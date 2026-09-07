@@ -1,4 +1,5 @@
 /.phpunit.cache
+/.superpowers
 /node_modules
 /public/build
 /public/hot
