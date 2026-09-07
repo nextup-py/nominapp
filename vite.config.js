@@ -16,6 +16,7 @@ export default defineConfig({
                 'resources/css/attendances/terminal.css',
                 'resources/js/shared/capture-face.js',
                 'resources/css/shared/capture-face.css',
+                'resources/css/shared/fonts.css',
                 'resources/js/planner/planner.js',
                 'resources/css/planner/planner.css',
             ],
