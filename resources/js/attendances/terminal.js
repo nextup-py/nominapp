@@ -1,9 +1,9 @@
 import { captureFaceSamples } from '../shared/face-capture-core.js';
 import { markUserInteracted, hasUserInteracted, playBeep } from '../shared/audio-feedback.js';
-import { migrateTokenFromLocalStorage, getMeta, getCachedEmployees, countCachedEmployees, clearTerminalState } from './terminal-offline/db.js';
+import { migrateTokenFromLocalStorage, getMeta, getCachedEmployees, clearTerminalState } from './terminal-offline/db.js';
 import { identifyEmployee as matchDescriptor } from './terminal-offline/matcher.js';
 import { heartbeat, syncEmployees, getFaceConfig, TerminalAuthError } from './terminal-offline/sync.js';
-import { getEmployeeStatus, enqueueMark, flushQueue, countPendingEvents, countConflictEvents } from './terminal-offline/queue.js';
+import { getEmployeeStatus, enqueueMark, flushQueue } from './terminal-offline/queue.js';
 import {
     updateClock,
     updateIdleDate,
@@ -14,6 +14,12 @@ import {
     hideCaptureProgress,
     finishCaptureProgress,
 } from './terminal/ui-feedback.js';
+import {
+    setOffline,
+    updateIdleSyncStatus,
+    refreshIdleSyncStatus,
+    refreshLastSyncLabel,
+} from './terminal/sync-status-ui.js';
 
 document.addEventListener("DOMContentLoaded", () => {
     // ============================================================================
@@ -44,7 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const identificationStatus = document.getElementById("identificationStatus");
 
-    const idleSyncStatus      = document.getElementById("idleSyncStatus");
     const btnForceSync        = document.getElementById("btnForceSync");
 
     const typeButtons   = document.querySelectorAll(".terminal-type-btn");
@@ -1132,25 +1137,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================================
     // CONECTIVIDAD
     // ============================================================================
-    const offlineBanner    = document.getElementById("offlineBanner");
-    const connectivityDot  = document.getElementById("connectivityDot");
-    const connectivityLabel = document.getElementById("connectivityLabel");
-
-    /**
-     * A diferencia del banner (que solo aparece mientras el navegador está sin red),
-     * el indicador del header queda siempre visible — refleja `navigator.onLine`, no la
-     * conectividad real con el servidor (eso lo indica por separado "Últ. sync", más
-     * abajo: un dispositivo puede tener wifi pero sin salida a internet real).
-     */
-    function setOffline(isOffline) {
-        if (offlineBanner) {
-            offlineBanner.classList.toggle("is-visible", isOffline);
-            offlineBanner.setAttribute("aria-hidden", String(!isOffline));
-        }
-        if (connectivityDot)   connectivityDot.classList.toggle("is-offline", isOffline);
-        if (connectivityLabel) connectivityLabel.textContent = isOffline ? "Sin conexión" : "En línea";
-    }
-
     // Estado inicial (por si la página carga sin red)
     setOffline(!navigator.onLine);
 
@@ -1165,66 +1151,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     document.addEventListener("click",      markInteraction, { once: true });
     document.addEventListener("touchstart", markInteraction, { once: true });
-
-    // ============================================================================
-    // SINCRONIZACIÓN OFFLINE — token, caché de empleados y config facial
-    // ============================================================================
-    function updateIdleSyncStatus(text) {
-        if (idleSyncStatus) idleSyncStatus.textContent = text;
-    }
-
-    /**
-     * Refleja en la pantalla idle el estado de la cola de eventos offline —
-     * se llama después de cada intento de sincronización (registerMark, sync
-     * en segundo plano, botón manual) para que el texto visible siempre
-     * refleje la cola real en IndexedDB, no solo el último resultado puntual.
-     */
-    async function refreshIdleSyncStatus() {
-        // Prioridad más alta: sin empleados cacheados el terminal no puede identificar
-        // a NADIE — más grave que marcaciones pendientes/en conflicto, que sí sabe
-        // resolver localmente. Antes esto solo se notaba al fallar un intento real de
-        // reconocimiento, con un mensaje genérico que no distinguía la causa.
-        const employeeCount = await countCachedEmployees();
-        if (employeeCount === 0) {
-            updateIdleSyncStatus("⚠ Sin empleados sincronizados — verifique la conexión o contacte al administrador");
-            await refreshLastSyncLabel();
-            return;
-        }
-
-        const [pending, conflicts] = await Promise.all([countPendingEvents(), countConflictEvents()]);
-        if (conflicts > 0) {
-            updateIdleSyncStatus(`${conflicts} marcación(es) requieren revisión`);
-        } else if (pending > 0) {
-            updateIdleSyncStatus(`${pending} marcación(es) pendiente(s) de sincronizar`);
-        } else {
-            updateIdleSyncStatus(navigator.onLine ? "Sincronizado" : "Sin conexión — usando datos locales");
-        }
-        await refreshLastSyncLabel();
-    }
-
-    const terminalHeaderLastSync = document.getElementById("terminalHeaderLastSync");
-
-    /**
-     * Última vez que un heartbeat exitoso confirmó contacto real con el servidor
-     * (`last_heartbeat_at` en terminal_meta, escrito por heartbeat() en sync.js) — a
-     * diferencia del indicador "En línea"/"Sin conexión" (que solo refleja
-     * `navigator.onLine`), esto sirve para detectar un terminal con wifi pero sin
-     * conectividad real al backend. Se lee de IndexedDB en cada llamada, así que
-     * sobrevive a recargas de página sin depender del estado de esta sesión.
-     */
-    async function refreshLastSyncLabel() {
-        if (!terminalHeaderLastSync) return;
-        const lastHeartbeatAt = await getMeta("last_heartbeat_at");
-        if (!lastHeartbeatAt) {
-            terminalHeaderLastSync.classList.add("hidden");
-            return;
-        }
-        const time = new Date(lastHeartbeatAt).toLocaleTimeString("es-BO", {
-            hour: "2-digit", minute: "2-digit", hour12: false,
-        });
-        terminalHeaderLastSync.textContent = `Últ. sync: ${time}`;
-        terminalHeaderLastSync.classList.remove("hidden");
-    }
 
     /**
      * Pide al navegador que la cuota de almacenamiento de este origen sea
