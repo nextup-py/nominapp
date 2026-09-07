@@ -15,6 +15,7 @@ import { markUserInteracted, playBeep } from './mark/audio-feedback.js';
 import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sync-status-ui.js';
 import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js';
 import { showSuccessModal } from './mark/success-modal.js';
+import { showErrorModal, initErrorModal, isErrorModalVisible, setErrorModalVisible } from './mark/error-modal.js';
 
 /**
  * =============================================================================
@@ -233,18 +234,6 @@ const statusBar           = document.getElementById("statusBar");
         location: null,
     };
 
-    /**
-     * Indica si ya se agregó el listener al modal de error
-     * @type {boolean}
-     */
-    let errorModalListenerAdded = false;
-
-    /**
-     * Elemento que tenía el foco antes de abrir un modal
-     * @type {HTMLElement|null}
-     */
-    let previousActiveElement = null;
-
     /** @type {boolean} Indica si hay una identificación en curso (evita re-entradas) */
     let isIdentifying = false;
 
@@ -253,9 +242,6 @@ const statusBar           = document.getElementById("statusBar");
 
     /** @type {number|null} ID del setInterval del dwell de auto-identificación */
     let autoIdDotInterval = null;
-
-    /** @type {boolean} Indica si el modal de error está visible (pausa el dwell de auto-identificación) */
-    let errorModalVisible = false;
 
     /** @type {{employee: object, lastEvent: string|null}|null} Datos pendientes de paso 2 cuando GPS falla */
     let pendingStep2 = null;
@@ -271,9 +257,6 @@ const statusBar           = document.getElementById("statusBar");
 
     /** @type {number|null} Timeout que restablece el estado de confirmación de duplicado */
     let duplicateConfirmTimeout = null;
-
-    /** @type {boolean} Indica si ya se agregó el listener de teclado del modal de error */
-    let errorKeyListenerAdded = false;
 
     /**
      * Timeout actual de la alerta para poder cancelarlo
@@ -1148,7 +1131,7 @@ const statusBar           = document.getElementById("statusBar");
                 ctx.clearRect(0, 0, overlay.width, overlay.height);
 
                 // Durante captura activa, cooldown post-error o modal de error visible, el drawLoop no toca el estado visual
-                if (!isIdentifying && Date.now() > notRecognizedUntil && !errorModalVisible) {
+                if (!isIdentifying && Date.now() > notRecognizedUntil && !isErrorModalVisible()) {
                     if (detection && video.videoWidth > 0 && video.videoHeight > 0) {
                         if (overlay.width !== video.videoWidth || overlay.height !== video.videoHeight) {
                             faceapi.matchDimensions(overlay, video);
@@ -1385,7 +1368,7 @@ const statusBar           = document.getElementById("statusBar");
      * Al completar los 5 dots dispara runIdentification() automáticamente.
      */
     function startAutoIdentifyDwell() {
-        if (isIdentifying || autoIdDotInterval || Date.now() <= notRecognizedUntil || errorModalVisible) return;
+        if (isIdentifying || autoIdDotInterval || Date.now() <= notRecognizedUntil || isErrorModalVisible()) return;
 
         let dotsFilled = 0;
         showCaptureProgress();
@@ -1563,19 +1546,19 @@ const statusBar           = document.getElementById("statusBar");
             showErrorModal("Ubicación no disponible", gpsMsg, () => {
                 // Mantener errorModalVisible=true durante la solicitud GPS para
                 // evitar que el drawLoop dispare un nuevo dwell y re-identifique al empleado
-                errorModalVisible = true;
+                setErrorModalVisible(true);
                 setStatusBar("Obteniendo ubicación GPS...", "detecting");
                 requestGPSBackground(
                     () => {
                         // GPS obtenido — continuar al paso 2
-                        errorModalVisible = false;
+                        setErrorModalVisible(false);
                         const pending = pendingStep2;
                         pendingStep2 = null;
                         if (pending) transitionToStep2(pending.employee, pending.lastEvent, pending.lastEventTime);
                     },
                     () => {
                         // GPS falló de nuevo — liberar y mostrar modal otra vez
-                        errorModalVisible = false;
+                        setErrorModalVisible(false);
                         const pending = pendingStep2;
                         pendingStep2 = null;
                         if (pending) transitionToStep2(pending.employee, pending.lastEvent, pending.lastEventTime);
@@ -1742,60 +1725,6 @@ const statusBar           = document.getElementById("statusBar");
     // ==========================================================================
     // FUNCIONES DE MODALES
     // ==========================================================================
-
-    /**
-     * Muestra el modal de error con un mensaje personalizado
-     * @param {string} title - Título del error
-     * @param {string} message - Descripción detallada del error
-     * @returns {void}
-     */
-    function showErrorModal(title, message, onRetry) {
-        const modal   = document.getElementById("errorModal");
-        const titleEl = document.getElementById("errorModalTitle");
-        const descEl  = document.getElementById("errorModalDesc");
-        const retryBtn = document.getElementById("retryErrorModal");
-
-        if (!modal || !titleEl || !descEl) {
-            logError("Elementos del modal de error no encontrados");
-            return;
-        }
-
-        previousActiveElement = document.activeElement;
-
-        titleEl.textContent = title || "Error";
-        descEl.textContent  = message || "Ha ocurrido un error inesperado.";
-
-        // onRetry === false → ocultar botón Reintentar (ej: sesión expirada, reintentar no ayudaría)
-        if (retryBtn) {
-            const hideRetry = onRetry === false;
-            retryBtn.classList.toggle("hidden", hideRetry);
-            retryBtn._onRetry = hideRetry ? null : (onRetry || null);
-        }
-
-        errorModalVisible = true;
-        cancelAutoIdentifyDwell();
-
-        modal.setAttribute("aria-hidden", "false");
-        modal.classList.remove("hidden");
-        void modal.offsetWidth;
-
-        requestAnimationFrame(() => { modal.classList.add("show"); });
-
-        if (retryBtn) retryBtn._shownAt = Date.now();
-        const focusTarget = (onRetry !== false ? retryBtn : null) ?? document.getElementById("closeErrorModal");
-        setTimeout(() => { focusTarget?.focus(); }, 100);
-
-        document.body.classList.add("modal-open");
-    }
-
-    /**
-     * Cierra el modal de error con animación
-     * @returns {void}
-     */
-    function closeErrorModalHandler() {
-        errorModalVisible = false;
-        setTimeout(() => window.location.reload(), 250);
-    }
 
     // ==========================================================================
     // FUNCIONES DE RESET
@@ -2255,38 +2184,10 @@ const statusBar           = document.getElementById("statusBar");
     window.addEventListener("offline", () => setOfflineBanner(true, checkEnableMark));
     window.addEventListener("online",  () => setOfflineBanner(false, checkEnableMark));
 
-    // Evento: Botón "Reintentar" del modal de error
-    const retryErrorBtn = document.getElementById("retryErrorModal");
-    if (retryErrorBtn) {
-        retryErrorBtn.addEventListener("click", () => {
-            // Guardia contra tap-through: ignorar si el click llega < 400ms después de mostrar el modal
-            if (Date.now() - (retryErrorBtn._shownAt || 0) < 400) return;
-
-            // Blur antes de ocultar el modal para evitar la advertencia ARIA
-            if (document.activeElement === retryErrorBtn) retryErrorBtn.blur();
-
-            // Cerrar modal
-            const modal = document.getElementById("errorModal");
-            if (modal) {
-                modal.setAttribute("aria-hidden", "true");
-                modal.classList.remove("show");
-                setTimeout(() => {
-                    modal.classList.add("hidden");
-                    document.body.classList.remove("modal-open");
-                    errorModalVisible = false;
-                    if (previousActiveElement?.focus && !modal.contains(previousActiveElement)) {
-                        previousActiveElement.focus();
-                    }
-                }, 250);
-            }
-            // Ejecutar callback de reintento si fue provisto (ej: re-solicitar GPS)
-            const onRetry = retryErrorBtn._onRetry;
-            retryErrorBtn._onRetry = null;
-            if (typeof onRetry === "function") {
-                setTimeout(onRetry, 260); // esperar a que el modal termine de ocultarse
-                return;
-            }
-
+    // Evento: listeners globales del modal de error (Reintentar, Recargar, teclado)
+    initErrorModal({
+        onShow: cancelAutoIdentifyDwell,
+        onRetryFallback: () => {
             // Dar feedback mientras el cooldown de 3s expira
             setStatusBar("Reintentando en un momento...", "detecting");
             // No limpiar notRecognizedUntil — dejar que el cooldown de 3s expire por sí solo.
@@ -2294,55 +2195,8 @@ const statusBar           = document.getElementById("statusBar");
             if (drawLoopActive) {
                 faceInFrameState = null;
             }
-        });
-    }
-
-    // Evento: Botón "Recargar" del modal de error
-    const closeErrorBtn = document.getElementById("closeErrorModal");
-    if (closeErrorBtn && !errorModalListenerAdded) {
-        closeErrorBtn.addEventListener("click", closeErrorModalHandler);
-        errorModalListenerAdded = true;
-    }
-
-    // Evento: Teclado en modal de error — Escape cierra, Tab queda atrapado dentro del modal
-    if (!errorKeyListenerAdded) {
-        document.addEventListener("keydown", (e) => {
-            if (!errorModalVisible) return;
-            const modal = document.getElementById("errorModal");
-            if (!modal || modal.classList.contains("hidden")) return;
-
-            if (e.key === "Escape") {
-                // Solo cerrar con Escape si el botón "Reintentar" está visible;
-                // si está oculto (ej: sesión expirada) no hacer nada para evitar
-                // recargar la página accidentalmente.
-                const retryBtn = document.getElementById("retryErrorModal");
-                if (retryBtn && !retryBtn.classList.contains("hidden")) {
-                    retryBtn.click();
-                }
-                return;
-            }
-
-            if (e.key === "Tab") {
-                // Focus trap: Tab cicla solo entre los botones visibles del modal
-                const retryBtn  = document.getElementById("retryErrorModal");
-                const closeBtn  = document.getElementById("closeErrorModal");
-                const focusable = [retryBtn, closeBtn].filter(
-                    el => el && !el.classList.contains("hidden")
-                );
-                if (focusable.length <= 1) return;
-                const first = focusable[0];
-                const last  = focusable[focusable.length - 1];
-                if (e.shiftKey && document.activeElement === first) {
-                    e.preventDefault();
-                    last.focus();
-                } else if (!e.shiftKey && document.activeElement === last) {
-                    e.preventDefault();
-                    first.focus();
-                }
-            }
-        });
-        errorKeyListenerAdded = true;
-    }
+        },
+    });
 
     // ==========================================================================
     // TEMA CLARO / OSCURO
