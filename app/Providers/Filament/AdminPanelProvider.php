@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use EightyNine\FilamentDocs\FilamentDocsPlugin;
+use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -16,6 +17,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -28,7 +30,11 @@ class AdminPanelProvider extends PanelProvider
             ->path('')
             ->login()
             ->profile(isSimple: false)
-            ->font('Poppins')
+            ->font(
+                'Poppins',
+                url: Vite::asset('resources/css/shared/fonts.css'),
+                provider: LocalFontProvider::class,
+            )
             ->favicon(asset('icons/favicon.ico'))
             ->sidebarCollapsibleOnDesktop()
             ->colors([
