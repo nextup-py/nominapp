@@ -14,6 +14,7 @@ import { translateEventType, buildDetailedError } from './mark/text-helpers.js';
 import { markUserInteracted, playBeep } from './mark/audio-feedback.js';
 import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sync-status-ui.js';
 import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js';
+import { showSuccessModal } from './mark/success-modal.js';
 
 /**
  * =============================================================================
@@ -231,12 +232,6 @@ const statusBar           = document.getElementById("statusBar");
         allowed: [],
         location: null,
     };
-
-    /**
-     * Indica si ya se agregó el listener al modal de éxito
-     * @type {boolean}
-     */
-    let modalListenerAdded = false;
 
     /**
      * Indica si ya se agregó el listener al modal de error
@@ -1493,7 +1488,7 @@ const statusBar           = document.getElementById("statusBar");
                 const descEl  = document.getElementById("successModalDesc");
                 if (titleEl) titleEl.textContent = "¡Jornada completada!";
                 if (descEl)  descEl.textContent  = `${fullName ? fullName + ", ya" : "Ya"} no tienes más marcaciones disponibles por hoy. ¡Hasta mañana!`;
-                showSuccessModal();
+                showSuccessModal(undefined, undefined, undefined, undefined, returnToSplash);
                 navigator.vibrate?.(80);
                 playBeep("success");
                 logStatus("Jornada completa — sin eventos disponibles");
@@ -1747,101 +1742,6 @@ const statusBar           = document.getElementById("statusBar");
     // ==========================================================================
     // FUNCIONES DE MODALES
     // ==========================================================================
-
-    /**
-     * Muestra el modal de éxito después de una marcación exitosa
-     * @description Muestra un modal con animación, maneja accesibilidad (foco, aria),
-     *              y configura eventos para cerrarlo (botón, backdrop, tecla ESC)
-     * @returns {void}
-     */
-    function showSuccessModal(name, eventType, time, { queued = false } = {}) {
-        const modal = document.getElementById("successModal");
-        const closeModal = document.getElementById("closeModal");
-
-        if (!modal || !closeModal) {
-            logError("Elementos del modal no encontrados");
-            return;
-        }
-
-        // Poblar bloque de detalle si se proveyeron datos
-        const metaEl    = document.getElementById("successModalMeta");
-        const nameEl    = document.getElementById("successModalMetaName");
-        const eventEl   = document.getElementById("successModalMetaEvent");
-        const timeEl    = document.getElementById("successModalMetaTime");
-        const queuedEl  = document.getElementById("successModalQueuedNotice");
-
-        if (metaEl && name && eventType && time) {
-            if (nameEl)  nameEl.textContent  = name;
-            if (eventEl) eventEl.textContent = translateEventType(eventType);
-            if (timeEl)  timeEl.textContent  = time.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-            metaEl.classList.remove("hidden");
-        } else if (metaEl) {
-            metaEl.classList.add("hidden");
-        }
-
-        // Marcación guardada en el dispositivo pero todavía no confirmada por el servidor
-        // (sin red en el momento) — avisar sin asustar: no se perdió, se sincroniza sola.
-        if (queuedEl) queuedEl.style.display = queued ? "" : "none";
-
-        previousActiveElement = document.activeElement;
-
-        modal.setAttribute("aria-hidden", "false");
-        modal.classList.remove("hidden");
-        void modal.offsetWidth; // Forzar reflow para animación
-
-        requestAnimationFrame(() => {
-            modal.classList.add("show");
-        });
-
-        setTimeout(() => {
-            closeModal.focus();
-        }, 100);
-
-        document.body.classList.add("modal-open");
-
-        if (!modalListenerAdded) {
-            closeModal.addEventListener("click", closeModalHandler);
-
-            modal.addEventListener("click", (e) => {
-                if (e.target === modal) {
-                    closeModalHandler();
-                }
-            });
-
-            document.addEventListener("keydown", (e) => {
-                if (e.key === "Escape" && modal.classList.contains("show")) {
-                    closeModalHandler();
-                }
-            });
-
-            modalListenerAdded = true;
-        }
-    }
-
-    /**
-     * Cierra el modal de éxito con animación
-     * @description Oculta el modal, restaura el foco al elemento anterior,
-     *              y resetea el sistema para una nueva marcación
-     * @returns {void}
-     */
-    function closeModalHandler() {
-        const modal = document.getElementById("successModal");
-
-        if (!modal) return;
-
-        if (modal.contains(document.activeElement)) {
-            document.activeElement.blur();
-        }
-
-        modal.setAttribute("aria-hidden", "true");
-        modal.classList.remove("show");
-
-        setTimeout(() => {
-            modal.classList.add("hidden");
-            document.body.classList.remove("modal-open");
-            returnToSplash();
-        }, 250);
-    }
 
     /**
      * Muestra el modal de error con un mensaje personalizado
@@ -2282,7 +2182,7 @@ const statusBar           = document.getElementById("statusBar");
                 playBeep("success");
                 navigator.vibrate?.(120);
                 const fullName = `${state.employee.first_name || ""} ${state.employee.last_name || ""}`.trim();
-                showSuccessModal(fullName, eventTypeEl.value, new Date(recordedAt), { queued });
+                showSuccessModal(fullName, eventTypeEl.value, new Date(recordedAt), { queued }, returnToSplash);
             } catch (e) {
                 logError("Error en la marcación:", e);
                 if (e instanceof MobileAuthError) {
