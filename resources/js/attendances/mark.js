@@ -1,4 +1,3 @@
-import L from 'leaflet';
 import { captureFaceSamples } from '../shared/face-capture-core.js';
 import { migrateTokenFromLocalStorage, getMeta, getOwnEmployee, resetDb } from './mobile-offline/db.js';
 import { identifyEmployee as matchDescriptor } from './mobile-offline/matcher.js';
@@ -16,6 +15,13 @@ import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sy
 import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js';
 import { showSuccessModal } from './mark/success-modal.js';
 import { showErrorModal, initErrorModal, isErrorModalVisible, setErrorModalVisible } from './mark/error-modal.js';
+import {
+    getLastGpsErrorCode,
+    requestGPSBackground,
+    requestGPSManual,
+    resetLocationUi,
+    initGps,
+} from './mark/gps.js';
 
 /**
  * =============================================================================
@@ -82,10 +88,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const videoWrap       = document.getElementById("videoWrap");
     const statusDot       = document.getElementById("statusDot");
     const statusText      = document.getElementById("statusText");
-    const locationStatus  = document.getElementById("locationStatus");
-    const locationCoords  = document.getElementById("locationCoords");
-    const locationMapEl   = document.getElementById("locationMap");
-    const btnGeoRetry     = document.getElementById("btnGeoRetry");
     const headerClock     = document.getElementById("headerClock");
     const eventBtns       = document.querySelectorAll(".event-btn");
 
@@ -105,9 +107,6 @@ const statusBar           = document.getElementById("statusBar");
     const captureProgress     = document.getElementById("captureProgress");
     const captureDots         = captureProgress ? Array.from(captureProgress.querySelectorAll(".capture-dot")) : [];
     const splashOverlay       = document.getElementById("splashOverlay");
-    const gpsBanner           = document.getElementById("gpsBanner");
-    const gpsBannerText       = document.getElementById("gpsBannerText");
-    const gpsBannerRetry      = document.getElementById("gpsBannerRetry");
     const markHint            = document.getElementById("markHint");
     const btnSyncNow          = document.getElementById("btnSyncNow");
     const btnUnlinkDevice     = document.getElementById("btnUnlinkDevice");
@@ -216,11 +215,6 @@ const statusBar           = document.getElementById("statusBar");
      */
     let refreshOwnEmployeeUi = () => {};
 
-    /** Instancia del mapa Leaflet del mini-mapa de ubicación */
-    let locationMap    = null;
-    /** Marcador del mini-mapa */
-    let locationMarker = null;
-
     /** Controla si el splash ya fue procesado (evita doble disparo) */
     let splashHandled = false;
 
@@ -245,9 +239,6 @@ const statusBar           = document.getElementById("statusBar");
 
     /** @type {{employee: object, lastEvent: string|null}|null} Datos pendientes de paso 2 cuando GPS falla */
     let pendingStep2 = null;
-
-    /** @type {number|null} Último código de error de geolocalización (1=denegado, 2=no disponible, 3=timeout) */
-    let lastGpsErrorCode = null;
 
     /** @type {{employeeId: number, eventType: string, time: number}|null} Última marcación registrada (para ventana anti-duplicados) */
     let lastMark = null;
@@ -531,121 +522,6 @@ const statusBar           = document.getElementById("statusBar");
         hideCaptureProgress();
     }
 
-    // --------------------------------------------------------------------------
-    // GPS EN SEGUNDO PLANO
-    // --------------------------------------------------------------------------
-    function showGPSBanner(message) {
-        if (!gpsBanner || !gpsBannerText) return;
-        gpsBannerText.textContent = message;
-        gpsBanner.classList.remove("hidden");
-    }
-
-    const pulseIcon = L.divIcon({
-        className: '',
-        html: '<div class="map-pulse-marker"><div class="map-pulse-ring"></div><div class="map-pulse-dot"></div></div>',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-    });
-
-    function showLocationMap(lat, lng) {
-        if (!locationMapEl) return;
-        locationMapEl.classList.remove("hidden");
-        locationMapEl.removeAttribute("aria-hidden");
-        if (btnGeoRetry) btnGeoRetry.classList.remove("hidden");
-        // El mapa hace las coordenadas redundantes — ocultar el span
-        if (locationCoords) locationCoords.classList.add("hidden");
-
-        setTimeout(() => {
-            if (!locationMap) {
-                locationMap = L.map(locationMapEl, {
-                    zoomControl: false,
-                    attributionControl: false,
-                    dragging: false,
-                    scrollWheelZoom: false,
-                    doubleClickZoom: false,
-                    touchZoom: false,
-                }).setView([lat, lng], 16);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                }).addTo(locationMap);
-                locationMarker = L.marker([lat, lng], { icon: pulseIcon }).addTo(locationMap);
-                setTimeout(() => locationMap?.invalidateSize(), 50);
-            } else {
-                locationMap.setView([lat, lng], 16);
-                locationMarker.setLatLng([lat, lng]);
-                locationMap.invalidateSize();
-            }
-        }, 120);
-    }
-
-    function hideGPSBanner() {
-        if (gpsBanner) gpsBanner.classList.add("hidden");
-    }
-
-    /**
-     * Muestra un contador regresivo en locationStatus durante la solicitud GPS.
-     * @param {number} totalSec - Segundos totales del timeout GPS
-     * @returns {function} Función para detener el contador
-     */
-    function startGPSProgress(totalSec = 10) {
-        let remaining = totalSec;
-        const dots = ["·", "··", "···"];
-        let dotIdx = 0;
-
-        const tick = () => {
-            if (locationStatus) {
-                locationStatus.textContent = `Obteniendo GPS ${dots[dotIdx % 3]} ${remaining}s`;
-            }
-            dotIdx++;
-            remaining--;
-        };
-        tick(); // mostrar inmediatamente
-        const id = setInterval(tick, 1000);
-        return () => clearInterval(id);
-    }
-
-    function requestGPSBackground(onSuccess, onError) {
-        if (!navigator.geolocation) {
-            lastGpsErrorCode = null;
-            if (locationStatus) locationStatus.textContent = "GPS no disponible en este dispositivo";
-            onError?.();
-            return;
-        }
-
-        const stopProgress = startGPSProgress(10);
-
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                stopProgress();
-                lastGpsErrorCode = null;
-                hideGPSBanner();
-                state.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                if (locationStatus) locationStatus.textContent = "Ubicación obtenida";
-                if (locationCoords) {
-                    locationCoords.textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-                }
-                showLocationMap(pos.coords.latitude, pos.coords.longitude);
-                checkEnableMark();
-                onSuccess?.();
-            },
-            (err) => {
-                stopProgress();
-                lastGpsErrorCode = err.code;
-                const msgs = {
-                    1: "Ubicación denegada. Active el permiso en su navegador y toque Reintentar.",
-                    2: "No se pudo obtener la ubicación. Verifique que el GPS esté activo.",
-                    3: "Tiempo de espera agotado al obtener la ubicación.",
-                };
-                const msg = msgs[err.code] || "No se pudo obtener la ubicación.";
-                if (locationStatus) locationStatus.textContent = msg;
-                showGPSBanner(msg);
-                logWarn("GPS en segundo plano:", msg);
-                onError?.();
-            },
-            { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true }
-        );
-    }
-
     // ==========================================================================
     // FUNCIONES DE VERIFICACIÓN
     // ==========================================================================
@@ -761,11 +637,7 @@ const statusBar           = document.getElementById("statusBar");
         setStatusBar("Inicie la cámara para comenzar", null);
 
         // Resetear ubicación y mapa
-        if (locationStatus) locationStatus.textContent = "Solicitando ubicación...";
-        if (locationCoords) { locationCoords.textContent = ""; locationCoords.classList.remove("hidden"); }
-        if (locationMapEl) { locationMapEl.classList.add("hidden"); locationMapEl.setAttribute("aria-hidden", "true"); }
-        if (btnGeoRetry) btnGeoRetry.classList.add("hidden");
-        if (locationMap) { locationMap.remove(); locationMap = null; locationMarker = null; }
+        resetLocationUi();
 
         // Volver al wizard paso 1 (sin animación — el splash lo cubre)
         if (step2Section) step2Section.classList.add("hidden");
@@ -1537,9 +1409,10 @@ const statusBar           = document.getElementById("statusBar");
         if (!state.location) {
             pendingStep2 = { employee, lastEvent, lastEventTime };
 
-            const gpsMsg = lastGpsErrorCode === 1
+            const gpsErrorCode = getLastGpsErrorCode();
+            const gpsMsg = gpsErrorCode === 1
                 ? "El permiso de ubicación está denegado. Vaya a la configuración de su navegador, habilite la ubicación para este sitio y toque Reintentar."
-                : lastGpsErrorCode === 2
+                : gpsErrorCode === 2
                     ? "No se pudo obtener la ubicación GPS. Verifique que el GPS esté activado en el dispositivo y toque Reintentar."
                     : "No se pudo obtener la ubicación GPS. Esto es necesario para registrar la marcación. Intente nuevamente.";
 
@@ -1691,18 +1564,7 @@ const statusBar           = document.getElementById("statusBar");
 
         // Resetear ubicación y mapa
         state.location = null;
-        if (locationStatus) locationStatus.textContent = "Solicitando ubicación...";
-        if (locationCoords) { locationCoords.textContent = ""; locationCoords.classList.remove("hidden"); }
-        if (locationMapEl) {
-            locationMapEl.classList.add("hidden");
-            locationMapEl.setAttribute("aria-hidden", "true");
-        }
-        if (btnGeoRetry) btnGeoRetry.classList.add("hidden");
-        if (locationMap) {
-            locationMap.remove();
-            locationMap    = null;
-            locationMarker = null;
-        }
+        resetLocationUi();
 
         // Reiniciar cámara en paralelo con la animación — salvo que el empleado la
         // haya pausado manualmente (btnCameraPause): en ese caso queda pausada y se
@@ -1786,18 +1648,7 @@ const statusBar           = document.getElementById("statusBar");
             });
 
             // Resetear fila de ubicación
-            if (locationStatus) locationStatus.textContent = "Solicitando ubicación...";
-            if (locationCoords) { locationCoords.textContent = ""; locationCoords.classList.remove("hidden"); }
-            if (locationMapEl) {
-                locationMapEl.classList.add("hidden");
-                locationMapEl.setAttribute("aria-hidden", "true");
-            }
-            if (btnGeoRetry) btnGeoRetry.classList.add("hidden");
-            if (locationMap) {
-                locationMap.remove();
-                locationMap    = null;
-                locationMarker = null;
-            }
+            resetLocationUi();
 
             logStatus("Sistema reiniciado");
         } catch (error) {
@@ -1962,61 +1813,6 @@ const statusBar           = document.getElementById("statusBar");
         });
     }
 
-    // Solicitar GPS manualmente (usado como retry desde el modal de error)
-    function requestGPSManual() {
-        markUserInteracted();
-        if (!navigator.geolocation) {
-            const errorMsg = "Este dispositivo no puede obtener la ubicación GPS. Si el problema persiste, contacte a RRHH.";
-            logStatus(errorMsg);
-            showErrorModal("Ubicación no disponible", errorMsg);
-            return;
-        }
-
-        logStatus("Solicitando ubicación GPS...");
-        const stopProgress = startGPSProgress(10);
-
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                stopProgress();
-                state.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                if (locationStatus) locationStatus.textContent = "Ubicación obtenida";
-                if (locationCoords) {
-                    locationCoords.textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-                }
-                showLocationMap(pos.coords.latitude, pos.coords.longitude);
-                checkEnableMark();
-                logStatus("Ubicación obtenida correctamente");
-            },
-            (err) => {
-                stopProgress();
-                logError("Error de geolocalización:", err);
-                let errorMsg = "";
-
-                switch (err.code) {
-                    case 1:
-                        errorMsg = "Permiso de ubicación denegado. Habilite el GPS en su navegador e intente nuevamente.";
-                        break;
-                    case 2:
-                        errorMsg = "No se pudo obtener la ubicación. Verifique que el GPS esté activado e intente nuevamente.";
-                        break;
-                    case 3:
-                        errorMsg = "La obtención de ubicación tardó demasiado. Intente nuevamente.";
-                        break;
-                    default:
-                        errorMsg = "No se pudo obtener la ubicación. Por favor, intente nuevamente.";
-                        break;
-                }
-
-                showErrorModal("Ubicación no disponible", errorMsg, requestGPSManual);
-            },
-            {
-                timeout: 10000,
-                maximumAge: 60000,
-                enableHighAccuracy: true,
-            }
-        );
-    }
-
     // Evento: Registrar marcación
     if (btnMark) {
         btnMark.addEventListener("click", async () => {
@@ -2158,18 +1954,11 @@ const statusBar           = document.getElementById("statusBar");
         btn.addEventListener("click", () => { markUserInteracted(); }, { once: true });
     });
 
-    // Evento: Botón actualizar ubicación del mini-mapa
-    if (btnGeoRetry) {
-        btnGeoRetry.addEventListener("click", () => requestGPSManual());
-    }
-
-    // Evento: Botón reintentar GPS del banner inline
-    if (gpsBannerRetry) {
-        gpsBannerRetry.addEventListener("click", () => {
-            hideGPSBanner();
-            requestGPSBackground();
-        });
-    }
+    // Evento: botones de reintento GPS (mini-mapa y banner inline) + callbacks del módulo
+    initGps({
+        onLocation: (coords) => { state.location = coords; },
+        checkEnableMark,
+    });
 
     // Evento: Limpiar recursos al salir de la página
     window.addEventListener("beforeunload", () => {
