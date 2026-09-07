@@ -1,3 +1,3 @@
-<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
-<link rel="icon" href="/icons/favicon.ico" sizes="any">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="{{ asset('icons/favicon.svg') }}" type="image/svg+xml">
+<link rel="icon" href="{{ asset('icons/favicon.ico') }}" sizes="any">
+<link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">

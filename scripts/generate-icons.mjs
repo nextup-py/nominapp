@@ -30,7 +30,7 @@ async function main() {
     writeFileSync(`${OUT_DIR}/favicon.svg`, masterSvg);
     console.log(`  ${OUT_DIR}/favicon.svg`);
 
-    await renderPng(masterSvg, 180, `${OUT_DIR}/apple-touch-icon.png`);
+    await renderPng(maskableSvg, 180, `${OUT_DIR}/apple-touch-icon.png`);
     await renderPng(masterSvg, 192, `${OUT_DIR}/icon-192.png`);
     await renderPng(masterSvg, 512, `${OUT_DIR}/icon-512.png`);
     await renderPng(maskableSvg, 192, `${OUT_DIR}/icon-192-maskable.png`);

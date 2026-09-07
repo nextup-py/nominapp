@@ -210,7 +210,7 @@ video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-
 .desc-label { color: var(--c-muted); }
 .desc-value { font-weight: 500; color: var(--c-text); }
 .desc-value--high  { color: #16a34a; }
-.desc-value--mid   { color: #d97706; }
+.desc-value--mid   { color: var(--c-warning); }
 .desc-value--low   { color: #dc2626; }
 .save-form { display: flex; flex-direction: column; gap: var(--sp-3); }
 .form-actions { margin-top: var(--sp-4); }

@@ -15,6 +15,7 @@ export default defineConfig({
                 'resources/css/attendances/device-link.css',
                 'resources/js/attendances/terminal.js',
                 'resources/css/attendances/terminal.css',
+                'resources/css/attendances/terminal-setup.css',
                 'resources/js/shared/capture-face.js',
                 'resources/css/shared/capture-face.css',
                 'resources/css/shared/fonts.css',
