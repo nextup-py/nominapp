@@ -8,11 +8,11 @@ import {
     enqueueMark,
     flushQueue,
     countPendingEvents,
-    countConflictEvents,
     dismissConflictEvents,
 } from './mobile-offline/queue.js';
 import { translateEventType, buildDetailedError } from './mark/text-helpers.js';
 import { markUserInteracted, playBeep } from './mark/audio-feedback.js';
+import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sync-status-ui.js';
 
 /**
  * =============================================================================
@@ -106,10 +106,8 @@ const statusBar           = document.getElementById("statusBar");
     const gpsBannerText       = document.getElementById("gpsBannerText");
     const gpsBannerRetry      = document.getElementById("gpsBannerRetry");
     const markHint            = document.getElementById("markHint");
-    const syncStatusText      = document.getElementById("syncStatusText");
     const btnSyncNow          = document.getElementById("btnSyncNow");
     const btnUnlinkDevice     = document.getElementById("btnUnlinkDevice");
-    const conflictBanner      = document.getElementById("conflictBanner");
     const btnDismissConflict  = document.getElementById("btnDismissConflict");
     const btnMyEvents         = document.getElementById("btnMyEvents");
     const btnCameraPause      = document.getElementById("btnCameraPause");
@@ -342,51 +340,6 @@ const statusBar           = document.getElementById("statusBar");
     const logError = (message, errorObj) => {
         errorObj !== undefined ? console.error("[Error]", message, errorObj) : console.error("[Error]", message);
     };
-
-    // --------------------------------------------------------------------------
-    // BANNER OFFLINE
-    // --------------------------------------------------------------------------
-    function setOfflineBanner(isOffline) {
-        const banner = document.getElementById("offlineBanner");
-        if (!banner) return;
-        banner.classList.toggle("is-visible", isOffline);
-        banner.setAttribute("aria-hidden", String(!isOffline));
-        // Re-evaluar botón de marcación al cambiar estado de conexión
-        checkEnableMark();
-    }
-
-    // --------------------------------------------------------------------------
-    // ESTADO DE SINCRONIZACIÓN OFFLINE — paridad con refreshIdleSyncStatus()
-    // de terminal.js: mismo texto/prioridad (conflictos > pendientes >
-    // sincronizado), pero acá además hay un aviso separado (conflictBanner)
-    // porque un conflicto en el dispositivo es del propio empleado, no de un
-    // tercero — amerita más que una línea de texto discreta.
-    // --------------------------------------------------------------------------
-    function updateSyncStatus(text) {
-        if (syncStatusText) syncStatusText.textContent = text;
-    }
-
-    /**
-     * Refleja en la fila de estado la cola de eventos offline real (no solo
-     * el último resultado puntual) — se llama después de cada intento de
-     * sincronización (marcación, sync de fondo, botón manual, carga inicial).
-     */
-    async function refreshSyncStatus() {
-        const [pending, conflicts] = await Promise.all([countPendingEvents(), countConflictEvents()]);
-
-        if (conflicts > 0) {
-            updateSyncStatus(`${conflicts} marcación(es) requieren revisión`);
-        } else if (pending > 0) {
-            updateSyncStatus(`${pending} marcación(es) pendiente(s) de sincronizar`);
-        } else {
-            updateSyncStatus(navigator.onLine ? "Sincronizado" : "Sin conexión — usando datos locales");
-        }
-
-        if (conflictBanner) {
-            conflictBanner.classList.toggle("is-visible", conflicts > 0);
-            conflictBanner.setAttribute("aria-hidden", String(conflicts === 0));
-        }
-    }
 
     // Botón "Entendido" del aviso de conflicto — el empleado no puede resolverlo
     // (ya lo revisa RRHH en Filament), solo confirma que lo vio. Limpia la copia
@@ -2481,9 +2434,9 @@ const statusBar           = document.getElementById("statusBar");
     });
 
     // Evento: Detección de conexión online/offline
-    setOfflineBanner(!navigator.onLine);
-    window.addEventListener("offline", () => setOfflineBanner(true));
-    window.addEventListener("online",  () => setOfflineBanner(false));
+    setOfflineBanner(!navigator.onLine, checkEnableMark);
+    window.addEventListener("offline", () => setOfflineBanner(true, checkEnableMark));
+    window.addEventListener("online",  () => setOfflineBanner(false, checkEnableMark));
 
     // Evento: Botón "Reintentar" del modal de error
     const retryErrorBtn = document.getElementById("retryErrorModal");
