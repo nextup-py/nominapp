@@ -8,7 +8,7 @@ El proyecto tiene 4 vistas públicas de marcación de asistencia (`/marcar`, `/t
 
 - **3 copias paralelas de tokens de diseño**, ya divergentes entre sí, duplicadas verbatim entre `resources/css/attendances/styles.css` (mark), `resources/css/attendances/terminal.css` (terminal) y `resources/css/shared/capture-face.css` (enrolamiento/captura admin).
 - **Poppins cargado 3 veces desde Google Fonts** (`styles.css`, `terminal.css`, `capture-face.css`) con pesos ligeramente distintos, sin cachear por el service worker (dominio externo, fuera del chequeo de origen de `public/sw.js:99`) — rompe la tipografía en escenarios realmente offline.
-- **Panel Filament** carga Instrument Sans desde Bunny Fonts (`welcome.blade.php:11`), también externo, también no cacheado.
+- **Panel Filament ya usa Poppins también** — `AdminPanelProvider.php:31` tiene `->font('Poppins')`, sin `provider` explícito, por lo que usa el default de Filament (`BunnyFontProvider`, `Panel/Concerns/HasFont.php:12`) — carga Poppins desde Bunny Fonts (externo). El `--font-sans: 'Instrument Sans'` que existe en `app.css:9` es un token de Tailwind sin relación con el panel de Filament — solo lo consume `resources/views/welcome.blade.php`, la landing default de Laravel, que no tiene ninguna ruta que la sirva (confirmado por grep en `routes/web.php`) y queda fuera de alcance.
 - **`favicon.ico` de 0 bytes** — roto, no solo ausente. No existe manifest.json ni íconos PWA en `public/`.
 - **1102 líneas de CSS completamente muerto** (`resources/css/employees/capture-face.css`, `resources/css/enrollments/capture-face.css`) — no están en `vite.config.js` ni son importados por ningún blade (ambos wrappers fijan `$css = 'resources/css/shared/capture-face.css'` explícitamente).
 - `device-link.blade.php` vive 100% fuera del sistema — estilos inline, `font-family: Arial`, paleta azul propia, sin relación con los tokens teal/Poppins del resto.
@@ -26,7 +26,7 @@ Nuevo archivo `resources/css/shared/tokens.css`, con un bloque `@theme` de Tailw
 
 - **Color** — paleta alineada 1:1 con `AdminPanelProvider->colors()`: `primary` (teal-600 `#0d9488` y su escala 50-950), `success` (green), `danger` (red), `info` (blue), más los neutros de superficie (`bg`, `surface`, `border`, `text`, `muted`, `subtle`) hoy repartidos en `--c-*` con nombres consistentes entre sí. Se corrigen las divergencias puntuales ya detectadas (ej. `--c-danger-l` presente en `styles.css` pero ausente en `terminal.css`).
 - **Caso `warning` — discrepancia real a resolver explícitamente:** Filament tiene configurado `warning: Color::Yellow` (`AdminPanelProvider.php:38`), pero `styles.css`/`terminal.css` usan hoy un ámbar (`#d97706` ≈ Tailwind amber-600), no amarillo. Son colores visualmente distintos. Se resuelve a favor de **Filament** (`Color::Yellow`, escala completa) por el objetivo explícito de coherencia con el admin — el ámbar actual de las vistas de marcación se descarta, no se promueve a token.
-- **Tipografía** — `--font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, ...` (ya definida hoy en `app.css:9`, se reutiliza esa declaración como fuente de verdad única).
+- **Tipografía** — `--font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif, ...`. Poppins es la fuente real ya usada tanto por el panel Filament (`->font('Poppins')`) como por las 4 vistas de marcación — no hay migración de identidad tipográfica, solo consolidación de origen (self-hosted en vez de 4 requests externos distintos: 3 a Google Fonts + 1 a Bunny Fonts).
 - **Spacing / radios / sombras** — se consolida el superset de `--sp-*`, `--r-*`, `--sh-*`, `--tr-*` que hoy existe repartido y parcialmente divergente entre `styles.css` y `terminal.css` (ej. `terminal.css` tiene `--sp-12`, `--r-2xl`, `--r-3xl`, `--sh-xl` que `styles.css` no tiene — se incluyen todos en el set único).
 - **Dark mode** — un solo bloque `@media (prefers-color-scheme: dark)` + `html[data-theme="dark"]` en vez de las 4 copias actuales (2 en cada uno de los 2 archivos existentes).
 
@@ -38,11 +38,23 @@ Los 4 entrypoints CSS pasan a importar este archivo como primera línea y retien
 
 `device-link.blade.php` deja de tener CSS inline embebido en `<style>` y pasa a tener su propio entrypoint mínimo (`resources/css/attendances/device-link.css`, nuevo, agregado a `vite.config.js`) que también importa `tokens.css` — solo reemplaza colores/tipografía por las variables compartidas, sin tocar el layout/estructura actual de la página (eso es trabajo de E).
 
-## Tipografía — migración a Instrument Sans self-hosted
+## Tipografía — Poppins self-hosted (todo el proyecto)
 
-Se elimina el `@import url(...)` a Google Fonts en `styles.css`, `terminal.css`, `capture-face.css`, y el `<link>` a Bunny Fonts en `welcome.blade.php:10-11`. Se agregan los archivos `.woff2` de Instrument Sans (pesos 400, 500, 600, 700 — cubre el superset de pesos que las vistas actuales piden hoy, con la excepción del peso 900 que `terminal.css` pedía de más sin usarlo confirmadamente; si al implementar se encuentra un uso real de peso 900, se agrega ese archivo también) a `resources/fonts/instrument-sans/`, declarados vía `@font-face` con `font-display: swap` dentro de `tokens.css`.
+Se elimina el `@import url(...)` a Google Fonts en `styles.css`, `terminal.css`, `capture-face.css`. `welcome.blade.php` (Instrument Sans/Bunny) no se toca — está fuera de alcance, sin ruta que lo sirva. Se instala `@fontsource/poppins` (paquete npm que distribuye los `.woff2` de Poppins ya subseteados, sin depender de una descarga manual) con los pesos 400/500/600/700 — cubre el superset que las vistas actuales piden hoy, con la excepción del peso 900 que `terminal.css` pedía de más sin uso confirmado; si al implementar se encuentra un uso real de peso 900 en el CSS de componentes, se agrega ese peso también (`@fontsource/poppins` lo distribuye igual). `tokens.css` importa los CSS del paquete (`@import '@fontsource/poppins/400.css';` etc.), que declaran los `@font-face` con `font-display: swap` apuntando a los `.woff2` — Vite resuelve esos `url()` relativos a `node_modules` y los copia a `public/build/assets/` con hash de contenido, igual que cualquier otro asset.
 
 Al servirse desde Vite (mismo origen que el resto del bundle), quedan cubiertos automáticamente por el patrón `CACHE_FIRST_PATTERNS` existente en `public/sw.js` (`/build/assets/*`), sin necesidad de tocar el service worker para este punto específico — resuelve el problema real de offline sin trabajo adicional en el SW más allá de lo descrito en la sección siguiente.
+
+**Panel Filament — de Bunny Fonts a self-hosted:** Filament v3 soporta `LocalFontProvider` (`vendor/filament/filament/src/FontProviders/LocalFontProvider.php`) para servir una fuente propia en vez de ir a un CDN. Se crea un entrypoint adicional `resources/css/shared/fonts.css` (solo los `@import` de `@fontsource/poppins`, sin el resto de `tokens.css`) agregado a `vite.config.js`, y en `AdminPanelProvider.php:31` se cambia:
+
+```php
+// Antes
+->font('Poppins')
+
+// Después
+->font('Poppins', url: \Illuminate\Support\Facades\Vite::asset('resources/css/shared/fonts.css'), provider: \Filament\FontProviders\LocalFontProvider::class)
+```
+
+`tokens.css` importa este mismo `fonts.css` (en vez de repetir los `@import` de fontsource) para no declarar los `@font-face` dos veces.
 
 ## Isotipo y producción de íconos
 
@@ -75,23 +87,25 @@ Sin lógica de negocio nueva (cambio de CSS, assets estáticos y fuentes) — no
 2. Confirmar visualmente en cada una de las 4 vistas + `/admin` que la tipografía y colores se ven coherentes entre sí (mismo teal, misma fuente).
 3. Confirmar que el favicon aparece correctamente en la pestaña del navegador en las 5 superficies.
 4. En dispositivo real (celular + tablet, ya disponibles): confirmar que `/marcar` y `/terminal` cargan y se ven correctamente tras el cambio de fuente/tokens, sin regresión visual evidente.
-5. Con conexión cortada tras una carga previa (DevTools → Network → Offline, o modo avión real en el dispositivo): confirmar que la tipografía Instrument Sans se sigue viendo (no cae a system font), validando que el self-hosting resolvió el problema original.
+5. Con conexión cortada tras una carga previa (DevTools → Network → Offline, o modo avión real en el dispositivo): confirmar que la tipografía Poppins se sigue viendo (no cae a system font), validando que el self-hosting resolvió el problema original.
 
 ## Archivos tocados (resumen)
 
 **Nuevos:**
 - `resources/css/shared/tokens.css`
+- `resources/css/shared/fonts.css`
 - `resources/css/attendances/device-link.css`
-- `resources/fonts/instrument-sans/*.woff2`
 - `public/icons/*` (favicon + set de íconos)
 
 **Modificados:**
 - `resources/css/app.css`, `resources/css/attendances/styles.css`, `resources/css/attendances/terminal.css`, `resources/css/shared/capture-face.css` (import de tokens.css, retención solo de estilos específicos)
-- `resources/views/welcome.blade.php` (remueve `<link>` a Bunny Fonts)
 - `resources/views/attendances/device-link.blade.php` (remueve `<style>` inline, agrega `@vite` del nuevo CSS)
 - `public/sw.js` (`CACHE_FIRST_PATTERNS` + bump de `CACHE_VERSION`)
-- `vite.config.js` (nuevo entrypoint `attendances/device-link.css`)
-- Layout base del panel Filament (referencia al nuevo favicon)
+- `vite.config.js` (nuevos entrypoints `shared/fonts.css` y `attendances/device-link.css`)
+- `app/Providers/Filament/AdminPanelProvider.php` (`->font()` con `LocalFontProvider`, referencia al nuevo favicon)
+- `package.json` (nueva dependencia npm `@fontsource/poppins`)
+
+**No se toca:** `resources/views/welcome.blade.php` (fuera de alcance, sin ruta que lo sirva).
 
 **Eliminados:**
 - `resources/css/employees/capture-face.css`
