@@ -10,7 +10,7 @@ import {
     dismissConflictEvents,
 } from './mobile-offline/queue.js';
 import { translateEventType, buildDetailedError } from './mark/text-helpers.js';
-import { markUserInteracted, playBeep } from './mark/audio-feedback.js';
+import { markUserInteracted, playBeep } from '../shared/audio-feedback.js';
 import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sync-status-ui.js';
 import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js';
 import { showSuccessModal } from './mark/success-modal.js';

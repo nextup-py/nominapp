@@ -19,7 +19,7 @@
  */
 
 import L from 'leaflet';
-import { markUserInteracted } from './audio-feedback.js';
+import { markUserInteracted } from '../../shared/audio-feedback.js';
 import { showErrorModal } from './error-modal.js';
 
 /** @type {L.Map|null} */
