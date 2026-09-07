@@ -4,6 +4,16 @@ import { migrateTokenFromLocalStorage, getMeta, getCachedEmployees, countCachedE
 import { identifyEmployee as matchDescriptor } from './terminal-offline/matcher.js';
 import { heartbeat, syncEmployees, getFaceConfig, TerminalAuthError } from './terminal-offline/sync.js';
 import { getEmployeeStatus, enqueueMark, flushQueue, countPendingEvents, countConflictEvents } from './terminal-offline/queue.js';
+import {
+    updateClock,
+    updateIdleDate,
+    setTerminalVideoState,
+    setIdStatusDot,
+    showCaptureProgress,
+    updateCaptureProgress,
+    hideCaptureProgress,
+    finishCaptureProgress,
+} from './terminal/ui-feedback.js';
 
 document.addEventListener("DOMContentLoaded", () => {
     // ============================================================================
@@ -34,18 +44,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const identificationStatus = document.getElementById("identificationStatus");
 
-    const terminalHeaderClock = document.getElementById("terminalHeaderClock");
-    const terminalVideoWrap   = document.getElementById("terminalVideoWrap");
-    const idStatusDot         = document.getElementById("idStatusDot");
-    const idleClock           = document.getElementById("idleClock");
-    const idleDate            = document.getElementById("idleDate");
     const idleSyncStatus      = document.getElementById("idleSyncStatus");
     const btnForceSync        = document.getElementById("btnForceSync");
-
-    const terminalCaptureProgress = document.getElementById("terminalCaptureProgress");
-    const terminalCaptureDots     = terminalCaptureProgress
-        ? Array.from(terminalCaptureProgress.querySelectorAll(".capture-dot"))
-        : [];
 
     const typeButtons   = document.querySelectorAll(".terminal-type-btn");
     const btnCancel      = document.getElementById("btnCancelIdentification");
@@ -194,94 +194,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================================
     // RELOJ EN TIEMPO REAL
     // ============================================================================
-    function updateClock() {
-        const now = new Date();
-        const day   = String(now.getDate()).padStart(2, "0");
-        const month = String(now.getMonth() + 1).padStart(2, "0");
-        const year  = now.getFullYear();
-        const dateStr = `${day}/${month}/${year}`;
-        const timeStr = now.toLocaleTimeString("es-BO", {
-            hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
-        });
-        if (terminalHeaderClock) {
-            terminalHeaderClock.innerHTML =
-                `<span class="clock-date">${dateStr}</span><span class="clock-time">${timeStr}</span>`;
-        }
-        if (idleClock) idleClock.textContent = timeStr;
-    }
     updateClock();
     setInterval(updateClock, 1000);
-
-    function updateIdleDate() {
-        if (!idleDate) return;
-        const now = new Date();
-        const day   = String(now.getDate()).padStart(2, "0");
-        const month = String(now.getMonth() + 1).padStart(2, "0");
-        const year  = now.getFullYear();
-        const weekday = now.toLocaleDateString("es-BO", { weekday: "long" });
-        idleDate.textContent = `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${day}/${month}/${year}`;
-    }
-
-    // ============================================================================
-    // ESTADO VISUAL DEL VIDEO
-    // ============================================================================
-    function setTerminalVideoState(stateClass) {
-        if (!terminalVideoWrap) return;
-        terminalVideoWrap.classList.remove(
-            "video-wrapper--detecting",
-            "video-wrapper--face-found",
-            "video-wrapper--success",
-            "video-wrapper--error"
-        );
-        if (stateClass) terminalVideoWrap.classList.add(`video-wrapper--${stateClass}`);
-    }
-
-    function setIdStatusDot(dotClass) {
-        if (!idStatusDot) return;
-        idStatusDot.classList.remove(
-            "id-status-dot--searching",
-            "id-status-dot--processing",
-            "id-status-dot--found",
-            "id-status-dot--error"
-        );
-        // detecting → searching (naranja), face-found → processing (teal), success → found (verde)
-        const cssMap = { detecting: "searching", "face-found": "processing", success: "found", error: "error" };
-        const cssClass = cssMap[dotClass] || dotClass;
-        if (cssClass) idStatusDot.classList.add(`id-status-dot--${cssClass}`);
-    }
-
-    // ============================================================================
-    // PROGRESO DE CAPTURA FACIAL
-    // ============================================================================
-    function showCaptureProgress() {
-        if (!terminalCaptureProgress) return;
-        terminalCaptureDots.forEach(dot => dot.classList.remove("capture-dot--filled"));
-        terminalCaptureProgress.classList.remove("hidden");
-    }
-
-    function updateCaptureProgress(count) {
-        terminalCaptureDots.forEach((dot, i) => {
-            dot.classList.toggle("capture-dot--filled", i < count);
-        });
-    }
-
-    function hideCaptureProgress() {
-        if (!terminalCaptureProgress) return;
-        terminalCaptureProgress.classList.add("hidden");
-        terminalCaptureDots.forEach(dot => {
-            dot.classList.remove("capture-dot--filled", "capture-dot--success", "capture-dot--error");
-        });
-    }
-
-    async function finishCaptureProgress(outcome) {
-        // Asegurar que los 5 dots están visibles con el color del resultado
-        terminalCaptureDots.forEach(dot => {
-            dot.classList.remove("capture-dot--filled", "capture-dot--success", "capture-dot--error");
-            dot.classList.add(`capture-dot--${outcome}`);
-        });
-        await sleep(400);
-        hideCaptureProgress();
-    }
 
     // ============================================================================
     // IDLE — gestión de reposo
