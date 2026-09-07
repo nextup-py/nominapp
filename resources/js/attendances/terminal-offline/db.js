@@ -149,6 +149,11 @@ export async function getCachedEmployees() {
     return db.getAll('employees_cache');
 }
 
+/** @returns {Promise<number>} Cantidad de empleados cacheados — 0 indica que el terminal nunca sincronizó (o quedó sin candidatos). */
+export async function countCachedEmployees() {
+    return (await getCachedEmployees()).length;
+}
+
 /** @param {number} employeeId @returns {Promise<object|undefined>} */
 export async function getCachedEmployee(employeeId) {
     const db = await getDb();

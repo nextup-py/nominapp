@@ -359,6 +359,14 @@ const statusBar           = document.getElementById("statusBar");
     function buildDetailedError(rawMessage) {
         if (!rawMessage) return "No se pudo completar la marcación. Por favor, intente nuevamente.";
         const msg = rawMessage.toLowerCase();
+        // Chequeo primero — sin esto, el mensaje específico lanzado cuando el propio
+        // perfil todavía no sincronizó (ver identifyEmployee(), "ownEmployee" null)
+        // no matcheaba ninguna de las ramas de abajo y caía al genérico "error
+        // inesperado", escondiendo que el problema real es de sincronización, no de
+        // reconocimiento facial.
+        if (msg.includes("sincronizó tu perfil") || msg.includes("conectate a internet")) {
+            return "Tu perfil todavía no se sincronizó con este dispositivo. Conectate a internet y volvé a intentar en unos segundos.";
+        }
         if (msg.includes("ambiguo") || msg.includes("ambiguous") || msg.includes("múltiple") || msg.includes("multiple face")) {
             return "Se detectaron múltiples rostros o el rostro no es claro. Asegúrese de estar solo frente a la cámara y reposicione su cara.";
         }
@@ -2265,18 +2273,33 @@ const statusBar           = document.getElementById("statusBar");
                     if (employee?.company_name) {
                         document.title = `${employee.company_name} — Marcación Facial`;
                     }
+
+                    // Sin descriptor propio cacheado, cualquier intento de marcar va a
+                    // fallar sin importar cuántas veces lo intente el empleado — mostrarlo
+                    // acá (en vez de esperar a que falle un intento real) deja claro que el
+                    // problema es de sincronización, no de la cámara/rostro. Se resuelve
+                    // ANTES de tocar getOwnStatus() (no en paralelo) para que ese resultado
+                    // no pise este aviso con "Todavía no marcaste hoy" — getOwnStatus() no
+                    // depende de own_employee, así que sin este orden ganaría la carrera.
+                    if (!employee) {
+                        if (splashStatusEl) {
+                            splashStatusEl.textContent = "⚠ Tu perfil todavía no se sincronizó. Conectate a internet.";
+                            splashStatusEl.classList.remove("hidden");
+                        }
+                        return;
+                    }
+
+                    getOwnStatus()
+                        .then((status) => {
+                            if (!splashStatusEl) return;
+                            splashStatusEl.textContent = status.last_event
+                                ? `Hoy: ${translateEventType(status.last_event)}${status.last_event_time ? ` · ${status.last_event_time}` : ""}`
+                                : "Todavía no marcaste hoy";
+                            splashStatusEl.classList.remove("hidden");
+                        })
+                        .catch(() => {}); // sin red y sin nada cacheado todavía — se deja oculto, no vale la pena mostrar un error acá
                 })
                 .catch(() => {}); // sin caché todavía — se queda con el saludo genérico
-
-            getOwnStatus()
-                .then((status) => {
-                    if (!splashStatusEl) return;
-                    splashStatusEl.textContent = status.last_event
-                        ? `Hoy: ${translateEventType(status.last_event)}${status.last_event_time ? ` · ${status.last_event_time}` : ""}`
-                        : "Todavía no marcaste hoy";
-                    splashStatusEl.classList.remove("hidden");
-                })
-                .catch(() => {}); // sin red y sin nada cacheado todavía — se deja oculto, no vale la pena mostrar un error acá
         };
         refreshOwnEmployeeUi();
 
