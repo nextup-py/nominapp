@@ -1,12 +1,13 @@
 /**
  * =============================================================================
- * MARK.JS — FEEDBACK SONORO (Web Audio API)
+ * FEEDBACK SONORO (Web Audio API) — compartido entre mark.js y terminal.js
  * =============================================================================
  *
- * @fileoverview Beeps de éxito/error para la marcación facial. Extraído de
- * mark.js como parte de su descomposición en módulos más chicos — mismo
- * comportamiento que el código original, incluyendo el guard de interacción
- * del usuario (los navegadores bloquean Web Audio hasta el primer gesto).
+ * @fileoverview Beeps de éxito/error para la marcación facial. Extraído
+ * originalmente de mark.js (mismo comportamiento que ese código original,
+ * incluyendo el guard de interacción del usuario — los navegadores bloquean
+ * Web Audio hasta el primer gesto) y luego reutilizado en terminal.js, que
+ * tenía una copia byte-por-byte idéntica de esta misma lógica.
  */
 
 /** @type {AudioContext|null} */
@@ -21,6 +22,11 @@ let userHasInteracted = false;
 /** Marca que el usuario ya interactuó con la página (habilita el audio). */
 export function markUserInteracted() {
     userHasInteracted = true;
+}
+
+/** @returns {boolean} Si el usuario ya interactuó con la página. */
+export function hasUserInteracted() {
+    return userHasInteracted;
 }
 
 /** @returns {AudioContext} */

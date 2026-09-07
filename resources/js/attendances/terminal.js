@@ -1,4 +1,5 @@
 import { captureFaceSamples } from '../shared/face-capture-core.js';
+import { markUserInteracted, hasUserInteracted, playBeep } from '../shared/audio-feedback.js';
 import { migrateTokenFromLocalStorage, getMeta, getCachedEmployees, countCachedEmployees, clearTerminalState } from './terminal-offline/db.js';
 import { identifyEmployee as matchDescriptor } from './terminal-offline/matcher.js';
 import { heartbeat, syncEmployees, getFaceConfig, TerminalAuthError } from './terminal-offline/sync.js';
@@ -144,7 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
         idleTimer:              null,
         presenceCheckInterval:  null,
         isIdle:                 false,
-        userHasInteracted:      false,  // vibración solo permitida tras gesto del usuario
         backgroundSyncStarted:  false,  // evita registrar los setInterval de sync más de una vez
         consecutiveFailures:    0,      // intentos de reconocimiento fallidos seguidos — habilita la búsqueda manual por CI
         manualCandidate:        null,   // empleado elegido en la búsqueda manual — acota identifyEmployee() a un único candidato
@@ -785,7 +785,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     terminalState.manualCandidate = null;
                     hideManualSearchLink();
 
-                    if (terminalState.userHasInteracted) navigator.vibrate?.(80);
+                    if (hasUserInteracted()) navigator.vibrate?.(80);
                     stopAutoIdentification();
 
                     await finishCaptureProgress("success");
@@ -1043,47 +1043,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================================
-    // AUDIO FEEDBACK (Web Audio API — sin archivos, sin permisos)
-    // ============================================================================
-    let audioCtx = null;
-
-    function getAudioCtx() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        return audioCtx;
-    }
-
-    function playTone(freq, duration, gain = 0.25, delay = 0) {
-        try {
-            const ctx = getAudioCtx();
-            ctx.resume();
-            const osc  = ctx.createOscillator();
-            const env  = ctx.createGain();
-            osc.connect(env);
-            env.connect(ctx.destination);
-            osc.type = "sine";
-            osc.frequency.value = freq;
-            const t = ctx.currentTime + delay;
-            env.gain.setValueAtTime(gain, t);
-            env.gain.exponentialRampToValueAtTime(0.001, t + duration);
-            osc.start(t);
-            osc.stop(t + duration + 0.01);
-        } catch (_) { /* audio no disponible */ }
-    }
-
-    function playBeep(type) {
-        if (!terminalState.userHasInteracted) return;
-        if (type === "success") {
-            // Doble beep ascendente — confirmación positiva
-            playTone(880,  0.08, 0.22, 0.0);
-            playTone(1100, 0.12, 0.22, 0.1);
-        } else if (type === "error") {
-            // Beep grave descendente — advertencia
-            playTone(440, 0.08, 0.22, 0.0);
-            playTone(330, 0.14, 0.22, 0.1);
-        }
-    }
-
-    // ============================================================================
     // PANTALLAS DE RESULTADO
     // ============================================================================
     /**
@@ -1286,7 +1245,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Marcar interacción del usuario para habilitar Vibration API
     const markInteraction = () => {
-        terminalState.userHasInteracted = true;
+        markUserInteracted();
         document.removeEventListener("click",      markInteraction);
         document.removeEventListener("touchstart", markInteraction);
     };
