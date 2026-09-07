@@ -29,6 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->profile(isSimple: false)
             ->font('Poppins')
+            ->favicon(asset('icons/favicon.ico'))
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::Teal,

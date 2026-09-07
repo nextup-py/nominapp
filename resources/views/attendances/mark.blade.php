@@ -7,6 +7,7 @@
     <title>{{ $title }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="color-scheme" content="light dark">
+    <x-favicon-links />
     @vite('resources/css/attendances/styles.css')
     @vite('resources/js/attendances/mark.js')
 </head>

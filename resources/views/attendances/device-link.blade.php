@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Vincular dispositivo — Marcación de asistencia</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <x-favicon-links />
     @vite('resources/js/attendances/device-link.js')
     @vite('resources/css/attendances/device-link.css')
 </head>
