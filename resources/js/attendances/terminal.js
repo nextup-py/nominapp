@@ -21,6 +21,12 @@ import {
     refreshLastSyncLabel,
 } from './terminal/sync-status-ui.js';
 import { buildDetailedError } from './terminal/text-helpers.js';
+import {
+    showManualSearchLink,
+    hideManualSearchLink,
+    closeManualSearch,
+    initManualSearch,
+} from './terminal/manual-search.js';
 
 document.addEventListener("DOMContentLoaded", () => {
     // ============================================================================
@@ -59,14 +65,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnRetry       = document.getElementById("btnRetry");
     const btnReload      = document.getElementById("btnReload");
     const btnThemeToggle = document.getElementById("btnThemeToggle");
-
-    // Búsqueda manual por CI (fallback cuando el reconocimiento facial falla seguido)
-    const btnManualSearch       = document.getElementById("btnManualSearch");
-    const manualSearchOverlay   = document.getElementById("manualSearchOverlay");
-    const manualSearchInput     = document.getElementById("manualSearchInput");
-    const manualSearchResults   = document.getElementById("manualSearchResults");
-    const manualSearchEmpty     = document.getElementById("manualSearchEmpty");
-    const btnManualSearchCancel = document.getElementById("btnManualSearchCancel");
 
     // Day complete screen elements
     const dayCompleteEmployeePhoto  = document.getElementById("dayCompleteEmployeePhoto");
@@ -748,95 +746,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================================
     // BÚSQUEDA MANUAL POR CI — fallback cuando el reconocimiento facial falla seguido
     // ============================================================================
-    /**
-     * NO reemplaza la verificación facial: elegir un candidato acá solo acota
-     * identifyEmployee() a esa única persona (ver terminalState.manualCandidate) — la
-     * cámara sigue activa y el empleado igual tiene que superar el umbral de distancia
-     * normal contra ese descriptor específico antes de que se registre cualquier marcación.
-     */
-    const MAX_MANUAL_SEARCH_RESULTS = 8;
-
-    function showManualSearchLink() {
-        if (btnManualSearch) btnManualSearch.classList.remove("hidden");
-    }
-
-    function hideManualSearchLink() {
-        if (btnManualSearch) btnManualSearch.classList.add("hidden");
-    }
-
-    function openManualSearch() {
-        if (!manualSearchOverlay) return;
-        manualSearchOverlay.classList.remove("hidden");
-        if (manualSearchInput) {
-            manualSearchInput.value = "";
-            manualSearchInput.focus();
-        }
-        renderManualSearchResults("");
-    }
-
-    function closeManualSearch() {
-        if (manualSearchOverlay) manualSearchOverlay.classList.add("hidden");
-    }
-
-    async function renderManualSearchResults(query) {
-        if (!manualSearchResults) return;
-        manualSearchResults.innerHTML = "";
-
-        const digits = (query || "").trim();
-        if (digits.length < 2) {
-            if (manualSearchEmpty) manualSearchEmpty.classList.add("hidden");
-            return;
-        }
-
-        const candidates = await getCachedEmployees();
-        const matches = candidates
-            .filter((employee) => employee.ci && String(employee.ci).includes(digits))
-            .slice(0, MAX_MANUAL_SEARCH_RESULTS);
-
-        if (manualSearchEmpty) manualSearchEmpty.classList.toggle("hidden", matches.length > 0);
-
-        matches.forEach((employee) => {
-            const fullName = `${employee.first_name || ""} ${employee.last_name || ""}`.trim() || "Empleado";
-            const item = document.createElement("button");
-            item.type = "button";
-            item.className = "manual-search-result";
-            item.setAttribute("role", "option");
-            item.innerHTML = `
-                <img src="${employee.photo_thumbnail || "/images/default-avatar.png"}" alt="" aria-hidden="true">
-                <span>
-                    <span class="manual-search-result-name">${fullName}</span><br>
-                    <span class="manual-search-result-ci">CI: ${employee.ci}</span>
-                </span>
-            `;
-            item.addEventListener("click", () => selectManualCandidate(employee));
-            manualSearchResults.appendChild(item);
-        });
-    }
-
-    function selectManualCandidate(employee) {
-        terminalState.manualCandidate = employee;
-        terminalState.consecutiveFailures = 0;
-        hideManualSearchLink();
-        closeManualSearch();
-        updateStatus(`Mirá la cámara para confirmar que sos ${employee.first_name || "vos"}...`);
-    }
-
-    if (btnManualSearch) {
-        btnManualSearch.addEventListener("click", openManualSearch);
-    }
-    if (btnManualSearchCancel) {
-        btnManualSearchCancel.addEventListener("click", closeManualSearch);
-    }
-    if (manualSearchOverlay) {
-        manualSearchOverlay.addEventListener("click", (event) => {
-            if (event.target === manualSearchOverlay) closeManualSearch();
-        });
-    }
-    if (manualSearchInput) {
-        manualSearchInput.addEventListener("input", (event) => {
-            renderManualSearchResults(event.target.value);
-        });
-    }
+    initManualSearch({
+        onSelect: (employee) => {
+            terminalState.manualCandidate = employee;
+            terminalState.consecutiveFailures = 0;
+            updateStatus(`Mirá la cámara para confirmar que sos ${employee.first_name || "vos"}...`);
+        },
+    });
 
     // ============================================================================
     // SELECCIÓN DE TIPO POST-IDENTIFICACIÓN (solo si hay múltiples eventos válidos)
