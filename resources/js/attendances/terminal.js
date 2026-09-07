@@ -1,5 +1,5 @@
 import { captureFaceSamples } from '../shared/face-capture-core.js';
-import { migrateTokenFromLocalStorage, getMeta, getCachedEmployees, clearTerminalState } from './terminal-offline/db.js';
+import { migrateTokenFromLocalStorage, getMeta, getCachedEmployees, countCachedEmployees, clearTerminalState } from './terminal-offline/db.js';
 import { identifyEmployee as matchDescriptor } from './terminal-offline/matcher.js';
 import { heartbeat, syncEmployees, getFaceConfig, TerminalAuthError } from './terminal-offline/sync.js';
 import { getEmployeeStatus, enqueueMark, flushQueue, countPendingEvents, countConflictEvents } from './terminal-offline/queue.js';
@@ -815,8 +815,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     terminalState.inNotRecognizedCooldown = true;
                     setTerminalVideoState("detecting");
                     setIdStatusDot("detecting");
-                    updateStatus("Rostro no reconocido. Mantenga el rostro quieto frente a la cámara.");
-                    console.log("No se pudo identificar");
+                    // `result.reason` distingue "no hay nadie cacheado" (problema del terminal,
+                    // no del empleado) de un intento normal que no matcheó — antes se pisaban
+                    // ambos casos con el mismo texto genérico, escondiendo la falla real de sync.
+                    const idleStatusMessages = {
+                        no_candidates: "Terminal sin empleados sincronizados. Contacte al administrador.",
+                        ambiguous: "Rostro ambiguo. Reposicione su cara e intente de nuevo.",
+                        no_match: "Rostro no reconocido. Mantenga el rostro quieto frente a la cámara.",
+                    };
+                    updateStatus(idleStatusMessages[result.reason] || result.message || "Rostro no reconocido. Mantenga el rostro quieto frente a la cámara.");
+                    console.log("No se pudo identificar", result.reason);
 
                     // Tras varios intentos fallidos seguidos, ofrecer la búsqueda manual por CI
                     // en vez de dejar al empleado atrapado repitiendo el mismo intento sin salida.
@@ -1299,6 +1307,17 @@ document.addEventListener("DOMContentLoaded", () => {
      * refleje la cola real en IndexedDB, no solo el último resultado puntual.
      */
     async function refreshIdleSyncStatus() {
+        // Prioridad más alta: sin empleados cacheados el terminal no puede identificar
+        // a NADIE — más grave que marcaciones pendientes/en conflicto, que sí sabe
+        // resolver localmente. Antes esto solo se notaba al fallar un intento real de
+        // reconocimiento, con un mensaje genérico que no distinguía la causa.
+        const employeeCount = await countCachedEmployees();
+        if (employeeCount === 0) {
+            updateIdleSyncStatus("⚠ Sin empleados sincronizados — verifique la conexión o contacte al administrador");
+            await refreshLastSyncLabel();
+            return;
+        }
+
         const [pending, conflicts] = await Promise.all([countPendingEvents(), countConflictEvents()]);
         if (conflicts > 0) {
             updateIdleSyncStatus(`${conflicts} marcación(es) requieren revisión`);
