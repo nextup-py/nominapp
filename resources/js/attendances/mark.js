@@ -12,6 +12,7 @@ import {
     dismissConflictEvents,
 } from './mobile-offline/queue.js';
 import { translateEventType, buildDetailedError } from './mark/text-helpers.js';
+import { markUserInteracted, playBeep } from './mark/audio-feedback.js';
 
 /**
  * =============================================================================
@@ -259,9 +260,6 @@ const statusBar           = document.getElementById("statusBar");
     /** @type {number|null} ID del setInterval del dwell de auto-identificación */
     let autoIdDotInterval = null;
 
-    /** @type {boolean} Indica si el usuario ya ha interactuado (requerido por Web Audio API) */
-    let userHasInteracted = false;
-
     /** @type {boolean} Indica si el modal de error está visible (pausa el dwell de auto-identificación) */
     let errorModalVisible = false;
 
@@ -279,9 +277,6 @@ const statusBar           = document.getElementById("statusBar");
 
     /** @type {number|null} Timeout que restablece el estado de confirmación de duplicado */
     let duplicateConfirmTimeout = null;
-
-    /** @type {AudioContext|null} Contexto de audio compartido */
-    let audioCtx = null;
 
     /** @type {boolean} Indica si ya se agregó el listener de teclado del modal de error */
     let errorKeyListenerAdded = false;
@@ -347,43 +342,6 @@ const statusBar           = document.getElementById("statusBar");
     const logError = (message, errorObj) => {
         errorObj !== undefined ? console.error("[Error]", message, errorObj) : console.error("[Error]", message);
     };
-
-    // --------------------------------------------------------------------------
-    // AUDIO FEEDBACK (Web Audio API)
-    // --------------------------------------------------------------------------
-    function getAudioCtx() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        return audioCtx;
-    }
-
-    function playTone(freq, duration, gain = 0.25, delay = 0) {
-        try {
-            const ctx = getAudioCtx();
-            ctx.resume();
-            const osc = ctx.createOscillator();
-            const env = ctx.createGain();
-            osc.connect(env);
-            env.connect(ctx.destination);
-            osc.type = "sine";
-            osc.frequency.value = freq;
-            const t = ctx.currentTime + delay;
-            env.gain.setValueAtTime(gain, t);
-            env.gain.exponentialRampToValueAtTime(0.001, t + duration);
-            osc.start(t);
-            osc.stop(t + duration + 0.01);
-        } catch (_) { /* audio no disponible */ }
-    }
-
-    function playBeep(type) {
-        if (!userHasInteracted) return;
-        if (type === "success") {
-            playTone(880,  0.08, 0.22, 0.0);
-            playTone(1100, 0.12, 0.22, 0.1);
-        } else if (type === "error") {
-            playTone(440, 0.08, 0.22, 0.0);
-            playTone(330, 0.14, 0.22, 0.1);
-        }
-    }
 
     // --------------------------------------------------------------------------
     // BANNER OFFLINE
@@ -2252,7 +2210,7 @@ const statusBar           = document.getElementById("statusBar");
             if (splashHandled) return;
             splashHandled = true;
             clearInterval(splashClockInterval);
-            userHasInteracted = true;
+            markUserInteracted();
             hideSplash(async () => {
                 try {
                     await startCamera();
@@ -2278,7 +2236,7 @@ const statusBar           = document.getElementById("statusBar");
     // Fallback de cámara para iOS/Safari
     if (cameraFallback) {
         cameraFallback.addEventListener("click", async () => {
-            userHasInteracted = true;
+            markUserInteracted();
             cameraFallback.classList.add("hidden");
             try {
                 await startCamera();
@@ -2307,7 +2265,7 @@ const statusBar           = document.getElementById("statusBar");
 
     // Solicitar GPS manualmente (usado como retry desde el modal de error)
     function requestGPSManual() {
-        userHasInteracted = true;
+        markUserInteracted();
         if (!navigator.geolocation) {
             const errorMsg = "Este dispositivo no puede obtener la ubicación GPS. Si el problema persiste, contacte a RRHH.";
             logStatus(errorMsg);
@@ -2498,7 +2456,7 @@ const statusBar           = document.getElementById("statusBar");
 
     // Evento: Botones visuales de tipo de evento — marcar interacción de usuario
     eventBtns.forEach((btn) => {
-        btn.addEventListener("click", () => { userHasInteracted = true; }, { once: true });
+        btn.addEventListener("click", () => { markUserInteracted(); }, { once: true });
     });
 
     // Evento: Botón actualizar ubicación del mini-mapa
