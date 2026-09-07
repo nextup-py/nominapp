@@ -22,6 +22,16 @@ import {
     resetLocationUi,
     initGps,
 } from './mark/gps.js';
+import {
+    updateClock,
+    setVideoState,
+    setStatusBar,
+    getCaptureDotCount,
+    showCaptureProgress,
+    updateCaptureProgress,
+    hideCaptureProgress,
+    finishCaptureProgress,
+} from './mark/ui-feedback.js';
 
 /**
  * =============================================================================
@@ -85,10 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const eventTypeEl = document.getElementById("eventType");
 
     // New UI elements added in the redesign
-    const videoWrap       = document.getElementById("videoWrap");
-    const statusDot       = document.getElementById("statusDot");
-    const statusText      = document.getElementById("statusText");
-    const headerClock     = document.getElementById("headerClock");
     const eventBtns       = document.querySelectorAll(".event-btn");
 
     // Step sections — wizard de un solo screen
@@ -103,9 +109,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const step2LastEventEl  = document.getElementById("step2LastEvent");
     const step2BtnBack      = document.getElementById("step2BtnBack");
 
-const statusBar           = document.getElementById("statusBar");
-    const captureProgress     = document.getElementById("captureProgress");
-    const captureDots         = captureProgress ? Array.from(captureProgress.querySelectorAll(".capture-dot")) : [];
     const splashOverlay       = document.getElementById("splashOverlay");
     const markHint            = document.getElementById("markHint");
     const btnSyncNow          = document.getElementById("btnSyncNow");
@@ -434,93 +437,8 @@ const statusBar           = document.getElementById("statusBar");
     // --------------------------------------------------------------------------
     // RELOJ EN TIEMPO REAL
     // --------------------------------------------------------------------------
-    function updateClock() {
-        if (headerClock) {
-            const now = new Date();
-            const day   = String(now.getDate()).padStart(2, "0");
-            const month = String(now.getMonth() + 1).padStart(2, "0");
-            const year  = now.getFullYear();
-            const dateStr = `${day}/${month}/${year}`;
-            const timeStr = now.toLocaleTimeString("es-BO", {
-                hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
-            });
-            headerClock.innerHTML =
-                `<span class="clock-date">${dateStr}</span><span class="clock-time">${timeStr}</span>`;
-        }
-    }
     updateClock();
     setInterval(updateClock, 1000);
-
-    // --------------------------------------------------------------------------
-    // ESTADO VISUAL DEL VIDEO
-    // --------------------------------------------------------------------------
-    function setVideoState(stateClass) {
-        if (!videoWrap) return;
-        videoWrap.classList.remove(
-            "video-wrap--detecting", "video-wrap--face-found",
-            "video-wrap--success", "video-wrap--error"
-        );
-        if (stateClass) videoWrap.classList.add(`video-wrap--${stateClass}`);
-    }
-
-    function setStatusBar(text, dotClass) {
-        if (statusText) {
-            statusText.classList.remove("status-text--new");
-            void statusText.offsetWidth; // reiniciar animación
-            statusText.textContent = text;
-            statusText.classList.add("status-text--new");
-        }
-        if (statusBar) {
-            statusBar.classList.remove("status-bar--detecting", "status-bar--found", "status-bar--error");
-            if (dotClass) statusBar.classList.add(`status-bar--${dotClass}`);
-        }
-        if (statusDot) {
-            statusDot.classList.remove(
-                "status-dot--active", "status-dot--found",
-                "status-dot--success", "status-dot--error"
-            );
-            const cssMap = { detecting: "active", found: "found", success: "success", error: "error" };
-            const cssClass = cssMap[dotClass] ?? dotClass;
-            if (cssClass) statusDot.classList.add(`status-dot--${cssClass}`);
-        }
-    }
-
-    // --------------------------------------------------------------------------
-    // PROGRESO DE CAPTURA FACIAL
-    // --------------------------------------------------------------------------
-    function showCaptureProgress() {
-        if (!captureProgress) return;
-        captureDots.forEach(dot => dot.classList.remove("capture-dot--filled"));
-        captureProgress.classList.remove("hidden");
-    }
-
-    function updateCaptureProgress(count) {
-        captureDots.forEach((dot, i) => {
-            dot.classList.toggle("capture-dot--filled", i < count);
-        });
-    }
-
-    function hideCaptureProgress() {
-        if (!captureProgress) return;
-        captureProgress.classList.add("hidden");
-        captureDots.forEach(dot => dot.classList.remove("capture-dot--filled", "capture-dot--success", "capture-dot--error"));
-    }
-
-    /**
-     * Finaliza la animación de captura mostrando todos los dots en el color del resultado
-     * (éxito = verde, error = rojo) durante 400ms antes de ocultarlos.
-     * @param {"success"|"error"} outcome
-     */
-    async function finishCaptureProgress(outcome) {
-        if (!captureProgress) return;
-        captureDots.forEach(dot => {
-            dot.classList.remove("capture-dot--filled", "capture-dot--success", "capture-dot--error");
-            dot.classList.add(`capture-dot--${outcome}`);
-        });
-        captureProgress.classList.remove("hidden");
-        await sleep(400);
-        hideCaptureProgress();
-    }
 
     // ==========================================================================
     // FUNCIONES DE VERIFICACIÓN
@@ -1248,7 +1166,7 @@ const statusBar           = document.getElementById("statusBar");
         autoIdDotInterval = setInterval(() => {
             dotsFilled++;
             updateCaptureProgress(dotsFilled);
-            if (dotsFilled >= captureDots.length) {
+            if (dotsFilled >= getCaptureDotCount()) {
                 clearInterval(autoIdDotInterval);
                 autoIdDotInterval = null;
                 runIdentification(true);
