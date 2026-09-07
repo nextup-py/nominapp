@@ -20,6 +20,7 @@ import {
     refreshIdleSyncStatus,
     refreshLastSyncLabel,
 } from './terminal/sync-status-ui.js';
+import { buildDetailedError } from './terminal/text-helpers.js';
 
 document.addEventListener("DOMContentLoaded", () => {
     // ============================================================================
@@ -300,32 +301,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setTerminalVideoState("detecting");
     }
 
-
-    // ============================================================================
-    // MENSAJES DE ERROR DETALLADOS
-    // ============================================================================
-    function buildDetailedError(rawMessage) {
-        if (!rawMessage) return "No se pudo completar la marcación. Por favor, intente nuevamente.";
-        const msg = rawMessage.toLowerCase();
-        if (msg.includes("no identificado") || msg.includes("not found") || msg.includes("no match")) {
-            return "No se pudo reconocer su rostro. Asegúrese de estar frente a la cámara con buena iluminación, sin lentes de sol ni gorras, y mantenga el rostro quieto.";
-        }
-        if (msg.includes("descriptor") || msg.includes("muestra") || msg.includes("sample")) {
-            return "No se detectó un rostro válido. Acerque el rostro a la cámara (30-60 cm) y asegúrese de tener buena iluminación frontal.";
-        }
-        if (msg.includes("conexión") || msg.includes("network") || msg.includes("fetch")) {
-            return !navigator.onLine
-                ? "Sin conexión a internet. Verifique la red del dispositivo y vuelva a intentar."
-                : "Error de conexión al servidor. Verifique que el dispositivo tenga acceso a la red y vuelva a intentar.";
-        }
-        if (msg.includes("csrf") || msg.includes("419")) {
-            return "La sesión expiró. Por favor, recargue la página para continuar.";
-        }
-        if (msg.includes("event") || msg.includes("evento") || msg.includes("allowed")) {
-            return "No hay tipos de marcación disponibles para este empleado en este momento. Consulte con el departamento de RRHH.";
-        }
-        return rawMessage;
-    }
 
     // ============================================================================
     // PANTALLA DE CARGA
