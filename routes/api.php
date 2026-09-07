@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Route;
 
 // Terminal compartido por sucursal — bearer token emitido al provisionarlo
 // (ver TerminalSetupController). Ability requerida: 'terminal:sync'.
-Route::prefix('v1/terminal')->name('api.terminal.')->middleware(['auth:sanctum'])->group(function () {
+Route::prefix('v1/terminal')->name('api.terminal.')->middleware(['auth:sanctum', 'terminal.active'])->group(function () {
     Route::get('/employees/sync', [TerminalEmployeeSyncController::class, 'index'])
         ->middleware('ability:terminal:sync')
         ->name('employees.sync');
