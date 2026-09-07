@@ -12,6 +12,7 @@ export default defineConfig({
                 'resources/js/attendances/mark.js',
                 'resources/js/attendances/device-link.js',
                 'resources/css/attendances/styles.css',
+                'resources/css/attendances/device-link.css',
                 'resources/js/attendances/terminal.js',
                 'resources/css/attendances/terminal.css',
                 'resources/js/shared/capture-face.js',
