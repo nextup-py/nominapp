@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MobileLinkController;
+use App\Http\Middleware\EnsureTerminalIsActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
+            'terminal.active' => EnsureTerminalIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
