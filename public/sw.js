@@ -15,7 +15,7 @@
  * y la cola de eventos viven en JS (terminal-offline/ y mobile-offline/), no acá.
  */
 
-const CACHE_VERSION = 'nominapp-attendance-v1';
+const CACHE_VERSION = 'nominapp-attendance-v2';
 
 /**
  * Contenido estático que nunca cambia sin un deploy — cache-first.
@@ -29,6 +29,8 @@ const CACHE_FIRST_PATTERNS = [
     /^\/models\//, // modelos de face-api.js (tinyFaceDetector, faceLandmark68, faceRecognition)
     /^\/js\/face-api\.min\.js$/,
     /^\/build\/assets\//, // todos los bundles JS/CSS de Vite (nombres con hash de contenido — seguros de cachear indefinidamente)
+    /^\/icons\//, // favicon + set de íconos PWA (Task 6) — deben estar disponibles offline en el launcher
+    /^\/images\//, // ej. default-avatar.png, usado como fallback de foto en terminal.js
 ];
 
 /** Shell HTML del terminal y del dispositivo — stale-while-revalidate para que un reload offline funcione. */

@@ -6,49 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Configurar terminal — {{ $terminal->name }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            min-height: 100dvh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 2rem;
-        }
-        .container { max-width: 480px; width: 100%; }
-        .icon {
-            width: 80px; height: 80px;
-            border-radius: 50%;
-            background: #1e293b;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 1.5rem;
-            border: 2px solid #38bdf8;
-        }
-        .icon svg { width: 40px; height: 40px; color: #38bdf8; }
-        h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; }
-        p { font-size: 1rem; color: #94a3b8; line-height: 1.6; margin-bottom: 0.5rem; }
-        .terminal-meta { font-size: 0.875rem; color: #64748b; margin: 1rem 0 2rem; }
-        button {
-            font: inherit;
-            font-weight: 600;
-            font-size: 1rem;
-            padding: 0.85rem 1.75rem;
-            border-radius: 0.75rem;
-            border: none;
-            background: #38bdf8;
-            color: #0f172a;
-            cursor: pointer;
-        }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
-        button:not(:disabled):hover { background: #7dd3fc; }
-        .status { margin-top: 1.25rem; font-size: 0.9rem; min-height: 1.5rem; }
-        .status--error { color: #f87171; }
-        .status--success { color: #4ade80; }
-    </style>
+    <x-favicon-links />
+    @vite('resources/css/attendances/terminal-setup.css')
 </head>
 
 <body>

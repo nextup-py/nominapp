@@ -26,6 +26,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $isEnrollment ? 'Registro Facial' : 'Capturar Rostro' }} - {{ config('app.name', 'RRHH') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <x-favicon-links />
     <link rel="preconnect" href="https://unpkg.com">
     @vite($css)
 </head>
