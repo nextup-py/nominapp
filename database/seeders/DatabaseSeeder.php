@@ -19,9 +19,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
-            // Configuración del sistema (debe correr antes de seeders que dependan de settings)
-            SettingsSeeder::class,
-
             // Estructura organizacional
             CompanySeeder::class,
             ScheduleSeeder::class,

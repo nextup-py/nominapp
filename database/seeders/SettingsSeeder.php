@@ -42,13 +42,6 @@ class SettingsSeeder extends Seeder
             'face_enrollment_expiry_hours' => 48,
             'face_threshold' => 0.45,
             'face_min_confidence_gap' => 0.1,
-
-            // Terminal stale threshold
-            'terminal_stale_threshold_hours' => 24,
-
-            // Filament theming
-            'primary_color' => 'teal',
-            'font' => 'poppins',
         ]);
 
         $this->command->info('GeneralSettings sembrados.');
