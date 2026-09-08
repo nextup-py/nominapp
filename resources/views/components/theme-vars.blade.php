@@ -11,9 +11,17 @@
     rgba() literales en tokens.css (no var()-based), por eso se recalculan acá.
 --}}
 @php
-    $settings = app(\App\Settings\GeneralSettings::class);
-    $theme = \App\Support\ThemeResolver::primaryColorCss($settings->primary_color);
-    $fontFamily = \App\Support\ThemeResolver::fontFamily($settings->font);
+    try {
+        $settings = app(\App\Settings\GeneralSettings::class);
+        $colorKey = $settings->primary_color;
+        $fontKey = $settings->font;
+    } catch (\Throwable) {
+        $colorKey = \App\Support\ThemeResolver::DEFAULT_COLOR;
+        $fontKey = \App\Support\ThemeResolver::DEFAULT_FONT;
+    }
+
+    $theme = \App\Support\ThemeResolver::primaryColorCss($colorKey);
+    $fontFamily = \App\Support\ThemeResolver::fontFamily($fontKey);
 @endphp
 <style>
     :root {

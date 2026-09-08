@@ -32,3 +32,19 @@ it('cae al color Teal si el valor guardado no es una key curada válida', functi
 
     expect($panel->getColors()['primary'])->toBe(Color::Teal);
 });
+
+it('cae a Teal/Poppins si el settings store no está disponible al bootear el panel', function () {
+    // Simula la tabla `settings` inexistente/no poblada (fresh install o CI
+    // antes de migrar) sin dropear la tabla realmente: bindea una
+    // implementación que lanza al resolver GeneralSettings del container.
+    app()->bind(GeneralSettings::class, function () {
+        throw new RuntimeException('settings unavailable');
+    });
+
+    $provider = new AdminPanelProvider(app());
+    $panel = $provider->panel(Panel::make());
+
+    expect($panel->getColors()['primary'])->toBe(Color::Teal);
+
+    app()->forgetInstance(GeneralSettings::class);
+});
