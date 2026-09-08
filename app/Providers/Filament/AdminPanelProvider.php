@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Settings\GeneralSettings;
+use App\Support\ThemeResolver;
 use EightyNine\FilamentDocs\FilamentDocsPlugin;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -24,6 +26,8 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        $settings = app(GeneralSettings::class);
+
         $panel = $panel
             ->default()
             ->id('admin')
@@ -33,7 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(asset('icons/favicon.ico'))
             ->sidebarCollapsibleOnDesktop()
             ->colors([
-                'primary' => Color::Teal,
+                'primary' => ThemeResolver::colorPalette($settings->primary_color),
                 'secondary' => Color::Amber,
                 'success' => Color::Green,
                 'danger' => Color::Red,
@@ -85,8 +89,8 @@ class AdminPanelProvider extends PanelProvider
 
         if (file_exists(public_path('build/manifest.json'))) {
             $panel->font(
-                'Poppins',
-                url: Vite::asset('resources/css/shared/fonts/poppins.css'),
+                ThemeResolver::fontFamily($settings->font),
+                url: Vite::asset(ThemeResolver::fontAssetPath($settings->font)),
                 provider: LocalFontProvider::class,
             );
         }
