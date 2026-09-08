@@ -24,17 +24,12 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        $panel = $panel
             ->default()
             ->id('admin')
             ->path('')
             ->login()
             ->profile(isSimple: false)
-            ->font(
-                'Poppins',
-                url: Vite::asset('resources/css/shared/fonts.css'),
-                provider: LocalFontProvider::class,
-            )
             ->favicon(asset('icons/favicon.ico'))
             ->sidebarCollapsibleOnDesktop()
             ->colors([
@@ -87,5 +82,15 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+
+        if (file_exists(public_path('build/manifest.json'))) {
+            $panel->font(
+                'Poppins',
+                url: Vite::asset('resources/css/shared/fonts.css'),
+                provider: LocalFontProvider::class,
+            );
+        }
+
+        return $panel;
     }
 }
