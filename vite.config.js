@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+﻿import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
@@ -12,13 +12,16 @@ export default defineConfig({
                 'resources/js/attendances/mark.js',
                 'resources/js/attendances/device-link.js',
                 'resources/css/attendances/styles.css',
-                'resources/css/attendances/device-link.css',
                 'resources/js/attendances/terminal.js',
                 'resources/css/attendances/terminal.css',
                 'resources/css/attendances/terminal-setup.css',
                 'resources/js/shared/capture-face.js',
                 'resources/css/shared/capture-face.css',
-                'resources/css/shared/fonts.css',
+                'resources/css/shared/fonts/poppins.css',
+                'resources/css/shared/fonts/inter.css',
+                'resources/css/shared/fonts/roboto.css',
+                'resources/css/shared/fonts/nunito-sans.css',
+                'resources/css/shared/fonts/work-sans.css',
                 'resources/js/planner/planner.js',
                 'resources/css/planner/planner.css',
             ],

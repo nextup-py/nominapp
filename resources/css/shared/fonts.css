@@ -1,11 +1,14 @@
-/**
- * Poppins self-hosted — sirve el peso 400/500/600/700 desde el mismo origen
- * que el resto del bundle de Vite (public/build/assets/), en vez de pedirlo
- * a Google Fonts o Bunny Fonts. Consumido por tokens.css (vistas públicas de
- * marcación) y directamente por el panel Filament vía LocalFontProvider
- * (ver AdminPanelProvider.php).
+﻿/**
+ * Las 5 fuentes curadas, self-hosted, empaquetadas completas. Consumido por
+ * tokens.css (vistas públicas de marcación) — el navegador solo descarga
+ * los .woff2 de la fuente que <x-theme-vars /> activa vía --font en tiempo
+ * de request (@font-face es perezoso, no hay costo de red por las que no
+ * se usan). El panel Filament NO usa este archivo combinado — usa el
+ * archivo individual de una sola fuente vía
+ * App\Support\ThemeResolver::fontAssetPath() (ver fonts/*.css).
  */
-@import '@fontsource/poppins/400.css';
-@import '@fontsource/poppins/500.css';
-@import '@fontsource/poppins/600.css';
-@import '@fontsource/poppins/700.css';
+@import './fonts/poppins.css';
+@import './fonts/inter.css';
+@import './fonts/roboto.css';
+@import './fonts/nunito-sans.css';
+@import './fonts/work-sans.css';

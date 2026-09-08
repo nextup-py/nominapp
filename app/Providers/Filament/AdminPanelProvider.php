@@ -86,7 +86,7 @@ class AdminPanelProvider extends PanelProvider
         if (file_exists(public_path('build/manifest.json'))) {
             $panel->font(
                 'Poppins',
-                url: Vite::asset('resources/css/shared/fonts.css'),
+                url: Vite::asset('resources/css/shared/fonts/poppins.css'),
                 provider: LocalFontProvider::class,
             );
         }

@@ -1,0 +1,10 @@
+﻿/**
+ * Poppins self-hosted — pesos 400/500/600/700 desde el mismo origen que el
+ * resto del bundle de Vite (public/build/assets/). Archivo individual: lo
+ * consume LocalFontProvider del panel Filament cuando 'poppins' es la
+ * fuente elegida (ver App\Support\ThemeResolver::fontAssetPath()).
+ */
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
