@@ -4,6 +4,9 @@ use App\Providers\Filament\AdminPanelProvider;
 use App\Settings\GeneralSettings;
 use Filament\Panel;
 use Filament\Support\Colors\Color;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 it('usa el color primario configurado en GeneralSettings al construir el panel', function () {
     $settings = app(GeneralSettings::class);
