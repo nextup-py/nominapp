@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Settings\GeneralSettings;
+use App\Support\ThemeResolver;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -118,6 +119,30 @@ class ManageGeneralSettings extends SettingsPage
                             ->default(2)
                             ->suffix('horas')
                             ->helperText('Horas sin heartbeat exitoso antes de marcar un terminal como desconectado en el panel'),
+                    ]),
+
+                Section::make('Apariencia')
+                    ->description('Color primario y fuente de la aplicación (panel y vistas de marcación)')
+                    ->icon('heroicon-o-paint-brush')
+                    ->columns(2)
+                    ->schema([
+                        Select::make('primary_color')
+                            ->label('Color primario')
+                            ->options(ThemeResolver::colorOptions())
+                            ->native(false)
+                            ->default(ThemeResolver::DEFAULT_COLOR)
+                            ->required()
+                            ->in(array_keys(ThemeResolver::colorOptions()))
+                            ->helperText('Color de acento del panel admin y las vistas de marcación'),
+
+                        Select::make('font')
+                            ->label('Fuente')
+                            ->options(ThemeResolver::fontOptions())
+                            ->native(false)
+                            ->default(ThemeResolver::DEFAULT_FONT)
+                            ->required()
+                            ->in(array_keys(ThemeResolver::fontOptions()))
+                            ->helperText('Tipografía del panel admin y las vistas de marcación'),
                     ]),
             ]);
     }
