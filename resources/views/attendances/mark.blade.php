@@ -10,6 +10,7 @@
     <x-favicon-links />
     @vite('resources/css/attendances/styles.css')
     <x-theme-vars />
+    <x-pwa-meta manifest-url="{{ route('mark.manifest') }}" app-title="Nominapp Marcación" />
     @vite('resources/js/attendances/mark.js')
 </head>
 
@@ -79,6 +80,13 @@
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                 </svg>
             </button>
+            <button type="button" id="btnInstallApp" class="install-toggle hidden" aria-label="Instalar aplicación">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            </button>
         </div>
         <div class="app-clock" id="headerClock" aria-live="off" aria-label="Hora actual"></div>
     </header>
@@ -107,6 +115,12 @@
         </svg>
         <span>Una marcación reciente no pudo confirmarse — RRHH la va a revisar.</span>
         <button type="button" id="btnDismissConflict" class="conflict-dismiss-btn">Entendido</button>
+    </div>
+
+    <div id="installBanner" class="install-banner" role="status" aria-live="polite" aria-hidden="true">
+        <span id="installBannerText">Instalá esta app en tu pantalla de inicio para acceso rápido</span>
+        <button type="button" id="btnInstallNow" class="install-banner-btn">Instalar</button>
+        <button type="button" id="btnDismissInstall" class="install-banner-dismiss">Ahora no</button>
     </div>
 
     {{-- Estado de sincronización offline + sync manual — paridad con el botón "Sincronizar"

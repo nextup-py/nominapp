@@ -141,6 +141,67 @@ html[data-theme="dark"]  .theme-toggle .icon-moon { display: none; }
 .conflict-dismiss-btn:hover { background: var(--c-danger); color: #fff; }
 
 /* ============================================================
+   BANNER E ÍCONO DE INSTALACIÓN PWA
+   ============================================================ */
+.install-toggle {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--c-border);
+    background: transparent;
+    color: var(--c-muted);
+    cursor: pointer;
+    transition: background var(--tr-f), color var(--tr-f), border-color var(--tr-f);
+    flex-shrink: 0;
+}
+.install-toggle:hover { background: var(--c-primary-bg); color: var(--c-primary); border-color: var(--c-primary); }
+.install-toggle svg { width: 16px; height: 16px; display: block; }
+.install-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2) var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--c-primary-bg);
+    border-bottom: 1px solid var(--c-primary-ring);
+    color: var(--c-primary);
+    font-size: .8125rem;
+    font-weight: 600;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 400ms ease, opacity 400ms ease, padding 400ms ease;
+}
+.install-banner.is-visible { max-height: 140px; opacity: 1; padding: var(--sp-2) var(--sp-4); }
+.install-banner-btn {
+    background: var(--c-primary);
+    color: #fff;
+    font: inherit;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: 4px var(--sp-3);
+    border: none;
+    border-radius: var(--r);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.install-banner-btn:hover { background: var(--c-primary-h); }
+.install-banner-dismiss {
+    background: transparent;
+    border: 1px solid var(--c-primary);
+    color: var(--c-primary);
+    font: inherit;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: 3px var(--sp-3);
+    border-radius: var(--r);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.install-banner-dismiss:hover { background: var(--c-primary); color: #fff; }
+
+/* ============================================================
    ESTADO DE SINCRONIZACIÓN OFFLINE (dispositivo)
    ============================================================ */
 .sync-status-row {

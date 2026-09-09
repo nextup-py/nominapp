@@ -16,6 +16,14 @@ import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js
 import { showSuccessModal } from './mark/success-modal.js';
 import { showErrorModal, initErrorModal, isErrorModalVisible, setErrorModalVisible } from './mark/error-modal.js';
 import {
+    captureInstallPrompt,
+    triggerInstallPrompt,
+    isStandalone,
+    isIOS,
+    isDismissed,
+    dismiss,
+} from '../shared/install-prompt.js';
+import {
     getLastGpsErrorCode,
     requestGPSBackground,
     requestGPSManual,
@@ -1926,6 +1934,111 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem("mark-theme", next);
         });
     }
+
+    (function initInstallUi() {
+        const installBanner = document.getElementById("installBanner");
+        const installBannerText = document.getElementById("installBannerText");
+        const btnInstallNow = document.getElementById("btnInstallNow");
+        const btnDismissInstall = document.getElementById("btnDismissInstall");
+        const btnInstallApp = document.getElementById("btnInstallApp");
+
+        const standalone = isStandalone(
+            window.navigator.standalone,
+            window.matchMedia("(display-mode: standalone)").matches
+        );
+        if (standalone) {
+            return;
+        }
+
+        /**
+         * Hace visible el banner incondicionalmente — sin chequear isDismissed().
+         * Uso exclusivo de disparadores explícitos del usuario (btnInstallApp, el
+         * botón de respaldo permanente) donde un dismiss anterior no debe impedir
+         * un nuevo pedido explícito de instalación.
+         */
+        function revealBanner() {
+            installBanner.classList.add("is-visible");
+            installBanner.setAttribute("aria-hidden", "false");
+        }
+
+        /**
+         * Muestra el banner solo si el usuario no lo descartó antes — uso exclusivo
+         * del pop-up *automático* inicial (al cargar la página o al capturar el
+         * evento beforeinstallprompt), nunca de un click explícito en el botón.
+         */
+        function showBanner() {
+            if (isDismissed("mark")) {
+                return;
+            }
+            revealBanner();
+        }
+
+        function hideBanner() {
+            installBanner.classList.remove("is-visible");
+            installBanner.setAttribute("aria-hidden", "true");
+        }
+
+        function showBackupButton() {
+            btnInstallApp.classList.remove("hidden");
+        }
+
+        /**
+         * Fallback cuando el prompt nativo ya no está disponible (consumido en un
+         * intento previo — dismissed/unavailable) — evita dejar el botón "muerto"
+         * sin ninguna señal para el usuario. Reusa el mismo texto manual de iOS.
+         * Siempre se dispara desde un click explícito del usuario (btnInstallNow o
+         * btnInstallApp), así que revela el banner incondicionalmente — el dismiss
+         * previo no debe silenciar una nueva solicitud explícita de instalación.
+         */
+        function showManualInstallFallback() {
+            installBannerText.textContent = "No se pudo iniciar la instalación automática — buscá \"Agregar a pantalla de inicio\" en el menú del navegador.";
+            revealBanner();
+        }
+
+        if (isIOS(window.navigator.userAgent, window.navigator.maxTouchPoints)) {
+            installBannerText.textContent = 'Tocá el botón Compartir y elegí "Agregar a pantalla de inicio".';
+            btnInstallNow.classList.add("hidden");
+            showBanner();
+            showBackupButton();
+            // Botón de respaldo permanente — la única vía posterior de instalación
+            // tras un dismiss; debe funcionar siempre, dismissed o no.
+            btnInstallApp.addEventListener("click", () => revealBanner());
+        } else {
+            captureInstallPrompt(() => {
+                showBanner();
+                showBackupButton();
+            });
+
+            btnInstallNow.addEventListener("click", async () => {
+                const outcome = await triggerInstallPrompt();
+                if (outcome === "accepted") {
+                    hideBanner();
+                    btnInstallApp.classList.add("hidden");
+                } else {
+                    showManualInstallFallback();
+                }
+            });
+
+            // Botón de respaldo permanente — la única vía posterior de instalación
+            // tras un dismiss; debe producir un resultado visible siempre, dismissed
+            // o no, por eso usa showManualInstallFallback()/revealBanner() en vez
+            // de pasar por el gate de isDismissed() de showBanner().
+            btnInstallApp.addEventListener("click", async () => {
+                const outcome = await triggerInstallPrompt();
+                if (outcome === "accepted") {
+                    hideBanner();
+                    btnInstallApp.classList.add("hidden");
+                } else {
+                    showManualInstallFallback();
+                }
+            });
+        }
+
+        btnDismissInstall.addEventListener("click", () => {
+            dismiss("mark");
+            hideBanner();
+        });
+    })();
 
     // ==========================================================================
     // INICIALIZACIÓN
