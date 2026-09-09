@@ -94,12 +94,22 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ]);
 
-        if (file_exists(public_path('build/manifest.json'))) {
+        // No basta con file_exists(manifest.json): un manifest presente pero
+        // desactualizado (deploy en curso, composer install corre antes que
+        // npm run build) puede no tener la entrada de ESTA fuente puntual —
+        // ya ocurrió en producción (deploy a nextup-demo tras sub-proyecto F,
+        // manifest viejo sin el split de fonts/{key}.css). Vite::asset() debe
+        // ir dentro del try/catch, no solo detrás del file_exists().
+        try {
             $panel->font(
                 ThemeResolver::fontFamily($fontKey),
                 url: Vite::asset(ThemeResolver::fontAssetPath($fontKey)),
                 provider: LocalFontProvider::class,
             );
+        } catch (\Throwable) {
+            // Sin fuente self-hosted disponible, Filament cae a su provider
+            // default (BunnyFontProvider) — degradación aceptable, nunca debe
+            // tumbar el boot de la app.
         }
 
         return $panel;
