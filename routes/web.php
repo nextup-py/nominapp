@@ -40,12 +40,14 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/marcar', [AttendanceFaceMarkController::class, 'show'])->name('mark.show');
+Route::get('/marcar/manifest.json', [AttendanceFaceMarkController::class, 'markManifest'])->name('mark.manifest');
 
 // Terminal legacy — mantener activa hasta migrar todos los dispositivos físicos
 Route::get('/terminal', [AttendanceFaceMarkController::class, 'terminal'])->name('terminal.legacy');
 
 // Terminal identificada por código — nueva arquitectura
 Route::get('/terminal/{code}', [AttendanceFaceMarkController::class, 'terminalByCode'])->name('terminal.show');
+Route::get('/terminal/{code}/manifest.json', [AttendanceFaceMarkController::class, 'terminalManifest'])->name('terminal.manifest');
 
 // Provisión del terminal como PWA offline — enlace de un solo uso generado desde TerminalResource,
 // emite el token Sanctum que el terminal usará contra la API de sincronización (routes/api.php).
