@@ -99,7 +99,25 @@ btn.addEventListener('click', async () => {
     }
 });
 
-btnInstallNow.addEventListener('click', () => triggerInstallPrompt());
+/**
+ * Fallback cuando el prompt nativo no está disponible o el usuario lo
+ * descarta (dismissed/unavailable) — evita dejar el botón inerte sin
+ * ninguna señal. Reutiliza el mismo elemento de instrucciones manuales que
+ * ya existe para iOS, y oculta el botón para dejar claro que ese camino ya
+ * se agotó.
+ */
+function showManualInstallFallback() {
+    installInstructionsIos.textContent = 'No se pudo iniciar la instalación automática — buscá "Agregar a pantalla de inicio" en el menú del navegador.';
+    installInstructionsIos.hidden = false;
+    btnInstallNow.hidden = true;
+}
+
+btnInstallNow.addEventListener('click', async () => {
+    const outcome = await triggerInstallPrompt();
+    if (outcome === 'unavailable' || outcome === 'dismissed') {
+        showManualInstallFallback();
+    }
+});
 
 btnContinue.addEventListener('click', () => {
     window.location.href = '/terminal/' + terminalCode;
