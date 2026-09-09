@@ -16,6 +16,14 @@ import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js
 import { showSuccessModal } from './mark/success-modal.js';
 import { showErrorModal, initErrorModal, isErrorModalVisible, setErrorModalVisible } from './mark/error-modal.js';
 import {
+    captureInstallPrompt,
+    triggerInstallPrompt,
+    isStandalone,
+    isIOS,
+    isDismissed,
+    dismiss,
+} from '../shared/install-prompt.js';
+import {
     getLastGpsErrorCode,
     requestGPSBackground,
     requestGPSManual,
@@ -1926,6 +1934,65 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem("mark-theme", next);
         });
     }
+
+    (function initInstallUi() {
+        const installBanner = document.getElementById("installBanner");
+        const installBannerText = document.getElementById("installBannerText");
+        const btnInstallNow = document.getElementById("btnInstallNow");
+        const btnDismissInstall = document.getElementById("btnDismissInstall");
+        const btnInstallApp = document.getElementById("btnInstallApp");
+
+        const standalone = isStandalone(
+            window.navigator.standalone,
+            window.matchMedia("(display-mode: standalone)").matches
+        );
+        if (standalone) {
+            return;
+        }
+
+        function showBanner() {
+            if (isDismissed("mark")) {
+                return;
+            }
+            installBanner.classList.add("is-visible");
+        }
+
+        function hideBanner() {
+            installBanner.classList.remove("is-visible");
+        }
+
+        function showBackupButton() {
+            btnInstallApp.classList.remove("hidden");
+        }
+
+        if (isIOS(window.navigator.userAgent, window.navigator.maxTouchPoints)) {
+            installBannerText.textContent = 'Tocá el botón Compartir y elegí "Agregar a pantalla de inicio".';
+            btnInstallNow.classList.add("hidden");
+            showBanner();
+            showBackupButton();
+            btnInstallApp.addEventListener("click", () => installBanner.classList.add("is-visible"));
+        } else {
+            captureInstallPrompt(() => {
+                showBanner();
+                showBackupButton();
+            });
+
+            btnInstallNow.addEventListener("click", async () => {
+                const outcome = await triggerInstallPrompt();
+                if (outcome === "accepted") {
+                    hideBanner();
+                    btnInstallApp.classList.add("hidden");
+                }
+            });
+
+            btnInstallApp.addEventListener("click", () => triggerInstallPrompt());
+        }
+
+        btnDismissInstall.addEventListener("click", () => {
+            dismiss("mark");
+            hideBanner();
+        });
+    })();
 
     // ==========================================================================
     // INICIALIZACIÓN
