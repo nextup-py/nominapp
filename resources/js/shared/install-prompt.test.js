@@ -98,9 +98,13 @@ describe('captureInstallPrompt / triggerInstallPrompt', () => {
     });
 
     it('devuelve unavailable si nunca se capturó un evento', async () => {
-        // Este test corre después de que el test anterior ya consumió el
-        // deferredPrompt capturado (triggerInstallPrompt lo limpia tras usarlo).
-        const outcome = await triggerInstallPrompt();
+        // Independiente del orden de ejecución: usa una instancia fresca del
+        // módulo (vi.resetModules + import dinámico) en vez de depender de que
+        // el test anterior ya haya consumido el deferredPrompt module-level.
+        vi.resetModules();
+        const fresh = await import('./install-prompt.js');
+
+        const outcome = await fresh.triggerInstallPrompt();
         expect(outcome).toBe('unavailable');
     });
 });
