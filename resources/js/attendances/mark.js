@@ -1955,14 +1955,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
             installBanner.classList.add("is-visible");
+            installBanner.setAttribute("aria-hidden", "false");
         }
 
         function hideBanner() {
             installBanner.classList.remove("is-visible");
+            installBanner.setAttribute("aria-hidden", "true");
         }
 
         function showBackupButton() {
             btnInstallApp.classList.remove("hidden");
+        }
+
+        /**
+         * Fallback cuando el prompt nativo ya no está disponible (consumido en un
+         * intento previo — dismissed/unavailable) — evita dejar el botón "muerto"
+         * sin ninguna señal para el usuario. Reusa el mismo texto manual de iOS.
+         */
+        function showManualInstallFallback() {
+            installBannerText.textContent = "No se pudo iniciar la instalación automática — buscá \"Agregar a pantalla de inicio\" en el menú del navegador.";
+            showBanner();
         }
 
         if (isIOS(window.navigator.userAgent, window.navigator.maxTouchPoints)) {
@@ -1970,7 +1982,7 @@ document.addEventListener("DOMContentLoaded", () => {
             btnInstallNow.classList.add("hidden");
             showBanner();
             showBackupButton();
-            btnInstallApp.addEventListener("click", () => installBanner.classList.add("is-visible"));
+            btnInstallApp.addEventListener("click", () => showBanner());
         } else {
             captureInstallPrompt(() => {
                 showBanner();
@@ -1982,10 +1994,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (outcome === "accepted") {
                     hideBanner();
                     btnInstallApp.classList.add("hidden");
+                } else {
+                    showManualInstallFallback();
                 }
             });
 
-            btnInstallApp.addEventListener("click", () => triggerInstallPrompt());
+            btnInstallApp.addEventListener("click", async () => {
+                const outcome = await triggerInstallPrompt();
+                if (outcome === "accepted") {
+                    hideBanner();
+                    btnInstallApp.classList.add("hidden");
+                } else if (outcome === "unavailable" || outcome === "dismissed") {
+                    showManualInstallFallback();
+                }
+            });
         }
 
         btnDismissInstall.addEventListener("click", () => {

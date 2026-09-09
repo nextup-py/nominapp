@@ -117,7 +117,7 @@
         <button type="button" id="btnDismissConflict" class="conflict-dismiss-btn">Entendido</button>
     </div>
 
-    <div id="installBanner" class="install-banner" role="status" aria-live="polite">
+    <div id="installBanner" class="install-banner" role="status" aria-live="polite" aria-hidden="true">
         <span id="installBannerText">Instalá esta app en tu pantalla de inicio para acceso rápido</span>
         <button type="button" id="btnInstallNow" class="install-banner-btn">Instalar</button>
         <button type="button" id="btnDismissInstall" class="install-banner-dismiss">Ahora no</button>
