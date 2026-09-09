@@ -24,70 +24,16 @@
 
         <button type="button" id="btnClaim">Vincular este dispositivo</button>
         <div id="status" class="status" role="status" aria-live="polite"></div>
+
+        <div id="installSection" class="install-section" hidden>
+            <p>Instalá esta app en la pantalla de inicio del dispositivo para que funcione como terminal fijo.</p>
+            <p id="installInstructionsIos" class="install-instructions-ios" hidden>En iOS: tocá el botón Compartir y elegí "Agregar a pantalla de inicio".</p>
+            <button type="button" id="btnInstallNow" hidden>Instalar ahora</button>
+            <button type="button" id="btnContinue" class="btn-secondary">Continuar al terminal</button>
+        </div>
     </div>
 
-    <script>
-        const btn = document.getElementById('btnClaim');
-        const statusEl = document.getElementById('status');
-        const csrf = document.querySelector('meta[name="csrf-token"]').content;
-
-        // Modelo real del dispositivo, solo disponible vía Client Hints en navegadores
-        // Chromium sobre Android (Chrome, Edge...) — null en iOS/Safari/Firefox/desktop,
-        // donde el servidor cae al parseo del User-Agent (ver DeviceHintsParser). Sirve
-        // solo para prellenar marca/modelo como sugerencia editable en el panel.
-        async function getClientHintModel() {
-            if (!navigator.userAgentData?.getHighEntropyValues) return null;
-            try {
-                const hints = await navigator.userAgentData.getHighEntropyValues(['model']);
-                return hints.model || null;
-            } catch {
-                return null;
-            }
-        }
-
-        btn.addEventListener('click', async () => {
-            btn.disabled = true;
-            statusEl.textContent = 'Vinculando...';
-            statusEl.className = 'status';
-
-            try {
-                const response = await fetch(window.location.pathname.replace(/\/$/, '') + '/claim', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-                    body: JSON.stringify({ device_model_hint: await getClientHintModel() }),
-                });
-                const data = await response.json();
-
-                if (!data.ok) {
-                    statusEl.textContent = data.message || 'No se pudo vincular el dispositivo.';
-                    statusEl.className = 'status status--error';
-                    btn.disabled = false;
-                    return;
-                }
-
-                // Almacenamiento provisorio del token — en la fase de sincronización offline
-                // (IndexedDB, módulo terminal-offline/) este valor pasa a vivir en el store
-                // `terminal_meta` en vez de localStorage. Se guarda el id (estable, no cambia
-                // con "Cambiar URL del terminal") además del code (cambia con esa acción) —
-                // terminal.js usa el id para detectar si el estado local pertenece a OTRO
-                // terminal distinto, sin confundir un simple cambio de URL con eso.
-                localStorage.setItem('nominapp_terminal_token', data.token);
-                localStorage.setItem('nominapp_terminal_id', data.terminal.id);
-                localStorage.setItem('nominapp_terminal_code', data.terminal.code);
-
-                statusEl.textContent = 'Dispositivo vinculado correctamente. Redirigiendo...';
-                statusEl.className = 'status status--success';
-
-                setTimeout(() => {
-                    window.location.href = '/terminal/' + data.terminal.code;
-                }, 1200);
-            } catch (error) {
-                statusEl.textContent = 'Error de conexión. Intente nuevamente.';
-                statusEl.className = 'status status--error';
-                btn.disabled = false;
-            }
-        });
-    </script>
+    @vite('resources/js/attendances/terminal-setup.js')
 </body>
 
 </html>
