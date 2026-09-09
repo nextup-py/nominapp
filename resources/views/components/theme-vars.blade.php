@@ -23,6 +23,7 @@
     $theme = \App\Support\ThemeResolver::primaryColorCss($colorKey);
     $fontFamily = \App\Support\ThemeResolver::fontFamily($fontKey);
 @endphp
+<meta name="theme-color" content="{{ $theme['hex'][600] }}">
 <style>
     :root {
         --color-primary-50: {{ $theme['hex'][50] }};

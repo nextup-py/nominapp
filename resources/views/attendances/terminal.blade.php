@@ -10,6 +10,9 @@
     <x-favicon-links />
     @vite('resources/css/attendances/terminal.css')
     <x-theme-vars />
+    @isset($terminal)
+        <x-pwa-meta manifest-url="{{ route('terminal.manifest', $terminal->code) }}" app-title="Nominapp Terminal" />
+    @endisset
     @vite('resources/js/attendances/terminal.js')
 </head>
 
