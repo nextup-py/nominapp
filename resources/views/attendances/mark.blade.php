@@ -9,6 +9,7 @@
     <meta name="color-scheme" content="light dark">
     <x-favicon-links />
     @vite('resources/css/attendances/styles.css')
+    <x-theme-vars />
     @vite('resources/js/attendances/mark.js')
 </head>
 

@@ -20,6 +20,12 @@ class GeneralSettings extends Settings
 
     public int $terminal_stale_threshold_hours;
 
+    /** Color primario utilizado en el panel Filament. Default: 'teal'. */
+    public string $primary_color;
+
+    /** Tipografía utilizada en el panel Filament. Default: 'poppins'. */
+    public string $font;
+
     public static function group(): string
     {
         return 'general';

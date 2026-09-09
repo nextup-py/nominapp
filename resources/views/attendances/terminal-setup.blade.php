@@ -8,6 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <x-favicon-links />
     @vite('resources/css/attendances/terminal-setup.css')
+    <x-theme-vars />
 </head>
 
 <body>

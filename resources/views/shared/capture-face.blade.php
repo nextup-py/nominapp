@@ -29,6 +29,7 @@
     <x-favicon-links />
     <link rel="preconnect" href="https://unpkg.com">
     @vite($css)
+    <x-theme-vars />
 </head>
 
 <body data-mode="{{ $mode }}"
