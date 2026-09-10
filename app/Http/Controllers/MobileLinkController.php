@@ -85,6 +85,8 @@ class MobileLinkController extends Controller
                 'last_name' => $employee->last_name,
                 'ci' => $employee->ci,
                 'face_descriptor' => $employee->face_descriptor,
+                'company_name' => $employee->branch?->company?->name,
+                'company_logo' => $employee->branch?->company?->logo_thumbnail,
             ],
         ]);
     }
