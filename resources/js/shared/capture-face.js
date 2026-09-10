@@ -12,6 +12,7 @@
  */
 
 import { FaceCaptureApp } from './FaceCaptureApp.js';
+import { initThemeToggle } from './theme-toggle.js';
 
 /* ============================================================
    CLASE ESPECÍFICA PARA AUTO-REGISTRO (ENROLLMENT)
@@ -55,9 +56,7 @@ class EnrollmentCaptureApp extends FaceCaptureApp {
      */
     hideModal() {
         if (this.modal) {
-            this.modal.style.display = "none";
-            this.modal.style.opacity = "0";
-            this.modal.style.visibility = "hidden";
+            this.modal.classList.add("hidden");
         }
     }
 
@@ -75,6 +74,8 @@ class EnrollmentCaptureApp extends FaceCaptureApp {
    ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
+    initThemeToggle('capture-face-theme');
+
     try {
         if (typeof faceapi === "undefined") {
             console.error("face-api.js no está cargado");

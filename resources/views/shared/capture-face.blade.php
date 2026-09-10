@@ -27,7 +27,6 @@
     <title>{{ $isEnrollment ? 'Registro Facial' : 'Capturar Rostro' }} - {{ config('app.name', 'RRHH') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <x-favicon-links />
-    <link rel="preconnect" href="https://unpkg.com">
     @vite($css)
     <x-theme-vars />
 </head>
@@ -42,6 +41,7 @@
             <div class="app-header-brand">
                 <span class="app-mode-badge">{{ $isEnrollment ? 'Auto-Registro' : 'Captura Facial' }}</span>
                 <span class="app-title">Registro Facial</span>
+                <x-theme-toggle-button />
             </div>
             <div class="app-employee-info" aria-label="Empleado">
                 <span class="app-employee-name">{{ $employeeName }}</span>
@@ -158,7 +158,7 @@
                                     </svg></span>
                                 Guardar
                             </button>
-                            <button type="button" id="btnCancel" class="btn-red" onclick="handleCancel()"
+                            <button type="button" id="btnCancel" class="btn-red"
                                 aria-label="Cancelar y regresar">
                                 <span aria-hidden="true"><svg class="btn-icon" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -188,7 +188,7 @@
     </div>
 
     <!-- Modal de confirmación -->
-    <div id="confirmationModal" class="modal" style="display: none;" role="dialog" aria-modal="true"
+    <div id="confirmationModal" class="modal hidden" role="dialog" aria-modal="true"
         aria-labelledby="modal-title" aria-describedby="modal-description" tabindex="-1">
         <div class="modal-backdrop"></div>
         <div class="modal-content">
@@ -213,23 +213,17 @@
         </div>
     </div>
 
-    <script defer src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js" crossorigin="anonymous"
-        referrerpolicy="no-referrer" onerror="handleScriptError()"></script>
+    <script defer src="{{ asset('js/face-api.min.js') }}"></script>
     @vite($js)
 
     <script>
-        function handleCancel() {
+        document.getElementById('btnCancel')?.addEventListener('click', () => {
             const msg = @json(
                 $isEnrollment
                     ? '¿Está seguro de que desea cancelar el registro?'
                     : '¿Está seguro de que desea cancelar la captura? Se perderá el progreso actual.');
             if (confirm(msg)) window.history.back();
-        }
-
-        function handleScriptError() {
-            document.getElementById('status').textContent =
-                'Error: No se pudo cargar la biblioteca de reconocimiento facial.';
-        }
+        });
     </script>
 </body>
 
