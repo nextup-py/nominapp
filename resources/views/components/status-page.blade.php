@@ -43,7 +43,9 @@
             <p class="status-page-description">{{ $paragraph }}</p>
         @endforeach
 
-        {{ $extra ?? '' }}
+        @isset($extra)
+            <div class="status-page-extra">{{ $extra }}</div>
+        @endisset
     </div>
 </body>
 

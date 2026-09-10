@@ -17,6 +17,7 @@ it('renderiza título, descripción, variante y contenido extra', function () {
         ->toContain('Primer párrafo.')
         ->toContain('Segundo párrafo.')
         ->toContain('Contenido extra')
+        ->toContain('status-page-extra')
         ->toContain('status-page-icon--danger')
         ->toContain('status-page-label--danger')
         ->toContain('Prueba');
@@ -33,5 +34,6 @@ it('omite el label y el extra cuando no se pasan', function () {
     BLADE);
 
     expect($html)->toContain('Sin extras')
-        ->not->toContain('status-page-label');
+        ->not->toContain('status-page-label')
+        ->not->toContain('status-page-extra');
 });

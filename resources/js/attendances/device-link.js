@@ -118,7 +118,9 @@ function initLinkForm() {
         if (result.employee.company_name && brandingName && brandingEl) {
             brandingName.textContent = result.employee.company_name;
         }
-        brandingEl?.classList.remove('hidden');
+        if (result.employee.company_name || result.employee.company_logo) {
+            brandingEl?.classList.remove('hidden');
+        }
 
         statusEl.textContent = `Dispositivo vinculado. ¡Hola, ${result.employee.first_name}! Redirigiendo...`;
         statusEl.className = 'status status--success';

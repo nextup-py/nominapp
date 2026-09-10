@@ -8,7 +8,7 @@
  *   - "enrollment" → EnrollmentCaptureApp  (auto-registro, sin redirect)
  *
  * @requires ./FaceCaptureApp.js
- * @requires face-api.js (cargado via CDN en la vista)
+ * @requires face-api.js (cargado localmente desde public/js/ en la vista)
  */
 
 import { FaceCaptureApp } from './FaceCaptureApp.js';
