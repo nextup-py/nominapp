@@ -21,6 +21,7 @@
  */
 
 import { getMeta, getOwnEmployee, migrateTokenFromLocalStorage } from './mobile-offline/db.js';
+import { initThemeToggle } from '../shared/theme-toggle.js';
 
 /**
  * Modelo real del dispositivo, solo disponible vía Client Hints en
@@ -134,6 +135,8 @@ function initLinkForm() {
 // ya que `document` siempre existe ahí.
 if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', async () => {
+        initThemeToggle('device-link-theme');
+
         // Por si quedó un token sin migrar de una vinculación interrumpida (ej. el
         // empleado cerró la pestaña antes de que /marcar corriera la migración).
         await migrateTokenFromLocalStorage();

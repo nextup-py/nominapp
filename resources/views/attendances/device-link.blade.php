@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Vincular dispositivo — Marcación de asistencia</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="color-scheme" content="light dark">
     <x-favicon-links />
     @vite('resources/js/attendances/device-link.js')
     @vite('resources/css/attendances/device-link.css')
@@ -13,6 +14,10 @@
 </head>
 
 <body>
+    <header class="device-link-header">
+        <x-theme-toggle-button />
+    </header>
+
     <div class="container">
         <div class="icon">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -44,6 +49,14 @@
             <button type="submit" id="btnLink">Vincular este dispositivo</button>
         </form>
         <div id="status" class="status" role="status" aria-live="polite"></div>
+
+        {{-- Branding de la empresa del empleado recién identificado — oculto
+        hasta la vinculación exitosa, poblado por device-link.js con los
+        campos company_name/company_logo de la respuesta de claim(). --}}
+        <div id="linkSuccessBranding" class="link-success-branding hidden">
+            <img id="linkSuccessLogo" class="link-success-logo hidden" alt="">
+            <span id="linkSuccessCompanyName" class="link-success-company-name"></span>
+        </div>
 
         <p class="hint">Solo se puede vincular un dispositivo a la vez. Si vinculás uno nuevo, el anterior deja de funcionar automáticamente.</p>
     </div>
