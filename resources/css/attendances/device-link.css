@@ -1,40 +1,48 @@
 @import '../shared/tokens.css';
+@import '../shared/theme-toggle.css';
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
     font-family: var(--font);
-    background: var(--color-surface-900);
-    color: var(--color-surface-200);
+    background: var(--c-bg);
+    color: var(--c-text);
     min-height: 100dvh;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 2rem;
+    padding: var(--sp-8) var(--sp-4);
+}
+.device-link-header {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--sp-4);
 }
 .container { max-width: 420px; width: 100%; text-align: center; }
 .icon {
     width: 80px; height: 80px;
     border-radius: 50%;
-    background: var(--color-surface-800);
+    background: var(--c-surface);
     display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1.5rem;
+    margin: 0 auto var(--sp-6);
     border: 2px solid var(--c-primary-l);
 }
 .icon svg { width: 40px; height: 40px; color: var(--c-primary-l); }
-h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; }
-p { font-size: 1rem; color: var(--color-surface-400); line-height: 1.6; margin-bottom: 1.5rem; }
+h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: var(--sp-3); color: var(--c-text); }
+p { font-size: 1rem; color: var(--c-muted); line-height: 1.6; margin-bottom: var(--sp-6); }
 form { text-align: left; }
-label { display: block; font-size: 0.875rem; color: var(--color-surface-400); margin-bottom: 0.35rem; }
+label { display: block; font-size: .875rem; color: var(--c-muted); margin-bottom: var(--sp-1); }
 input {
     width: 100%;
     font: inherit;
     font-size: 1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.6rem;
-    border: 1px solid var(--color-surface-700);
-    background: var(--color-surface-800);
-    color: var(--color-surface-200);
-    margin-bottom: 1.1rem;
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-md);
+    border: 1px solid var(--c-border-s);
+    background: var(--c-surface);
+    color: var(--c-text);
+    margin-bottom: var(--sp-4);
 }
 input:focus { outline: none; border-color: var(--c-primary-l); }
 button {
@@ -42,42 +50,57 @@ button {
     font: inherit;
     font-weight: 600;
     font-size: 1rem;
-    padding: 0.85rem 1.75rem;
-    border-radius: 0.75rem;
+    padding: var(--sp-3) var(--sp-6);
+    border-radius: var(--r-lg);
     border: none;
-    background: var(--c-primary-l);
-    color: var(--color-surface-900);
+    background: var(--c-primary);
+    color: #fff;
     cursor: pointer;
 }
-button:disabled { opacity: 0.6; cursor: not-allowed; }
-button:not(:disabled):hover { background: var(--color-primary-400); }
-.status { margin-top: 1.25rem; font-size: 0.9rem; min-height: 1.5rem; text-align: center; }
-.status--error { color: var(--c-danger-l); }
-.status--success { color: var(--c-success-l); }
-.hint { font-size: 0.8rem; color: var(--c-muted); margin-top: 1.5rem; line-height: 1.5; }
+button:disabled { opacity: .6; cursor: not-allowed; }
+button:not(:disabled):hover { background: var(--c-primary-h); }
+
+.status { margin-top: var(--sp-5); font-size: .9rem; min-height: 1.5rem; text-align: center; }
+.status--error {
+    color: var(--c-danger);
+    background: var(--c-danger-bg);
+    border: 1px solid var(--c-danger-ring);
+    border-radius: var(--r-md);
+    padding: var(--sp-3) var(--sp-4);
+}
+.status--success { color: var(--c-success); }
+.hint { font-size: .8rem; color: var(--c-subtle); margin-top: var(--sp-6); line-height: 1.5; }
 .hidden { display: none !important; }
+
+/* Branding post-vinculación exitosa */
+.link-success-branding {
+    display: flex; align-items: center; justify-content: center; gap: var(--sp-2);
+    margin-top: var(--sp-4);
+}
+.link-success-logo { max-height: 32px; max-width: 120px; }
+.link-success-company-name { font-size: .875rem; color: var(--c-muted); font-weight: 600; }
 
 /* Aviso: este navegador ya tiene un dispositivo vinculado */
 .already-linked-warning {
     text-align: left;
-    background: rgba(202, 138, 4, 0.2);
+    background: var(--c-warning-bg);
     border: 1px solid var(--c-warning-l);
-    border-radius: 0.75rem;
-    padding: 1.1rem 1.25rem;
-    margin-bottom: 1.5rem;
+    border-radius: var(--r-lg);
+    padding: var(--sp-5);
+    margin-bottom: var(--sp-6);
 }
-.already-linked-warning p { color: var(--color-warning-300); font-size: 0.9rem; margin-bottom: 1rem; }
-.already-linked-warning p:last-of-type { margin-bottom: 1.25rem; }
-.already-linked-actions { display: flex; flex-direction: column; gap: 0.6rem; }
+.already-linked-warning p { color: var(--c-warning); font-size: .9rem; margin-bottom: var(--sp-4); }
+.already-linked-warning p:last-of-type { margin-bottom: var(--sp-5); }
+.already-linked-actions { display: flex; flex-direction: column; gap: var(--sp-2); }
 .btn-continue-anyway {
-    width: 100%; font: inherit; font-weight: 600; font-size: 0.9rem;
-    padding: 0.7rem 1.5rem; border-radius: 0.6rem; border: 1px solid var(--c-warning-l);
-    background: transparent; color: var(--color-warning-300); cursor: pointer;
+    width: 100%; font: inherit; font-weight: 600; font-size: .9rem;
+    padding: var(--sp-3) var(--sp-6); border-radius: var(--r-md); border: 1px solid var(--c-warning-l);
+    background: transparent; color: var(--c-warning); cursor: pointer;
 }
-.btn-continue-anyway:hover { background: rgba(202, 138, 4, 0.12); }
+.btn-continue-anyway:hover { background: var(--c-warning-bg); }
 .btn-cancel-relink {
-    width: 100%; font: inherit; font-weight: 600; font-size: 0.9rem;
-    padding: 0.7rem 1.5rem; border-radius: 0.6rem; border: none;
-    background: var(--c-primary-l); color: var(--color-surface-900); cursor: pointer;
+    width: 100%; font: inherit; font-weight: 600; font-size: .9rem;
+    padding: var(--sp-3) var(--sp-6); border-radius: var(--r-md); border: none;
+    background: var(--c-primary); color: #fff; cursor: pointer;
 }
-.btn-cancel-relink:hover { background: var(--color-primary-400); }
+.btn-cancel-relink:hover { background: var(--c-primary-h); }

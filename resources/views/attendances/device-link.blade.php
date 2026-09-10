@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Vincular dispositivo — Marcación de asistencia</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="color-scheme" content="light dark">
     <x-favicon-links />
     @vite('resources/js/attendances/device-link.js')
     @vite('resources/css/attendances/device-link.css')
@@ -13,6 +14,10 @@
 </head>
 
 <body>
+    <header class="device-link-header">
+        <x-theme-toggle-button />
+    </header>
+
     <div class="container">
         <div class="icon">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -45,73 +50,16 @@
         </form>
         <div id="status" class="status" role="status" aria-live="polite"></div>
 
+        {{-- Branding de la empresa del empleado recién identificado — oculto
+        hasta la vinculación exitosa, poblado por device-link.js con los
+        campos company_name/company_logo de la respuesta de claim(). --}}
+        <div id="linkSuccessBranding" class="link-success-branding hidden">
+            <img id="linkSuccessLogo" class="link-success-logo hidden" alt="">
+            <span id="linkSuccessCompanyName" class="link-success-company-name"></span>
+        </div>
+
         <p class="hint">Solo se puede vincular un dispositivo a la vez. Si vinculás uno nuevo, el anterior deja de funcionar automáticamente.</p>
     </div>
-
-    <script>
-        const form = document.getElementById('linkForm');
-        const btn = document.getElementById('btnLink');
-        const statusEl = document.getElementById('status');
-        const csrf = document.querySelector('meta[name="csrf-token"]').content;
-
-        // Modelo real del dispositivo, solo disponible vía Client Hints en navegadores
-        // Chromium sobre Android (Chrome, Edge...) — null en iOS/Safari/Firefox/desktop,
-        // donde el servidor cae al parseo del User-Agent (ver DeviceHintsParser). Sirve
-        // solo para prellenar marca/modelo como sugerencia editable en el panel.
-        async function getClientHintModel() {
-            if (!navigator.userAgentData?.getHighEntropyValues) return null;
-            try {
-                const hints = await navigator.userAgentData.getHighEntropyValues(['model']);
-                return hints.model || null;
-            } catch {
-                return null;
-            }
-        }
-
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            btn.disabled = true;
-            statusEl.textContent = 'Vinculando...';
-            statusEl.className = 'status';
-
-            try {
-                const response = await fetch(window.location.pathname.replace(/\/$/, ''), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-                    body: JSON.stringify({
-                        ci: document.getElementById('ci').value.trim(),
-                        birth_date: document.getElementById('birth_date').value,
-                        device_model_hint: await getClientHintModel(),
-                    }),
-                });
-                const data = await response.json();
-
-                if (!data.ok) {
-                    statusEl.textContent = data.message || 'No se pudo vincular el dispositivo.';
-                    statusEl.className = 'status status--error';
-                    btn.disabled = false;
-                    return;
-                }
-
-                // Almacenamiento provisorio del token — en la fase de sincronización offline
-                // (IndexedDB, módulo mobile-offline/) este valor pasa a vivir en su propio store,
-                // mismo patrón que usó terminal-setup.blade.php para el terminal.
-                localStorage.setItem('nominapp_mobile_token', data.token);
-                localStorage.setItem('nominapp_mobile_employee_id', String(data.employee.id));
-
-                statusEl.textContent = `Dispositivo vinculado. ¡Hola, ${data.employee.first_name}! Redirigiendo...`;
-                statusEl.className = 'status status--success';
-
-                setTimeout(() => {
-                    window.location.href = '{{ route('mark.show') }}';
-                }, 1200);
-            } catch (error) {
-                statusEl.textContent = 'Error de conexión. Intente nuevamente.';
-                statusEl.className = 'status status--error';
-                btn.disabled = false;
-            }
-        });
-    </script>
 </body>
 
 </html>

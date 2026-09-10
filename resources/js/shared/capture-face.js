@@ -8,10 +8,11 @@
  *   - "enrollment" → EnrollmentCaptureApp  (auto-registro, sin redirect)
  *
  * @requires ./FaceCaptureApp.js
- * @requires face-api.js (cargado via CDN en la vista)
+ * @requires face-api.js (cargado localmente desde public/js/ en la vista)
  */
 
 import { FaceCaptureApp } from './FaceCaptureApp.js';
+import { initThemeToggle } from './theme-toggle.js';
 
 /* ============================================================
    CLASE ESPECÍFICA PARA AUTO-REGISTRO (ENROLLMENT)
@@ -55,9 +56,7 @@ class EnrollmentCaptureApp extends FaceCaptureApp {
      */
     hideModal() {
         if (this.modal) {
-            this.modal.style.display = "none";
-            this.modal.style.opacity = "0";
-            this.modal.style.visibility = "hidden";
+            this.modal.classList.add("hidden");
         }
     }
 
@@ -75,6 +74,8 @@ class EnrollmentCaptureApp extends FaceCaptureApp {
    ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
+    initThemeToggle('capture-face-theme');
+
     try {
         if (typeof faceapi === "undefined") {
             console.error("face-api.js no está cargado");

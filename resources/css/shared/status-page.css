@@ -1,0 +1,50 @@
+/* resources/css/shared/status-page.css */
+@import './tokens.css';
+
+/* ============================================================
+   PANTALLA DE ESTADO — layout compartido por las 4 vistas de
+   error/estado (terminal-inactive, terminal-setup-invalid,
+   enrollments/already-submitted, enrollments/expired).
+   Sin toggle de tema manual: son pantallas de una sola visita,
+   sin interacción — solo siguen prefers-color-scheme.
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: var(--font);
+    background: var(--c-bg);
+    color: var(--c-text);
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--sp-8);
+}
+.status-page-container { max-width: 480px; }
+.status-page-icon {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto var(--sp-6);
+    border: 2px solid;
+}
+.status-page-icon svg { width: 40px; height: 40px; }
+
+.status-page-icon--danger  { background: var(--c-danger-bg);  border-color: var(--c-danger-l);  }
+.status-page-icon--danger svg  { color: var(--c-danger-l); }
+.status-page-icon--success { background: var(--c-success-bg); border-color: var(--c-success-l); }
+.status-page-icon--success svg { color: var(--c-success-l); }
+.status-page-icon--warning { background: var(--c-warning-bg); border-color: var(--c-warning-l); }
+.status-page-icon--warning svg { color: var(--c-warning-l); }
+
+.status-page-label {
+    font-size: .75rem; font-weight: 600; letter-spacing: .15em;
+    text-transform: uppercase; margin-bottom: var(--sp-3);
+}
+.status-page-label--danger  { color: var(--c-danger-l); }
+.status-page-label--success { color: var(--c-success-l); }
+.status-page-label--warning { color: var(--c-warning-l); }
+
+.status-page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: var(--sp-3); color: var(--c-text); }
+.status-page-description { font-size: 1rem; color: var(--c-muted); line-height: 1.6; margin-bottom: var(--sp-2); }
+.status-page-extra { font-size: .875rem; color: var(--c-subtle); margin-top: var(--sp-8); }

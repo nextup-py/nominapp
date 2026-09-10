@@ -815,9 +815,7 @@ export class FaceCaptureApp {
         console.log("Intentando mostrar el modal de éxito...");
         if (this.modal) {
             console.log("Modal encontrado, configurando estilos...");
-            this.modal.style.display = "flex";
-            this.modal.style.opacity = "1";
-            this.modal.style.visibility = "visible";
+            this.modal.classList.remove("hidden");
 
             setTimeout(() => {
                 console.log("Enfocando el botón de cerrar...");
@@ -830,9 +828,7 @@ export class FaceCaptureApp {
 
     hideModal() {
         if (this.modal) {
-            this.modal.style.display = "none";
-            this.modal.style.opacity = "0";
-            this.modal.style.visibility = "hidden";
+            this.modal.classList.add("hidden");
 
             window.location.href = "/employees";
         }
@@ -869,7 +865,7 @@ export class FaceCaptureApp {
     }
 
     handleKeydown(event) {
-        if (event.key === "Escape" && this.modal?.style.display !== "none") {
+        if (event.key === "Escape" && this.modal && !this.modal.classList.contains("hidden")) {
             event.preventDefault();
             this.hideModal();
         }

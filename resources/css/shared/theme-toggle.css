@@ -1,0 +1,27 @@
+/* ============================================================
+   THEME TOGGLE
+   Botón compartido por mark, terminal, capture-face y device-link
+   para alternar entre modo claro/oscuro. Ver <x-theme-toggle-button>.
+   ============================================================ */
+.theme-toggle {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--c-border);
+    background: transparent;
+    color: var(--c-muted);
+    cursor: pointer;
+    transition: background var(--tr-f), color var(--tr-f), border-color var(--tr-f);
+    flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--c-primary-bg); color: var(--c-primary); border-color: var(--c-primary); }
+.theme-toggle svg { width: 16px; height: 16px; display: block; }
+.theme-toggle .icon-sun  { display: none; }
+.theme-toggle .icon-moon { display: block; }
+html[data-theme="dark"]  .theme-toggle .icon-sun  { display: block; }
+html[data-theme="dark"]  .theme-toggle .icon-moon { display: none; }
+/* sistema oscuro sin override manual */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .theme-toggle .icon-sun  { display: block; }
+    :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: none; }
+}

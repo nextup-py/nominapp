@@ -24,6 +24,7 @@ export default defineConfig({
                 'resources/css/shared/fonts/roboto.css',
                 'resources/css/shared/fonts/nunito-sans.css',
                 'resources/css/shared/fonts/work-sans.css',
+                'resources/css/shared/status-page.css',
                 'resources/js/planner/planner.js',
                 'resources/css/planner/planner.css',
             ],
