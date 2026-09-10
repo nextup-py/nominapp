@@ -1,5 +1,6 @@
 import { captureFaceSamples } from '../shared/face-capture-core.js';
 import { markUserInteracted, hasUserInteracted, playBeep } from '../shared/audio-feedback.js';
+import { initThemeToggle } from '../shared/theme-toggle.js';
 import { migrateTokenFromLocalStorage, getMeta, getCachedEmployees, clearTerminalState } from './terminal-offline/db.js';
 import { identifyEmployee as matchDescriptor } from './terminal-offline/matcher.js';
 import { heartbeat, syncEmployees, getFaceConfig, TerminalAuthError } from './terminal-offline/sync.js';
@@ -64,7 +65,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnMarkAnother = document.getElementById("btnMarkAnother");
     const btnRetry       = document.getElementById("btnRetry");
     const btnReload      = document.getElementById("btnReload");
-    const btnThemeToggle = document.getElementById("btnThemeToggle");
 
     // Day complete screen elements
     const dayCompleteEmployeePhoto  = document.getElementById("dayCompleteEmployeePhoto");
@@ -1183,22 +1183,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================================
     // TEMA CLARO / OSCURO
     // ============================================================================
-    (function initTheme() {
-        const saved = localStorage.getItem("terminal-theme");
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const isDark = saved === "dark" || (!saved && prefersDark);
-        if (isDark) document.documentElement.setAttribute("data-theme", "dark");
-        else document.documentElement.setAttribute("data-theme", "light");
-    })();
-
-    if (btnThemeToggle) {
-        btnThemeToggle.addEventListener("click", () => {
-            const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-            const next = isDark ? "light" : "dark";
-            document.documentElement.setAttribute("data-theme", next);
-            localStorage.setItem("terminal-theme", next);
-        });
-    }
+    initThemeToggle("terminal-theme");
 
     // ============================================================================
     // INICIALIZACIÓN

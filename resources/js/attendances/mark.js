@@ -23,6 +23,7 @@ import {
     isDismissed,
     dismiss,
 } from '../shared/install-prompt.js';
+import { initThemeToggle } from '../shared/theme-toggle.js';
 import {
     getLastGpsErrorCode,
     requestGPSBackground,
@@ -1918,22 +1919,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================================================
     // Mismo mecanismo que ya usa terminal.js — localStorage con clave
     // propia para no interferir si algún dispositivo llegara a usarse en los dos modos.
-    (function initTheme() {
-        const saved = localStorage.getItem("mark-theme");
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const isDark = saved === "dark" || (!saved && prefersDark);
-        document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
-    })();
-
-    const btnThemeToggle = document.getElementById("btnThemeToggle");
-    if (btnThemeToggle) {
-        btnThemeToggle.addEventListener("click", () => {
-            const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-            const next = isDark ? "light" : "dark";
-            document.documentElement.setAttribute("data-theme", next);
-            localStorage.setItem("mark-theme", next);
-        });
-    }
+    initThemeToggle("mark-theme");
 
     (function initInstallUi() {
         const installBanner = document.getElementById("installBanner");
