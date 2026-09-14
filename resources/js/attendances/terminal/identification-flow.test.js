@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../terminal-offline/db.js', () => ({ getCachedEmployees: vi.fn() }));
 vi.mock('../terminal-offline/matcher.js', () => ({ identifyEmployee: vi.fn() }));
@@ -14,11 +14,59 @@ vi.mock('../terminal-offline/sync.js', () => {
 });
 vi.mock('../terminal-offline/queue.js', () => ({ getEmployeeStatus: vi.fn() }));
 
+// Mocks exclusivos de la suite `startIdentificationFlow` de más abajo: ese
+// flujo orquesta cámara/pantallas/búsqueda-manual/feedback además del
+// matching ya mockeado arriba. Se mockean acá (nivel de módulo, por el
+// hoisting de vi.mock) aunque solo los use una suite — las 5 pruebas de
+// `identifyEmployeeFromDescriptor` no tocan ninguno de estos módulos.
+vi.mock('./camera.js', () => ({
+    loadModels: vi.fn().mockResolvedValue({ ok: true }),
+    startCamera: vi.fn().mockResolvedValue({ ok: true }),
+    stopCamera: vi.fn(),
+    startDrawLoop: vi.fn(),
+    stopDrawLoop: vi.fn(),
+    captureDescriptor: vi.fn(),
+    isFaceDetected: vi.fn().mockReturnValue(false),
+    isInCooldown: vi.fn().mockReturnValue(false),
+    setNotRecognizedCooldown: vi.fn(),
+}));
+vi.mock('./idle-detection.js', () => ({ resetIdleTimer: vi.fn() }));
+vi.mock('./screen-state.js', () => ({
+    showScreen: vi.fn(),
+    showSuccessScreen: vi.fn(),
+    showError: vi.fn(),
+    showDayComplete: vi.fn(),
+}));
+vi.mock('./mark-registration.js', () => ({
+    showTypeSelectionForEmployee: vi.fn(),
+    registerMark: vi.fn(),
+    clearPendingEmployee: vi.fn(),
+}));
+vi.mock('./ui-feedback.js', () => ({
+    setTerminalVideoState: vi.fn(),
+    setIdStatusDot: vi.fn(),
+    showCaptureProgress: vi.fn(),
+    updateCaptureProgress: vi.fn(),
+    finishCaptureProgress: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('./manual-search.js', () => ({
+    showManualSearchLink: vi.fn(),
+    hideManualSearchLink: vi.fn(),
+    closeManualSearch: vi.fn(),
+}));
+
 import { getCachedEmployees } from '../terminal-offline/db.js';
 import { identifyEmployee as matchDescriptor } from '../terminal-offline/matcher.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
 import { getEmployeeStatus } from '../terminal-offline/queue.js';
-import { identifyEmployeeFromDescriptor, setManualCandidate } from './identification-flow.js';
+import * as camera from './camera.js';
+import {
+    identifyEmployeeFromDescriptor,
+    setManualCandidate,
+    startIdentificationFlow,
+    stopAutoIdentification,
+    getConsecutiveFailures,
+} from './identification-flow.js';
 
 describe('identifyEmployeeFromDescriptor', () => {
     beforeEach(() => {
@@ -41,7 +89,7 @@ describe('identifyEmployeeFromDescriptor', () => {
         setManualCandidate(candidate);
         matchDescriptor.mockReturnValue({ employee: null, distance: null, reason: 'no_match' });
 
-        await identifyEmployeeFromDescriptor(new Float32Array(128), candidate);
+        await identifyEmployeeFromDescriptor(new Float32Array(128));
 
         expect(getCachedEmployees).not.toHaveBeenCalled();
         expect(matchDescriptor).toHaveBeenCalledWith(expect.any(Float32Array), [candidate], 0.5, 0.1);
@@ -77,5 +125,49 @@ describe('identifyEmployeeFromDescriptor', () => {
         const result = await identifyEmployeeFromDescriptor(new Float32Array(128), null);
 
         expect(result).toEqual({ ok: false, message: 'sin token', needsProvisioning: true });
+    });
+});
+
+describe('startIdentificationFlow', () => {
+    /**
+     * Refs mínimas que aceptan todos los módulos mockeados (screen-state.js,
+     * ui-feedback.js, etc.) sin acceder a propiedades específicas del DOM.
+     */
+    const refs = {
+        screens: {},
+        video: {},
+        overlay: {},
+        ctx: {},
+        identificationStatus: null,
+        successDom: {},
+        errorMessageEl: {},
+        dayCompleteDom: {},
+        typeSelectionDom: {},
+    };
+
+    afterEach(() => {
+        // Limpia el setInterval real de captura para que no siga vivo entre
+        // tests (startAutoIdentification arranca uno de 1500ms al llegar a
+        // startDrawLoop, y esta suite lo alcanza deliberadamente).
+        stopAutoIdentification(refs.video);
+    });
+
+    it('resetea isProcessing y consecutiveFailures de un ciclo previo', async () => {
+        let capturedIsProcessing = null;
+        camera.startDrawLoop.mockImplementation((video, overlay, ctx, { isProcessing }) => {
+            capturedIsProcessing = isProcessing;
+        });
+
+        startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+
+        // startAutoIdentification es async y no se espera desde
+        // startIdentificationFlow (fire-and-forget) — hay que dejar correr
+        // las dos promesas resueltas (loadModels, startCamera) antes de que
+        // llegue a startDrawLoop().
+        await vi.waitFor(() => expect(camera.startDrawLoop).toHaveBeenCalled());
+
+        expect(capturedIsProcessing).not.toBeNull();
+        expect(capturedIsProcessing()).toBe(false);
+        expect(getConsecutiveFailures()).toBe(0);
     });
 });

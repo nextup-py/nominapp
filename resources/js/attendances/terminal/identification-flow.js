@@ -155,6 +155,7 @@ export async function startAutoIdentification(refs) {
         return;
     }
 
+    updateStatus(refs.identificationStatus, 'Iniciando cámara...');
     const cameraResult = await camera.startCamera(refs.video, refs.overlay);
     if (!cameraResult.ok) {
         showError(refs.screens, refs.errorMessageEl, cameraResult.message);
