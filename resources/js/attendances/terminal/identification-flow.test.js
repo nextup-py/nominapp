@@ -171,3 +171,67 @@ describe('startIdentificationFlow', () => {
         expect(getConsecutiveFailures()).toBe(0);
     });
 });
+
+describe('startIdentificationFlow — reset tras un ciclo que queda "trabado"', () => {
+    /**
+     * Refs mínimas — mismas que la suite de arriba, copia local para no
+     * acoplar ambas suites entre sí.
+     */
+    const refs = {
+        screens: {},
+        video: {},
+        overlay: {},
+        ctx: {},
+        identificationStatus: null,
+        successDom: {},
+        errorMessageEl: {},
+        dayCompleteDom: {},
+        typeSelectionDom: {},
+    };
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('libera isProcessing en un segundo ciclo aunque el anterior haya terminado en needsProvisioning sin pasar por el finally normal', async () => {
+        let capturedInterval = null;
+        vi.stubGlobal(
+            'setInterval',
+            vi.fn((cb) => {
+                capturedInterval = cb;
+                return 999;
+            })
+        );
+        vi.stubGlobal('clearInterval', vi.fn());
+
+        camera.isFaceDetected.mockReturnValue(true);
+        camera.isInCooldown.mockReturnValue(false);
+        camera.captureDescriptor.mockResolvedValue(new Float32Array(128));
+        getFaceConfig.mockRejectedValue(new TerminalAuthError('sin token'));
+
+        const capturedIsProcessingFns = [];
+        camera.startDrawLoop.mockImplementation((video, overlay, ctx, { isProcessing }) => {
+            capturedIsProcessingFns.push(isProcessing);
+        });
+
+        startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+        await vi.waitFor(() => expect(capturedInterval).not.toBeNull());
+
+        // Ejecutar manualmente el callback del interval (simula que pasaron
+        // 1500ms) — identifyEmployeeFromDescriptor rechaza con
+        // TerminalAuthError, lo que dispara la rama needsProvisioning: llama
+        // stopAutoIdentification() (limpia identifyInterval a null) ANTES de
+        // que el finally intente resetear isProcessing — reproduce el
+        // estado "trabado" del bug original.
+        await capturedInterval();
+
+        expect(capturedIsProcessingFns[0]()).toBe(true);
+
+        // Segundo ciclo: startIdentificationFlow debe liberar isProcessing.
+        startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+        await vi.waitFor(() => expect(capturedIsProcessingFns.length).toBe(2));
+
+        expect(capturedIsProcessingFns[1]()).toBe(false);
+        expect(getConsecutiveFailures()).toBe(0);
+    });
+});
