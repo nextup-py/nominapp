@@ -22,7 +22,7 @@
 import * as camera from './camera.js';
 import { resetIdleTimer } from './idle-detection.js';
 import { showScreen, showSuccessScreen, showError, showDayComplete } from './screen-state.js';
-import { showTypeSelectionForEmployee, registerMark } from './mark-registration.js';
+import { showTypeSelectionForEmployee, registerMark, clearPendingEmployee } from './mark-registration.js';
 import { identifyEmployee as matchDescriptor } from '../terminal-offline/matcher.js';
 import { getCachedEmployees } from '../terminal-offline/db.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
@@ -41,6 +41,11 @@ let manualCandidate = null;
 /** @param {object|null} employee */
 export function setManualCandidate(employee) {
     manualCandidate = employee;
+    // Elegir un candidato manual es un reinicio implícito del contador de
+    // fallos — mismo comportamiento que el terminal.js original, que
+    // reseteaba consecutiveFailures junto con manualCandidate en el mismo
+    // callback onSelect.
+    consecutiveFailures = 0;
 }
 
 /** @returns {number} */
@@ -113,13 +118,26 @@ function updateStatus(identificationStatusEl, text) {
  * Punto de entrada principal del flujo — resetea el estado de intentos
  * previos, oculta la búsqueda manual, muestra la pantalla de identificación
  * y arranca la auto-identificación.
+ *
+ * Único punto de re-entrada común a todo path de finalización/cancelación/
+ * reintento/salida-de-reposo (directamente, o vía el wrapper local
+ * `resetTerminal()` de terminal.js) — por eso también es el lugar correcto
+ * para resetear `isProcessing` (bug: quedaba en `true` para siempre tras un
+ * ciclo exitoso, porque el `finally` del intervalo que lo resetea está
+ * guardado por `if (identifyInterval)`, y `stopAutoIdentification()` ya lo
+ * anuló antes de que ese `finally` corra) y para limpiar el empleado
+ * pendiente de selección de tipo (`clearPendingEmployee()` — antes solo se
+ * limpiaba en Cancelar/Reintentar/Marcar otra persona, nunca en un path de
+ * éxito).
  * @param {{screens, video, overlay, ctx, identificationStatus}} refs
  * @param {{onIdleTimeout: () => void}} callbacks
  */
 export function startIdentificationFlow(refs, { onIdleTimeout }) {
     resetIdleTimer(onIdleTimeout);
+    isProcessing = false;
     consecutiveFailures = 0;
     manualCandidate = null;
+    clearPendingEmployee();
     hideManualSearchLink();
     closeManualSearch();
     showScreen(refs.screens, 'identification');

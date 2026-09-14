@@ -1,5 +1,4 @@
 // resources/js/attendances/terminal.js
-import * as camera from './terminal/camera.js';
 import * as idleDetection from './terminal/idle-detection.js';
 import * as screenState from './terminal/screen-state.js';
 import * as markRegistration from './terminal/mark-registration.js';
@@ -109,7 +108,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const terminalHeader = document.querySelector('.terminal-header');
-    const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+
+    /** Guarda re-entrancy de exitIdle() — evita arrancar una segunda auto-identificación
+     *  si dos disparadores casi simultáneos (touch + presence-check) llaman a exitIdle()
+     *  antes de que el primero termine de salir del modo reposo. */
+    let isIdle = false;
 
     /** Bundle de refs pasado a identification-flow.js — un único objeto reutilizado en cada llamada. */
     const identificationRefs = {
@@ -140,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         idleDetection.clearIdleTimer();
         identificationFlow.stopAutoIdentification(video);
         screenState.stopCountdown();
+        isIdle = true;
         updateIdleDate();
         screenState.showScreen(screens, 'idle');
         idleDetection.startPresenceCheck(video, exitIdle);
@@ -147,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function exitIdle() {
+        if (!isIdle) return;
+        isIdle = false;
         idleDetection.stopPresenceCheck();
         if (terminalHeader) terminalHeader.classList.remove('terminal-header--idle');
         identificationFlow.startIdentificationFlow(identificationRefs, { onIdleTimeout: enterIdle });
