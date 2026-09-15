@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../terminal-offline/db.js', () => ({ getCachedEmployees: vi.fn() }));
-vi.mock('../terminal-offline/matcher.js', () => ({ identifyEmployee: vi.fn() }));
+vi.mock('../offline-shared/matcher.js', () => ({ identifyEmployee: vi.fn() }));
 vi.mock('../terminal-offline/sync.js', () => {
     // Nombre de clase local distinto de `TerminalAuthError` a propósito: si
     // coincide con el nombre que este archivo importa más abajo desde el
@@ -56,7 +56,7 @@ vi.mock('./manual-search.js', () => ({
 }));
 
 import { getCachedEmployees } from '../terminal-offline/db.js';
-import { identifyEmployee as matchDescriptor } from '../terminal-offline/matcher.js';
+import { identifyEmployee as matchDescriptor } from '../offline-shared/matcher.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
 import { getEmployeeStatus } from '../terminal-offline/queue.js';
 import * as camera from './camera.js';
