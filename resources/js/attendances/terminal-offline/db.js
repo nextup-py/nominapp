@@ -1,9 +1,14 @@
+// resources/js/attendances/terminal-offline/db.js
 /**
  * =============================================================================
  * INDEXEDDB — CACHÉ LOCAL DEL TERMINAL
  * =============================================================================
  *
  * @fileoverview Wrapper delgado sobre `idb` para la base local del terminal.
+ * El CRUD genérico (metadata, cola de eventos, caché de estado, sync log)
+ * vive en `offline-shared/generic-db.js` — acá solo el schema propio
+ * (incluye `employees_cache`, que mobile no tiene) y las funciones
+ * específicas de la caché de empleados (N candidatos por sucursal).
  *
  * Stores:
  * - terminal_meta          — key/value: api_token, terminal_id/code/branch_id,
@@ -27,9 +32,11 @@
  */
 
 import { openDB } from 'idb';
+import * as genericDb from '../offline-shared/generic-db.js';
 
 const DB_NAME = 'nominapp-terminal';
 const DB_VERSION = 2;
+const META_STORE = 'terminal_meta';
 
 /** @type {Promise<import('idb').IDBPDatabase>|null} */
 let dbPromise = null;
@@ -60,24 +67,14 @@ export function getDb() {
     return dbPromise;
 }
 
-/**
- * Lee un valor de `terminal_meta`.
- * @param {string} key
- * @returns {Promise<any>}
- */
+/** @param {string} key @returns {Promise<any>} */
 export async function getMeta(key) {
-    const db = await getDb();
-    return db.get('terminal_meta', key);
+    return genericDb.getMeta(await getDb(), META_STORE, key);
 }
 
-/**
- * Escribe un valor en `terminal_meta`.
- * @param {string} key
- * @param {any} value
- */
+/** @param {string} key @param {any} value */
 export async function setMeta(key, value) {
-    const db = await getDb();
-    return db.put('terminal_meta', value, key);
+    return genericDb.setMeta(await getDb(), META_STORE, key, value);
 }
 
 /**
@@ -123,24 +120,9 @@ export async function clearTerminalState() {
     ]);
 }
 
-/**
- * Registra una entrada en `sync_log`, recortando el historial a las últimas 50.
- * @param {string} type
- * @param {boolean} ok
- * @param {string|null} [detail]
- */
+/** @param {string} type @param {boolean} ok @param {string|null} [detail] */
 export async function logSync(type, ok, detail = null) {
-    const db = await getDb();
-    await db.add('sync_log', { type, ok, detail, at: Date.now() });
-
-    const allKeys = await db.getAllKeys('sync_log');
-    if (allKeys.length > 50) {
-        const tx = db.transaction('sync_log', 'readwrite');
-        for (const key of allKeys.slice(0, allKeys.length - 50)) {
-            await tx.store.delete(key);
-        }
-        await tx.done;
-    }
+    return genericDb.logSync(await getDb(), type, ok, detail);
 }
 
 /** @returns {Promise<Array<object>>} */
@@ -181,11 +163,8 @@ export async function applyEmployeesDelta(employees, tombstones) {
 /**
  * Aplica el mapa `has_scheduled_break` (id → bool) a los empleados YA
  * cacheados — a diferencia de `applyEmployeesDelta()`, esto se recalcula
- * completo en cada sync (ver EmployeeDescriptorSyncService::breakFlagsForBranch()),
- * no solo para los que cambiaron, porque el valor depende del día calendario
- * y de asignaciones de horario que no tocan el registro del empleado. Un id
- * que todavía no está en la caché (recién sincronizado en el mismo lote) se
- * ignora silenciosamente — ya llegó con el campo puesto vía `applyEmployeesDelta()`.
+ * completo en cada sync, no solo para los que cambiaron. Un id que todavía no
+ * está en la caché se ignora silenciosamente.
  * @param {Record<number, boolean>} breakFlags
  */
 export async function applyBreakFlags(breakFlags) {
@@ -202,32 +181,27 @@ export async function applyBreakFlags(breakFlags) {
 }
 
 // =========================================================================
-// COLA DE EVENTOS OFFLINE (outbound_events)
+// COLA DE EVENTOS OFFLINE (outbound_events) — delegado a generic-db.js
 // =========================================================================
 
 /**
  * Encola una marcación capturada localmente. `date` es la fecha local del
- * dispositivo (YYYY-MM-DD) al momento de la captura — se usa solo para
- * filtrar "eventos de hoy de este empleado" del lado del cliente; la fecha
- * real de negocio (con el timezone de la app) la decide el servidor al sincronizar.
+ * dispositivo (YYYY-MM-DD) al momento de la captura.
  * @param {{client_event_id: string, employee_id: number, event_type: string, recorded_at: string, date: string}} event
  */
 export async function queueEvent(event) {
-    const db = await getDb();
-    await db.put('outbound_events', { ...event, status: 'pending', attempts: 0, created_at: Date.now() });
+    return genericDb.queueEvent(await getDb(), event);
 }
 
-/** @returns {Promise<Array<object>>} Eventos pendientes de sincronizar (no incluye los marcados 'conflict'). */
+/** @returns {Promise<Array<object>>} Eventos pendientes de sincronizar. */
 export async function getPendingEvents() {
-    const db = await getDb();
-    const all = await db.getAll('outbound_events');
-    return all.filter((event) => event.status === 'pending');
+    return genericDb.getPendingEvents(await getDb());
 }
 
 /**
  * Eventos (pendientes o en conflicto) de un empleado para la fecha local
- * indicada — usado para resolver localmente el último evento del día
- * cuando no hay red para consultar al servidor (ver queue.js).
+ * indicada — la única función de cola que sigue siendo específica del
+ * terminal (filtra por employeeId, que mobile no necesita).
  * @param {number} employeeId
  * @param {string} date - YYYY-MM-DD local.
  */
@@ -237,57 +211,44 @@ export async function getEventsForEmployeeOnDate(employeeId, date) {
     return all.filter((event) => event.employee_id === employeeId && event.date === date);
 }
 
-/** Marca un evento encolado como sincronizado — se elimina del store (ya vive en el servidor). */
+/** @param {string} clientEventId */
 export async function removeQueuedEvent(clientEventId) {
-    const db = await getDb();
-    await db.delete('outbound_events', clientEventId);
+    return genericDb.removeQueuedEvent(await getDb(), clientEventId);
 }
 
-/** Marca un evento encolado como rechazado por el servidor — no se reintenta más, queda para revisión manual. */
+/** @param {string} clientEventId @param {string} [message] */
 export async function markQueuedEventConflict(clientEventId, message) {
-    const db = await getDb();
-    const event = await db.get('outbound_events', clientEventId);
-    if (!event) return;
-    await db.put('outbound_events', { ...event, status: 'conflict', server_message: message ?? null });
+    return genericDb.markQueuedEventConflict(await getDb(), clientEventId, message);
 }
 
-/** Incrementa el contador de intentos de un evento encolado (diagnóstico, no afecta el reintento en sí). */
+/** @param {string} clientEventId */
 export async function incrementQueuedEventAttempts(clientEventId) {
-    const db = await getDb();
-    const event = await db.get('outbound_events', clientEventId);
-    if (!event) return;
-    await db.put('outbound_events', { ...event, attempts: (event.attempts ?? 0) + 1 });
+    return genericDb.incrementQueuedEventAttempts(await getDb(), clientEventId);
 }
 
-/** @returns {Promise<number>} Cantidad de eventos pendientes de sincronizar. */
+/** @returns {Promise<number>} */
 export async function countPendingEvents() {
-    return (await getPendingEvents()).length;
+    return genericDb.countPendingEvents(await getDb());
 }
 
-/** @returns {Promise<number>} Cantidad de eventos en conflicto (requieren revisión manual en Filament). */
+/** @returns {Promise<number>} */
 export async function countConflictEvents() {
-    const db = await getDb();
-    const all = await db.getAll('outbound_events');
-    return all.filter((event) => event.status === 'conflict').length;
+    return genericDb.countConflictEvents(await getDb());
 }
 
 // =========================================================================
-// CACHÉ DE ESTADO POR EMPLEADO (employee_status_cache)
+// CACHÉ DE ESTADO POR EMPLEADO (employee_status_cache) — delegado
 // =========================================================================
 
 /**
- * Guarda el último estado de marcación conocido del servidor para un
- * empleado (se actualiza cada vez que fetchEmployeeStatus() tiene éxito).
  * @param {number} employeeId
  * @param {{last_event: string|null, last_event_time: string|null, allowed_events: string[]}} status
  */
 export async function setEmployeeStatusCache(employeeId, status) {
-    const db = await getDb();
-    await db.put('employee_status_cache', { employee_id: employeeId, ...status, cached_at: Date.now() });
+    return genericDb.setEmployeeStatusCache(await getDb(), employeeId, status);
 }
 
 /** @param {number} employeeId @returns {Promise<object|undefined>} */
 export async function getEmployeeStatusCache(employeeId) {
-    const db = await getDb();
-    return db.get('employee_status_cache', employeeId);
+    return genericDb.getEmployeeStatusCache(await getDb(), employeeId);
 }
