@@ -163,8 +163,11 @@ export async function applyEmployeesDelta(employees, tombstones) {
 /**
  * Aplica el mapa `has_scheduled_break` (id → bool) a los empleados YA
  * cacheados — a diferencia de `applyEmployeesDelta()`, esto se recalcula
- * completo en cada sync, no solo para los que cambiaron. Un id que todavía no
- * está en la caché se ignora silenciosamente.
+ * completo en cada sync (ver EmployeeDescriptorSyncService::breakFlagsForBranch()),
+ * no solo para los que cambiaron, porque el valor depende del día calendario
+ * y de asignaciones de horario que no tocan el registro del empleado. Un id
+ * que todavía no está en la caché (recién sincronizado en el mismo lote) se
+ * ignora silenciosamente — ya llegó con el campo puesto vía `applyEmployeesDelta()`.
  * @param {Record<number, boolean>} breakFlags
  */
 export async function applyBreakFlags(breakFlags) {
@@ -186,14 +189,16 @@ export async function applyBreakFlags(breakFlags) {
 
 /**
  * Encola una marcación capturada localmente. `date` es la fecha local del
- * dispositivo (YYYY-MM-DD) al momento de la captura.
+ * dispositivo (YYYY-MM-DD) al momento de la captura — se usa solo para
+ * filtrar "eventos de hoy de este empleado" del lado del cliente; la fecha
+ * real de negocio (con el timezone de la app) la decide el servidor al sincronizar.
  * @param {{client_event_id: string, employee_id: number, event_type: string, recorded_at: string, date: string}} event
  */
 export async function queueEvent(event) {
     return genericDb.queueEvent(await getDb(), event);
 }
 
-/** @returns {Promise<Array<object>>} Eventos pendientes de sincronizar. */
+/** @returns {Promise<Array<object>>} Eventos pendientes de sincronizar (no incluye los marcados 'conflict'). */
 export async function getPendingEvents() {
     return genericDb.getPendingEvents(await getDb());
 }
@@ -211,17 +216,17 @@ export async function getEventsForEmployeeOnDate(employeeId, date) {
     return all.filter((event) => event.employee_id === employeeId && event.date === date);
 }
 
-/** @param {string} clientEventId */
+/** Marca un evento encolado como sincronizado — se elimina del store (ya vive en el servidor). @param {string} clientEventId */
 export async function removeQueuedEvent(clientEventId) {
     return genericDb.removeQueuedEvent(await getDb(), clientEventId);
 }
 
-/** @param {string} clientEventId @param {string} [message] */
+/** Marca un evento encolado como rechazado por el servidor — no se reintenta más, queda para revisión manual. @param {string} clientEventId @param {string} [message] */
 export async function markQueuedEventConflict(clientEventId, message) {
     return genericDb.markQueuedEventConflict(await getDb(), clientEventId, message);
 }
 
-/** @param {string} clientEventId */
+/** Incrementa el contador de intentos de un evento encolado (diagnóstico, no afecta el reintento en sí). @param {string} clientEventId */
 export async function incrementQueuedEventAttempts(clientEventId) {
     return genericDb.incrementQueuedEventAttempts(await getDb(), clientEventId);
 }
@@ -241,6 +246,8 @@ export async function countConflictEvents() {
 // =========================================================================
 
 /**
+ * Guarda el último estado de marcación conocido del servidor para un
+ * empleado (se actualiza cada vez que fetchEmployeeStatus() tiene éxito).
  * @param {number} employeeId
  * @param {{last_event: string|null, last_event_time: string|null, allowed_events: string[]}} status
  */

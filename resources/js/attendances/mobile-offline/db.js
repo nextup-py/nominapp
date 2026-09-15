@@ -90,7 +90,11 @@ export async function logSync(type, ok, detail = null) {
 
 /**
  * Vacía por completo la caché local del dispositivo — llamado tras una
- * auto-desvinculación exitosa (ver `unlinkDevice()` en `sync.js`).
+ * auto-desvinculación exitosa (ver `unlinkDevice()` en `sync.js`). El
+ * dispositivo queda como recién instalado: sin token, sin empleado
+ * cacheado, sin cola de eventos ni estado. Cualquier marcación pendiente de
+ * sincronizar en `outbound_events` se pierde — el caller es responsable de
+ * intentar `flushQueue()` y advertir al usuario antes de llamar a esto.
  * @returns {Promise<void>}
  */
 export async function resetDb() {
@@ -101,7 +105,8 @@ export async function resetDb() {
 }
 
 /**
- * Empleado dueño del dispositivo, con su descriptor facial cacheado.
+ * Empleado dueño del dispositivo, con su descriptor facial cacheado — el
+ * único "candidato" contra el que el matcher local compara.
  * @returns {Promise<{id: number, first_name: string, last_name: string, ci: string|null, face_descriptor: number[]}|undefined>}
  */
 export async function getOwnEmployee() {
@@ -109,7 +114,9 @@ export async function getOwnEmployee() {
 }
 
 /**
- * Actualiza el empleado propio cacheado (llamado tras cada heartbeat exitoso).
+ * Actualiza el empleado propio cacheado (llamado tras cada heartbeat exitoso
+ * — propaga automáticamente una re-inscripción facial sin que el empleado
+ * tenga que re-vincular el dispositivo).
  * @param {{id: number, first_name: string, last_name: string, ci: string|null, face_descriptor: number[]}} employee
  */
 export async function setOwnEmployee(employee) {
@@ -122,13 +129,17 @@ export async function setOwnEmployee(employee) {
 // =========================================================================
 
 /**
+ * Encola una marcación capturada localmente. `date` es la fecha local del
+ * dispositivo (YYYY-MM-DD) al momento de la captura — se usa solo para
+ * filtrar "eventos de hoy" del lado del cliente; la fecha real de negocio
+ * (con el timezone de la app) la decide el servidor al sincronizar.
  * @param {{client_event_id: string, employee_id: number, event_type: string, recorded_at: string, date: string, location?: object|null}} event
  */
 export async function queueEvent(event) {
     return genericDb.queueEvent(await getDb(), event);
 }
 
-/** @returns {Promise<Array<object>>} */
+/** @returns {Promise<Array<object>>} Eventos pendientes de sincronizar (no incluye los marcados 'conflict'). */
 export async function getPendingEvents() {
     return genericDb.getPendingEvents(await getDb());
 }
@@ -144,17 +155,17 @@ export async function getEventsOnDate(date) {
     return all.filter((event) => event.date === date);
 }
 
-/** @param {string} clientEventId */
+/** Marca un evento encolado como sincronizado — se elimina del store (ya vive en el servidor). @param {string} clientEventId */
 export async function removeQueuedEvent(clientEventId) {
     return genericDb.removeQueuedEvent(await getDb(), clientEventId);
 }
 
-/** @param {string} clientEventId @param {string} [message] */
+/** Marca un evento encolado como rechazado por el servidor — no se reintenta más, queda para revisión manual. @param {string} clientEventId @param {string} [message] */
 export async function markQueuedEventConflict(clientEventId, message) {
     return genericDb.markQueuedEventConflict(await getDb(), clientEventId, message);
 }
 
-/** @param {string} clientEventId */
+/** Incrementa el contador de intentos de un evento encolado (diagnóstico, no afecta el reintento en sí). @param {string} clientEventId */
 export async function incrementQueuedEventAttempts(clientEventId) {
     return genericDb.incrementQueuedEventAttempts(await getDb(), clientEventId);
 }
@@ -169,7 +180,13 @@ export async function countConflictEvents() {
     return genericDb.countConflictEvents(await getDb());
 }
 
-/** Elimina del store local los eventos en conflicto. */
+/**
+ * Elimina del store local los eventos en conflicto — el registro real de lo
+ * ocurrido ya vive en el servidor (`AttendanceMarkFailure`, revisado por un
+ * admin en Filament); la copia local solo sirve para avisarle una vez al
+ * empleado. Sin esto, el aviso de conflicto en /marcar quedaría pegado para
+ * siempre (nada más limpia `outbound_events` del lado del cliente).
+ */
 export async function dismissConflictEvents() {
     return genericDb.dismissConflictEvents(await getDb());
 }
@@ -179,6 +196,8 @@ export async function dismissConflictEvents() {
 // =========================================================================
 
 /**
+ * Guarda el último estado de marcación conocido del servidor para el propio
+ * empleado (se actualiza cada vez que fetchStatus() tiene éxito).
  * @param {number} employeeId
  * @param {{last_event: string|null, last_event_time: string|null, allowed_events: string[]}} status
  */
