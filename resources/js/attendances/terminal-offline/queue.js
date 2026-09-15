@@ -257,6 +257,13 @@ export async function flushQueue() {
             );
             return { synced, conflicts, stillPending: await countPendingEvents(), results };
         } catch (error) {
+            // Solo los fallos de lote (submitInChunks los decora con `remainingEvents`) se
+            // absorben acá. Cualquier otro error (ej. una escritura fallida en IndexedDB dentro
+            // de onSynced/onConflict) debe propagarse sin tocar — mismo comportamiento que el
+            // código original, donde removeQueuedEvent/markQueuedEventConflict corrían fuera del
+            // try/catch que envolvía solo al envío por red.
+            if (!('remainingEvents' in error)) throw error;
+
             // Terminal: cualquier fallo de lote (sin red, servidor caído) se absorbe acá —
             // incrementa attempts en los eventos que quedaron sin enviar y se reintenta en el
             // próximo ciclo. Mismo comportamiento que el código original.

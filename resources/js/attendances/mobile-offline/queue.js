@@ -262,6 +262,13 @@ export async function flushQueue() {
             // mismo comportamiento que el código original.
             if (error instanceof MobileAuthError) throw error;
 
+            // Solo los fallos de lote (submitInChunks los decora con `remainingEvents`) se
+            // absorben acá. Cualquier otro error (ej. una escritura fallida en IndexedDB dentro
+            // de onSynced/onConflict) debe propagarse sin tocar — mismo comportamiento que el
+            // código original, donde removeQueuedEvent/markQueuedEventConflict corrían fuera del
+            // try/catch que envolvía solo al envío por red.
+            if (!('remainingEvents' in error)) throw error;
+
             for (const event of error.remainingEvents ?? []) await incrementQueuedEventAttempts(event.client_event_id);
             console.warn(`flushQueue: no se pudo sincronizar el lote (${(error.remainingEvents ?? []).length} eventos restantes):`, error.message);
             const partial = error.partialResults ?? { synced: 0, conflicts: 0, results: [] };
