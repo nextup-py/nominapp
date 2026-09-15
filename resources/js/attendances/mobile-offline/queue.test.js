@@ -156,6 +156,19 @@ describe('flushQueue', () => {
         expect(result.stillPending).toBe(1);
     });
 
+    it('un fallo de persistencia (no de red) en onSynced se propaga en vez de devolverse como resultado limpio', async () => {
+        // Regresión: antes de este fix, cualquier error capturado en el catch de flushQueue()
+        // (salvo MobileAuthError) se trataba como "fallo de lote de red" y se absorbía
+        // devolviendo {synced: 0, ...} — aunque el error viniera de una escritura fallida en
+        // IndexedDB (removeQueuedEvent) DESPUÉS de que el servidor ya confirmó el envío. El
+        // comportamiento original propagaba ese tipo de error fuera de flushQueue().
+        getPendingEvents.mockResolvedValue([{ client_event_id: 'e1', event_type: 'check_in', recorded_at: '2026-01-01T10:00:00Z', location: null }]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'e1', status: 'synced' }]);
+        removeQueuedEvent.mockRejectedValueOnce(new Error('IndexedDB write failed'));
+
+        await expect(flushQueue()).rejects.toThrow('IndexedDB write failed');
+    });
+
     it('parte la cola en lotes de a lo sumo 200 eventos', async () => {
         const pending = Array.from({ length: 250 }, (_, i) => ({ client_event_id: `e${i}`, event_type: 'check_in', recorded_at: '2026-01-01T10:00:00Z', location: null }));
         getPendingEvents.mockResolvedValue(pending);
