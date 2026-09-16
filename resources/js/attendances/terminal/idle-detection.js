@@ -19,7 +19,20 @@
 import { hasStream, adoptStream } from './camera.js';
 
 const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
-const lightOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+
+/**
+ * `faceapi` es un global cargado vía `<script defer>` (face-api.min.js), no
+ * un import — construir esta opción a nivel de módulo asumiría que ese
+ * script ya corrió, lo cual depende del orden de los `<script>` en el HTML.
+ * Construcción perezosa (primer uso real) para no depender de esa carrera.
+ * Ver la misma nota en `camera.js`.
+ */
+let lightOptions = null;
+
+function getLightOptions() {
+    if (!lightOptions) lightOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+    return lightOptions;
+}
 
 let idleTimer = null;
 let presenceCheckActive = false;
@@ -76,7 +89,7 @@ async function presenceCheckTick(videoEl, onPresenceDetected) {
 
     try {
         if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
-            const detection = await faceapi.detectSingleFace(videoEl, lightOptions);
+            const detection = await faceapi.detectSingleFace(videoEl, getLightOptions());
             if (detection && presenceCheckActive) {
                 stopPresenceCheck();
                 onPresenceDetected();

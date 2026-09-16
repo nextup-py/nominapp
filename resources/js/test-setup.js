@@ -1,12 +1,14 @@
 /**
  * @fileoverview Setup global de Vitest. `face-api.js` se carga vía <script>
  * en producción (variable global `faceapi`, nunca importada como módulo).
- * Varios módulos (`terminal/camera.js`, `terminal/idle-detection.js`)
- * instancian `new faceapi.TinyFaceDetectorOptions(...)` a nivel de módulo,
- * por lo que basta con importarlos para que `faceapi` deba existir — este
- * stub mínimo evita un `ReferenceError` en el entorno de test sin alterar
- * el comportamiento real (nunca se usan sus métodos de detección en estos
- * tests, solo el constructor de opciones).
+ * `terminal/camera.js`/`terminal/idle-detection.js` construyen
+ * `faceapi.TinyFaceDetectorOptions(...)` de forma perezosa (primer uso real,
+ * no a nivel de módulo — ver la nota en esos archivos sobre el
+ * `ReferenceError: faceapi is not defined` que esto causaba en producción
+ * cuando el orden de los `<script>` no garantizaba que face-api.min.js ya
+ * hubiera corrido). Este stub sigue siendo necesario igual: varios tests
+ * (`camera.test.js`, `identification-flow.test.js`, etc.) sí invocan esas
+ * funciones y necesitan que `faceapi` exista para no explotar.
  */
 if (typeof globalThis.faceapi === 'undefined') {
     globalThis.faceapi = {

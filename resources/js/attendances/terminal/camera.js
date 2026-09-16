@@ -26,8 +26,28 @@ import { captureFaceSamples } from '../../shared/face-capture-core.js';
 const MODELS_URI = '/models';
 const MIN_FACE_SIZE = 100;
 
-const tinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.6 });
-const lightOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+/**
+ * `faceapi` es un global cargado vía `<script defer>` (face-api.min.js), no
+ * un import — construir estas opciones a nivel de módulo asumiría que ese
+ * script ya corrió, lo cual depende del orden de los `<script>` en el HTML
+ * (bug real: ver `resources/js/attendances/terminal/camera.js` git history,
+ * `ReferenceError: faceapi is not defined` en producción cuando el `<script>`
+ * de face-api.min.js queda después del `@vite` de terminal.js). Construcción
+ * perezosa (primer uso real, después de DOMContentLoaded) para no depender
+ * de esa carrera.
+ */
+let tinyOptions = null;
+let lightOptions = null;
+
+function getTinyOptions() {
+    if (!tinyOptions) tinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.6 });
+    return tinyOptions;
+}
+
+function getLightOptions() {
+    if (!lightOptions) lightOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+    return lightOptions;
+}
 
 let stream = null;
 let drawLoopActive = false;
@@ -132,7 +152,7 @@ async function drawLoopTick(videoEl, overlayEl, ctx, callbacks) {
 
     try {
         if (videoEl.readyState >= 2 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
-            const detection = await faceapi.detectSingleFace(videoEl, lightOptions);
+            const detection = await faceapi.detectSingleFace(videoEl, getLightOptions());
             ctx.clearRect(0, 0, overlayEl.width, overlayEl.height);
 
             if (!callbacks.isProcessing() && Date.now() > notRecognizedUntil) {
@@ -167,7 +187,7 @@ async function drawLoopTick(videoEl, overlayEl, ctx, callbacks) {
  * @returns {Promise<Float32Array>}
  */
 export async function captureDescriptor(videoEl, samples = 5, intervalMs = 150, onProgress = null) {
-    const { averaged } = await captureFaceSamples(videoEl, tinyOptions, {
+    const { averaged } = await captureFaceSamples(videoEl, getTinyOptions(), {
         samples,
         intervalMs,
         minFaceSize: MIN_FACE_SIZE,

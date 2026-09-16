@@ -1,6 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { resetIdleTimer, clearIdleTimer, acquireWakeLock } from './idle-detection.js';
 
+describe('idle-detection.js — no debe depender de que faceapi exista al momento de importar', () => {
+    // Regresión del `ReferenceError: faceapi is not defined` en producción
+    // (humo manual, 2026-09-15) — ver la misma nota en camera.test.js.
+    const originalFaceapi = globalThis.faceapi;
+
+    beforeEach(() => {
+        vi.resetModules();
+        delete globalThis.faceapi;
+    });
+
+    afterEach(() => {
+        globalThis.faceapi = originalFaceapi;
+    });
+
+    it('el import no explota aunque faceapi todavía no esté definido', async () => {
+        await expect(import('./idle-detection.js')).resolves.toBeDefined();
+    });
+});
+
 describe('resetIdleTimer / clearIdleTimer', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
