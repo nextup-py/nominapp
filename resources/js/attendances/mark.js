@@ -1,6 +1,6 @@
 import { captureFaceSamples } from '../shared/face-capture-core.js';
 import { migrateTokenFromLocalStorage, getMeta, getOwnEmployee, resetDb } from './mobile-offline/db.js';
-import { identifyEmployee as matchDescriptor } from './mobile-offline/matcher.js';
+import { identifyEmployee as matchDescriptor } from './offline-shared/matcher.js';
 import { heartbeat, getFaceConfig, unlinkDevice, MobileAuthError } from './mobile-offline/sync.js';
 import {
     getOwnStatus,

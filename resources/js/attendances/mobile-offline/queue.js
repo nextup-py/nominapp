@@ -28,6 +28,7 @@ import {
     setEmployeeStatusCache,
 } from './db.js';
 import { submitEvents, fetchStatus, MobileAuthError } from './sync.js';
+import { submitInChunks } from '../offline-shared/submit-in-chunks.js';
 
 /**
  * Máquina de estados de marcación diaria — mismo criterio que
@@ -241,48 +242,38 @@ export async function flushQueue() {
         const pending = await getPendingEvents();
         if (pending.length === 0) return { synced: 0, conflicts: 0, stillPending: 0, results: [] };
 
-        let synced = 0;
-        let conflicts = 0;
-        const allResults = [];
-
-        for (let offset = 0; offset < pending.length; offset += MAX_BATCH_SIZE) {
-            const batch = pending.slice(offset, offset + MAX_BATCH_SIZE);
-
-            let results;
-            try {
-                results = await submitEvents(batch.map(({ client_event_id, event_type, recorded_at, location }) => ({
+        try {
+            const { synced, conflicts, results } = await submitInChunks(
+                pending,
+                (batch) => submitEvents(batch.map(({ client_event_id, event_type, recorded_at, location }) => ({
                     client_event_id,
                     event_type,
                     recorded_at,
                     location: location ?? undefined,
-                })));
-            } catch (error) {
-                // Token revocado — no es un fallo de red recuperable, el caller (mark.js)
-                // debe mandar al empleado a re-vincular el dispositivo. Los eventos de este
-                // lote y los restantes quedan `pending` tal cual (se reintentan solos una
-                // vez que el empleado se re-vincule).
-                if (error instanceof MobileAuthError) throw error;
+                }))),
+                { onSynced: removeQueuedEvent, onConflict: markQueuedEventConflict },
+                MAX_BATCH_SIZE,
+            );
+            return { synced, conflicts, stillPending: await countPendingEvents(), results };
+        } catch (error) {
+            // Token revocado — no es un fallo de red recuperable, el caller (mark.js) debe
+            // mandar al empleado a re-vincular el dispositivo. NO se incrementa attempts acá —
+            // no tiene sentido contar como "intento fallido" algo que no es un problema de red,
+            // mismo comportamiento que el código original.
+            if (error instanceof MobileAuthError) throw error;
 
-                // Sin red o el servidor no respondió — este lote y los restantes (todavía no
-                // enviados) quedan pendientes para el próximo intento.
-                for (const event of pending.slice(offset)) await incrementQueuedEventAttempts(event.client_event_id);
-                console.warn(`flushQueue: no se pudo sincronizar el lote (${batch.length} de ${pending.length - offset} restantes):`, error.message);
-                break;
-            }
+            // Solo los fallos de lote (submitInChunks los decora con `remainingEvents`) se
+            // absorben acá. Cualquier otro error (ej. una escritura fallida en IndexedDB dentro
+            // de onSynced/onConflict) debe propagarse sin tocar — mismo comportamiento que el
+            // código original, donde removeQueuedEvent/markQueuedEventConflict corrían fuera del
+            // try/catch que envolvía solo al envío por red.
+            if (!('remainingEvents' in error)) throw error;
 
-            for (const result of results) {
-                if (result.status === 'synced' || result.status === 'duplicate') {
-                    await removeQueuedEvent(result.client_event_id);
-                    synced++;
-                } else {
-                    await markQueuedEventConflict(result.client_event_id, result.message);
-                    conflicts++;
-                }
-            }
-            allResults.push(...results);
+            for (const event of error.remainingEvents ?? []) await incrementQueuedEventAttempts(event.client_event_id);
+            console.warn(`flushQueue: no se pudo sincronizar el lote (${(error.remainingEvents ?? []).length} eventos restantes):`, error.message);
+            const partial = error.partialResults ?? { synced: 0, conflicts: 0, results: [] };
+            return { synced: partial.synced, conflicts: partial.conflicts, stillPending: await countPendingEvents(), results: partial.results };
         }
-
-        return { synced, conflicts, stillPending: await countPendingEvents(), results: allResults };
     } finally {
         flushInProgress = false;
     }

@@ -7,7 +7,7 @@
  * (camera.js), captura un descriptor cuando hay rostro, lo compara contra la
  * caché local de empleados (identifyEmployeeFromDescriptor — mismo algoritmo
  * de distancia euclidiana + umbral/gap que corre en el servidor, ver
- * terminal-offline/matcher.js), y decide el siguiente paso: registrar
+ * offline-shared/matcher.js), y decide el siguiente paso: registrar
  * directo, mostrar selección de tipo, o mostrar jornada completa. Extraído
  * de terminal.js como parte de su descomposición en módulos más chicos —
  * mismo comportamiento que el código original.
@@ -23,7 +23,7 @@ import * as camera from './camera.js';
 import { resetIdleTimer } from './idle-detection.js';
 import { showScreen, showSuccessScreen, showError, showDayComplete } from './screen-state.js';
 import { showTypeSelectionForEmployee, registerMark, clearPendingEmployee } from './mark-registration.js';
-import { identifyEmployee as matchDescriptor } from '../terminal-offline/matcher.js';
+import { identifyEmployee as matchDescriptor } from '../offline-shared/matcher.js';
 import { getCachedEmployees } from '../terminal-offline/db.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
 import { getEmployeeStatus } from '../terminal-offline/queue.js';
