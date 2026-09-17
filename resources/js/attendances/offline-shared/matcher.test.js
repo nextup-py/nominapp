@@ -29,6 +29,19 @@ describe('euclideanDistance', () => {
 });
 
 describe('identifyEmployee', () => {
+    it('retorna invalid_descriptor si el descriptor en vivo no es un array de 128 elementos', () => {
+        const candidates = [{ id: 1, face_descriptor: descriptor(0) }];
+
+        expect(identifyEmployee([1, 2, 3], candidates, 0.5, 0.1).reason).toBe('invalid_descriptor');
+        expect(identifyEmployee(null, candidates, 0.5, 0.1).reason).toBe('invalid_descriptor');
+        expect(identifyEmployee(undefined, candidates, 0.5, 0.1).reason).toBe('invalid_descriptor');
+    });
+
+    it('invalid_descriptor se evalúa antes que no_candidates (descriptor corrupto sin candidatos)', () => {
+        const result = identifyEmployee([1, 2, 3], [], 0.5, 0.1);
+        expect(result).toEqual({ employee: null, distance: Infinity, reason: 'invalid_descriptor' });
+    });
+
     it('retorna no_candidates si la lista está vacía', () => {
         const result = identifyEmployee(descriptor(0), [], 0.5, 0.1);
         expect(result).toEqual({ employee: null, distance: Infinity, reason: 'no_candidates' });

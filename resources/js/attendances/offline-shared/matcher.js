@@ -42,9 +42,16 @@ export function euclideanDistance(a, b) {
  * @param {Array<{id: number, first_name: string, last_name: string, ci: string|null, face_descriptor: number[]}>} candidates - Empleados cacheados (uno o varios, según terminal/mobile).
  * @param {number} threshold - Distancia máxima para aceptar un match (face_threshold).
  * @param {number} minGap - Diferencia mínima requerida con el segundo candidato (face_min_confidence_gap).
- * @returns {{employee: object|null, distance: number, reason: 'no_match'|'ambiguous'|'no_candidates'|null}}
+ * @returns {{employee: object|null, distance: number, reason: 'no_match'|'ambiguous'|'no_candidates'|'invalid_descriptor'|null}}
  */
 export function identifyEmployee(liveDescriptor, candidates, threshold, minGap) {
+    // Guarda explícita: sin esto, un descriptor corrupto/incompleto (longitud
+    // != 128, por un fallo de promediado en captureFaceSamples) matchearía
+    // en silencio tratando los índices faltantes como 0 — mejor fallar claro.
+    if (!Array.isArray(liveDescriptor) || liveDescriptor.length !== 128) {
+        return { employee: null, distance: Infinity, reason: 'invalid_descriptor' };
+    }
+
     if (!candidates || candidates.length === 0) {
         return { employee: null, distance: Infinity, reason: 'no_candidates' };
     }

@@ -19,7 +19,7 @@
 import * as camera from './camera.js';
 import { acquireWakeLock } from './idle-detection.js';
 import { migrateTokenFromLocalStorage, getMeta, clearTerminalState } from '../terminal-offline/db.js';
-import { heartbeat, syncEmployees } from '../terminal-offline/sync.js';
+import { heartbeat, syncEmployees, TerminalAuthError } from '../terminal-offline/sync.js';
 import { flushQueue } from '../terminal-offline/queue.js';
 import { updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './sync-status-ui.js';
 import { markUserInteracted } from '../../shared/audio-feedback.js';
@@ -196,17 +196,35 @@ export function startBackgroundSync() {
     if (backgroundSyncStarted) return;
     backgroundSyncStarted = true;
 
+    // Sin esto, un terminal revocado (re-provisión, baja) seguía intentando
+    // sincronizar en loop cada 30-90s sin avisar a nadie más que la consola —
+    // el mismo texto visible que ya usa initializeOfflineSync() cuando falta
+    // el token por primera vez, ahora también cuando se pierde en caliente.
+    const reportAuthError = (error) => {
+        if (error instanceof TerminalAuthError) {
+            updateIdleSyncStatus('Terminal sin configurar — necesita re-provisión');
+            return true;
+        }
+        return false;
+    };
+
     const runHeartbeat = () => {
         if (!navigator.onLine) return;
-        heartbeat().catch((error) => console.warn('Heartbeat en segundo plano falló:', error.message));
+        heartbeat().catch((error) => {
+            if (!reportAuthError(error)) console.warn('Heartbeat en segundo plano falló:', error.message);
+        });
     };
     const runEmployeeSync = () => {
         if (!navigator.onLine) return;
-        syncEmployees().catch((error) => console.warn('Sync de empleados en segundo plano falló:', error.message));
+        syncEmployees().catch((error) => {
+            if (!reportAuthError(error)) console.warn('Sync de empleados en segundo plano falló:', error.message);
+        });
     };
     const runQueueFlush = () => {
         if (!navigator.onLine) return;
-        flushQueue().then(() => refreshIdleSyncStatus()).catch((error) => console.warn('Sincronización de cola en segundo plano falló:', error.message));
+        flushQueue().then(() => refreshIdleSyncStatus()).catch((error) => {
+            if (!reportAuthError(error)) console.warn('Sincronización de cola en segundo plano falló:', error.message);
+        });
     };
 
     setInterval(runHeartbeat, 90 * 1000);

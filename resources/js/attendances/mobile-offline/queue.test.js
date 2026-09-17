@@ -137,6 +137,31 @@ describe('flushQueue', () => {
         expect(result.synced).toBe(1);
     });
 
+    it('tras un conflict, refresca el caché de estado propio (no queda con el estado optimista rechazado)', async () => {
+        getPendingEvents.mockResolvedValue([{ client_event_id: 'e1', event_type: 'break_start', recorded_at: '2026-01-01T10:00:00Z', location: null }]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'e1', status: 'conflict', message: 'Secuencia inválida' }]);
+        countPendingEvents.mockResolvedValue(0);
+        fetchStatus.mockResolvedValue({ last_event: 'check_in', last_event_time: '08:00', allowed_events: ['break_start', 'check_out'] });
+
+        await flushQueue();
+
+        expect(fetchStatus).toHaveBeenCalled();
+        // employee_id 5, fijado por el mock de getMeta en beforeEach.
+        expect(setEmployeeStatusCache).toHaveBeenCalledWith(5, expect.objectContaining({ last_event: 'check_in' }));
+    });
+
+    it('si el refresh de caché tras un conflict lanza MobileAuthError, no interrumpe el flush', async () => {
+        getPendingEvents.mockResolvedValue([{ client_event_id: 'e1', event_type: 'break_start', recorded_at: '2026-01-01T10:00:00Z', location: null }]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'e1', status: 'conflict', message: 'Secuencia inválida' }]);
+        countPendingEvents.mockResolvedValue(0);
+        fetchStatus.mockRejectedValue(new MobileAuthError('revocado'));
+
+        const result = await flushQueue();
+
+        expect(result.conflicts).toBe(1);
+        expect(markQueuedEventConflict).toHaveBeenCalledWith('e1', 'Secuencia inválida');
+    });
+
     it('propaga MobileAuthError inmediatamente (no la trata como fallo de red reintentable)', async () => {
         getPendingEvents.mockResolvedValue([{ client_event_id: 'e1', event_type: 'check_in', recorded_at: '2026-01-01T10:00:00Z', location: null }]);
         submitEvents.mockRejectedValue(new MobileAuthError('revocado'));

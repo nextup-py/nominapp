@@ -175,6 +175,38 @@ describe('flushQueue', () => {
         expect(result.conflicts).toBe(1);
     });
 
+    it('tras un conflict, refresca el caché de estado del empleado afectado (no queda con el estado optimista rechazado)', async () => {
+        getPendingEvents.mockResolvedValue([
+            { client_event_id: 'e1', employee_id: 7, event_type: 'break_start', recorded_at: '2026-01-01T10:00:00Z' },
+        ]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'e1', status: 'conflict', message: 'Secuencia inválida' }]);
+        countPendingEvents.mockResolvedValue(0);
+        fetchEmployeeStatus.mockResolvedValue({ last_event: 'check_in', last_event_time: '08:00', allowed_events: ['break_start', 'check_out'] });
+
+        await flushQueue();
+
+        // El refresh debe consultar el estado REAL del empleado 7 (no el 'break_start'
+        // optimista que enqueueMark() habría dejado en caché antes del rechazo).
+        expect(fetchEmployeeStatus).toHaveBeenCalledWith(7);
+        expect(setEmployeeStatusCache).toHaveBeenCalledWith(7, expect.objectContaining({ last_event: 'check_in' }));
+    });
+
+    it('si el refresh de caché tras un conflict falla (sin red), no interrumpe el flush', async () => {
+        getPendingEvents.mockResolvedValue([
+            { client_event_id: 'e1', employee_id: 7, event_type: 'break_start', recorded_at: '2026-01-01T10:00:00Z' },
+        ]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'e1', status: 'conflict', message: 'Secuencia inválida' }]);
+        countPendingEvents.mockResolvedValue(0);
+        fetchEmployeeStatus.mockRejectedValue(new Error('network down'));
+        getEmployeeStatusCache.mockResolvedValue(undefined);
+        getEventsForEmployeeOnDate.mockResolvedValue([]);
+
+        const result = await flushQueue();
+
+        expect(result.conflicts).toBe(1);
+        expect(markQueuedEventConflict).toHaveBeenCalledWith('e1', 'Secuencia inválida');
+    });
+
     it('si un lote falla por red, ese lote y los siguientes quedan pending (incrementa attempts)', async () => {
         getPendingEvents.mockResolvedValue([
             { client_event_id: 'e1', employee_id: 1, event_type: 'check_in', recorded_at: '2026-01-01T10:00:00Z' },

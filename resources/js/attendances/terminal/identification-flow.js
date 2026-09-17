@@ -75,6 +75,7 @@ export async function identifyEmployeeFromDescriptor(descriptor, manualCandidate
                 no_candidates: 'No hay empleados sincronizados en este terminal.',
                 ambiguous: 'Rostro ambiguo. Por favor, reposicione su cara e intente de nuevo.',
                 no_match: 'No se pudo identificar el rostro. Intente nuevamente.',
+                invalid_descriptor: 'No se pudo capturar el rostro correctamente. Intente nuevamente.',
             };
             return { ok: false, message: messages[reason] || 'No identificado', reason };
         }
@@ -239,6 +240,7 @@ export async function startAutoIdentification(refs) {
                     no_candidates: 'Terminal sin empleados sincronizados. Contacte al administrador.',
                     ambiguous: 'Rostro ambiguo. Reposicione su cara e intente de nuevo.',
                     no_match: 'Rostro no reconocido. Mantenga el rostro quieto frente a la cámara.',
+                    invalid_descriptor: 'No se pudo capturar el rostro correctamente. Intente nuevamente.',
                 };
                 updateStatus(refs.identificationStatus, idleStatusMessages[result.reason] || result.message || 'Rostro no reconocido. Mantenga el rostro quieto frente a la cámara.');
                 console.log('No se pudo identificar', result.reason);

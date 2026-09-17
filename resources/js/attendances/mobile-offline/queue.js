@@ -213,6 +213,34 @@ export async function enqueueMark(eventType, location = null) {
     return { client_event_id: clientEventId, recorded_at: recordedAt.toISOString() };
 }
 
+/**
+ * Envuelve markQueuedEventConflict() para además invalidar el caché de
+ * estado (employee_status_cache) del propio empleado — sin esto,
+ * enqueueMark() ya había escrito ahí un estado optimista asumiendo que el
+ * evento iba a ser aceptado, y ese estado queda desactualizado si el
+ * servidor lo rechaza (ver resolveOwnStatus(): con la cola offline vacía de
+ * eventos pendientes de HOY, cae al valor cacheado). El refresco es
+ * best-effort y no bloquea el loop de submitInChunks: si hay red,
+ * getOwnStatus() corrige el caché con la verdad del servidor; sin red,
+ * resuelve localmente igual (ya excluye el evento recién marcado
+ * `conflict`, que no cuenta como "pending"). Se espera (await) para que el
+ * caller de flushQueue() vea siempre el caché ya corregido. getOwnStatus()
+ * puede lanzar MobileAuthError (token revocado) — se absorbe acá porque no
+ * debe interrumpir el resto del flush; el caso de token revocado ya lo
+ * maneja por separado el catch de flushQueue() cuando submitEvents() falla.
+ * @param {string} clientEventId
+ * @param {string} [message]
+ */
+async function onQueuedEventConflict(clientEventId, message) {
+    await markQueuedEventConflict(clientEventId, message);
+
+    try {
+        await getOwnStatus();
+    } catch {
+        // best-effort — un fallo acá no debe interrumpir el resto del flush.
+    }
+}
+
 /** @type {boolean} Evita que dos flush corran en simultáneo (ej. reintento manual + timer de fondo). */
 let flushInProgress = false;
 
@@ -251,7 +279,7 @@ export async function flushQueue() {
                     recorded_at,
                     location: location ?? undefined,
                 }))),
-                { onSynced: removeQueuedEvent, onConflict: markQueuedEventConflict },
+                { onSynced: removeQueuedEvent, onConflict: onQueuedEventConflict },
                 MAX_BATCH_SIZE,
             );
             return { synced, conflicts, stillPending: await countPendingEvents(), results };

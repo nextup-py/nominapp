@@ -206,6 +206,37 @@ export async function enqueueMark(employeeId, eventType) {
     return { client_event_id: clientEventId, recorded_at: recordedAt.toISOString() };
 }
 
+/**
+ * Envuelve markQueuedEventConflict() para además invalidar el caché de
+ * estado (employee_status_cache) del empleado afectado — sin esto,
+ * enqueueMark() ya había escrito ahí un estado optimista asumiendo que el
+ * evento iba a ser aceptado, y ese estado queda desactualizado si el
+ * servidor lo rechaza (ver resolveEmployeeStatus(): con la cola offline
+ * vacía de eventos pendientes de HOY, cae al valor cacheado). El refresco
+ * es best-effort y no bloquea el loop de submitInChunks: si hay red,
+ * getEmployeeStatus() corrige el caché con la verdad del servidor; sin
+ * red, resuelve localmente igual (ya excluye el evento recién marcado
+ * `conflict`, que no cuenta como "pending"). Se espera (await) para que el
+ * caller de flushQueue() vea siempre el caché ya corregido, pero nunca deja
+ * que un fallo acá tumbe el loop de sincronización de los demás eventos.
+ * @param {Map<string, number>} employeeIdByClientEventId
+ * @returns {(clientEventId: string, message?: string) => Promise<void>}
+ */
+function onQueuedEventConflict(employeeIdByClientEventId) {
+    return async (clientEventId, message) => {
+        await markQueuedEventConflict(clientEventId, message);
+
+        const employeeId = employeeIdByClientEventId.get(clientEventId);
+        if (employeeId) {
+            try {
+                await getEmployeeStatus(employeeId);
+            } catch {
+                // best-effort — un fallo acá no debe interrumpir el resto del flush.
+            }
+        }
+    };
+}
+
 /** @type {boolean} Evita que dos flush corran en simultáneo (ej. click manual + timer de fondo). */
 let flushInProgress = false;
 
@@ -243,6 +274,8 @@ export async function flushQueue() {
         const pending = await getPendingEvents();
         if (pending.length === 0) return { synced: 0, conflicts: 0, stillPending: 0, results: [] };
 
+        const employeeIdByClientEventId = new Map(pending.map((e) => [e.client_event_id, e.employee_id]));
+
         try {
             const { synced, conflicts, results } = await submitInChunks(
                 pending,
@@ -252,7 +285,7 @@ export async function flushQueue() {
                     event_type,
                     recorded_at,
                 }))),
-                { onSynced: removeQueuedEvent, onConflict: markQueuedEventConflict },
+                { onSynced: removeQueuedEvent, onConflict: onQueuedEventConflict(employeeIdByClientEventId) },
                 MAX_BATCH_SIZE,
             );
             return { synced, conflicts, stillPending: await countPendingEvents(), results };

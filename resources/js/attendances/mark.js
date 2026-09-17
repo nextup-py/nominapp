@@ -705,15 +705,37 @@ document.addEventListener("DOMContentLoaded", () => {
      * sync de empleados (acá no existe, ver mobile-offline/sync.js).
      */
     function startBackgroundSync() {
+        // Sin esto, un dispositivo revocado en caliente (vinculó uno nuevo, o un
+        // admin lo revocó) seguía reintentando en loop cada 30-90s sin avisar
+        // nada más que la consola — a diferencia de initializeOfflineSync() y el
+        // botón "Sincronizar" manual, que sí redirigen a /vincular-dispositivo.
+        // Acá NO se fuerza esa redirección: un timer de fondo puede disparar en
+        // medio de una captura facial en curso, y sacar al empleado de esa
+        // pantalla sin que lo haya pedido sería peor que el aviso silencioso que
+        // reemplaza. Se muestra un mensaje visible y persistente en su lugar —
+        // el empleado lo ve la próxima vez que mire la pantalla, y puede
+        // re-vincularse manualmente con el botón "Sincronizar"/"Desvincular".
+        const reportAuthError = (error) => {
+            if (error instanceof MobileAuthError) {
+                updateSyncStatus("Dispositivo desvinculado — reingresá desde /vincular-dispositivo");
+                return true;
+            }
+            return false;
+        };
+
         const runHeartbeat = () => {
             if (!navigator.onLine) return;
-            heartbeat().catch((error) => logWarn("Heartbeat en segundo plano falló:", error.message));
+            heartbeat().catch((error) => {
+                if (!reportAuthError(error)) logWarn("Heartbeat en segundo plano falló:", error.message);
+            });
         };
         const runQueueFlush = () => {
             if (!navigator.onLine) return;
             flushQueue()
                 .then(() => refreshSyncStatus())
-                .catch((error) => logWarn("Sincronización de cola en segundo plano falló:", error.message));
+                .catch((error) => {
+                    if (!reportAuthError(error)) logWarn("Sincronización de cola en segundo plano falló:", error.message);
+                });
         };
 
         setInterval(runHeartbeat, 90 * 1000);
@@ -1237,6 +1259,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const messages = {
                     no_match: "No se pudo identificar el rostro. Intente nuevamente.",
                     ambiguous: "Rostro ambiguo. Por favor, reposicione su cara e intente de nuevo.",
+                    invalid_descriptor: "No se pudo capturar el rostro correctamente. Intente nuevamente.",
                 };
                 throw new Error(messages[reason] || "No identificado");
             }
