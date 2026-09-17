@@ -100,12 +100,12 @@ class EmployeeDescriptorSyncService
     {
         $today = now(config('app.timezone'));
 
-        return Employee::query()
+        $employees = Employee::query()
             ->where('branch_id', $terminal->branch_id)
             ->where('status', 'active')
             ->whereNotNull('face_descriptor')
-            ->get(['id'])
-            ->mapWithKeys(fn (Employee $employee) => [$employee->id => AttendanceCalculator::hasScheduledBreak($employee, $today)])
-            ->all();
+            ->get(['id', 'schedule_id']);
+
+        return AttendanceCalculator::hasScheduledBreakBatch($employees, $today);
     }
 }

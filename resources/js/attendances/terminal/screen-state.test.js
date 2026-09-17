@@ -101,8 +101,8 @@ describe('resetTerminal', () => {
         // de que `document` quede undefined fuera de este stub puntual.
         vi.stubGlobal('document', { getElementById: () => null });
 
-        const btn1 = { style: {} };
-        const btn2 = { style: { display: 'none' } };
+        const btn1 = { style: {}, disabled: true };
+        const btn2 = { style: { display: 'none' }, disabled: true };
         const typeButtons = [btn1, btn2];
         const screenTitleEl = { textContent: 'otro texto' };
         const typeSelectionScreen = { querySelector: () => screenTitleEl };
@@ -113,6 +113,10 @@ describe('resetTerminal', () => {
 
         expect(btn1.style.display).toBe('');
         expect(btn2.style.display).toBe('');
+        // re-entrancy guard: un doble-tap deshabilita los botones antes de registrar
+        // la marcación — resetTerminal debe reabilitarlos para el próximo empleado.
+        expect(btn1.disabled).toBe(false);
+        expect(btn2.disabled).toBe(false);
         expect(screenTitleEl.textContent).toBe('Marcación');
         expect(onReset).toHaveBeenCalledTimes(1);
     });

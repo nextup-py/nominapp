@@ -4,9 +4,15 @@ namespace App\Services;
 
 use App\Models\AttendanceDay;
 use App\Models\Employee;
+use App\Models\EmployeeScheduleAssignment;
 use App\Models\Holiday;
+use App\Models\RotationAssignment;
+use App\Models\Schedule;
+use App\Models\ShiftOverride;
+use App\Models\ShiftTemplate;
 use App\Settings\PayrollSettings;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -483,6 +489,131 @@ class AttendanceCalculator
     public static function hasScheduledBreak(Employee $employee, \Carbon\Carbon $date): bool
     {
         return (int) (self::resolveShiftDataFor($employee, $date)['break_minutes'] ?? 0) > 0;
+    }
+
+    /**
+     * Versión batch de hasScheduledBreak() para varios empleados en la misma
+     * fecha — reemplaza las 2-4 queries por empleado que hace
+     * resolveShiftDataFor() (vía RotationService::getShiftForDate() +
+     * Employee::getScheduleForDate()) por un puñado de queries con whereIn.
+     * Usado por EmployeeDescriptorSyncService::breakFlagsForBranch(), que
+     * recalcula este flag para toda la sucursal en cada sync del terminal
+     * (~cada 5 min) — con muchos empleados eso era N+1 real.
+     *
+     * Misma jerarquía y mismo resultado que llamar hasScheduledBreak()
+     * empleado por empleado: 1) override puntual, 2) rotación vigente,
+     * 3) horario fijo por asignación vigente, 4) horario legacy
+     * (employees.schedule_id).
+     *
+     * @param  Collection<int, Employee>  $employees  Deben traer cargado `schedule_id` (columna por defecto de `Employee::query()->get()`).
+     * @return array<int, bool> employee_id => tiene descanso hoy
+     */
+    public static function hasScheduledBreakBatch(Collection $employees, \Carbon\Carbon $date): array
+    {
+        if ($employees->isEmpty()) {
+            return [];
+        }
+
+        $employeeIds = $employees->pluck('id')->all();
+        $dateString = $date->toDateString();
+
+        $overrides = ShiftOverride::query()
+            ->whereIn('employee_id', $employeeIds)
+            ->where('override_date', $dateString)
+            ->with('shift')
+            ->get()
+            ->keyBy('employee_id');
+
+        $rotationAssignments = RotationAssignment::query()
+            ->whereIn('employee_id', $employeeIds)
+            ->where('valid_from', '<=', $date)
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $date))
+            ->with('pattern')
+            ->orderByDesc('valid_from')
+            ->get()
+            ->groupBy('employee_id')
+            ->map(fn ($group) => $group->first());
+
+        $shiftTemplates = ShiftTemplate::query()->get()->keyBy('id');
+
+        // Empleados que no resolvieron por override ni por un ShiftTemplate real
+        // de rotación (assignment sin shift válido para la fecha cuenta como
+        // "sin rotación", igual que RotationService::getShiftForDate() devolviendo null).
+        $needsFixedSchedule = $employees->reject(function (Employee $employee) use ($overrides, $rotationAssignments, $shiftTemplates, $date) {
+            if ($overrides->has($employee->id)) {
+                return true;
+            }
+            $assignment = $rotationAssignments->get($employee->id);
+            if (! $assignment) {
+                return false;
+            }
+            $shiftId = $assignment->shiftIdForDate($date);
+
+            return $shiftId && $shiftTemplates->has($shiftId);
+        });
+
+        $scheduleAssignments = $needsFixedSchedule->isEmpty() ? collect() : EmployeeScheduleAssignment::query()
+            ->whereIn('employee_id', $needsFixedSchedule->pluck('id')->all())
+            ->where('valid_from', '<=', $date)
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $date))
+            ->with('schedule.days')
+            ->orderByDesc('valid_from')
+            ->get()
+            ->groupBy('employee_id')
+            ->map(fn ($group) => $group->first());
+
+        $legacyScheduleIds = $needsFixedSchedule
+            ->reject(fn (Employee $employee) => $scheduleAssignments->has($employee->id))
+            ->pluck('schedule_id')
+            ->filter()
+            ->unique()
+            ->all();
+
+        $legacySchedules = empty($legacyScheduleIds) ? collect() : Schedule::query()
+            ->whereIn('id', $legacyScheduleIds)
+            ->with('days')
+            ->get()
+            ->keyBy('id');
+
+        $dayOfWeek = $date->dayOfWeekIso;
+        $result = [];
+
+        foreach ($employees as $employee) {
+            $override = $overrides->get($employee->id);
+            if ($override) {
+                $shift = $override->shift;
+                $result[$employee->id] = $shift ? (! $shift->is_day_off && (int) $shift->break_minutes > 0) : false;
+
+                continue;
+            }
+
+            $assignment = $rotationAssignments->get($employee->id);
+            if ($assignment) {
+                $shiftId = $assignment->shiftIdForDate($date);
+                $shift = $shiftId ? $shiftTemplates->get($shiftId) : null;
+                if ($shift) {
+                    $result[$employee->id] = ! $shift->is_day_off && (int) $shift->break_minutes > 0;
+
+                    continue;
+                }
+            }
+
+            $schedule = $scheduleAssignments->get($employee->id)?->schedule
+                ?? $legacySchedules->get($employee->schedule_id);
+
+            if (! $schedule) {
+                $result[$employee->id] = false;
+
+                continue;
+            }
+
+            $scheduleDay = $schedule->days->firstWhere('day_of_week', $dayOfWeek);
+            $result[$employee->id] = $scheduleDay && $scheduleDay->is_active
+                ? (int) ($scheduleDay->total_break_minutes ?? 0) > 0
+                : false;
+        }
+
+        return $result;
     }
 
     /**

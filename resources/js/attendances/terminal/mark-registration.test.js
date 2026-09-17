@@ -63,7 +63,7 @@ describe('registerMark', () => {
 
 describe('showTypeSelectionForEmployee / getPendingEmployee / clearPendingEmployee', () => {
     it('guarda el empleado pendiente y lo expone via getPendingEmployee', () => {
-        const typeButtons = [{ getAttribute: () => 'check_in', style: {} }];
+        const typeButtons = [{ getAttribute: () => 'check_in', style: {}, disabled: true }];
         const typeGrid = { style: {} };
         // `showScreen` (real, not mocked) reads/mutates `classList` on every screen —
         // needed here even though this test only asserts pendingEmployee/title text.
@@ -81,6 +81,10 @@ describe('showTypeSelectionForEmployee / getPendingEmployee / clearPendingEmploy
 
         expect(getPendingEmployee()).toEqual(employee);
         expect(dom.screenTitleEl.textContent).toBe('Hola, Juan Pérez');
+        // re-entrancy guard: showTypeSelectionForEmployee reabilita los botones
+        // para el nuevo empleado, aunque hayan quedado deshabilitados por un
+        // doble-tap del empleado anterior.
+        expect(typeButtons[0].disabled).toBe(false);
 
         clearPendingEmployee();
         expect(getPendingEmployee()).toBeNull();

@@ -181,7 +181,7 @@ export function stopCountdown() {
 export function resetTerminal(screens, typeButtons, onReset) {
     stopCountdown();
 
-    typeButtons.forEach((btn) => { btn.style.display = ''; });
+    typeButtons.forEach((btn) => { btn.style.display = ''; btn.disabled = false; });
 
     const screenTitle = screens.typeSelection?.querySelector('.screen-title');
     if (screenTitle) screenTitle.textContent = 'Marcación';

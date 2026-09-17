@@ -185,6 +185,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const eventType = button.getAttribute('data-event-type');
             const employee = markRegistration.getPendingEmployee();
             if (!employee) return;
+
+            // Re-entrancy guard: un doble-tap en pantalla táctil no debe encolar
+            // dos marcaciones para el mismo empleado — ver mark.js (btnMark.disabled)
+            // para el mismo patrón en el modo móvil.
+            markRegistration.clearPendingEmployee();
+            typeButtons.forEach((btn) => { btn.disabled = true; });
+
             idleDetection.clearIdleTimer();
             await markRegistration.registerMark(employee, eventType, {
                 onStatusUpdate: (text) => {

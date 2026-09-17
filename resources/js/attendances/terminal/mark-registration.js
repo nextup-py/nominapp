@@ -38,6 +38,7 @@ export function showTypeSelectionForEmployee(screens, dom, employee, allowedEven
     dom.typeButtons.forEach((btn) => {
         const evtType = btn.getAttribute('data-event-type');
         btn.style.display = allowedEvents.includes(evtType) ? '' : 'none';
+        btn.disabled = false;
     });
 
     const visibleCount = allowedEvents.length;
