@@ -9,7 +9,6 @@
     <meta name="color-scheme" content="light dark">
     <x-favicon-links />
     @vite('resources/css/attendances/styles.css')
-    <x-theme-vars />
     <x-pwa-meta manifest-url="{{ route('mark.manifest') }}" app-title="Nominapp Marcación" />
     @vite('resources/js/attendances/mark.js')
 </head>

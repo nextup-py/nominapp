@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Terminal;
-use App\Settings\GeneralSettings;
 use App\Support\ThemeResolver;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Http\JsonResponse;
@@ -91,21 +90,12 @@ class AttendanceFaceMarkController extends Controller
     }
 
     /**
-     * Construye el JSON del manifest, resolviendo el color primario configurado
-     * en Settings una sola vez por request (cae al default de ThemeResolver si
-     * el settings store no está disponible — mismo criterio defensivo que
-     * <x-theme-vars />: una lectura fallida no debe romper una ruta pública activa).
-     * Mismo set de íconos para ambos modos — sin variantes por modo.
+     * Construye el JSON del manifest. Mismo set de íconos para ambos modos —
+     * sin variantes por modo.
      */
     private function buildManifest(string $name, string $shortName, string $startUrl, string $scope): JsonResponse
     {
-        try {
-            $colorKey = app(GeneralSettings::class)->primary_color;
-        } catch (\Throwable) {
-            $colorKey = ThemeResolver::DEFAULT_COLOR;
-        }
-
-        $theme = ThemeResolver::primaryColorCss($colorKey);
+        $theme = ThemeResolver::primaryColorCss();
 
         return response()->json([
             'name' => $name,

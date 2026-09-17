@@ -27,7 +27,7 @@
             text-align: center;
             margin-bottom: 10px;
             padding-bottom: 8px;
-            border-bottom: 1px solid #000;
+            border-bottom: 2px solid #0d9488;
         }
 
         .company-logo {

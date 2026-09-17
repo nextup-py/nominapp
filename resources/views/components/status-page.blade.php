@@ -22,7 +22,6 @@
     <meta name="color-scheme" content="light dark">
     <x-favicon-links />
     @vite('resources/css/shared/status-page.css')
-    <x-theme-vars />
 </head>
 
 <body>

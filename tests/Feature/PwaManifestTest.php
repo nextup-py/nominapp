@@ -3,7 +3,6 @@
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Terminal;
-use App\Settings\GeneralSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -29,18 +28,6 @@ it('el manifest de /marcar devuelve JSON válido con el color primario por defec
         'theme_color' => '#0d9488',
         'background_color' => '#f0fdfa',
     ]);
-});
-
-it('el manifest de /marcar refleja un color primario distinto del default', function () {
-    $settings = app(GeneralSettings::class);
-    $settings->primary_color = 'rose';
-    $settings->save();
-
-    $response = $this->get('/marcar/manifest.json');
-
-    $response->assertOk();
-    $response->assertJsonPath('theme_color', '#e11d48');
-    $response->assertJsonPath('background_color', '#fff1f2');
 });
 
 it('el manifest de terminal incluye el start_url específico de esa sucursal', function () {

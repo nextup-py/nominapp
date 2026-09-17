@@ -552,11 +552,9 @@ canvas {
 
 /* Legacy aliases usados por otros componentes */
 .btn.btn-gray  { background: #64748b; color: #fff; }
-.btn.btn-blue  { background: var(--c-info); color: #fff; }
 .btn.btn-green { background: var(--c-success); color: #fff; }
 .btn.btn-red   { background: var(--c-danger); color: #fff; }
 .btn.btn-gray:hover:not(:disabled)  { background: #475569; }
-.btn.btn-blue:hover:not(:disabled)  { background: #1d4ed8; }
 .btn.btn-green:hover:not(:disabled) { background: #15803d; }
 .btn.btn-red:hover:not(:disabled)   { background: #b91c1c; }
 

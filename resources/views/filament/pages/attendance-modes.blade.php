@@ -98,11 +98,11 @@
                 <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
 
                     {{-- Encabezado --}}
-                    <div class="flex items-center gap-3 bg-blue-600 px-5 py-4">
+                    <div class="flex items-center gap-3 bg-primary-600 px-5 py-4">
                         <x-filament::icon icon="heroicon-o-computer-desktop" class="h-7 w-7 text-white" />
                         <div>
                             <p class="text-base font-bold text-white">Modo Terminal / Kiosco</p>
-                            <p class="text-xs text-blue-100">Dispositivo compartido en la sucursal</p>
+                            <p class="text-xs text-primary-100">Dispositivo compartido en la sucursal</p>
                         </div>
                     </div>
 
@@ -118,7 +118,7 @@
                             {{-- Una card por terminal --}}
                             <div class="space-y-5">
                                 @foreach ($terminals as $terminal)
-                                    <div class="rounded-lg border border-blue-100 dark:border-blue-900 bg-blue-50/40 dark:bg-blue-950/20 p-4 space-y-4">
+                                    <div class="rounded-lg border border-primary-100 dark:border-primary-900 bg-primary-50/40 dark:bg-primary-950/20 p-4 space-y-4">
 
                                         {{-- Nombre y sucursal --}}
                                         <div>
@@ -137,7 +137,7 @@
                                                 <a
                                                     href="{{ $terminal['url'] }}"
                                                     target="_blank"
-                                                    class="flex-1 truncate rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-2 font-mono text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                                    class="flex-1 truncate rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-2 font-mono text-sm text-primary-600 dark:text-primary-400 hover:underline"
                                                 >
                                                     {{ $terminal['url'] }}
                                                 </a>
@@ -191,7 +191,7 @@
                         </div>
 
                         {{-- Cuándo usarlo --}}
-                        <div class="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
+                        <div class="rounded-lg bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-800 px-4 py-3 text-sm text-primary-800 dark:text-primary-300">
                             <strong>Cuándo usarlo:</strong> tablet o PC fija en la entrada de la
                             sucursal. Todos los empleados del lugar marcan en el mismo dispositivo.
                             La ubicación se toma automáticamente de las coordenadas configuradas

@@ -254,13 +254,11 @@ button:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px;
 button:disabled { opacity: .5; cursor: not-allowed; }
 
 .btn-gray    { background: #64748b; }
-.btn-blue    { background: var(--c-info); }
 .btn-green   { background: var(--c-success); }
 .btn-red     { background: var(--c-danger); }
 .btn-primary { background: var(--c-primary); }
 
 .btn-gray:hover:not(:disabled)    { background: #475569; }
-.btn-blue:hover:not(:disabled)    { background: #1d4ed8; }
 .btn-green:hover:not(:disabled)   { background: #15803d; }
 .btn-red:hover:not(:disabled)     { background: #b91c1c; }
 .btn-primary:hover:not(:disabled) { background: var(--c-primary-h); }

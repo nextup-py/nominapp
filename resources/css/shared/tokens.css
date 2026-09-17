@@ -1,17 +1,26 @@
 /**
- * Tokens de diseño unificados — fuente de verdad única para las 4 vistas
- * públicas de marcación y el panel Filament. Reemplaza las 3 copias
+ * Tokens de diseño unificados — fuente de verdad única para las vistas
+ * públicas de marcación (no del panel Filament, que tiene su propio
+ * pipeline Tailwind vía tailwind.config.preset.js). Reemplaza las 3 copias
  * duplicadas que existían antes en styles.css/terminal.css/capture-face.css.
  *
- * Estructura en dos capas:
- * 1. @theme (Tailwind v4) — nombres canónicos de Tailwind, disponibles como
- *    utilities (bg-primary-600, etc.) para código nuevo (rediseño futuro).
+ * Estructura en dos capas, ambas `:root` (custom properties CSS estándar):
+ * 1. Nombres canónicos de Tailwind (--color-primary-600, etc.) — nomenclatura
+ *    compartida con la paleta de Filament, no utilities reales: estos
+ *    entrypoints de Vite (device-link.css, terminal.css, etc.) no importan
+ *    `"tailwindcss"`, así que un bloque `@theme` acá NO se compila — Tailwind
+ *    solo lo procesa dentro de un archivo que sí tiene ese import, y sin eso
+ *    el at-rule `@theme` llega tal cual al navegador, que lo descarta por
+ *    inválido (bug real: `--color-primary-500` y derivados quedaban
+ *    indefinidos, silenciado en dark mode porque ese bloque hardcodea hex
+ *    directos, pero rompía por completo el modo claro — fondos/bordes
+ *    transparentes en inputs y botones). Por eso va como `:root` plano.
  * 2. :root — alias con los nombres legacy (--c-primary, --sp-4, etc.) que
  *    ya consume el CSS de componentes existente, para no reescribirlo acá.
  */
 @import './fonts.css';
 
-@theme {
+:root {
     --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
 
     --color-primary-50: #f0fdfa;

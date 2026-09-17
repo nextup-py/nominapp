@@ -6,7 +6,7 @@
     @page { size: A4 {{ $orientation }}; margin: 0; }
     body { font-family: Arial, sans-serif; font-size: 10px; line-height: 1.4; padding: 15mm 20mm; color: #000; }
 
-    .company-header { text-align: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #000; }
+    .company-header { text-align: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #0d9488; }
     .company-logo   { max-height: 36px; max-width: 100px; margin-bottom: 5px; }
     .company-name   { font-size: 13px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
     .company-info   { font-size: 8px; color: #444; }

@@ -28,7 +28,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <x-favicon-links />
     @vite($css)
-    <x-theme-vars />
 </head>
 
 <body data-mode="{{ $mode }}"
@@ -82,7 +81,7 @@
                                 </svg></span>
                             Iniciar Cámara
                         </button>
-                        <button id="btnCapture" type="button" class="btn-blue" disabled aria-label="Capturar rostro">
+                        <button id="btnCapture" type="button" class="btn-primary" disabled aria-label="Capturar rostro">
                             <span aria-hidden="true"><svg class="btn-icon" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round">

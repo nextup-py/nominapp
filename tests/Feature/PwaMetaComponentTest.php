@@ -11,8 +11,8 @@ it('el componente pwa-meta renderiza el link de manifest y los meta tags de iOS'
         ->toContain('name="apple-mobile-web-app-title" content="Nominapp Marcación"');
 });
 
-it('theme-vars incluye el meta theme-color con el hex del color primario', function () {
-    $html = (string) $this->blade('<x-theme-vars />');
+it('favicon-links incluye el meta theme-color de marca', function () {
+    $html = (string) $this->blade('<x-favicon-links />');
 
     expect($html)->toContain('<meta name="theme-color" content="#0d9488">');
 });

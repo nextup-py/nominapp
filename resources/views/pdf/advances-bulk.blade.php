@@ -45,7 +45,7 @@
             text-align: center;
             margin-bottom: 4px;
             padding-bottom: 4px;
-            border-bottom: 1px solid #000;
+            border-bottom: 2px solid #0d9488;
         }
 
         .company-logo {

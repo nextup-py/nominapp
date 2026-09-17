@@ -2,7 +2,6 @@
 
 namespace App\Providers\Filament;
 
-use App\Settings\GeneralSettings;
 use App\Support\ThemeResolver;
 use EightyNine\FilamentDocs\FilamentDocsPlugin;
 use Filament\FontProviders\LocalFontProvider;
@@ -26,15 +25,6 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        try {
-            $settings = app(GeneralSettings::class);
-            $colorKey = $settings->primary_color;
-            $fontKey = $settings->font;
-        } catch (\Throwable) {
-            $colorKey = ThemeResolver::DEFAULT_COLOR;
-            $fontKey = ThemeResolver::DEFAULT_FONT;
-        }
-
         $panel = $panel
             ->default()
             ->id('admin')
@@ -42,9 +32,12 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->profile(isSimple: false)
             ->favicon(asset('icons/favicon.ico'))
+            ->brandLogo(asset('images/branding/nominapp-isotipo.png'))
+            ->darkModeBrandLogo(asset('images/branding/nominapp-isotipo.png'))
+            ->brandLogoHeight('2.25rem')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
-                'primary' => ThemeResolver::colorPalette($colorKey),
+                'primary' => ThemeResolver::colorPalette(),
                 'secondary' => Color::Amber,
                 'success' => Color::Green,
                 'danger' => Color::Red,
@@ -102,8 +95,8 @@ class AdminPanelProvider extends PanelProvider
         // ir dentro del try/catch, no solo detrás del file_exists().
         try {
             $panel->font(
-                ThemeResolver::fontFamily($fontKey),
-                url: Vite::asset(ThemeResolver::fontAssetPath($fontKey)),
+                ThemeResolver::fontFamily(),
+                url: Vite::asset(ThemeResolver::fontAssetPath()),
                 provider: LocalFontProvider::class,
             );
         } catch (\Throwable) {

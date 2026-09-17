@@ -10,7 +10,6 @@
     <x-favicon-links />
     @vite('resources/js/attendances/device-link.js')
     @vite('resources/css/attendances/device-link.css')
-    <x-theme-vars />
 </head>
 
 <body>

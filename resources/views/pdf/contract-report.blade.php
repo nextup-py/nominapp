@@ -27,7 +27,7 @@
             text-align: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 1px solid #000;
+            border-bottom: 2px solid #0d9488;
         }
 
         .company-logo  { max-height: 40px; max-width: 120px; margin-bottom: 8px; }

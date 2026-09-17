@@ -9,7 +9,6 @@
     <meta name="color-scheme" content="light dark">
     <x-favicon-links />
     @vite('resources/css/attendances/terminal.css')
-    <x-theme-vars />
     @isset($terminal)
         <x-pwa-meta manifest-url="{{ route('terminal.manifest', $terminal->code) }}" app-title="Nominapp Terminal" />
     @endisset
