@@ -67,32 +67,6 @@ body {
     padding: var(--sp-2) var(--sp-4);
 }
 
-/* Banner de migración — /terminal (legacy) con un terminal_code ya guardado localmente */
-.legacy-migration-banner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--sp-2);
-    padding: var(--sp-2) var(--sp-4);
-    background: var(--c-warning-bg);
-    border-bottom: 1px solid var(--c-warning-ring);
-    color: var(--c-warning);
-    font-size: .8125rem;
-    font-weight: 600;
-    text-align: center;
-    overflow: hidden;
-    max-height: 0;
-    opacity: 0;
-    transition: max-height 400ms ease, opacity 400ms ease, padding 400ms ease;
-}
-.legacy-migration-banner svg { width: 15px; height: 15px; flex-shrink: 0; }
-.legacy-migration-banner a { color: inherit; text-decoration: underline; word-break: break-all; }
-.legacy-migration-banner.is-visible {
-    max-height: 80px;
-    opacity: 1;
-    padding: var(--sp-2) var(--sp-4);
-}
-
 .terminal-header {
     background: var(--c-surface);
     border-bottom: 1px solid var(--c-border);
@@ -739,6 +713,7 @@ body {
 .result-card--success  { border-top: 4px solid var(--c-success); }
 .result-card--error    { border-top: 4px solid var(--c-danger); }
 .result-card--complete { border-top: 4px solid var(--c-info); }
+.result-card--warning  { border-top: 4px solid var(--c-warning); }
 .result-top    { padding: var(--sp-10) var(--sp-8) var(--sp-6); }
 .result-bottom {
     padding: var(--sp-5) var(--sp-8) var(--sp-8);
@@ -755,10 +730,12 @@ body {
 .result-icon--success  { background: var(--c-success-bg); border: 2px solid var(--c-success-ring); }
 .result-icon--error    { background: var(--c-danger-bg);  border: 2px solid var(--c-danger-ring); }
 .result-icon--complete { background: var(--c-info-bg);   border: 2px solid rgba(37,99,235,.3); }
+.result-icon--warning  { background: var(--c-warning-bg); border: 2px solid var(--c-warning-ring); }
 .result-icon svg       { width: 32px; height: 32px; }
 .result-icon--success  svg { stroke: var(--c-success); }
 .result-icon--error    svg { stroke: var(--c-danger); }
 .result-icon--complete svg { stroke: var(--c-info); }
+.result-icon--warning  svg { stroke: var(--c-warning); }
 
 /* Ocultar emojis heredados del componente */
 .success-icon, .error-icon { display: none; }

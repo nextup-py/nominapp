@@ -54,23 +54,6 @@
             <span>Sin conexión — las marcaciones no pueden registrarse</span>
         </div>
 
-        {{--
-            Solo puede mostrarse en /terminal (legacy, sin código) — si $terminal ya
-            está presente (arquitectura actual, /terminal/{code}), no hay nada que migrar.
-            El JS decide si corresponde mostrarlo: busca el terminal_code ya guardado en
-            IndexedDB por una provisión anterior y arma el link a la URL correcta, sin
-            necesidad de que un admin busque el código en Filament.
-        --}}
-        @empty($terminal)
-        <div id="legacyMigrationBanner" class="legacy-migration-banner" role="alert" aria-live="polite" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 9v4"/><path d="M12 17h.01"/>
-                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/>
-            </svg>
-            <span>Esta URL quedará fuera de servicio. Actualizá el acceso de este dispositivo a: <a id="legacyMigrationLink" href="#"></a></span>
-        </div>
-        @endempty
-
         <main id="main-content">
             <x-attendance.terminal-start-gate />
             <x-attendance.terminal-loading />
@@ -78,6 +61,17 @@
             <x-attendance.terminal-type-selector />
             <x-attendance.terminal-video-section />
             <x-attendance.terminal-success />
+            {{--
+                Solo puede mostrarse en /terminal (legacy, sin código) — si $terminal ya
+                está presente (arquitectura actual, /terminal/{code}), no hay nada que migrar.
+                El JS decide si corresponde: busca el terminal_code ya guardado en IndexedDB
+                por una provisión anterior y, si lo encuentra, reemplaza TODA la pantalla por
+                esta (bloqueante, sin botón "Comenzar") — la ruta legacy va a darse de baja,
+                así que no debe poder seguir usándose para marcar una vez detectada.
+            --}}
+            @empty($terminal)
+                <x-attendance.terminal-legacy-migration />
+            @endempty
         </main>
     </div>
 

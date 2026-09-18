@@ -50,25 +50,25 @@ export function updateLoadingProgress(dom, percentage, message, stepNumber) {
 
 /**
  * Si esta página es /terminal (legacy, sin código) y el dispositivo ya tiene
- * un terminal_code guardado en IndexedDB de una provisión anterior, muestra
- * un banner con el link directo a /terminal/{code}.
- * @param {{banner: HTMLElement|null, link: HTMLElement|null}} dom
+ * un terminal_code guardado en IndexedDB de una provisión anterior, arma la
+ * URL correcta y avisa que hay que migrar — bootstrap.js no decide qué
+ * pantalla mostrar (ver nota arriba), así que retorna el resultado y es
+ * terminal.js quien reemplaza toda la pantalla por la de migración,
+ * bloqueando el arranque normal: la ruta legacy va a darse de baja, no debe
+ * poder seguir usándose para marcar una vez detectado el dispositivo.
+ * @returns {Promise<{needsMigration: boolean, url?: string}>}
  */
-export async function checkLegacyTerminalMigration(dom) {
-    if (window.terminalData) return; // ya estamos en /terminal/{code}, nada que migrar
-    if (!dom.banner || !dom.link) return;
+export async function checkLegacyTerminalMigration() {
+    if (window.terminalData) return { needsMigration: false }; // ya estamos en /terminal/{code}, nada que migrar
 
     try {
         const code = await getMeta('terminal_code');
-        if (!code) return;
+        if (!code) return { needsMigration: false };
 
-        const url = `${window.location.origin}/terminal/${code}`;
-        dom.link.href = url;
-        dom.link.textContent = url;
-        dom.banner.classList.add('is-visible');
-        dom.banner.setAttribute('aria-hidden', 'false');
+        return { needsMigration: true, url: `${window.location.origin}/terminal/${code}` };
     } catch (error) {
         console.warn('No se pudo verificar el código de terminal guardado localmente:', error);
+        return { needsMigration: false };
     }
 }
 

@@ -16,14 +16,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // ELEMENTOS DEL DOM
     // ============================================================================
     const screens = {
-        startGate:      document.getElementById('startGateScreen'),
-        loading:        document.getElementById('loadingScreen'),
-        idle:           document.getElementById('idleScreen'),
-        typeSelection:  document.getElementById('typeSelectionScreen'),
-        identification: document.getElementById('identificationScreen'),
-        success:        document.getElementById('successScreen'),
-        dayComplete:    document.getElementById('dayCompleteScreen'),
-        error:          document.getElementById('errorScreen'),
+        startGate:       document.getElementById('startGateScreen'),
+        loading:         document.getElementById('loadingScreen'),
+        idle:            document.getElementById('idleScreen'),
+        typeSelection:   document.getElementById('typeSelectionScreen'),
+        identification:  document.getElementById('identificationScreen'),
+        success:         document.getElementById('successScreen'),
+        dayComplete:     document.getElementById('dayCompleteScreen'),
+        error:           document.getElementById('errorScreen'),
+        legacyMigration: document.getElementById('legacyMigrationScreen'),
     };
 
     const loadingDom = {
@@ -259,22 +260,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================================
     console.log('Terminal de marcación inicializado');
 
-    bootstrap.checkLegacyTerminalMigration({
-        banner: document.getElementById('legacyMigrationBanner'),
-        link: document.getElementById('legacyMigrationLink'),
-    });
-
     const btnStartGate = document.getElementById('btnStartGate');
-    const startSystem = () => {
-        screenState.showScreen(screens, 'loading');
-        bootstrap.initializeSystem(loadingDom, {
-            onReady: enterIdle,
-            onError: (message) => screenState.showError(screens, errorMessageEl, message),
-        });
-    };
-    if (btnStartGate) {
-        btnStartGate.addEventListener('click', startSystem, { once: true });
-    } else {
-        startSystem();
-    }
+
+    // El click de "Comenzar" recién se cablea DESPUÉS de resolver esta verificación —
+    // mientras está pendiente, tocar el botón no hace nada (sin listener todavía). Así
+    // se evita la ventana en la que un dispositivo que ya necesita migrar podría arrancar
+    // igual el flujo normal antes de que se reemplace la pantalla por la de bloqueo.
+    bootstrap.checkLegacyTerminalMigration().then(({ needsMigration, url }) => {
+        if (needsMigration) {
+            const link = document.getElementById('legacyMigrationLink');
+            if (link) {
+                link.href = url;
+                link.textContent = url;
+            }
+            screenState.showScreen(screens, 'legacyMigration');
+            return;
+        }
+
+        const startSystem = () => {
+            screenState.showScreen(screens, 'loading');
+            bootstrap.initializeSystem(loadingDom, {
+                onReady: enterIdle,
+                onError: (message) => screenState.showError(screens, errorMessageEl, message),
+            });
+        };
+        if (btnStartGate) {
+            btnStartGate.addEventListener('click', startSystem, { once: true });
+        } else {
+            startSystem();
+        }
+    });
 });

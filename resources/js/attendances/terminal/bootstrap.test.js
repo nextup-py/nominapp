@@ -42,8 +42,8 @@ async function loadFreshBootstrap() {
     const queueMod = await import('../terminal-offline/queue.js');
     const statusMod = await import('./sync-status-ui.js');
     const dbMod = await import('../terminal-offline/db.js');
-    const { startBackgroundSync, initializeOfflineSync } = await import('./bootstrap.js');
-    return { startBackgroundSync, initializeOfflineSync, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
+    const { startBackgroundSync, initializeOfflineSync, checkLegacyTerminalMigration } = await import('./bootstrap.js');
+    return { startBackgroundSync, initializeOfflineSync, checkLegacyTerminalMigration, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
 }
 
 describe('startBackgroundSync — reporte de TerminalAuthError', () => {
@@ -182,5 +182,55 @@ describe('initializeOfflineSync — confirmación antes de limpiar el estado de 
         expect(syncEmployees).not.toHaveBeenCalled();
         expect(flushQueue).not.toHaveBeenCalled();
         expect(updateIdleSyncStatus).toHaveBeenCalledWith('Este es otro terminal — volvé a /terminal/viejo-code');
+    });
+});
+
+describe('checkLegacyTerminalMigration', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('en /terminal/{code} (window.terminalData presente): no hay nada que migrar', async () => {
+        const { checkLegacyTerminalMigration, getMeta } = await loadFreshBootstrap();
+        vi.stubGlobal('window', { terminalData: { id: 1, code: 'algo' }, location: { origin: 'https://ej.com' } });
+
+        const result = await checkLegacyTerminalMigration();
+
+        expect(result).toEqual({ needsMigration: false });
+        expect(getMeta).not.toHaveBeenCalled();
+    });
+
+    it('en /terminal (legacy) sin terminal_code guardado: no hay nada que migrar', async () => {
+        const { checkLegacyTerminalMigration, getMeta } = await loadFreshBootstrap();
+        vi.stubGlobal('window', { terminalData: undefined, location: { origin: 'https://ej.com' } });
+        getMeta.mockResolvedValue(null);
+
+        const result = await checkLegacyTerminalMigration();
+
+        expect(result).toEqual({ needsMigration: false });
+    });
+
+    it('en /terminal (legacy) con terminal_code guardado: pide migrar con la URL correcta', async () => {
+        const { checkLegacyTerminalMigration, getMeta } = await loadFreshBootstrap();
+        vi.stubGlobal('window', { terminalData: undefined, location: { origin: 'https://ej.com' } });
+        getMeta.mockResolvedValue('mi-code');
+
+        const result = await checkLegacyTerminalMigration();
+
+        expect(result).toEqual({ needsMigration: true, url: 'https://ej.com/terminal/mi-code' });
+    });
+
+    it('si getMeta falla, no bloquea el arranque (needsMigration: false)', async () => {
+        const { checkLegacyTerminalMigration, getMeta } = await loadFreshBootstrap();
+        vi.stubGlobal('window', { terminalData: undefined, location: { origin: 'https://ej.com' } });
+        getMeta.mockRejectedValue(new Error('indexeddb down'));
+
+        const result = await checkLegacyTerminalMigration();
+
+        expect(result).toEqual({ needsMigration: false });
     });
 });
