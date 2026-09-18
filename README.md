@@ -1,55 +1,56 @@
 # Nominapp
 
-Sistema de gestión de recursos humanos y nómina, desarrollado con Laravel y Filament.
+[![Tests](https://github.com/nextup-py/nominapp/actions/workflows/tests.yml/badge.svg)](https://github.com/nextup-py/nominapp/actions/workflows/tests.yml)
+
+Sistema de gestión de recursos humanos y nómina para Paraguay, construido con Laravel 12 y Filament 3.
+
+## Stack
+
+| | |
+|---|---|
+| Backend | Laravel 12, PHP 8.2+ |
+| Panel admin | Filament 3.3 (todo el CRUD en `/admin`) |
+| Frontend | Blade + Vite + Tailwind CSS v4, Vue solo en asistencia/reconocimiento facial |
+| Testing | Pest |
+| Cola / caché / sesión | driver `database` |
+| Locale | Español (`es`), zona horaria `America/Asuncion`, moneda Guaraní (Gs.) |
 
 ## Características
 
-- Gestión de empleados y departamentos
-- Control de asistencia con reconocimiento facial, con marcación offline vía PWA (terminal de sucursal y dispositivo personal)
-- Gestión de nóminas y períodos de pago
-- Administración de vacaciones y ausencias
-- Sistema de préstamos con cuotas
-- Percepciones y deducciones personalizadas
-- Generación de reportes en PDF y Excel
-- Calendario de días feriados
-- Gestión de horarios y turnos
+- Gestión de empleados, sucursales, departamentos y cargos
+- Contratos con ciclo de vida completo (renovación, terminación, liquidación)
+- Nómina con pipeline de calculadoras (percepciones, horas extra, deducciones, préstamos, adelantos, bonificación familiar)
+- Control de asistencia con reconocimiento facial, marcación offline vía PWA (terminal de sucursal y dispositivo personal)
+- Vacaciones, aguinaldo y liquidación de haberes según legislación paraguaya (CLT)
+- Préstamos, adelantos de salario y retiros de mercadería a crédito con descuento automático en cuotas
+- Pagos bancarios masivos (formato Itaú)
+- Permisos, licencias y amonestaciones
+- Reportes en PDF y Excel
 
 ## Requisitos
 
-- PHP ^8.2 (con extensiones: PDO, mbstring, OpenSSL, JSON, BCMath, Ctype, Fileinfo, Tokenizer)
+- PHP ^8.2 (extensiones: PDO, mbstring, OpenSSL, JSON, BCMath, Ctype, Fileinfo, Tokenizer)
 - Composer
 - Node.js ≥ 18
-- MySQL / PostgreSQL / SQLite
+- MySQL — el proyecto usa funciones y sintaxis específicas de MySQL (`TIMESTAMPDIFF`, `GROUP_CONCAT`, modo `ONLY_FULL_GROUP_BY`) en reportes y exports; no es compatible con PostgreSQL o SQLite sin adaptar esas queries
 
 ## Instalación
 
-1. Clonar el repositorio:
-```bash
-git clone <url-del-repositorio>
-cd nominapp
-```
+1. Clonar el repositorio e instalar dependencias:
+   ```bash
+   git clone <url-del-repositorio>
+   cd nominapp
+   composer install
+   npm install
+   ```
 
-2. Instalar dependencias de PHP:
-```bash
-composer install
-```
+2. Copiar el archivo de entorno y generar la clave de aplicación:
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-3. Instalar dependencias de Node.js:
-```bash
-npm install
-```
-
-4. Copiar el archivo de entorno:
-```bash
-cp .env.example .env
-```
-
-5. Generar la clave de aplicación:
-```bash
-php artisan key:generate
-```
-
-6. Configurar el archivo `.env`:
+3. Configurar `.env`:
 
    **Base de datos** (obligatorio):
    ```
@@ -71,7 +72,7 @@ php artisan key:generate
    GOOGLE_MAPS_API_KEY=tu_clave_aqui
    ```
 
-   **Administrador inicial** (usado por el seeder de producción):
+   **Administrador inicial** (usado por `ProductionSeeder`):
    ```
    ADMIN_NAME="Nombre Apellido"
    ADMIN_EMAIL=admin@ejemplo.com
@@ -79,62 +80,67 @@ php artisan key:generate
    ```
    > Si `ADMIN_PASSWORD` se deja vacío, se genera una contraseña aleatoria y se muestra en consola.
 
-   > Cola de trabajos, caché y sesiones ya están configurados como `database` en `.env.example` — no requieren cambios.
+   Cola de trabajos, caché y sesiones ya están configurados como `database` en `.env.example` — no requieren cambios.
 
-7. Ejecutar las migraciones:
-```bash
-php artisan migrate
-```
-
-8. Crear el enlace simbólico de almacenamiento (requerido para PDFs y logos):
-```bash
-php artisan storage:link
-```
-
-9. Ejecutar los seeders según el entorno:
-
-   **Desarrollo** — carga datos de demostración (empleados, nóminas, etc.):
+4. Migrar, enlazar storage y sembrar datos:
    ```bash
-   php artisan db:seed
+   php artisan migrate
+   php artisan storage:link
    ```
 
-   **Producción / nuevo cliente** — crea el usuario administrador y los códigos de deducción obligatorios (`IPS001`, `PRE001`, `ADE001`):
+   Elegir el seeder según el entorno:
+
+   | Entorno | Comando | Qué hace |
+   |---|---|---|
+   | Desarrollo | `php artisan db:seed` | Datos de demostración (empleados, nóminas, etc.) |
+   | Producción / nuevo cliente | `php artisan db:seed --class=ProductionSeeder` | Usuario admin + deducciones obligatorias del sistema (`IPS001`, `PRE001`, `ADE001`, `MER001`, `LIC001`) |
+
+5. Compilar assets:
    ```bash
-   php artisan db:seed --class=ProductionSeeder
+   npm run build
    ```
 
-10. Compilar los assets:
+## Desarrollo
+
+Levantar servidor, cola y Vite con HMR en paralelo:
 ```bash
-npm run build
+composer run dev
 ```
 
-## Uso
+## Testing
 
-Acceder a la aplicación en la URL configurada en `APP_URL` (por defecto `http://localhost:8000`).
+```bash
+composer run test                              # suite completa
+php artisan test --filter=NombreDelTest        # un test puntual
+php artisan test tests/Feature/AlgunTest.php   # un archivo puntual
+```
 
-Para producción, optimizar antes de desplegar:
+Los tests corren contra `.env.testing` (BD `nominapp_testing`, cola `sync`, caché/sesión en memoria) — no requieren Redis ni un mailer real.
+
+Antes de dar por cerrado un cambio:
+```bash
+vendor/bin/pint --dirty   # formateo
+```
+
+## Uso y producción
+
+Acceder a la aplicación en la URL configurada en `APP_URL`.
+
+Antes de desplegar:
 ```bash
 php artisan optimize
 php artisan filament:optimize
 ```
 
-Configurar el scheduler en cron para tareas automáticas (ausencias, vencimientos, préstamos, etc.):
+Configurar el scheduler en cron (ausencias, vencimientos de contrato, expiración de enrolamientos faciales, etc.):
 ```
 * * * * * cd /ruta/al/proyecto && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-## Desarrollo
+## Documentación adicional
 
-Iniciar el servidor de desarrollo, cola de trabajos y compilador de assets simultáneamente:
-```bash
-composer run dev
-```
+Las convenciones de código, la arquitectura de módulos (nómina, préstamos, asistencia offline, etc.) y los mecanismos de deploy están documentados en [`CLAUDE.md`](CLAUDE.md). Documentos específicos:
 
-Este comando ejecuta en paralelo:
-- `php artisan serve` — servidor HTTP
-- `php artisan queue:listen --tries=1` — procesador de colas
-- `npm run dev` — Vite con HMR
-
-## Licencia
-
-MIT
+- [`docs/marcacion-offline.md`](docs/marcacion-offline.md) — arquitectura de marcación offline (terminal y dispositivo personal)
+- [`docs/runbook-terminal-revocacion-reprovision.md`](docs/runbook-terminal-revocacion-reprovision.md)
+- [`docs/runbook-dispositivo-vinculacion-revocacion.md`](docs/runbook-dispositivo-vinculacion-revocacion.md)
