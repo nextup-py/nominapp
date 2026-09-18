@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(asset('icons/favicon.ico'))
             ->brandLogo(asset('images/branding/nominapp-isotipo.png'))
             ->darkModeBrandLogo(asset('images/branding/nominapp-isotipo.png'))
-            ->brandLogoHeight('2.25rem')
+            ->brandLogoHeight('3rem')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => ThemeResolver::colorPalette(),
