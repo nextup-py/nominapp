@@ -142,9 +142,15 @@ export async function requestPersistentStorage() {
  * la pantalla idle.
  *
  * Regresión de seguridad prevenida acá: compara terminal_id/terminal_code
- * guardados contra los del terminal actual — si no coinciden, limpia el
- * estado local antes de continuar (ver terminal.js original para el
- * contexto completo de esta protección).
+ * guardados contra los del terminal actual — si no coinciden, este
+ * navegador ya reclamó el token de sincronización de OTRO terminal (ver
+ * clearTerminalState() en db.js). Antes de limpiar (lo que además borra el
+ * token/empleados/cola de ESE otro terminal, dejándolo desprovisionado) se
+ * pide confirmación explícita — abrir la URL equivocada por error (un link
+ * viejo, una pestaña confundida) no debe destruir en silencio un terminal
+ * que venía funcionando bien. Si cancela, el arranque se detiene acá sin
+ * tocar nada — el dispositivo sigue funcionando como el terminal que ya
+ * tenía configurado.
  */
 export async function initializeOfflineSync() {
     await migrateTokenFromLocalStorage();
@@ -159,6 +165,17 @@ export async function initializeOfflineSync() {
         : (storedCode != null && currentCode != null && storedCode !== currentCode);
 
     if (belongsToOtherTerminal) {
+        const confirmed = window.confirm(
+            `Este dispositivo ya está configurado como el terminal "${storedCode ?? storedId}". `
+            + `¿Querés cambiarlo a este terminal ("${currentCode ?? currentId}")? `
+            + 'Se va a perder toda la caché local del terminal anterior (empleados sincronizados y marcaciones pendientes de sincronizar).',
+        );
+
+        if (!confirmed) {
+            updateIdleSyncStatus(`Este es otro terminal — volvé a /terminal/${storedCode ?? ''}`);
+            return;
+        }
+
         console.warn(`Datos locales pertenecen a otro terminal (id ${storedId ?? 'desconocido'}, code "${storedCode}") — limpiando antes de continuar.`);
         await clearTerminalState();
     }

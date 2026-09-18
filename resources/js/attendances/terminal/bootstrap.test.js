@@ -41,8 +41,9 @@ async function loadFreshBootstrap() {
     const syncMod = await import('../terminal-offline/sync.js');
     const queueMod = await import('../terminal-offline/queue.js');
     const statusMod = await import('./sync-status-ui.js');
-    const { startBackgroundSync } = await import('./bootstrap.js');
-    return { startBackgroundSync, ...syncMod, ...queueMod, ...statusMod };
+    const dbMod = await import('../terminal-offline/db.js');
+    const { startBackgroundSync, initializeOfflineSync } = await import('./bootstrap.js');
+    return { startBackgroundSync, initializeOfflineSync, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
 }
 
 describe('startBackgroundSync — reporte de TerminalAuthError', () => {
@@ -110,5 +111,76 @@ describe('startBackgroundSync — reporte de TerminalAuthError', () => {
         await vi.advanceTimersByTimeAsync(90 * 1000);
 
         expect(updateIdleSyncStatus).not.toHaveBeenCalledWith('Terminal sin configurar — necesita re-provisión');
+    });
+});
+
+describe('initializeOfflineSync — confirmación antes de limpiar el estado de otro terminal', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    function stubWindow({ confirmReturns, terminalCode = 'nuevo-code', terminalId = 99 } = {}) {
+        vi.stubGlobal('window', {
+            addEventListener: vi.fn(),
+            confirm: vi.fn().mockReturnValue(confirmReturns),
+            terminalData: { id: terminalId, code: terminalCode },
+        });
+        vi.stubGlobal('navigator', { onLine: true, storage: undefined });
+    }
+
+    it('sin datos locales previos (primera provisión): no pregunta nada', async () => {
+        const { initializeOfflineSync, getMeta, clearTerminalState, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        stubWindow({ confirmReturns: true });
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'api_token' ? 'un-token' : null));
+        heartbeat.mockResolvedValue(undefined);
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+
+        await initializeOfflineSync();
+
+        expect(window.confirm).not.toHaveBeenCalled();
+        expect(clearTerminalState).not.toHaveBeenCalled();
+    });
+
+    it('terminal distinto + confirma: limpia el estado anterior y sincroniza como el nuevo', async () => {
+        const { initializeOfflineSync, getMeta, clearTerminalState, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        stubWindow({ confirmReturns: true, terminalCode: 'nuevo-code', terminalId: 99 });
+        getMeta.mockImplementation((key) => Promise.resolve({
+            terminal_id: 1,
+            terminal_code: 'viejo-code',
+            api_token: 'token-viejo',
+        }[key] ?? null));
+        heartbeat.mockResolvedValue(undefined);
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+
+        await initializeOfflineSync();
+
+        expect(window.confirm).toHaveBeenCalledTimes(1);
+        expect(clearTerminalState).toHaveBeenCalledTimes(1);
+        expect(heartbeat).toHaveBeenCalled();
+    });
+
+    it('terminal distinto + cancela: NO limpia nada y no intenta sincronizar', async () => {
+        const { initializeOfflineSync, getMeta, clearTerminalState, heartbeat, syncEmployees, flushQueue, updateIdleSyncStatus } = await loadFreshBootstrap();
+        stubWindow({ confirmReturns: false, terminalCode: 'nuevo-code', terminalId: 99 });
+        getMeta.mockImplementation((key) => Promise.resolve({
+            terminal_id: 1,
+            terminal_code: 'viejo-code',
+            api_token: 'token-viejo',
+        }[key] ?? null));
+
+        await initializeOfflineSync();
+
+        expect(window.confirm).toHaveBeenCalledTimes(1);
+        expect(clearTerminalState).not.toHaveBeenCalled();
+        expect(heartbeat).not.toHaveBeenCalled();
+        expect(syncEmployees).not.toHaveBeenCalled();
+        expect(flushQueue).not.toHaveBeenCalled();
+        expect(updateIdleSyncStatus).toHaveBeenCalledWith('Este es otro terminal — volvé a /terminal/viejo-code');
     });
 });
