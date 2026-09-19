@@ -66,7 +66,7 @@
 
     <header class="app-header">
         <div class="app-header-brand">
-            <span class="app-mode-badge">Marcación Facial</span>
+            <span class="app-mode-badge">Marcación facial</span>
             <img id="headerLogo" class="header-logo hidden" alt="">
             <span id="headerLocation" class="app-location-badge"></span>
             <x-theme-toggle-button />

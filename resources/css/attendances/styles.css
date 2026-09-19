@@ -233,10 +233,8 @@ body.modal-open { overflow: hidden; }
 .app-mode-badge {
     background: var(--c-primary-bg);
     color: var(--c-primary);
-    font-size: .6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .1em;
+    font-size: .75rem;
+    font-weight: 600;
     padding: 3px var(--sp-2);
     border-radius: var(--r);
     border: 1px solid rgba(13,148,136,.25);
