@@ -349,6 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 await refreshSyncStatus();
             } catch (error) {
                 if (error instanceof MobileAuthError) {
+                    await resetDb();
                     window.location.href = "/vincular-dispositivo";
                     return;
                 }
@@ -687,6 +688,13 @@ document.addEventListener("DOMContentLoaded", () => {
             await flushQueue();
         } catch (error) {
             if (error instanceof MobileAuthError) {
+                // Sin resetDb() acá, el token muerto queda en IndexedDB y
+                // /vincular-dispositivo lo detecta como "ya vinculado" —
+                // el empleado nunca ve el formulario, solo un loop entre
+                // las dos páginas (ver mismo fix en los otros 2 puntos de
+                // redirección de este archivo, y en btnUnlinkDevice que ya
+                // lo hacía bien).
+                await resetDb();
                 window.location.href = "/vincular-dispositivo";
                 return;
             }
@@ -1328,7 +1336,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 showErrorModal(
                     "Dispositivo desvinculado",
                     "Este dispositivo ya no está vinculado a tu cuenta. Volvé a identificarte con tu CI y fecha de nacimiento.",
-                    () => { window.location.href = "/vincular-dispositivo"; }
+                    async () => { await resetDb(); window.location.href = "/vincular-dispositivo"; }
                 );
                 return;
             }
@@ -1865,7 +1873,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     showErrorModal(
                         "Dispositivo desvinculado",
                         "Este dispositivo ya no está vinculado a tu cuenta. Volvé a identificarte con tu CI y fecha de nacimiento.",
-                        () => { window.location.href = "/vincular-dispositivo"; }
+                        async () => { await resetDb(); window.location.href = "/vincular-dispositivo"; }
                     );
                     return;
                 }
