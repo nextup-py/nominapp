@@ -41,6 +41,8 @@ export function updateSyncStatus(text) {
  */
 export async function refreshSyncStatus() {
     const [pending, conflicts] = await Promise.all([countPendingEvents(), countConflictEvents()]);
+    const dot = document.getElementById("syncStatusDot");
+    const isPending = conflicts > 0 || pending > 0;
 
     if (conflicts > 0) {
         updateSyncStatus(`${conflicts} marcación(es) requieren revisión`);
@@ -48,6 +50,11 @@ export async function refreshSyncStatus() {
         updateSyncStatus(`${pending} marcación(es) pendiente(s) de sincronizar`);
     } else {
         updateSyncStatus(navigator.onLine ? "Sincronizado" : "Sin conexión — usando datos locales");
+    }
+
+    if (dot) {
+        dot.classList.toggle("sync-status-dot--pending", isPending);
+        dot.classList.toggle("sync-status-dot--synced", !isPending);
     }
 
     const conflictBanner = document.getElementById("conflictBanner");

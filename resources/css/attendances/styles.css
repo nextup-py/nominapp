@@ -124,19 +124,6 @@ body.modal-open { overflow: hidden; }
 /* ============================================================
    BANNER E ÍCONO DE INSTALACIÓN PWA
    ============================================================ */
-.install-toggle {
-    display: flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    border: 1px solid var(--c-border);
-    background: transparent;
-    color: var(--c-muted);
-    cursor: pointer;
-    transition: background var(--tr-f), color var(--tr-f), border-color var(--tr-f);
-    flex-shrink: 0;
-}
-.install-toggle:hover { background: var(--c-primary-bg); color: var(--c-primary); border-color: var(--c-primary); }
-.install-toggle svg { width: 16px; height: 16px; display: block; }
 .install-banner {
     display: flex;
     align-items: center;
@@ -182,54 +169,114 @@ body.modal-open { overflow: hidden; }
 }
 .install-banner-dismiss:hover { background: var(--c-primary); color: #fff; }
 
-/* ============================================================
-   ESTADO DE SINCRONIZACIÓN OFFLINE (dispositivo)
-   ============================================================ */
-.sync-status-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: var(--sp-2) var(--sp-3);
-    padding: var(--sp-1) var(--sp-4);
-    background: var(--c-bg);
-    border-bottom: 1px solid var(--c-border);
-    font-size: .75rem;
-}
-.sync-status-text { color: var(--c-muted); min-width: 0; }
-.sync-status-btn {
+.app-header-right { display: flex; align-items: center; gap: var(--sp-3); }
+
+.menu-trigger {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--c-border);
     background: transparent;
-    border: 1px solid var(--c-border-s);
     color: var(--c-muted);
-    font: inherit;
-    font-size: .75rem;
-    font-weight: 600;
-    padding: 2px var(--sp-3);
-    border-radius: var(--r);
     cursor: pointer;
-    white-space: nowrap;
-    transition: background var(--tr-f), color var(--tr-f);
+    transition: background var(--tr-f), color var(--tr-f), border-color var(--tr-f);
+    flex-shrink: 0;
 }
-.sync-status-btn:hover:not(:disabled) { background: var(--c-surface); color: var(--c-text); }
-.sync-status-btn:disabled { opacity: .5; cursor: not-allowed; }
-/* Desvincular dispositivo: acción rara y destructiva — discreta hasta el hover, no compite visualmente con "Sincronizar". */
-.sync-status-btn--unlink {
-    border-color: transparent;
-    margin-left: auto;
+.menu-trigger:hover { background: var(--c-primary-bg); color: var(--c-primary); border-color: var(--c-primary); }
+.menu-trigger svg { width: 18px; height: 18px; display: block; }
+
+.sync-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--c-subtle);
+    flex-shrink: 0;
 }
-.sync-status-btn--unlink:hover:not(:disabled) {
-    background: var(--c-danger-bg);
+.sync-status-dot--synced  { background: var(--c-success); }
+.sync-status-dot--pending { background: var(--c-warning); }
+
+/* ============================================================
+   MENÚ DE ACCIONES SECUNDARIAS (HOJA INFERIOR)
+   ============================================================ */
+.menu-sheet {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; align-items: flex-end; justify-content: center;
+    visibility: hidden;
+    pointer-events: none;
+}
+.menu-sheet.is-open { visibility: visible; pointer-events: auto; }
+
+.menu-sheet-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(15,23,42,.72);
+    opacity: 0;
+    transition: opacity var(--tr);
+}
+.menu-sheet.is-open .menu-sheet-backdrop { opacity: 1; }
+
+.menu-sheet-panel {
+    position: relative;
+    width: 100%;
+    max-width: 540px;
+    background: var(--c-surface);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    padding: var(--sp-3) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+    box-shadow: var(--sh-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    transform: translateY(100%);
+    transition: transform var(--tr-s);
+}
+.menu-sheet.is-open .menu-sheet-panel { transform: translateY(0); }
+
+.menu-sheet-handle {
+    width: 36px; height: 4px;
+    border-radius: 99px;
+    background: var(--c-border-s);
+    margin: 0 auto var(--sp-2);
+}
+
+.menu-sheet .sync-status-text {
+    display: block;
+    text-align: center;
+    font-size: .8125rem;
+    color: var(--c-muted);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--c-border);
+    margin-bottom: var(--sp-1);
+}
+
+.menu-sheet-item {
+    display: flex; align-items: center; gap: var(--sp-3);
+    width: 100%;
+    padding: var(--sp-3) var(--sp-2);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-md);
+    font: inherit;
+    font-size: .9375rem;
+    font-weight: 500;
+    color: var(--c-text);
+    cursor: pointer;
+    text-align: left;
+    transition: background var(--tr-f);
+}
+.menu-sheet-item:hover { background: var(--c-bg); }
+.menu-sheet-item[aria-pressed="true"] { color: var(--c-warning); }
+.menu-sheet-item-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--c-muted); }
+
+.menu-sheet-item--danger {
     color: var(--c-danger);
-    border-color: var(--c-danger-bg);
+    border-top: 1px solid var(--c-border);
+    margin-top: var(--sp-1);
+    padding-top: var(--sp-4);
 }
-.sync-status-btn--camera-pause { display: inline-flex; align-items: center; gap: 4px; }
-.camera-pause-icon { width: 14px; height: 14px; flex-shrink: 0; }
-/* Estado activo (cámara pausada) — mismo tratamiento visual que otros avisos de atención */
-.sync-status-btn--camera-pause[aria-pressed="true"] {
-    background: var(--c-warning-bg);
-    color: var(--c-warning);
-    border-color: var(--c-warning-ring);
-}
+.menu-sheet-item--danger:hover { background: var(--c-danger-bg); }
+
+.menu-sheet-item--theme { cursor: default; }
+.menu-sheet-item--theme .theme-toggle { width: 32px; height: 32px; }
+.menu-sheet-item-label { font-size: .9375rem; font-weight: 500; color: var(--c-text); }
+
 .app-mode-badge {
     background: var(--c-primary-bg);
     color: var(--c-primary);

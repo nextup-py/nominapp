@@ -15,6 +15,7 @@ import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sy
 import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js';
 import { showSuccessModal } from './mark/success-modal.js';
 import { showErrorModal, initErrorModal, isErrorModalVisible, setErrorModalVisible } from './mark/error-modal.js';
+import { createMenuSheet } from './mark/menu-sheet.js';
 import {
     captureInstallPrompt,
     triggerInstallPrompt,
@@ -127,6 +128,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnCameraPause      = document.getElementById("btnCameraPause");
     const btnCameraPauseLabel = document.getElementById("btnCameraPauseLabel");
     const cameraPausedOverlay = document.getElementById("cameraPausedOverlay");
+    const menuSheet        = document.getElementById("menuSheet");
+    const menuSheetBackdrop = document.getElementById("menuSheetBackdrop");
+    const menuSheetPanel   = document.getElementById("menuSheetPanel");
+    const btnMenu          = document.getElementById("btnMenu");
 
     // ==========================================================================
     // CONFIGURACIÓN Y CONSTANTES
@@ -1951,6 +1956,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // Mismo mecanismo que ya usa terminal.js — localStorage con clave
     // propia para no interferir si algún dispositivo llegara a usarse en los dos modos.
     initThemeToggle("mark-theme");
+
+    if (menuSheet && menuSheetBackdrop && menuSheetPanel && btnMenu) {
+        createMenuSheet({
+            sheet: menuSheet,
+            backdrop: menuSheetBackdrop,
+            panel: menuSheetPanel,
+            trigger: btnMenu,
+        });
+    }
 
     (function initInstallUi() {
         const installBanner = document.getElementById("installBanner");
