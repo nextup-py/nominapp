@@ -32,6 +32,8 @@
         </div>
     </div>
 
+    <x-branding-footer />
+
     @vite('resources/js/attendances/terminal-setup.js')
 </body>
 

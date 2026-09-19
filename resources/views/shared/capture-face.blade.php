@@ -184,6 +184,8 @@
                 </div>
             </section>
         </main>
+
+        <x-branding-footer />
     </div>
 
     <!-- Modal de confirmación -->

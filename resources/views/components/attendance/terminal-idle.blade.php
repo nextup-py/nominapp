@@ -22,5 +22,6 @@
             <span class="idle-hint-dot" aria-hidden="true"></span>
             <span>Acérquese para registrar asistencia</span>
         </div>
+        <x-branding-footer />
     </div>
 </section>

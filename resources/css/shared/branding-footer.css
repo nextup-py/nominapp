@@ -1,0 +1,22 @@
+/**
+ * Footer de atribución de marca ("Desarrollado por NextUp") compartido por
+ * las vistas públicas de marcación y enrolamiento. Usa los tokens de
+ * ../shared/tokens.css, que ya se adaptan a dark mode — sin reglas propias
+ * de tema acá.
+ */
+.branding-footer {
+    display: flex;
+    justify-content: center;
+    padding: var(--sp-4) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+}
+
+.branding-footer-link {
+    font-size: .75rem;
+    color: var(--c-subtle);
+    text-decoration: none;
+    transition: color var(--tr-f);
+}
+
+.branding-footer-link:hover {
+    color: var(--c-muted);
+}

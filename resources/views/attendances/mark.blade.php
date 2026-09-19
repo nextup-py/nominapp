@@ -58,6 +58,7 @@
                     </svg>
                     Identificarme
                 </button>
+                <x-branding-footer />
             </div>
 
         </div>

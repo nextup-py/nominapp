@@ -1,5 +1,6 @@
 @import '../shared/tokens.css';
 @import '../shared/theme-toggle.css';
+@import '../shared/branding-footer.css';
 @import 'leaflet/dist/leaflet.css';
 
 /* ============================================================

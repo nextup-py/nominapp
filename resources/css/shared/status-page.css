@@ -1,5 +1,6 @@
 /* resources/css/shared/status-page.css */
 @import './tokens.css';
+@import './branding-footer.css';
 
 /* ============================================================
    PANTALLA DE ESTADO — layout compartido por las 4 vistas de

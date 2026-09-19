@@ -46,6 +46,8 @@
             <div class="status-page-extra">{{ $extra }}</div>
         @endisset
     </div>
+
+    <x-branding-footer />
 </body>
 
 </html>

@@ -59,6 +59,8 @@
 
         <p class="hint">Solo se puede vincular un dispositivo a la vez. Si vinculás uno nuevo, el anterior deja de funcionar automáticamente.</p>
     </div>
+
+    <x-branding-footer />
 </body>
 
 </html>
