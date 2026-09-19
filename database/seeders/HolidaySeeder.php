@@ -6,7 +6,13 @@ use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-/** Siembra los feriados nacionales oficiales de Paraguay para el año en curso. */
+/**
+ * Siembra los feriados nacionales oficiales de Paraguay para el año en curso.
+ *
+ * Idempotente: usa insertOrIgnore sobre la fecha (columna única) para poder
+ * correrse múltiples veces sin duplicar registros ni pisar ediciones manuales
+ * que el usuario haya hecho desde el panel.
+ */
 class HolidaySeeder extends Seeder
 {
     public function run(): void
@@ -32,8 +38,8 @@ class HolidaySeeder extends Seeder
             ['date' => "$year-12-25", 'name' => 'Navidad'],
         ];
 
-        DB::table('holidays')->insert(
-            collect($holidays)->map(fn($h) => array_merge($h, [
+        DB::table('holidays')->insertOrIgnore(
+            collect($holidays)->map(fn ($h) => array_merge($h, [
                 'created_at' => $now,
                 'updated_at' => $now,
             ]))->toArray()

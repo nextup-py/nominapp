@@ -65,11 +65,13 @@ class DemoSeeder extends Seeder
             // Asistencia y calendario
             HolidaySeeder::class,
             AttendanceDayWithEventsSeeder::class,
-            AbsenceSeeder::class,
 
-            // Vacaciones y permisos
+            // Vacaciones y permisos (antes de AbsenceSeeder: las ausencias
+            // justificadas vinculan un EmployeeLeave aprobado, como exige
+            // Absence::justify() en la app real)
             VacationSeeder::class,
             EmployeeLeaveSeeder::class,
+            AbsenceSeeder::class,
 
             // Nómina y períodos
             PayrollPeriodSeeder::class,

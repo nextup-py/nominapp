@@ -10,9 +10,13 @@ use Illuminate\Support\Str;
 /**
  * Seeder para nueva instalación de cliente.
  *
- * Solo siembra datos reales/obligatorios:
+ * Solo siembra datos reales/obligatorios, nunca datos demo o específicos
+ * de un cliente en particular:
  *   - Usuario administrador (configurable vía .env)
- *   - Deducciones legalmente obligatorias (IPS)
+ *   - Deducciones del sistema requeridas por los calculators de nómina (IPS, préstamos, adelantos, mercadería, permisos)
+ *   - Catálogo geográfico oficial de Paraguay (departamentos y ciudades)
+ *   - Feriados nacionales del año en curso
+ *   - Plantilla vacía de contrato por cada tipo (para que ContractResource tenga un registro base)
  *
  * Es idempotente: se puede correr múltiples veces sin duplicar registros.
  * NO trunca tablas ni inserta datos demo.
@@ -31,6 +35,13 @@ class ProductionSeeder extends Seeder
     {
         $this->createAdminUser();
         $this->seedDeductions();
+
+        $this->call([
+            ParaguayRegionsSeeder::class,
+            HolidaySeeder::class,
+            ContractTemplateSeeder::class,
+        ]);
+
         $this->printChecklist();
     }
 
@@ -172,8 +183,8 @@ class ProductionSeeder extends Seeder
         $this->command->line('        - Revisar parámetros de vacaciones y liquidación');
         $this->command->line('');
         $this->command->line('  [ ] Feriados nacionales (Panel → Feriados):');
-        $this->command->line('        - Cargar los feriados del año en curso');
-        $this->command->line('        - Repetir al inicio de cada año calendario');
+        $this->command->line('        - Ya se cargaron los feriados oficiales del año en curso — revisar/ajustar si el cliente tiene acuerdos locales distintos');
+        $this->command->line('        - Repetir al inicio de cada año calendario (volver a correr ProductionSeeder o cargar manualmente)');
         $this->command->line('');
         $this->command->line('  [ ] Catálogos opcionales:');
         $this->command->line('        - Agregar deducciones adicionales (seguros, sindicato, etc.)');

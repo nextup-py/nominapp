@@ -18,6 +18,11 @@ use Illuminate\Support\Facades\DB;
  * El campo employee_deduction_id se deja en null: la deducción por ausencia
  * injustificada se aplica al procesar la nómina, no al registrar la ausencia.
  *
+ * Las ausencias 'justified' vinculan un EmployeeLeave propio (creado aquí
+ * mismo, aprobado, con start_date = end_date = la fecha de la ausencia) —
+ * refleja la regla real de Absence::justify(), que exige vincular un permiso
+ * aprobado (ver CLAUDE.md, "Módulo de Permisos y Licencias").
+ *
  * Depende de: AttendanceDayWithEventsSeeder (attendance_days con status absent).
  */
 class AbsenceSeeder extends Seeder
@@ -40,39 +45,55 @@ class AbsenceSeeder extends Seeder
 
         if ($absentDays->isEmpty()) {
             $this->command->warn('No hay días con status absent. Ejecuta AttendanceDayWithEventsSeeder primero.');
+
             return;
         }
 
-        $now      = now();
-        $today    = Carbon::today();
-        $rows     = [];
+        $now = now();
+        $today = Carbon::today();
+        $rows = [];
 
-        $pendingCount     = 0;
-        $justifiedCount   = 0;
+        $pendingCount = 0;
+        $justifiedCount = 0;
         $unjustifiedCount = 0;
 
         foreach ($absentDays as $day) {
-            $date     = Carbon::parse($day->date);
-            $daysAgo  = $date->diffInDays($today);
-            $empId    = $day->employee_id;
+            $date = Carbon::parse($day->date);
+            $daysAgo = $date->diffInDays($today);
+            $empId = $day->employee_id;
+            $employeeLeaveId = null;
 
             if ($daysAgo <= self::PENDING_DAYS_WINDOW) {
                 // Ausencia reciente: todavía no fue revisada
-                $status      = 'pending';
-                $reviewedAt  = null;
-                $reviewedBy  = null;
+                $status = 'pending';
+                $reviewedAt = null;
+                $reviewedBy = null;
                 $reviewNotes = null;
-                $reportedAt  = $date->copy()->setTime(8, ($empId + $date->day) % 31)->toDateTimeString();
+                $reportedAt = $date->copy()->setTime(8, ($empId + $date->day) % 31)->toDateTimeString();
 
                 $pendingCount++;
             } else {
                 // Ausencia más antigua: se alterna justified/unjustified por employee_id
                 if ($empId % 2 === 0) {
-                    $status      = 'justified';
+                    $status = 'justified';
                     $reviewNotes = $this->justifiedNote($empId, $date);
+
+                    // Absence::justify() exige un EmployeeLeave aprobado vinculado —
+                    // se crea aquí uno de un solo día que cubre exactamente la ausencia.
+                    $employeeLeaveId = DB::table('employee_leaves')->insertGetId([
+                        'employee_id' => $empId,
+                        'type' => $this->justifiedLeaveType($empId, $date),
+                        'start_date' => $date->toDateString(),
+                        'end_date' => $date->toDateString(),
+                        'reason' => $reviewNotes,
+                        'status' => 'approved',
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+
                     $justifiedCount++;
                 } else {
-                    $status      = 'unjustified';
+                    $status = 'unjustified';
                     $reviewNotes = 'No se recibió justificación en el plazo establecido.';
                     $unjustifiedCount++;
                 }
@@ -83,19 +104,20 @@ class AbsenceSeeder extends Seeder
             }
 
             $rows[] = [
-                'employee_id'          => $empId,
-                'attendance_day_id'    => $day->attendance_day_id,
-                'status'               => $status,
-                'reason'               => $this->absentReason($empId, $date),
-                'reported_at'          => $reportedAt,
-                'reported_by_id'       => $userId,
-                'reviewed_at'          => $reviewedAt,
-                'reviewed_by_id'       => $reviewedBy,
-                'review_notes'         => $reviewNotes,
-                'documents'            => null,
-                'employee_deduction_id'=> null,
-                'created_at'           => $now,
-                'updated_at'           => $now,
+                'employee_id' => $empId,
+                'attendance_day_id' => $day->attendance_day_id,
+                'status' => $status,
+                'reason' => $this->absentReason($empId, $date),
+                'reported_at' => $reportedAt,
+                'reported_by_id' => $userId,
+                'reviewed_at' => $reviewedAt,
+                'reviewed_by_id' => $reviewedBy,
+                'review_notes' => $reviewNotes,
+                'documents' => null,
+                'employee_deduction_id' => null,
+                'employee_leave_id' => $employeeLeaveId,
+                'created_at' => $now,
+                'updated_at' => $now,
             ];
         }
 
@@ -106,16 +128,12 @@ class AbsenceSeeder extends Seeder
         $total = count($rows);
         $this->command->info(
             "Ausencias sembradas: $total total "
-            . "($pendingCount pendientes, $justifiedCount justificadas, $unjustifiedCount injustificadas)."
+            ."($pendingCount pendientes, $justifiedCount justificadas, $unjustifiedCount injustificadas)."
         );
     }
 
     /**
      * Retorna un motivo de ausencia genérico determinista basado en employee_id y fecha.
-     *
-     * @param  int    $employeeId
-     * @param  Carbon $date
-     * @return string
      */
     private function absentReason(int $employeeId, Carbon $date): string
     {
@@ -133,10 +151,6 @@ class AbsenceSeeder extends Seeder
 
     /**
      * Retorna una nota de revisión para ausencias justificadas.
-     *
-     * @param  int    $employeeId
-     * @param  Carbon $date
-     * @return string
      */
     private function justifiedNote(int $employeeId, Carbon $date): string
     {
@@ -148,5 +162,16 @@ class AbsenceSeeder extends Seeder
         ];
 
         return $notes[($employeeId + $date->month) % count($notes)];
+    }
+
+    /**
+     * Retorna el tipo de EmployeeLeave correspondiente a la nota de justificación
+     * generada por justifiedNote() para el mismo employeeId y fecha (mismo índice).
+     */
+    private function justifiedLeaveType(int $employeeId, Carbon $date): string
+    {
+        $types = ['medical_leave', 'day_off', 'other', 'medical_leave'];
+
+        return $types[($employeeId + $date->month) % count($types)];
     }
 }

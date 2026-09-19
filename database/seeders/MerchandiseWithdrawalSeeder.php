@@ -15,8 +15,11 @@ use Illuminate\Support\Facades\DB;
  *   - Aprobado con cuotas generadas (2 pagadas, resto pendientes).
  *   - Rechazado.
  *
- * Se asignan a empleados en índices 4, 5 y 6 para no colisionar con
- * LoanSeeder (índice 0) ni AdvanceSeeder (índices 1–5).
+ * Se asignan a empleados en índices 4, 5 y 6. Los índices 4 y 5 también
+ * reciben un adelanto en AdvanceSeeder — es intencional (un empleado puede
+ * tener un adelanto y un retiro de mercadería activos a la vez, no hay
+ * regla de negocio que lo impida); solo el índice 0 (LoanSeeder) queda
+ * reservado en exclusiva.
  */
 class MerchandiseWithdrawalSeeder extends Seeder
 {

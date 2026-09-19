@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Employee;
+use App\Services\RotationService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,12 @@ use Illuminate\Support\Facades\DB;
  *
  * El status de cada día es determinista (hash de employee_id + fecha)
  * para garantizar reproducibilidad entre ejecuciones.
+ *
+ * Empleados con rotación activa (ver RotationPatternSeeder, que debe correr
+ * antes): se respeta el turno real de RotationService::getShiftForDate() en
+ * vez del horario fijo 08:00-17:00 — incluye no generar jornada en los días
+ * de Franco (mismo criterio que CheckMissingAttendance, que tampoco marca
+ * ausencia cuando no hay check-in esperado).
  */
 class AttendanceDayWithEventsSeeder extends Seeder
 {
@@ -27,9 +34,12 @@ class AttendanceDayWithEventsSeeder extends Seeder
     private const DAYS = 30;
 
     /** Hora de entrada/salida esperada (horario estándar). */
-    private const EXPECTED_IN         = '08:00:00';
-    private const EXPECTED_OUT        = '17:00:00';
-    private const EXPECTED_HOURS      = 8.0;
+    private const EXPECTED_IN = '08:00:00';
+
+    private const EXPECTED_OUT = '17:00:00';
+
+    private const EXPECTED_HOURS = 8.0;
+
     private const EXPECTED_BREAK_MINS = 60;
 
     public function run(): void
@@ -40,30 +50,46 @@ class AttendanceDayWithEventsSeeder extends Seeder
 
         if ($employees->isEmpty()) {
             $this->command->warn('No hay empleados activos. Ejecuta EmployeeSeeder primero.');
+
             return;
         }
 
         // Feriados del período para marcar días como 'holiday'
-        $startDate    = Carbon::today()->subDays(self::DAYS - 1);
+        $startDate = Carbon::today()->subDays(self::DAYS - 1);
         $holidayDates = DB::table('holidays')
             ->whereBetween('date', [$startDate->toDateString(), Carbon::today()->toDateString()])
             ->pluck('date')
             ->toArray();
 
-        $now         = now();
-        $dayRows     = [];
+        $now = now();
+        $dayRows = [];
         $presentMeta = []; // "employee_id:date" => event timing data
 
         foreach ($employees as $employee) {
             $branchCoords = $employee->branch?->coordinates;
-            $baseLat      = is_array($branchCoords) ? ($branchCoords['lat'] ?? -25.2637) : -25.2637;
-            $baseLng      = is_array($branchCoords) ? ($branchCoords['lng'] ?? -57.5759) : -57.5759;
+            $baseLat = is_array($branchCoords) ? ($branchCoords['lat'] ?? -25.2637) : -25.2637;
+            $baseLng = is_array($branchCoords) ? ($branchCoords['lng'] ?? -57.5759) : -57.5759;
 
             for ($i = 0; $i < self::DAYS; $i++) {
-                $date      = Carbon::today()->subDays($i);
-                $dateStr   = $date->toDateString();
+                $date = Carbon::today()->subDays($i);
+                $dateStr = $date->toDateString();
                 $isWeekend = $date->isWeekend();
                 $isHoliday = in_array($dateStr, $holidayDates);
+
+                // Turno resuelto por rotación (si el empleado tiene una asignación
+                // vigente en esta fecha — ver RotationPatternSeeder). null cuando no
+                // hay rotación activa: el empleado sigue el horario fijo/hardcodeado.
+                $rotationShift = (! $isWeekend && ! $isHoliday)
+                    ? RotationService::getShiftForDate($employee, $date)
+                    : null;
+
+                if (! $isWeekend && ! $isHoliday && $rotationShift?->is_day_off) {
+                    // Franco rotativo: no se espera check-in ese día — igual que
+                    // CheckMissingAttendance, que tampoco marca ausencia cuando
+                    // resolveShiftDataFor() no devuelve un check_in esperado.
+                    // No generamos una jornada fantasma de "presente"/"ausente".
+                    continue;
+                }
 
                 if ($isWeekend) {
                     $status = 'weekend';
@@ -71,84 +97,100 @@ class AttendanceDayWithEventsSeeder extends Seeder
                     $status = 'holiday';
                 } else {
                     // Determinista: mismo resultado en cada ejecución
-                    $hash   = abs(crc32($employee->id . '-' . $dateStr)) % 100;
+                    $hash = abs(crc32($employee->id.'-'.$dateStr)) % 100;
                     $status = match (true) {
                         $hash < 80 => 'present',
                         $hash < 92 => 'absent',
-                        default    => 'on_leave',
+                        default => 'on_leave',
                     };
                 }
 
                 $dayRow = [
-                    'employee_id'            => $employee->id,
-                    'date'                   => $dateStr,
-                    'status'                 => $status,
-                    'is_weekend'             => $isWeekend,
-                    'is_holiday'             => $isHoliday,
-                    'justified_absence'      => $status === 'on_leave',
-                    'on_vacation'            => false,
-                    'is_extraordinary_work'  => false,
-                    'manual_adjustment'      => false,
-                    'overtime_approved'      => false,
-                    'overtime_limit_exceeded'=> false,
-                    'anomaly_flag'           => false,
+                    'employee_id' => $employee->id,
+                    'date' => $dateStr,
+                    'status' => $status,
+                    'is_weekend' => $isWeekend,
+                    'is_holiday' => $isHoliday,
+                    'justified_absence' => $status === 'on_leave',
+                    'on_vacation' => false,
+                    'is_extraordinary_work' => false,
+                    'manual_adjustment' => false,
+                    'overtime_approved' => false,
+                    'overtime_limit_exceeded' => false,
+                    'anomaly_flag' => false,
                     // Campos calculados: null para días no-presentes.
                     // MySQL exige que todas las filas de un bulk insert
                     // tengan exactamente las mismas columnas.
-                    'check_in_time'          => null,
-                    'check_out_time'         => null,
-                    'break_minutes'          => null,
-                    'total_hours'            => null,
-                    'net_hours'              => null,
-                    'expected_check_in'      => null,
-                    'expected_check_out'     => null,
-                    'expected_hours'         => null,
+                    'check_in_time' => null,
+                    'check_out_time' => null,
+                    'break_minutes' => null,
+                    'total_hours' => null,
+                    'net_hours' => null,
+                    'expected_check_in' => null,
+                    'expected_check_out' => null,
+                    'expected_hours' => null,
                     'expected_break_minutes' => null,
-                    'late_minutes'           => null,
-                    'early_leave_minutes'    => null,
-                    'extra_hours'            => null,
-                    'extra_hours_diurnas'    => null,
-                    'extra_hours_nocturnas'  => null,
-                    'is_calculated'          => false,
-                    'calculated_at'          => null,
-                    'created_at'             => $now,
-                    'updated_at'             => $now,
+                    'late_minutes' => null,
+                    'early_leave_minutes' => null,
+                    'extra_hours' => null,
+                    'extra_hours_diurnas' => null,
+                    'extra_hours_nocturnas' => null,
+                    'is_calculated' => false,
+                    'calculated_at' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
 
                 if ($status === 'present') {
+                    // Horario esperado: el turno de rotación vigente (si lo hay),
+                    // si no el horario fijo hardcodeado (empleados sin rotación).
+                    $expectedIn = $rotationShift->start_time ?? self::EXPECTED_IN;
+                    $expectedOut = $rotationShift->end_time ?? self::EXPECTED_OUT;
+                    $breakMins = $rotationShift ? (int) $rotationShift->break_minutes : self::EXPECTED_BREAK_MINS;
+                    $isNocturno = $rotationShift?->shift_type === 'nocturno';
+
+                    $expectedInAt = Carbon::parse("$dateStr $expectedIn");
+                    $expectedOutAt = Carbon::parse("$dateStr $expectedOut");
+                    if ($expectedOutAt->lte($expectedInAt)) {
+                        // Turno cruza medianoche (ej. Noche 22:00-06:00)
+                        $expectedOutAt->addDay();
+                    }
+                    $expectedMins = $expectedInAt->diffInMinutes($expectedOutAt);
+                    $expectedHours = round(($expectedMins - $breakMins) / 60, 2);
+
                     // Tiempos con variación pequeña por empleado y día
-                    $lateOffset  = ($employee->id + $i) % 16;          // 0–15 min tarde
+                    $lateOffset = ($employee->id + $i) % 16;          // 0–15 min tarde
                     $extraOffset = ($employee->id * 3 + $i * 7) % 31;  // 0–30 min extra al salir
 
-                    $checkIn    = Carbon::parse("$dateStr " . self::EXPECTED_IN)->addMinutes($lateOffset);
-                    $breakStart = Carbon::parse("$dateStr 12:00:00");
-                    $breakEnd   = Carbon::parse("$dateStr 13:00:00");
-                    $checkOut   = Carbon::parse("$dateStr " . self::EXPECTED_OUT)->addMinutes($extraOffset);
+                    $checkIn = $expectedInAt->copy()->addMinutes($lateOffset);
+                    $checkOut = $expectedOutAt->copy()->addMinutes($extraOffset);
+                    // Descanso a mitad de jornada — válido también para turnos que cruzan medianoche
+                    $breakStart = $checkIn->copy()->addMinutes((int) round($checkIn->diffInMinutes($checkOut) / 2));
+                    $breakEnd = $breakStart->copy()->addMinutes($breakMins);
 
-                    $breakMins  = self::EXPECTED_BREAK_MINS;
-                    $totalMins  = $checkIn->diffInMinutes($checkOut);
+                    $totalMins = $checkIn->diffInMinutes($checkOut);
                     $totalHours = round($totalMins / 60, 2);
-                    $netHours   = round(($totalMins - $breakMins) / 60, 2);
-                    $lateMins   = $lateOffset; // ya calculado arriba
-                    $extraHours = max(0.0, round($netHours - self::EXPECTED_HOURS, 2));
+                    $netHours = round(($totalMins - $breakMins) / 60, 2);
+                    $lateMins = $lateOffset; // ya calculado arriba
+                    $extraHours = max(0.0, round($netHours - $expectedHours, 2));
 
                     $dayRow = array_merge($dayRow, [
-                        'check_in_time'          => $checkIn->format('H:i:s'),
-                        'check_out_time'         => $checkOut->format('H:i:s'),
-                        'break_minutes'          => $breakMins,
-                        'total_hours'            => $totalHours,
-                        'net_hours'              => $netHours,
-                        'expected_check_in'      => self::EXPECTED_IN,
-                        'expected_check_out'     => self::EXPECTED_OUT,
-                        'expected_hours'         => self::EXPECTED_HOURS,
-                        'expected_break_minutes' => self::EXPECTED_BREAK_MINS,
-                        'late_minutes'           => $lateMins,
-                        'early_leave_minutes'    => 0,
-                        'extra_hours'            => $extraHours,
-                        'extra_hours_diurnas'    => $extraHours,
-                        'extra_hours_nocturnas'  => 0,
-                        'is_calculated'          => true,
-                        'calculated_at'          => $now,
+                        'check_in_time' => $checkIn->format('H:i:s'),
+                        'check_out_time' => $checkOut->format('H:i:s'),
+                        'break_minutes' => $breakMins,
+                        'total_hours' => $totalHours,
+                        'net_hours' => $netHours,
+                        'expected_check_in' => $expectedIn,
+                        'expected_check_out' => $expectedOut,
+                        'expected_hours' => $expectedHours,
+                        'expected_break_minutes' => $breakMins,
+                        'late_minutes' => $lateMins,
+                        'early_leave_minutes' => 0,
+                        'extra_hours' => $extraHours,
+                        'extra_hours_diurnas' => $isNocturno ? 0 : $extraHours,
+                        'extra_hours_nocturnas' => $isNocturno ? $extraHours : 0,
+                        'is_calculated' => true,
+                        'calculated_at' => $now,
                     ]);
 
                     // GPS con drift ~100m desde la coordenada de la sucursal
@@ -156,12 +198,12 @@ class AttendanceDayWithEventsSeeder extends Seeder
                     $lng = round($baseLng + (($employee->id * 2 + $i) % 200 - 100) / 100000, 6);
 
                     $presentMeta["$employee->id:$dateStr"] = [
-                        'employee'   => $employee,
-                        'checkIn'    => $checkIn->toDateTimeString(),
+                        'employee' => $employee,
+                        'checkIn' => $checkIn->toDateTimeString(),
                         'breakStart' => $breakStart->toDateTimeString(),
-                        'breakEnd'   => $breakEnd->toDateTimeString(),
-                        'checkOut'   => $checkOut->toDateTimeString(),
-                        'location'   => json_encode(['lat' => $lat, 'lng' => $lng]),
+                        'breakEnd' => $breakEnd->toDateTimeString(),
+                        'checkOut' => $checkOut->toDateTimeString(),
+                        'location' => json_encode(['lat' => $lat, 'lng' => $lng]),
                     ];
                 }
 
@@ -183,7 +225,7 @@ class AttendanceDayWithEventsSeeder extends Seeder
 
             $eventRows = [];
             foreach ($presentDayIds as $day) {
-                $key  = "$day->employee_id:$day->date";
+                $key = "$day->employee_id:$day->date";
                 $meta = $presentMeta[$key] ?? null;
                 if (! $meta) {
                     continue;
@@ -192,14 +234,14 @@ class AttendanceDayWithEventsSeeder extends Seeder
                 $emp = $meta['employee'];
 
                 $base = [
-                    'employee_id'   => $emp->id,
+                    'employee_id' => $emp->id,
                     'employee_name' => $emp->full_name,
-                    'employee_ci'   => $emp->ci,
-                    'branch_id'     => $emp->branch_id,
-                    'branch_name'   => $emp->branch?->name,
-                    'location'      => $meta['location'],
-                    'created_at'    => $now,
-                    'updated_at'    => $now,
+                    'employee_ci' => $emp->ci,
+                    'branch_id' => $emp->branch_id,
+                    'branch_name' => $emp->branch?->name,
+                    'location' => $meta['location'],
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
 
                 foreach ([
@@ -210,8 +252,8 @@ class AttendanceDayWithEventsSeeder extends Seeder
                 ] as [$type, $time]) {
                     $eventRows[] = array_merge($base, [
                         'attendance_day_id' => $day->id,
-                        'event_type'        => $type,
-                        'recorded_at'       => $time,
+                        'event_type' => $type,
+                        'recorded_at' => $time,
                     ]);
                 }
             }
