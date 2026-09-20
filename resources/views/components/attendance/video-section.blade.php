@@ -2,7 +2,8 @@
 
 <section id="step1Section" class="card" aria-labelledby="{{ $sectionId }}" role="region">
     <div class="card-header">
-        <h2 id="{{ $sectionId }}" tabindex="-1">Paso 1 &middot; Identificación</h2>
+        <h2 id="{{ $sectionId }}" tabindex="-1" class="sr-only">Paso 1 · Identificación</h2>
+        <x-attendance.mark-stepper :active="1" />
     </div>
     <div class="card-body">
         <div class="video-wrap" id="videoWrap" role="img" aria-label="Área de captura de video para reconocimiento facial">

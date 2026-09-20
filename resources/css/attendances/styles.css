@@ -529,6 +529,47 @@ canvas {
 /* Card header h2 */
 .card-header h2 { font-size: .875rem; font-weight: 600; color: var(--c-text); margin: 0; }
 
+/* ============================================================
+   STEPPER DE PROGRESO (Paso 1 / Paso 2)
+   ============================================================ */
+.mark-stepper {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 100%;
+}
+.mark-stepper-step { display: flex; align-items: center; gap: var(--sp-2); }
+.mark-stepper-dot {
+    display: flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    font-size: .75rem;
+    font-weight: 700;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border-s);
+    color: var(--c-muted);
+    flex-shrink: 0;
+    transition: background var(--tr-f), border-color var(--tr-f), color var(--tr-f);
+}
+.mark-stepper-label {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--c-muted);
+    white-space: nowrap;
+    transition: color var(--tr-f);
+}
+.mark-stepper-line {
+    flex: 1;
+    height: 2px;
+    background: var(--c-border-s);
+    min-width: 16px;
+    transition: background var(--tr-f);
+}
+.mark-stepper-step.is-active .mark-stepper-dot { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+.mark-stepper-step.is-active .mark-stepper-label { color: var(--c-text); }
+.mark-stepper-step.is-done .mark-stepper-dot { background: var(--c-success); border-color: var(--c-success); color: #fff; }
+.mark-stepper-line.is-done { background: var(--c-success); }
+
 /* Location row details */
 .location-icon  { width: 14px; height: 14px; flex-shrink: 0; stroke: var(--c-muted); }
 .location-status { flex: 1; }
