@@ -33,6 +33,9 @@ class DemoSeeder extends Seeder
         $this->createAdminUser();
 
         $this->call([
+            PermissionSeeder::class,
+            RoleSeeder::class,
+
             // Configuración del sistema (debe ir primero: muchos servicios leen settings al iniciar)
             SettingsSeeder::class,
 
