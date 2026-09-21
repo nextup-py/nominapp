@@ -9,6 +9,7 @@ use App\Models\Position;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -19,7 +20,7 @@ uses(RefreshDatabase::class);
  * columnas cuando Company::active()->count() <= 1).
  */
 it('preselecciona empresa y sucursal cuando solo hay una activa', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $company = Company::create(['name' => 'Única S.A.', 'ruc' => '1-1', 'employer_number' => 1, 'is_active' => true]);
     $branch = Branch::create(['name' => 'Casa Central', 'company_id' => $company->id]);
@@ -32,7 +33,7 @@ it('preselecciona empresa y sucursal cuando solo hay una activa', function () {
 });
 
 it('no preselecciona empresa cuando hay más de una activa', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     Company::create(['name' => 'Una S.A.', 'ruc' => '1-1', 'employer_number' => 1, 'is_active' => true]);
     Company::create(['name' => 'Otra S.A.', 'ruc' => '2-2', 'employer_number' => 2, 'is_active' => true]);
@@ -42,7 +43,7 @@ it('no preselecciona empresa cuando hay más de una activa', function () {
 });
 
 it('no preselecciona sucursal cuando la empresa tiene más de una', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $company = Company::create(['name' => 'Única S.A.', 'ruc' => '1-1', 'employer_number' => 1, 'is_active' => true]);
     Branch::create(['name' => 'Casa Central', 'company_id' => $company->id]);
@@ -57,7 +58,7 @@ it('no preselecciona sucursal cuando la empresa tiene más de una', function () 
  * foco el campo), no recién al hacer submit de todo el formulario.
  */
 it('avisa en vivo si la CI ya está en uso por otro empleado', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $company = Company::create(['name' => 'Empresa Hint', 'ruc' => '9-9', 'employer_number' => 9]);
     $branch = Branch::create(['name' => 'Sucursal Hint', 'company_id' => $company->id]);
@@ -73,7 +74,7 @@ it('avisa en vivo si la CI ya está en uso por otro empleado', function () {
 });
 
 it('no avisa si la CI no está en uso', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $field = Livewire::test(CreateEmployee::class)
         ->set('data.ci', '9999999')
@@ -92,7 +93,7 @@ it('no avisa si la CI no está en uso', function () {
  * equivocado al crear.
  */
 it('el departamento del contrato inicial se filtra por la empresa de la sucursal elegida', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $companyA = Company::create(['name' => 'Empresa A', 'ruc' => '1-1', 'employer_number' => 1]);
     $companyB = Company::create(['name' => 'Empresa B', 'ruc' => '2-2', 'employer_number' => 2]);
@@ -113,7 +114,7 @@ it('el departamento del contrato inicial se filtra por la empresa de la sucursal
 });
 
 it('el cargo del contrato inicial se filtra por la empresa aunque no haya departamento elegido', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $companyA = Company::create(['name' => 'Empresa A', 'ruc' => '1-1', 'employer_number' => 1]);
     $companyB = Company::create(['name' => 'Empresa B', 'ruc' => '2-2', 'employer_number' => 2]);

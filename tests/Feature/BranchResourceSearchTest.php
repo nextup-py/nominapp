@@ -5,6 +5,7 @@ use App\Filament\Resources\BranchResource\Pages\ListBranches;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -14,7 +15,7 @@ uses(RefreshDatabase::class);
  * por ->searchable() sin array explícito.
  */
 it('busca la empresa por nombre o nombre comercial en el form de sucursales', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     // El form de sucursales incluye un campo Map (filament-google-maps) que
     // requiere una API key configurada para renderizar — sin relación con
@@ -30,7 +31,7 @@ it('busca la empresa por nombre o nombre comercial en el form de sucursales', fu
 });
 
 it('busca la empresa por nombre o nombre comercial en el filtro de tabla de sucursales', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $filter = Livewire::test(ListBranches::class)
         ->instance()

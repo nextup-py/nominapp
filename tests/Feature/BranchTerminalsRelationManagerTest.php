@@ -8,6 +8,7 @@ use App\Models\Terminal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -22,7 +23,7 @@ function makeBranchForTerminalsRm(): Branch
 }
 
 it('el RelationManager de terminales renderiza en la ficha de la sucursal', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $branch = makeBranchForTerminalsRm();
     Terminal::create(['name' => 'Terminal Branch RM', 'branch_id' => $branch->id]);
 
@@ -33,7 +34,7 @@ it('el RelationManager de terminales renderiza en la ficha de la sucursal', func
 });
 
 it('el RelationManager de terminales solo muestra los terminales de esa sucursal, no de otras', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $branch = makeBranchForTerminalsRm();
     $otherBranch = makeBranchForTerminalsRm();
 

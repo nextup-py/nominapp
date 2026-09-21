@@ -8,12 +8,14 @@ use App\Models\Company;
 use App\Models\Contract;
 use App\Models\Employee;
 use App\Models\Terminal;
+use App\Models\User;
 use App\Observers\AttendanceDayObserver;
 use App\Observers\AttendanceEventObserver;
 use App\Observers\CompanyObserver;
 use App\Observers\ContractObserver;
 use App\Observers\EmployeeObserver;
 use App\Observers\TerminalObserver;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -37,5 +39,7 @@ class AppServiceProvider extends ServiceProvider
         Contract::observe(ContractObserver::class);
         Employee::observe(EmployeeObserver::class);
         Terminal::observe(TerminalObserver::class);
+
+        Gate::before(fn (User $user) => $user->hasRole('Super Admin') ? true : null);
     }
 }

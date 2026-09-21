@@ -15,6 +15,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -70,7 +71,7 @@ function makeEditableAttendanceEvent(): AttendanceEvent
  * fecha del día SIGUIENTE (00:32 UTC cruza la medianoche).
  */
 it('el modal de editar marcación prellena la fecha y hora correctas en la timezone de la app', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $event = makeEditableAttendanceEvent();
     $expectedDate = $event->recorded_at->toDateString();
 
@@ -90,7 +91,7 @@ it('el modal de editar marcación prellena la fecha y hora correctas en la timez
 });
 
 it('guardar el modal de editar marcación sin cambios no corre la fecha ni la hora', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $event = makeEditableAttendanceEvent();
     $expected = $event->recorded_at->format('Y-m-d H:i');
 
@@ -105,7 +106,7 @@ it('guardar el modal de editar marcación sin cambios no corre la fecha ni la ho
  * Mismo bug, mismo patrón, en la relation manager de AttendanceDayResource.
  */
 it('el modal de editar marcación en AttendanceDayResource prellena la fecha correcta', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $event = makeEditableAttendanceEvent();
     $expectedDate = $event->recorded_at->toDateString();
 

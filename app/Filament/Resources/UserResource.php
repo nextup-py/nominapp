@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -84,6 +85,18 @@ class UserResource extends Resource
                             ->columnSpan(1),
                     ])
                     ->columns(2),
+
+                Section::make('Roles')
+                    ->schema([
+                        Select::make('roles')
+                            ->label('Roles')
+                            ->relationship('roles', 'name')
+                            ->multiple()
+                            ->preload()
+                            ->searchable()
+                            ->visible(fn () => auth()->user()?->hasRole('Super Admin') ?? false)
+                            ->helperText('Solo Super Admin puede asignar roles.'),
+                    ]),
             ]);
     }
 

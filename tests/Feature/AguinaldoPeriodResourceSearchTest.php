@@ -5,6 +5,7 @@ use App\Filament\Resources\AguinaldoPeriodResource\Pages\ListAguinaldoPeriods;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -14,7 +15,7 @@ uses(RefreshDatabase::class);
  * por ->searchable() sin array explícito.
  */
 it('busca la empresa por nombre o nombre comercial en el form de períodos de aguinaldo', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $field = Livewire::test(CreateAguinaldoPeriod::class)
         ->instance()
@@ -25,7 +26,7 @@ it('busca la empresa por nombre o nombre comercial en el form de períodos de ag
 });
 
 it('busca la empresa por nombre o nombre comercial en el filtro de tabla de períodos de aguinaldo', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $filter = Livewire::test(ListAguinaldoPeriods::class)
         ->instance()
