@@ -16,6 +16,10 @@
             <div class="face-guide" aria-hidden="true">
                 <div class="face-guide-oval"></div>
             </div>
+            <span class="scan-corner scan-corner--tl" aria-hidden="true"></span>
+            <span class="scan-corner scan-corner--tr" aria-hidden="true"></span>
+            <span class="scan-corner scan-corner--bl" aria-hidden="true"></span>
+            <span class="scan-corner scan-corner--br" aria-hidden="true"></span>
 
             {{-- Dots de progreso de captura — sobre el video, debajo del óvalo --}}
             <div id="captureProgress" class="capture-progress hidden" aria-hidden="true">

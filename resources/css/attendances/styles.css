@@ -450,6 +450,26 @@ canvas {
 .video-wrap--success     .face-guide-oval { border-color: rgba(34,197,94,.9); animation: none; }
 @keyframes oval-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
 
+/* Marco de escaneo — corchetes en las esquinas del video, sin animación de
+   brillo/pulso (ya existe oval-pulse en el óvalo; no se agrega una segunda). */
+.scan-corner {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--c-primary);
+    z-index: 2;
+    pointer-events: none;
+    opacity: .85;
+}
+.scan-corner--tl { top: 6%; left: 22%; border-right: none; border-bottom: none; border-radius: var(--r) 0 0 0; }
+.scan-corner--tr { top: 6%; right: 22%; border-left: none; border-bottom: none; border-radius: 0 var(--r) 0 0; }
+.scan-corner--bl { bottom: 6%; left: 22%; border-right: none; border-top: none; border-radius: 0 0 0 var(--r); }
+.scan-corner--br { bottom: 6%; right: 22%; border-left: none; border-top: none; border-radius: 0 0 var(--r) 0; }
+.video-wrap--detecting  .scan-corner { border-color: var(--c-warning); }
+.video-wrap--face-found .scan-corner,
+.video-wrap--success    .scan-corner { border-color: var(--c-success); }
+.video-wrap--error      .scan-corner { border-color: var(--c-danger); }
+
 /* ============================================================
    BARRA DE ESTADO
    ============================================================ */
