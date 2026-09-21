@@ -16,6 +16,7 @@ use App\Services\RotationService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -87,7 +88,7 @@ function makeRotationRmPattern(Company $company): RotationPattern
 }
 
 it('asigna el patrón de rotación a los empleados seleccionados desde el RelationManager', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $company = makeRotationRmCompany();
     $employee = makeRotationRmEmployee($company);
@@ -111,7 +112,7 @@ it('asigna el patrón de rotación a los empleados seleccionados desde el Relati
 });
 
 it('remueve la asignación activa de un empleado desde el RelationManager', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $company = makeRotationRmCompany();
     $employee = makeRotationRmEmployee($company);
@@ -135,7 +136,7 @@ it('remueve la asignación activa de un empleado desde el RelationManager', func
 });
 
 it('el RelationManager solo lista empleados con asignación activa vigente hoy', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $company = makeRotationRmCompany();
     $activeEmployee = makeRotationRmEmployee($company);

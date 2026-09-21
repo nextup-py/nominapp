@@ -15,6 +15,7 @@ use App\Models\Position;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -122,7 +123,7 @@ it('device_description combina marca y modelo', function () {
 // ─── Recurso Filament ───────────────────────────────────────────────────────
 
 it('la lista de dispositivos muestra al empleado vinculado', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeDeviceTestEmployee();
     $employee->claimMobileToken('Device A');
 
@@ -132,7 +133,7 @@ it('la lista de dispositivos muestra al empleado vinculado', function () {
 });
 
 it('el detalle del dispositivo renderiza', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeDeviceTestEmployee();
     $employee->claimMobileToken('Device A');
 
@@ -141,7 +142,7 @@ it('el detalle del dispositivo renderiza', function () {
 });
 
 it('editar el dispositivo guarda marca/modelo/mac sin tocar el ciclo de vinculación', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeDeviceTestEmployee();
     $employee->claimMobileToken('Device A');
     $device = $employee->activeDevice;
@@ -163,7 +164,7 @@ it('editar el dispositivo guarda marca/modelo/mac sin tocar el ciclo de vinculac
 });
 
 it('la acción "Revocar" de la tabla cierra el dispositivo y limpia mobile_linked_at', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeDeviceTestEmployee();
     $employee->claimMobileToken('Device A');
     $device = $employee->activeDevice;
@@ -177,7 +178,7 @@ it('la acción "Revocar" de la tabla cierra el dispositivo y limpia mobile_linke
 });
 
 it('la acción "Revocar" no aparece para un dispositivo ya desvinculado', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeDeviceTestEmployee();
     $employee->claimMobileToken('Device A');
     $employee->revokeMobileToken();
@@ -188,7 +189,7 @@ it('la acción "Revocar" no aparece para un dispositivo ya desvinculado', functi
 });
 
 it('el RelationManager de dispositivos renderiza en la ficha del empleado', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeDeviceTestEmployee();
     $employee->claimMobileToken('Device A');
 

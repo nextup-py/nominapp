@@ -34,6 +34,10 @@ class ProductionSeeder extends Seeder
     public function run(): void
     {
         $this->createAdminUser();
+        $this->call([
+            PermissionSeeder::class,
+            RoleSeeder::class,
+        ]);
         $this->seedDeductions();
 
         $this->call([

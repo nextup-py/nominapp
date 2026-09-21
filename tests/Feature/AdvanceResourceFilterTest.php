@@ -4,6 +4,7 @@ use App\Filament\Resources\AdvanceResource\Pages\ListAdvances;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -13,7 +14,7 @@ uses(RefreshDatabase::class);
  * sin array explícito.
  */
 it('busca el empleado por nombre, apellido o CI en el filtro de tabla de adelantos', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $filter = Livewire::test(ListAdvances::class)
         ->instance()
