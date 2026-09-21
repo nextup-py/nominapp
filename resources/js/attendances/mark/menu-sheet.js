@@ -12,7 +12,11 @@
  */
 
 /**
- * @param {{ sheet: HTMLElement, backdrop: HTMLElement, panel: HTMLElement, trigger: HTMLElement }} els
+ * @param {{ sheet: HTMLElement, backdrop: HTMLElement, panel: HTMLElement, trigger: HTMLElement, onOpen?: () => void }} els
+ *   `onOpen` (opcional) se dispara al abrir el sheet — usado por mark.js para
+ *   cancelar un dwell de auto-identificación en curso (dots ya llenándose)
+ *   que de otro modo seguiría corriendo por su propio setInterval, ajeno a
+ *   los ticks del drawLoop.
  * @param {Document} [doc] - inyectable para tests; document en producción
  * @returns {{ open: () => void, close: () => void, isOpen: () => boolean }}
  */
@@ -49,6 +53,7 @@ export function createMenuSheet(els, doc = document) {
     function openSheet() {
         if (open) return;
         open = true;
+        els.onOpen?.();
         lastFocused = doc.activeElement;
         els.sheet.classList.add('is-open');
         els.sheet.setAttribute('aria-hidden', 'false');

@@ -72,6 +72,10 @@
         </div>
         <div class="app-header-right">
             <span id="syncStatusDot" class="sync-status-dot" aria-hidden="true"></span>
+            {{-- Región viva accesible: el dot es solo visual (aria-hidden) y #syncStatusText vive
+                 dentro del menú (aria-hidden="true" mientras está cerrado), así que ninguno de los
+                 dos anuncia cambios a lectores de pantalla — este span espejo sí lo hace --}}
+            <span id="syncStatusTextSr" class="sr-only" aria-live="polite"></span>
             <button type="button" id="btnMenu" class="menu-trigger" aria-haspopup="dialog"
                 aria-expanded="false" aria-controls="menuSheet" aria-label="Más opciones">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

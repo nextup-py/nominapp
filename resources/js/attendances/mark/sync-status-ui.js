@@ -27,10 +27,19 @@ export function setOfflineBanner(isOffline, onChange) {
     onChange?.();
 }
 
-/** @param {string} text */
+/**
+ * Actualiza el texto de estado de sincronización en ambos lugares: el
+ * `#syncStatusText` dentro del menú de acciones (visible cuando el usuario
+ * lo abre) y `#syncStatusTextSr`, una región viva visualmente oculta en el
+ * header — necesaria porque `#syncStatusText` vive dentro de un contenedor
+ * `aria-hidden="true"` mientras el menú está cerrado y nunca anuncia nada.
+ * @param {string} text
+ */
 export function updateSyncStatus(text) {
     const syncStatusText = document.getElementById("syncStatusText");
     if (syncStatusText) syncStatusText.textContent = text;
+    const syncStatusTextSr = document.getElementById("syncStatusTextSr");
+    if (syncStatusTextSr) syncStatusTextSr.textContent = text;
 }
 
 /**
