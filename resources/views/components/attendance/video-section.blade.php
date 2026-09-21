@@ -2,7 +2,8 @@
 
 <section id="step1Section" class="card" aria-labelledby="{{ $sectionId }}" role="region">
     <div class="card-header">
-        <h2 id="{{ $sectionId }}" tabindex="-1">Paso 1 &middot; Identificación</h2>
+        <h2 id="{{ $sectionId }}" tabindex="-1" class="sr-only">Paso 1 · Identificación</h2>
+        <x-attendance.mark-stepper :active="1" />
     </div>
     <div class="card-body">
         <div class="video-wrap" id="videoWrap" role="img" aria-label="Área de captura de video para reconocimiento facial">
@@ -15,6 +16,10 @@
             <div class="face-guide" aria-hidden="true">
                 <div class="face-guide-oval"></div>
             </div>
+            <span class="scan-corner scan-corner--tl" aria-hidden="true"></span>
+            <span class="scan-corner scan-corner--tr" aria-hidden="true"></span>
+            <span class="scan-corner scan-corner--bl" aria-hidden="true"></span>
+            <span class="scan-corner scan-corner--br" aria-hidden="true"></span>
 
             {{-- Dots de progreso de captura — sobre el video, debajo del óvalo --}}
             <div id="captureProgress" class="capture-progress hidden" aria-hidden="true">

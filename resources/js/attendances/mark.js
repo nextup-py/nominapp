@@ -15,6 +15,7 @@ import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sy
 import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js';
 import { showSuccessModal } from './mark/success-modal.js';
 import { showErrorModal, initErrorModal, isErrorModalVisible, setErrorModalVisible } from './mark/error-modal.js';
+import { createMenuSheet } from './mark/menu-sheet.js';
 import {
     captureInstallPrompt,
     triggerInstallPrompt,
@@ -127,6 +128,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnCameraPause      = document.getElementById("btnCameraPause");
     const btnCameraPauseLabel = document.getElementById("btnCameraPauseLabel");
     const cameraPausedOverlay = document.getElementById("cameraPausedOverlay");
+    const menuSheet        = document.getElementById("menuSheet");
+    const menuSheetBackdrop = document.getElementById("menuSheetBackdrop");
+    const menuSheetPanel   = document.getElementById("menuSheetPanel");
+    const btnMenu          = document.getElementById("btnMenu");
 
     // ==========================================================================
     // CONFIGURACIÓN Y CONSTANTES
@@ -248,6 +253,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /** @type {number|null} ID del setInterval del dwell de auto-identificación */
     let autoIdDotInterval = null;
+
+    /** @type {{ open: () => void, close: () => void, isOpen: () => boolean }|null} API del menú de acciones (hoja inferior) */
+    let menuSheetApi = null;
 
     /** @type {{employee: object, lastEvent: string|null}|null} Datos pendientes de paso 2 cuando GPS falla */
     let pendingStep2 = null;
@@ -959,8 +967,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-                // Durante captura activa, cooldown post-error o modal de error visible, el drawLoop no toca el estado visual
-                if (!isIdentifying && Date.now() > notRecognizedUntil && !isErrorModalVisible()) {
+                // Durante captura activa, cooldown post-error, modal de error visible o con el menú de acciones abierto, el drawLoop no toca el estado visual
+                if (!isIdentifying && Date.now() > notRecognizedUntil && !isErrorModalVisible() && !menuSheetApi?.isOpen()) {
                     if (detection && video.videoWidth > 0 && video.videoHeight > 0) {
                         if (overlay.width !== video.videoWidth || overlay.height !== video.videoHeight) {
                             faceapi.matchDimensions(overlay, video);
@@ -1951,6 +1959,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Mismo mecanismo que ya usa terminal.js — localStorage con clave
     // propia para no interferir si algún dispositivo llegara a usarse en los dos modos.
     initThemeToggle("mark-theme");
+
+    if (menuSheet && menuSheetBackdrop && menuSheetPanel && btnMenu) {
+        // Al abrir el sheet la cámara queda cubierta por el backdrop opaco — cancelar
+        // cualquier dwell de auto-identificación en curso (dots ya llenándose) para que
+        // no dispare una transición silenciosa al Paso 2 mientras el usuario no ve nada.
+        menuSheetApi = createMenuSheet({
+            sheet: menuSheet,
+            backdrop: menuSheetBackdrop,
+            panel: menuSheetPanel,
+            trigger: btnMenu,
+            onOpen: () => cancelAutoIdentifyDwell(),
+        });
+    }
 
     (function initInstallUi() {
         const installBanner = document.getElementById("installBanner");

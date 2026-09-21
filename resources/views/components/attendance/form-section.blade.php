@@ -2,7 +2,8 @@
 
 <section id="step2Section" class="card hidden" aria-labelledby="{{ $sectionId }}" role="region">
     <div class="card-header">
-        <h2 id="{{ $sectionId }}" tabindex="-1">Paso 2 &middot; Datos de marcación</h2>
+        <h2 id="{{ $sectionId }}" tabindex="-1" class="sr-only">Paso 2 · Datos de marcación</h2>
+        <x-attendance.mark-stepper :active="2" />
     </div>
     <div class="card-body">
         {{-- Barra compacta del empleado identificado --}}

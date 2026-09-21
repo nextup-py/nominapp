@@ -66,20 +66,29 @@
 
     <header class="app-header">
         <div class="app-header-brand">
-            <span class="app-mode-badge">Marcación Facial</span>
+            <span class="app-mode-badge">Marcación facial</span>
             <img id="headerLogo" class="header-logo hidden" alt="">
             <span id="headerLocation" class="app-location-badge"></span>
-            <x-theme-toggle-button />
-            <button type="button" id="btnInstallApp" class="install-toggle hidden" aria-label="Instalar aplicación">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
+        </div>
+        <div class="app-header-right">
+            <span id="syncStatusDot" class="sync-status-dot" aria-hidden="true"></span>
+            {{-- Región viva accesible: el dot es solo visual (aria-hidden) y #syncStatusText vive
+                 dentro del menú (aria-hidden="true" mientras está cerrado), así que ninguno de los
+                 dos anuncia cambios a lectores de pantalla — este span espejo sí lo hace --}}
+            <span id="syncStatusTextSr" class="sr-only" aria-live="polite"></span>
+            <button type="button" id="btnMenu" class="menu-trigger" aria-haspopup="dialog"
+                aria-expanded="false" aria-controls="menuSheet" aria-label="Más opciones">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="5" r="1.5"/>
+                    <circle cx="12" cy="12" r="1.5"/>
+                    <circle cx="12" cy="19" r="1.5"/>
                 </svg>
             </button>
+            <div class="app-clock" id="headerClock" aria-live="off" aria-label="Hora actual"></div>
         </div>
-        <div class="app-clock" id="headerClock" aria-live="off" aria-label="Hora actual"></div>
     </header>
+
+    <x-attendance.mark-menu-sheet />
 
     <div id="offlineBanner" class="offline-banner" role="alert" aria-live="assertive" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -111,33 +120,6 @@
         <span id="installBannerText">Instalá esta app en tu pantalla de inicio para acceso rápido</span>
         <button type="button" id="btnInstallNow" class="install-banner-btn">Instalar</button>
         <button type="button" id="btnDismissInstall" class="install-banner-dismiss">Ahora no</button>
-    </div>
-
-    {{-- Estado de sincronización offline + sync manual — paridad con el botón "Sincronizar"
-    del terminal (terminal-idle.blade.php). --}}
-    <div class="sync-status-row" id="syncStatusRow">
-        <span class="sync-status-text" id="syncStatusText" aria-live="polite"></span>
-        <button type="button" id="btnSyncNow" class="sync-status-btn" aria-label="Sincronizar marcaciones pendientes">
-            Sincronizar
-        </button>
-        <button type="button" id="btnMyEvents" class="sync-status-btn" aria-label="Ver mis marcaciones de hoy">
-            Mis marcaciones
-        </button>
-        {{-- Pausa manual de la cámara — apaga la detección facial para que el empleado pueda
-        usar Sincronizar/Mis marcaciones/Desvincular sin riesgo de que el dwell lo identifique
-        de encima mientras tanto. Ver cameraPausedOverlay en video-section.blade.php. --}}
-        <button type="button" id="btnCameraPause" class="sync-status-btn sync-status-btn--camera-pause"
-            aria-pressed="false" aria-label="Pausar identificación por cámara">
-            <svg class="camera-pause-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-            </svg>
-            <span id="btnCameraPauseLabel">Pausar cámara</span>
-        </button>
-        <button type="button" id="btnUnlinkDevice" class="sync-status-btn sync-status-btn--unlink" aria-label="Desvincular este dispositivo">
-            Desvincular dispositivo
-        </button>
     </div>
 
     <main id="main-content" class="page-wrapper">

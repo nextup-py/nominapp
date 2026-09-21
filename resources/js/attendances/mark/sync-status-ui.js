@@ -27,10 +27,19 @@ export function setOfflineBanner(isOffline, onChange) {
     onChange?.();
 }
 
-/** @param {string} text */
+/**
+ * Actualiza el texto de estado de sincronización en ambos lugares: el
+ * `#syncStatusText` dentro del menú de acciones (visible cuando el usuario
+ * lo abre) y `#syncStatusTextSr`, una región viva visualmente oculta en el
+ * header — necesaria porque `#syncStatusText` vive dentro de un contenedor
+ * `aria-hidden="true"` mientras el menú está cerrado y nunca anuncia nada.
+ * @param {string} text
+ */
 export function updateSyncStatus(text) {
     const syncStatusText = document.getElementById("syncStatusText");
     if (syncStatusText) syncStatusText.textContent = text;
+    const syncStatusTextSr = document.getElementById("syncStatusTextSr");
+    if (syncStatusTextSr) syncStatusTextSr.textContent = text;
 }
 
 /**
@@ -41,6 +50,8 @@ export function updateSyncStatus(text) {
  */
 export async function refreshSyncStatus() {
     const [pending, conflicts] = await Promise.all([countPendingEvents(), countConflictEvents()]);
+    const dot = document.getElementById("syncStatusDot");
+    const isPending = conflicts > 0 || pending > 0;
 
     if (conflicts > 0) {
         updateSyncStatus(`${conflicts} marcación(es) requieren revisión`);
@@ -48,6 +59,11 @@ export async function refreshSyncStatus() {
         updateSyncStatus(`${pending} marcación(es) pendiente(s) de sincronizar`);
     } else {
         updateSyncStatus(navigator.onLine ? "Sincronizado" : "Sin conexión — usando datos locales");
+    }
+
+    if (dot) {
+        dot.classList.toggle("sync-status-dot--pending", isPending);
+        dot.classList.toggle("sync-status-dot--synced", !isPending);
     }
 
     const conflictBanner = document.getElementById("conflictBanner");
