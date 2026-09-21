@@ -10,6 +10,11 @@ use Spatie\Permission\Models\Permission;
  * estado: aprobar, rechazar, cerrar, desembolsar, exportar, etc.) para los
  * 12 módulos con workflow real. No cubre CRUD (ver PermissionSeeder) ni
  * Warning (sin lifecycle).
+ *
+ * Nota: la clave 'period' en ACTIONS es una clave pseudo-modelo interna;
+ * no es un 13º módulo real — agrupa las acciones generate_payrolls y
+ * generate_aguinaldos cuya lógica de permisos diverge del patrón
+ * {accion}_{modelo_real} (ver comentario en ACTIONS).
  */
 class BusinessActionPermissionSeeder extends Seeder
 {
@@ -47,6 +52,10 @@ class BusinessActionPermissionSeeder extends Seeder
             'regenerate' => 'Regenerar',
             'export' => 'Exportar',
         ],
+        // Clave pseudo-modelo: agrupa generate_payrolls/generate_aguinaldos porque sus permisos finales
+        // (generate_payrolls_period, generate_aguinaldos_period) no siguen el patrón {accion}_{modelo_real}
+        // de payroll_period/aguinaldo_period — registrada en PermissionSeeder::GROUPS['Nómina y Créditos']
+        // para que sea visible en la UI de RoleResource (Task 3).
         'period' => [
             'generate_payrolls' => 'Generar Nóminas',
             'generate_aguinaldos' => 'Generar Aguinaldos',

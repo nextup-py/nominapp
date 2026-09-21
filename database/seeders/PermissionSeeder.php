@@ -62,6 +62,7 @@ class PermissionSeeder extends Seeder
         'payroll' => 'Nómina',
         'payroll_period' => 'Período de Nómina',
         'perception' => 'Percepción',
+        'period' => 'Generación de Períodos',
         'position' => 'Cargo',
         'rotation_pattern' => 'Patrón de Rotación',
         'schedule' => 'Horario',
@@ -76,7 +77,7 @@ class PermissionSeeder extends Seeder
         'Organización' => ['company', 'branch', 'department', 'position', 'contract_template'],
         'Empleados' => ['employee', 'contract', 'employee_device', 'face_enrollment', 'vacation', 'warning', 'employee_leave', 'holiday'],
         'Asistencia' => ['attendance_day', 'attendance_event', 'attendance_mark_failure', 'terminal', 'schedule', 'shift_template', 'rotation_pattern'],
-        'Nómina y Créditos' => ['payroll', 'payroll_period', 'deduction', 'perception', 'loan', 'advance', 'merchandise_withdrawal', 'liquidacion', 'aguinaldo', 'aguinaldo_period', 'disbursement_batch', 'absence'],
+        'Nómina y Créditos' => ['payroll', 'payroll_period', 'period', 'deduction', 'perception', 'loan', 'advance', 'merchandise_withdrawal', 'liquidacion', 'aguinaldo', 'aguinaldo_period', 'disbursement_batch', 'absence'],
         'Configuración' => ['user'],
     ];
 
