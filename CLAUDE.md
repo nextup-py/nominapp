@@ -333,6 +333,28 @@ Salario del mes 13, pagadero en diciembre. Se gestiona por `AguinaldoPeriod` (un
 
 **Cascada de estado del empleado:** al pasar a `expired` o `terminated`, `ContractObserver` marca al empleado `inactive` — salvo que tenga otro contrato `active` (ver convención "Observer para cascada de estados" más abajo).
 
+### Módulo de Roles y Permisos
+
+Fundación de control de acceso vía `spatie/laravel-permission`. Cubre permisos CRUD por modelo y administración de roles — **no** cubre permisos de acciones de negocio (aprobar, cerrar, exportar, etc.) ni auditoría completa, que quedan para planes posteriores.
+
+**Patrón `BasePolicy`:** cada uno de los 33 modelos con Resource en Filament tiene una Policy real (`app/Policies/{Modelo}Policy.php`) que solo extiende `App\Policies\BasePolicy` — sin lógica propia. `BasePolicy` resuelve el nombre del permiso por convención a partir del nombre de la clase (`EmployeePolicy` → abilities `view_any_employee`, `view_employee`, `create_employee`, `update_employee`, `delete_employee`) y delega en `$user->can(...)`. Laravel descubre las Policies automáticamente por convención de nombres — no requieren registro manual.
+
+**Catálogo de permisos (`PermissionSeeder`):** siembra `{ability}_{modelo}` para los 33 modelos × 5 abilities (`view_any`, `view`, `create`, `update`, `delete`). Las constantes `MODELS`, `ABILITIES`, `ABILITY_LABELS`, `MODEL_LABELS` y `GROUPS` (agrupación por módulo: Organización, Empleados, Asistencia, Nómina y Créditos, Configuración) son consumidas también por `RoleResource` para armar el formulario de permisos agrupados.
+
+**4 roles iniciales (`RoleSeeder`):**
+- **Super Admin** — bypassa cualquier chequeo de permiso vía `Gate::before` en `AppServiceProvider` (no se le sincronizan los ~165 permisos explícitamente).
+- **RRHH** — CRUD sobre empleados, contratos, asistencia, permisos/licencias, amonestaciones, vacaciones, horarios, dispositivos, terminales y sucursales.
+- **Contador/Nómina** — CRUD sobre nómina, préstamos, adelantos, retiros de mercadería, liquidación, aguinaldo, deducciones/percepciones y lotes bancarios; solo lectura sobre empleados y contratos.
+- **Solo Lectura** — `view_any`/`view` sobre todos los 33 modelos, sin permisos de mutación.
+
+`RoleSeeder` también asigna Super Admin a cualquier usuario existente sin rol (`User::doesntHave('roles')`), tanto en la primera siembra como en reejecuciones — útil para instalaciones que migran a este sistema.
+
+**Bloqueo de panel sin rol:** `User::canAccessPanel()` requiere al menos un rol asignado — un usuario recién creado sin rol no puede entrar a `/admin` hasta que se le asigne uno.
+
+**UI de administración:** `RoleResource` (grupo Configuración, solo visible/editable para Super Admin) permite crear/editar roles marcando permisos agrupados por módulo en checkboxes; `UserResource` incorpora un selector de roles (`Select` múltiple sobre la relación `roles`) visible únicamente para Super Admin.
+
+**Seeders:** `ProductionSeeder` y `DemoSeeder` siembran `PermissionSeeder` + `RoleSeeder` justo después de crear el usuario admin — así el admin queda con Super Admin automáticamente vía el mecanismo de "usuarios sin rol" de arriba.
+
 ### Módulo de Asistencia — Marcación Offline (Terminal y Dispositivo Personal)
 
 Documento completo con arquitectura, decisiones y deuda técnica: **`docs/marcacion-offline.md`**. Resumen:
@@ -2050,6 +2072,7 @@ Acompañar siempre con `formatAuditFieldsForPresentation()` en el modelo para mo
 - Mobile mode is for remote employees using their own device, **not** a shared kiosk
 - Terminal/kiosk mode is a shared device per branch
 - `attendance:check-missing` (deuda técnica conocida): corre cada 15 min entre 06:00-20:00 y solo evalúa la fecha de "hoy" contra "ahora" — nunca mira retroactivamente. Un empleado cuyo turno (horario fijo o rotación) arranca de noche (ej. 22:00) y falta esa noche **nunca** genera una ausencia automática: para cuando el comando vuelve a correr al día siguiente (06:00), ya está evaluando el horario/turno de ese nuevo día, no retrocede a revisar el turno de la noche anterior que nunca se marcó. Arreglarlo requiere que el comando también mire hacia atrás (el día previo), no solo "hoy" — pendiente, alcance mayor al soporte de rotación ya agregado (`AttendanceCalculator::resolveShiftDataFor()`).
+- Auditoría (`audits` table): sin política de retención/purga por ahora — la tabla crece sin límite. Deuda técnica conocida, pendiente de definir si el volumen lo justifica.
 
 ===
 

@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -45,7 +46,7 @@ function makeMobileLinkedEmployee(): Employee
  * dispositivo en sí.
  */
 it('el modal de revocar sesión móvil muestra la fecha de vinculación y el último sync', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeMobileLinkedEmployee();
 
     $test = Livewire::test(ListEmployees::class)
@@ -59,7 +60,7 @@ it('el modal de revocar sesión móvil muestra la fecha de vinculación y el úl
 });
 
 it('el modal de revocar sesión móvil indica "nunca sincronizó" si no hubo heartbeat', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeMobileLinkedEmployee();
     $employee->update(['mobile_last_heartbeat_at' => null]);
 
@@ -72,7 +73,7 @@ it('el modal de revocar sesión móvil indica "nunca sincronizó" si no hubo hea
 });
 
 it('revocar la sesión móvil desde el modal limpia mobile_linked_at y borra el token', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $employee = makeMobileLinkedEmployee();
     $employee->createToken('mobile:'.$employee->id, [Employee::MOBILE_SYNC_ABILITY]);
 

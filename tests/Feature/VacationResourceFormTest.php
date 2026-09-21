@@ -5,6 +5,7 @@ use App\Filament\Resources\VacationResource\Pages\ListVacations;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -15,7 +16,7 @@ uses(RefreshDatabase::class);
  * activo no aparecía al buscarlo por nombre, solo escribiendo su ID numérico.
  */
 it('busca el empleado por nombre, apellido o CI en el select de vacaciones, no solo por id', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $field = Livewire::test(CreateVacation::class)
         ->instance()
@@ -31,7 +32,7 @@ it('busca el empleado por nombre, apellido o CI en el select de vacaciones, no s
  * pero el label mostrado (full_name + CI) no era buscable con el fallback.
  */
 it('busca el empleado por nombre, apellido o CI en el filtro de tabla de vacaciones', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $filter = Livewire::test(ListVacations::class)
         ->instance()

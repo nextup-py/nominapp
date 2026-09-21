@@ -19,6 +19,7 @@ use App\Models\User;
 use Filament\Actions\ActionGroup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -80,7 +81,7 @@ function makeAttendanceEventForTerminal(Terminal $terminal, array $overrides = [
  * ImageEntry evita el sanitizador por completo.
  */
 it('el QR de acceso es un data URI SVG válido, no HTML crudo', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
     $component = collect(
@@ -100,7 +101,7 @@ it('el QR de acceso es un data URI SVG válido, no HTML crudo', function () {
 });
 
 it('sin ?provision=1 no abre el modal de generar enlace automáticamente', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
     $test = Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()]);
@@ -115,7 +116,7 @@ it('sin ?provision=1 no abre el modal de generar enlace automáticamente', funct
  * desmonta la acción de inmediato sin abrir el modal.
  */
 it('con ?provision=1 abre el modal de generar enlace automáticamente tras crear', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
     $test = Livewire::withQueryParams(['provision' => '1'])
@@ -145,7 +146,7 @@ it('el redirect tras crear un terminal apunta a su vista con ?provision=1', func
  * superior: la acción individual quedaría anidada dentro del grupo).
  */
 it('la acción "Revocar token" solo es visible en el detalle si el terminal tiene un token activo', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
     $withoutToken = Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()]);
@@ -166,7 +167,7 @@ it('la acción "Revocar token" solo es visible en el detalle si el terminal tien
 });
 
 it('el detalle del terminal expone la acción "Generar enlace de configuración"', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
     $test = Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()]);
@@ -252,7 +253,7 @@ it('POST .../claim pasa el device_model_hint del cliente hasta el terminal provi
 // ─── RelationManager de marcaciones ────────────────────────────────────────
 
 it('el RelationManager de marcaciones renderiza en la ficha del terminal', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
     makeAttendanceEventForTerminal($terminal);
 
@@ -263,7 +264,7 @@ it('el RelationManager de marcaciones renderiza en la ficha del terminal', funct
 });
 
 it('el RelationManager de marcaciones solo muestra eventos de ese terminal, no de otros', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
     $otherTerminal = makeProvisioningTerminal();
 
@@ -280,7 +281,7 @@ it('el RelationManager de marcaciones solo muestra eventos de ese terminal, no d
 });
 
 it('el RelationManager de marcaciones es de solo lectura, sin acciones de fila', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
     makeAttendanceEventForTerminal($terminal);
 
@@ -311,7 +312,7 @@ it('reclamar un enlace de configuración ya usado falla con 422 — un solo uso'
 });
 
 it('"Generar enlace" está visible sin enlace vigente; "Ver enlace" y "Generar nuevo" aparecen tras generar uno', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
     $withoutLink = collect(
@@ -343,7 +344,7 @@ it('TerminalResource::renderCurrentSetupLinkModal() no genera un token nuevo, a 
 });
 
 it('"Generar nuevo enlace" invalida el enlace vigente y notifica en vez de mostrar el QR en el mismo paso', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
     $oldToken = $terminal->generateSetupToken();
 
@@ -358,7 +359,7 @@ it('"Generar nuevo enlace" invalida el enlace vigente y notifica en vez de mostr
 // ─── Form: sucursal filtrada por empresa activa ────────────────────────────
 
 it('el select de sucursal excluye sucursales de empresas inactivas al crear un terminal', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $activeCompany = Company::create(['name' => 'Empresa Activa Form', 'ruc' => '7900001-1', 'employer_number' => 7900001, 'is_active' => true]);
     $inactiveCompany = Company::create(['name' => 'Empresa Inactiva Form', 'ruc' => '7900002-1', 'employer_number' => 7900002, 'is_active' => false]);
@@ -383,7 +384,7 @@ it('el select de sucursal excluye sucursales de empresas inactivas al crear un t
  * branch_id siga apuntando correctamente en la base de datos.
  */
 it('editar un terminal mantiene visible su sucursal aunque la empresa se haya desactivado después', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $company = Company::create(['name' => 'Empresa Form X', 'ruc' => '7900003-1', 'employer_number' => 7900003, 'is_active' => true]);
     $branch = Branch::create(['name' => 'Sucursal Form X', 'company_id' => $company->id]);
@@ -400,7 +401,7 @@ it('editar un terminal mantiene visible su sucursal aunque la empresa se haya de
 });
 
 it('el listado de terminales oculta la columna y el filtro de Empresa si solo hay una empresa activa', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     makeProvisioningTerminal();
 
     Livewire::test(ListTerminals::class)
@@ -409,7 +410,7 @@ it('el listado de terminales oculta la columna y el filtro de Empresa si solo ha
 });
 
 it('el listado de terminales muestra y filtra por Empresa cuando hay 2 o más empresas activas', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 
     $companyA = Company::create(['name' => 'Empresa Terminal A', 'ruc' => '7900010-1', 'employer_number' => 7900010]);
     $companyB = Company::create(['name' => 'Empresa Terminal B', 'ruc' => '7900011-1', 'employer_number' => 7900011]);
@@ -428,7 +429,7 @@ it('el listado de terminales muestra y filtra por Empresa cuando hay 2 o más em
 });
 
 it('el detalle del terminal oculta el nombre de la Empresa si solo hay una empresa activa', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
     Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()])
@@ -436,7 +437,7 @@ it('el detalle del terminal oculta el nombre de la Empresa si solo hay una empre
 });
 
 it('el detalle del terminal muestra el nombre de la Empresa cuando hay 2 o más empresas activas', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
     Company::create(['name' => 'Otra Empresa Detalle', 'ruc' => '7900012-1', 'employer_number' => 7900012]);
 
