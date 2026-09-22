@@ -18,7 +18,7 @@ class ViewEmployeeLeaves extends ViewRecord
     /**
      * Devuelve las acciones disponibles en el encabezado según el estado de la licencia.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
@@ -55,7 +55,7 @@ class ViewEmployeeLeaves extends ViewRecord
                     return $base;
                 })
                 ->modalSubmitActionLabel('Sí, aprobar')
-                ->visible(fn () => $this->record->status === 'pending')
+                ->visible(fn () => $this->record->status === 'pending' && auth()->user()->can('approve_employee_leave'))
                 ->action(function () {
                     $result = $this->record->approve(Auth::id());
 
@@ -97,7 +97,7 @@ class ViewEmployeeLeaves extends ViewRecord
                 ->modalHeading('Rechazar Licencia')
                 ->modalDescription('Se rechazará esta solicitud de licencia.')
                 ->modalSubmitActionLabel('Sí, rechazar')
-                ->visible(fn () => $this->record->status === 'pending')
+                ->visible(fn () => $this->record->status === 'pending' && auth()->user()->can('reject_employee_leave'))
                 ->action(function () {
                     $this->record->reject();
 
