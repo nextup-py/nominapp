@@ -36,6 +36,7 @@ class ProductionSeeder extends Seeder
         $this->createAdminUser();
         $this->call([
             PermissionSeeder::class,
+            BusinessActionPermissionSeeder::class,
             RoleSeeder::class,
         ]);
         $this->seedDeductions();
