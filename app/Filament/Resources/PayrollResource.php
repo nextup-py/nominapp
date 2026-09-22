@@ -226,7 +226,7 @@ class PayrollResource extends Resource
                             ->body("El recibo de {$record->employee->full_name} ha sido aprobado.")
                             ->send();
                     })
-                    ->visible(fn (Payroll $record) => $record->status === 'draft'),
+                    ->visible(fn (Payroll $record) => $record->status === 'draft' && auth()->user()->can('approve_payroll')),
 
                 Action::make('mark_disbursed')
                     ->label('Marcar Acreditado')
@@ -245,7 +245,7 @@ class PayrollResource extends Resource
                             ->body($result['message'])
                             ->send();
                     })
-                    ->visible(fn (Payroll $record) => $record->isApproved()),
+                    ->visible(fn (Payroll $record) => $record->isApproved() && auth()->user()->can('disburse_payroll')),
 
                 Action::make('mark_paid')
                     ->label('Marcar Pagado')
@@ -263,7 +263,7 @@ class PayrollResource extends Resource
                             ->title('Recibo marcado como pagado')
                             ->send();
                     })
-                    ->visible(fn (Payroll $record) => $record->isDisbursed()),
+                    ->visible(fn (Payroll $record) => $record->isDisbursed() && auth()->user()->can('mark_paid_payroll')),
 
                 Action::make('revert_paid')
                     ->label('Revertir Pago')
@@ -282,7 +282,7 @@ class PayrollResource extends Resource
                             ->body("El recibo de {$record->employee->full_name} ha vuelto a estado Acreditado.")
                             ->send();
                     })
-                    ->visible(fn (Payroll $record) => $record->isPaid()),
+                    ->visible(fn (Payroll $record) => $record->isPaid() && auth()->user()->can('revert_payroll')),
 
                 Action::make('revert_to_approved')
                     ->label('Revertir a Aprobado')
@@ -301,7 +301,7 @@ class PayrollResource extends Resource
                             ->body($result['message'])
                             ->send();
                     })
-                    ->visible(fn (Payroll $record) => $record->isDisbursed() && $record->disbursement_batch_id === null),
+                    ->visible(fn (Payroll $record) => $record->isDisbursed() && $record->disbursement_batch_id === null && auth()->user()->can('revert_payroll')),
 
                 Action::make('unapprove')
                     ->label('Desaprobar')
@@ -324,7 +324,7 @@ class PayrollResource extends Resource
                             ->body("El recibo de {$record->employee->full_name} ha vuelto a estado Borrador.")
                             ->send();
                     })
-                    ->visible(fn (Payroll $record) => $record->status === 'approved'),
+                    ->visible(fn (Payroll $record) => $record->status === 'approved' && auth()->user()->can('revert_payroll')),
 
                 Action::make('regenerate')
                     ->label('Regenerar')
@@ -351,7 +351,7 @@ class PayrollResource extends Resource
                                 ->send();
                         }
                     })
-                    ->visible(fn (Payroll $record) => $record->status === 'draft'),
+                    ->visible(fn (Payroll $record) => $record->status === 'draft' && auth()->user()->can('regenerate_payroll')),
 
                 DeleteAction::make()
                     ->visible(fn (Payroll $record) => $record->status === 'draft'),
@@ -362,6 +362,7 @@ class PayrollResource extends Resource
                         ->label('Aprobar Seleccionados')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
+                        ->visible(fn () => auth()->user()->can('approve_payroll'))
                         ->requiresConfirmation()
                         ->modalHeading('Aprobar Recibos Seleccionados')
                         ->modalDescription('¿Está seguro de aprobar todos los recibos seleccionados? Solo se aprobarán los que estén en estado "Borrador".')
@@ -390,6 +391,7 @@ class PayrollResource extends Resource
                         ->label('Marcar Acreditados')
                         ->icon('heroicon-o-building-library')
                         ->color('info')
+                        ->visible(fn () => auth()->user()->can('disburse_payroll'))
                         ->requiresConfirmation()
                         ->modalHeading('Marcar como Acreditados')
                         ->modalDescription('¿Confirma que los recibos seleccionados fueron acreditados/entregados? Solo se procesarán los que estén en estado "Aprobado".')
@@ -414,6 +416,7 @@ class PayrollResource extends Resource
                         ->label('Marcar Pagados')
                         ->icon('heroicon-o-banknotes')
                         ->color('success')
+                        ->visible(fn () => auth()->user()->can('mark_paid_payroll'))
                         ->requiresConfirmation()
                         ->modalHeading('Marcar como Pagados')
                         ->modalDescription('¿Confirma que los recibos seleccionados han sido pagados? Solo se marcarán los que estén en estado "Acreditado".')
@@ -438,6 +441,7 @@ class PayrollResource extends Resource
                         ->label('Revertir Pagos')
                         ->icon('heroicon-o-arrow-uturn-left')
                         ->color('warning')
+                        ->visible(fn () => auth()->user()->can('revert_payroll'))
                         ->requiresConfirmation()
                         ->modalHeading('Revertir Pagos Seleccionados')
                         ->modalDescription('¿Está seguro? Solo se revertirán los recibos en estado "Pagado". Volverán a estado Acreditado.')
@@ -462,6 +466,7 @@ class PayrollResource extends Resource
                         ->label('Desaprobar Seleccionados')
                         ->icon('heroicon-o-x-circle')
                         ->color('warning')
+                        ->visible(fn () => auth()->user()->can('revert_payroll'))
                         ->requiresConfirmation()
                         ->modalHeading('Desaprobar Recibos Seleccionados')
                         ->modalDescription('¿Está seguro? Solo se desaprobarán los recibos en estado "Aprobado". Volverán a estado Borrador.')
@@ -490,6 +495,7 @@ class PayrollResource extends Resource
                         ->label('Descargar PDFs')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('gray')
+                        ->visible(fn () => auth()->user()->can('export_payroll'))
                         ->action(function (Collection $records, Component $livewire) {
                             $records->load('employee');
                             $validRecords = $records->filter(
@@ -548,6 +554,7 @@ class PayrollResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     ExportBulkAction::make()
+                        ->visible(fn () => auth()->user()->can('export_payroll'))
                         ->exports([
                             ExcelExport::make()
                                 ->fromTable()
