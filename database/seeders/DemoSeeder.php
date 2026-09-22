@@ -34,6 +34,7 @@ class DemoSeeder extends Seeder
 
         $this->call([
             PermissionSeeder::class,
+            BusinessActionPermissionSeeder::class,
             RoleSeeder::class,
 
             // Configuración del sistema (debe ir primero: muchos servicios leen settings al iniciar)
