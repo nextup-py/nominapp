@@ -138,6 +138,7 @@ class AdvanceReport extends Page implements HasTable
                 ->label('Exportar Excel')
                 ->icon('heroicon-o-table-cells')
                 ->color('gray')
+                ->visible(fn () => auth()->user()->can('export_advance'))
                 ->modalHeading('Exportar reporte de adelantos')
                 ->modalDescription('Seleccione las columnas a incluir en el archivo Excel.')
                 ->modalSubmitActionLabel('Sí, exportar')
