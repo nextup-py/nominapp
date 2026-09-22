@@ -35,7 +35,7 @@ class EditAbsence extends EditRecord
                 ->icon('heroicon-o-clock')
                 ->color('primary')
                 ->tooltip('El empleado SÍ estuvo presente pero no marcó — crea las marcaciones y justifica el día automáticamente')
-                ->visible(fn () => ! $this->record->isJustified())
+                ->visible(fn () => ! $this->record->isJustified() && auth()->user()->can('justify_absence'))
                 ->modalHeading('Registrar jornada manual')
                 ->modalDescription(fn () => $this->record->isUnjustified()
                     ? '⚠️ Esta ausencia está marcada como injustificada con deducción generada. Al registrar la asistencia se justificará automáticamente y se eliminará la deducción.'
@@ -154,7 +154,7 @@ class EditAbsence extends EditRecord
                 ->label('Justificar')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn () => ! $this->record->isJustified())
+                ->visible(fn () => ! $this->record->isJustified() && auth()->user()->can('justify_absence'))
                 ->modalHeading(fn () => $this->record->isUnjustified()
                     ? 'Cambiar a Justificada'
                     : 'Justificar Ausencia')
@@ -304,7 +304,7 @@ class EditAbsence extends EditRecord
                 ->label('Marcar Injustificada')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->visible(fn () => ! $this->record->isUnjustified())
+                ->visible(fn () => ! $this->record->isUnjustified() && auth()->user()->can('mark_unjustified_absence'))
                 ->modalHeading(fn () => $this->record->isJustified()
                     ? 'Cambiar a Injustificada'
                     : 'Marcar como Injustificada')

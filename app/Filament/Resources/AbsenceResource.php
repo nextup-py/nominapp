@@ -316,6 +316,7 @@ class AbsenceResource extends Resource
                         ->label('Justificar seleccionadas')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
+                        ->visible(fn () => auth()->user()->can('justify_absence'))
                         ->tooltip('Justifica todas las ausencias seleccionadas')
                         ->requiresConfirmation()
                         ->modalHeading('Justificar Ausencias Seleccionadas')
@@ -345,6 +346,7 @@ class AbsenceResource extends Resource
                         ->label('Marcar injustificadas')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
+                        ->visible(fn () => auth()->user()->can('mark_unjustified_absence'))
                         ->tooltip('Marca como injustificadas y genera deducciones para las seleccionadas')
                         ->requiresConfirmation()
                         ->modalHeading('Marcar como Injustificadas')
@@ -472,6 +474,7 @@ class AbsenceResource extends Resource
             ->label('Exportar a Excel')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('info')
+            ->visible(fn () => auth()->user()->can('export_absence'))
             ->tooltip('Exportar registros visibles respetando filtros y tabs activos')
             ->exports([
                 ExcelExport::make()
