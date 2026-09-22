@@ -32,7 +32,7 @@ class ViewLiquidacion extends ViewRecord
                     LiquidacionResource::performCalculation($this->record, $service, 'Liquidación calculada');
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->isDraft()),
+                ->visible(fn () => $this->record->isDraft() && auth()->user()->can('calculate_liquidacion')),
 
             Action::make('recalculate')
                 ->label('Recalcular')
@@ -49,7 +49,7 @@ class ViewLiquidacion extends ViewRecord
                     LiquidacionResource::performCalculation($this->record, $service, 'Liquidación recalculada');
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->isCalculated()),
+                ->visible(fn () => $this->record->isCalculated() && auth()->user()->can('calculate_liquidacion')),
 
             Action::make('close')
                 ->label('Cerrar y Desactivar Empleado')
@@ -65,7 +65,7 @@ class ViewLiquidacion extends ViewRecord
                     LiquidacionResource::performClose($this->record, $service);
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->isCalculated()),
+                ->visible(fn () => $this->record->isCalculated() && auth()->user()->can('close_liquidacion')),
 
             Action::make('regenerate_pdf')
                 ->label('Regenerar PDF')
