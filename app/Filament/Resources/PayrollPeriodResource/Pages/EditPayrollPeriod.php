@@ -78,7 +78,7 @@ class EditPayrollPeriod extends EditRecord
                             ->send();
                     }
                 })
-                ->visible(fn () => in_array($this->record->status, ['draft', 'processing'])),
+                ->visible(fn () => in_array($this->record->status, ['draft', 'processing']) && auth()->user()->can('generate_payrolls_period')),
 
             Action::make('regenerate_payrolls')
                 ->label('Regenerar Recibos')
@@ -142,7 +142,7 @@ class EditPayrollPeriod extends EditRecord
                             ->send();
                     }
                 })
-                ->visible(fn () => $this->record->status === 'processing' && $this->record->payrolls()->whereIn('status', ['draft', 'approved'])->exists()),
+                ->visible(fn () => $this->record->status === 'processing' && $this->record->payrolls()->whereIn('status', ['draft', 'approved'])->exists() && auth()->user()->can('generate_payrolls_period')),
 
             Action::make('revert_to_draft')
                 ->label('Revertir a Borrador')
@@ -251,7 +251,8 @@ class EditPayrollPeriod extends EditRecord
                 // Visible solo cuando todos los recibos del período están pagados.
                 ->visible(fn () => $this->record->status === 'processing'
                     && $this->record->payrolls()->exists()
-                    && $this->record->payrolls()->whereNot('status', 'paid')->doesntExist()),
+                    && $this->record->payrolls()->whereNot('status', 'paid')->doesntExist()
+                    && auth()->user()->can('close_payroll_period')),
 
             Action::make('reopen_period')
                 ->label('Reabrir Planilla')
@@ -281,7 +282,7 @@ class EditPayrollPeriod extends EditRecord
                         'updated_at',
                     ]);
                 })
-                ->visible(fn () => $this->record->status === 'closed'),
+                ->visible(fn () => $this->record->status === 'closed' && auth()->user()->can('reopen_payroll_period')),
 
             DeleteAction::make()
                 ->label('Eliminar')
