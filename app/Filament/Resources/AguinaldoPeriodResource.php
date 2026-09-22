@@ -205,7 +205,7 @@ class AguinaldoPeriodResource extends Resource
                                 ->send();
                         }
                     })
-                    ->visible(fn (AguinaldoPeriod $record) => $record->isDraft()),
+                    ->visible(fn (AguinaldoPeriod $record) => $record->isDraft() && auth()->user()->can('generate_aguinaldos_period')),
             ])
             ->defaultSort('year', 'desc')
             ->emptyStateHeading('No hay períodos de aguinaldo registrados')
