@@ -16,6 +16,7 @@ use Filament\Forms\Components\Get;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
@@ -72,7 +73,7 @@ class ListLoans extends ListRecords
                 ->label('Crear Lote Bancario')
                 ->icon('heroicon-o-building-library')
                 ->color('info')
-                ->mountUsing(function (\Filament\Forms\Form $form, Action $action) {
+                ->mountUsing(function (Form $form, Action $action) {
                     $hasLoans = Loan::query()
                         ->where('status', 'approved')
                         ->where('payment_method', 'transfer')
@@ -241,6 +242,7 @@ class ListLoans extends ListRecords
                 ->label('Exportar Excel')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('info')
+                ->visible(fn () => auth()->user()->can('export_loan'))
                 ->requiresConfirmation()
                 ->modalHeading('Exportar Préstamos')
                 ->modalDescription('Se exportarán todos los préstamos a un archivo Excel.')
