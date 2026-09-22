@@ -17,8 +17,6 @@ class ListAguinaldos extends ListRecords
 
     /**
      * Define las acciones del encabezado para la página de listado de aguinaldos.
-     *
-     * @return array
      */
     protected function getHeaderActions(): array
     {
@@ -27,6 +25,7 @@ class ListAguinaldos extends ListRecords
                 ->label('Exportar')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
+                ->visible(fn () => auth()->user()->can('export_aguinaldo'))
                 ->requiresConfirmation()
                 ->modalHeading('¿Exportar aguinaldos a Excel?')
                 ->modalDescription('Se exportarán todos los aguinaldos según el filtro de estado activo.')
@@ -40,13 +39,13 @@ class ListAguinaldos extends ListRecords
 
                     $status = match ($this->activeTab) {
                         'pending' => 'pending',
-                        'paid'    => 'paid',
-                        default   => null,
+                        'paid' => 'paid',
+                        default => null,
                     };
 
                     return Excel::download(
                         new AguinaldosExport(status: $status),
-                        'aguinaldos_' . now()->format('Y_m_d_H_i_s') . '.xlsx'
+                        'aguinaldos_'.now()->format('Y_m_d_H_i_s').'.xlsx'
                     );
                 }),
         ];
@@ -54,8 +53,6 @@ class ListAguinaldos extends ListRecords
 
     /**
      * Define las pestañas para filtrar los aguinaldos por estado, mostrando el conteo de cada estado.
-     *
-     * @return array
      */
     public function getTabs(): array
     {
@@ -72,12 +69,12 @@ class ListAguinaldos extends ListRecords
                 ->badge($total ?: null),
 
             'pending' => Tab::make('Pendientes')
-                ->modifyQueryUsing(fn($query) => $query->where('status', 'pending'))
+                ->modifyQueryUsing(fn ($query) => $query->where('status', 'pending'))
                 ->badge($counts['pending'] ?? null)
                 ->badgeColor('warning'),
 
             'paid' => Tab::make('Pagados')
-                ->modifyQueryUsing(fn($query) => $query->where('status', 'paid'))
+                ->modifyQueryUsing(fn ($query) => $query->where('status', 'paid'))
                 ->badge($counts['paid'] ?? null)
                 ->badgeColor('success'),
         ];
@@ -85,10 +82,8 @@ class ListAguinaldos extends ListRecords
 
     /**
      * Define la pestaña activa por defecto al cargar la página de listado de aguinaldos.
-     *
-     * @return string|int|null
      */
-    public function getDefaultActiveTab(): string | int | null
+    public function getDefaultActiveTab(): string|int|null
     {
         return 'all';
     }
