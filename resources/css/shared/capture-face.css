@@ -99,27 +99,43 @@ body {
 .video-container {
     padding: var(--sp-4) var(--sp-5) 0;
 }
+/* Retrato (3:4) por defecto — mismo tratamiento mobile que mark/terminal: rostro
+   más grande y cercano. Pasa a 16:9 en tablet/desktop, donde comparte pantalla
+   con la tarjeta del paso 2 (layout de 2 columnas, no una app de cámara a pantalla completa). */
 .video-wrap {
-    position: relative; width: 100%; aspect-ratio: 4 / 3;
+    position: relative; width: 100%; aspect-ratio: 3 / 4;
     background: #000; border-radius: var(--r-lg); overflow: hidden;
     border: 2px solid var(--c-border); margin-bottom: var(--sp-4);
     transition: border-color var(--tr-s), box-shadow var(--tr-s);
 }
-.video-wrap.detecting {
-    border-color: var(--c-warning);
-    box-shadow: 0 0 0 3px rgba(252,211,77,.4);
-}
-.video-wrap.face-found {
-    border-color: var(--c-success);
-    box-shadow: 0 0 0 3px rgba(134,239,172,.4);
-}
+.video-wrap.detecting  { border-color: var(--c-warning); }
+.video-wrap.face-found { border-color: var(--c-success); }
 video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* ============================================================
+   MARCO DE ESCANEO — corchetes en las esquinas del óvalo guía
+   (reemplaza el anillo con glow que rodeaba todo el video)
+   ============================================================ */
+.capture-scan-corner {
+    position: absolute;
+    width: 22px; height: 22px;
+    border: 3px solid rgba(255,255,255,.5);
+    z-index: 2;
+    pointer-events: none;
+    transition: border-color var(--tr);
+}
+.capture-scan-corner--tl { top: 8%;  left: 14%;  border-right: none; border-bottom: none; border-radius: var(--r) 0 0 0; }
+.capture-scan-corner--tr { top: 8%;  right: 14%; border-left: none;  border-bottom: none; border-radius: 0 var(--r) 0 0; }
+.capture-scan-corner--bl { bottom: 8%; left: 14%;  border-right: none; border-top: none; border-radius: 0 0 0 var(--r); }
+.capture-scan-corner--br { bottom: 8%; right: 14%; border-left: none;  border-top: none; border-radius: 0 0 var(--r) 0; }
+.video-wrap.detecting  .capture-scan-corner { border-color: var(--c-warning); }
+.video-wrap.face-found .capture-scan-corner { border-color: var(--c-success); }
 
 /*
  * Capa de desenfoque fuera del óvalo.
  * Los radios (--orx, --ory) se calculan en base al tamaño del óvalo
  * relativo al video-wrap en cada breakpoint:
- *   Mobile (4:3):  oval 43% ancho → rx=21.5%, ry=oval_h/2/wrap_h = 38.2%
+ *   Mobile (3:4):  oval 70% ancho → rx=35%,   ry=35%   (mismo cálculo que terminal.css portrait)
  *   Tablet (16:9): oval 43% ancho → rx=21.5%, ry=50.9%
  *   Desktop(16:9): oval 30% ancho → rx=15%,   ry=35.6%
  */
@@ -128,8 +144,8 @@ video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-
     pointer-events: none;
     backdrop-filter: blur(8px) brightness(0.40);
     -webkit-backdrop-filter: blur(8px) brightness(0.40);
-    --orx: 21.5%;
-    --ory: 38.2%;
+    --orx: 35%;
+    --ory: 35%;
     mask-image: radial-gradient(ellipse var(--orx) var(--ory) at 50% 50%, transparent 70%, black 100%);
     -webkit-mask-image: radial-gradient(ellipse var(--orx) var(--ory) at 50% 50%, transparent 70%, black 100%);
 }
@@ -140,7 +156,7 @@ video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-
     pointer-events: none; z-index: 2;
 }
 .face-guide-oval {
-    width: 43%; aspect-ratio: 3 / 4;
+    width: 70%; aspect-ratio: 3 / 4;
     border: 2px dashed rgba(255,255,255,.35); border-radius: 50%;
     transition: border-color var(--tr);
 }
@@ -177,43 +193,59 @@ video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-
    SUGERENCIAS
    ============================================================ */
 .guide-tips {
-    padding: var(--sp-3) var(--sp-4);
+    padding: var(--sp-4);
     background: var(--c-primary-bg);
     border: 1px solid rgba(13,148,136,.18);
     border-radius: var(--r-lg); margin-bottom: var(--sp-3);
 }
+.guide-tips-header { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.guide-tips-icon { width: 18px; height: 18px; color: var(--c-primary); flex-shrink: 0; }
 .guide-tips-label {
-    font-size: .6875rem; font-weight: 700; color: var(--c-primary);
-    text-transform: uppercase; letter-spacing: .07em; margin-bottom: var(--sp-2);
+    font-size: .8125rem; font-weight: 700; color: var(--c-primary);
+    letter-spacing: .01em;
 }
-.guide-tips-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.guide-tips-list { list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); }
 .guide-tips-list li {
-    font-size: .78rem; color: var(--c-muted);
-    padding-left: var(--sp-3); position: relative; line-height: 1.4;
+    display: flex; align-items: flex-start; gap: var(--sp-2);
+    font-size: .8125rem; color: var(--c-text); line-height: 1.4;
 }
-.guide-tips-list li::before {
-    content: ''; position: absolute; left: 0; top: 7px;
-    width: 4px; height: 4px; border-radius: 50%; background: var(--c-primary);
+.guide-tips-list-icon {
+    width: 16px; height: 16px;
+    color: var(--c-success);
+    flex-shrink: 0;
+    margin-top: 1px;
 }
 
 /* ============================================================
    DESCRIPTOR Y FORMULARIO
    ============================================================ */
+/* Fila de mini-stats con divisores — mismo patrón que .mark-stats en terminal.css.
+   Cada .mini-stat que no sea el primero visible lleva un borde izquierdo; como los
+   ocultos (.hidden) no ocupan espacio, nunca queda un divisor "huérfano". */
 .descriptor-status {
-    padding: var(--sp-2) var(--sp-3);
+    display: flex;
+    align-items: center;
     background: var(--c-bg); border: 1px solid var(--c-border);
-    border-radius: var(--r); font-size: .8125rem;
-    color: var(--c-muted); margin-bottom: var(--sp-3);
-    display: flex; flex-direction: column; gap: var(--sp-1);
+    border-radius: var(--r-lg);
+    margin-bottom: var(--sp-3);
+    overflow: hidden;
 }
-.desc-row {
-    display: flex; justify-content: space-between; align-items: center;
+.mini-stat {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: var(--sp-3) var(--sp-2);
+    text-align: center;
 }
-.desc-label { color: var(--c-muted); }
-.desc-value { font-weight: 500; color: var(--c-text); }
-.desc-value--high  { color: #16a34a; }
+.mini-stat:not(:first-child) { border-left: 1px solid var(--c-border); }
+.mini-stat-label {
+    font-size: .68rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--c-subtle);
+}
+.desc-value { font-size: .9375rem; font-weight: 700; color: var(--c-text); }
+.desc-value--high  { color: var(--c-success); }
 .desc-value--mid   { color: var(--c-warning); }
-.desc-value--low   { color: #dc2626; }
+.desc-value--low   { color: var(--c-danger); }
 .save-form { display: flex; flex-direction: column; gap: var(--sp-3); }
 .form-actions { margin-top: var(--sp-4); }
 
@@ -387,8 +419,15 @@ button:disabled { opacity: .5; cursor: not-allowed; }
     .controls button, .form-actions button { flex: 1; width: auto; }
     .form-actions { flex-direction: row; }
     .video-wrap { aspect-ratio: 16 / 9; }
-    /* video-wrap pasa a 16:9 → ry recalculado */
-    .video-blur-overlay { --ory: 50.9%; }
+    /* Vuelve al óvalo 43%/landscape del layout de 2 columnas — el 70%/retrato es
+       solo para mobile a pantalla completa (ver .video-wrap base). */
+    .face-guide-oval { width: 43%; }
+    .video-blur-overlay { --orx: 21.5%; --ory: 50.9%; }
+    /* Óvalo más alto que la mitad del wrap en 16:9 → corchetes pegados a los bordes */
+    .capture-scan-corner--tl, .capture-scan-corner--tr { top: 2%; }
+    .capture-scan-corner--bl, .capture-scan-corner--br { bottom: 2%; }
+    .capture-scan-corner--tl, .capture-scan-corner--bl { left: 27%; }
+    .capture-scan-corner--tr, .capture-scan-corner--br { right: 27%; }
 }
 
 /* Desktop: 2 columnas, container amplio, botones compactos */
@@ -403,6 +442,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
     .face-guide-oval { width: 30%; }
     /* óvalo pasa a 30% → rx y ry recalculados */
     .video-blur-overlay { --orx: 15%; --ory: 35.6%; }
+    .capture-scan-corner--tl, .capture-scan-corner--bl { left: 33.5%; }
+    .capture-scan-corner--tr, .capture-scan-corner--br { right: 33.5%; }
     .app-header { margin-bottom: var(--sp-6); }
 
     /* Botones compactos en desktop (ambos modos) */

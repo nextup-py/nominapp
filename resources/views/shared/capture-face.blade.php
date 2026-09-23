@@ -66,10 +66,39 @@
                         <div class="face-guide" aria-hidden="true">
                             <div class="face-guide-oval"></div>
                         </div>
+                        {{-- Marco de escaneo — corchetes en las esquinas del óvalo guía, en vez del
+                        anillo con glow que antes rodeaba todo el marco de video. --}}
+                        <span class="capture-scan-corner capture-scan-corner--tl" aria-hidden="true"></span>
+                        <span class="capture-scan-corner capture-scan-corner--tr" aria-hidden="true"></span>
+                        <span class="capture-scan-corner capture-scan-corner--bl" aria-hidden="true"></span>
+                        <span class="capture-scan-corner capture-scan-corner--br" aria-hidden="true"></span>
                     </div>
                 </div>
 
                 <div class="card-body">
+                    <div class="guide-tips" role="note">
+                        <div class="guide-tips-header">
+                            <svg class="guide-tips-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/>
+                            </svg>
+                            <span class="guide-tips-label">Antes de empezar</span>
+                        </div>
+                        <ul class="guide-tips-list">
+                            @foreach ([
+                                'Buscá un lugar con buena luz, de frente a tu rostro',
+                                'Mirá directo a la cámara, sin lentes de sol ni gorra',
+                                'Mantené el rostro centrado dentro del óvalo',
+                            ] as $tip)
+                                <li>
+                                    <svg class="guide-tips-list-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    {{ $tip }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
                     <div class="controls row">
                         <button id="btnStart" type="button" class="btn-gray" aria-label="Iniciar cámara">
                             <span aria-hidden="true"><svg class="btn-icon" viewBox="0 0 24 24" fill="none"
@@ -122,21 +151,25 @@
                 </h2>
 
                 <div class="card-body">
+                    {{-- Fila de mini-stats con divisores (mismo patrón que .mark-stats en
+                    terminal.css) en vez de filas apiladas label:valor dentro de una caja gris.
+                    Los IDs se mantienen igual — FaceCaptureApp.js solo togglea .hidden y
+                    reemplaza el className de los spans de valor, sin importar su contenedor. --}}
                     <div class="descriptor-status">
-                        <div class="desc-row">
-                            <span class="desc-label">Rostro</span>
+                        <div class="mini-stat">
+                            <span class="mini-stat-label">Rostro</span>
                             <span id="descValue" class="desc-value">No capturado</span>
                         </div>
-                        <div class="desc-row hidden" id="descRowSamples">
-                            <span class="desc-label">Muestras</span>
+                        <div class="mini-stat hidden" id="descRowSamples">
+                            <span class="mini-stat-label">Muestras</span>
                             <span id="descSamplesValue" class="desc-value">—</span>
                         </div>
-                        <div class="desc-row hidden" id="descRowQuality">
-                            <span class="desc-label">Calidad</span>
+                        <div class="mini-stat hidden" id="descRowQuality">
+                            <span class="mini-stat-label">Calidad</span>
                             <span id="descQualityValue" class="desc-value">—</span>
                         </div>
-                        <div class="desc-row hidden" id="descRowTime">
-                            <span class="desc-label" id="descTimeLabel">Hora</span>
+                        <div class="mini-stat hidden" id="descRowTime">
+                            <span class="mini-stat-label" id="descTimeLabel">Hora</span>
                             <span id="descTimeValue" class="desc-value">—</span>
                         </div>
                     </div>
