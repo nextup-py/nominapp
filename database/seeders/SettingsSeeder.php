@@ -42,6 +42,9 @@ class SettingsSeeder extends Seeder
             'face_enrollment_expiry_hours' => 48,
             'face_threshold' => 0.45,
             'face_min_confidence_gap' => 0.1,
+
+            // Terminales de asistencia
+            'terminal_stale_threshold_hours' => 2,
         ]);
 
         $this->command->info('GeneralSettings sembrados.');
