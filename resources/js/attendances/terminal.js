@@ -8,6 +8,7 @@ import { updateClock, updateIdleDate } from './terminal/ui-feedback.js';
 import { setOffline, updateIdleSyncStatus, refreshIdleSyncStatus } from './terminal/sync-status-ui.js';
 import { initManualSearch } from './terminal/manual-search.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
+import { createMenuSheet } from '../shared/menu-sheet.js';
 import { heartbeat, syncEmployees, TerminalAuthError } from './terminal-offline/sync.js';
 import { flushQueue } from './terminal-offline/queue.js';
 
@@ -97,6 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (terminalData && headerLogo && terminalData.company_logo) {
         headerLogo.src = terminalData.company_logo;
         headerLogo.classList.remove('hidden');
+    }
+
+    const idleCompanyLogo = document.getElementById('idleCompanyLogo');
+    if (terminalData && idleCompanyLogo && terminalData.company_logo) {
+        idleCompanyLogo.src = terminalData.company_logo;
+        idleCompanyLogo.classList.remove('hidden');
     }
 
     const headerDevice = document.getElementById('terminalHeaderDevice');
@@ -254,6 +261,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // TEMA CLARO / OSCURO
     // ============================================================================
     initThemeToggle('terminal-theme');
+
+    // ============================================================================
+    // MENÚ ⋮ — estado del terminal (dispositivo, conectividad, última sync) + tema
+    // ============================================================================
+    (function initTerminalMenu() {
+        const sheet = document.getElementById('terminalMenuSheet');
+        const backdrop = document.getElementById('terminalMenuSheetBackdrop');
+        const panel = document.getElementById('terminalMenuSheetPanel');
+        const trigger = document.getElementById('btnTerminalMenu');
+        if (!sheet || !backdrop || !panel || !trigger) return;
+
+        createMenuSheet({ sheet, backdrop, panel, trigger });
+    })();
 
     // ============================================================================
     // INICIALIZACIÓN

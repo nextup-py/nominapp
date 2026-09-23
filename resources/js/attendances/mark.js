@@ -15,7 +15,7 @@ import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sy
 import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js';
 import { showSuccessModal } from './mark/success-modal.js';
 import { showErrorModal, initErrorModal, isErrorModalVisible, setErrorModalVisible } from './mark/error-modal.js';
-import { createMenuSheet } from './mark/menu-sheet.js';
+import { createMenuSheet } from '../shared/menu-sheet.js';
 import {
     captureInstallPrompt,
     triggerInstallPrompt,

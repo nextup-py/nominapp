@@ -85,10 +85,9 @@ body {
     box-shadow: none;
 }
 /* En idle solo se atenúan la etiqueta "Modo Terminal" y el reloj chico del header (ya
-   duplicado por el reloj grande de la pantalla de reposo) — sucursal/empresa, logo y la
-   fila de meta (dispositivo, conectividad, últ. sync) quedan visibles siempre: es
-   justamente en reposo, sin nadie todavía frente a la cámara, cuando más tiempo pasan
-   en pantalla. */
+   duplicado por el reloj grande de la pantalla de reposo) — sucursal/empresa y logo
+   quedan visibles siempre: es justamente en reposo, sin nadie todavía frente a la
+   cámara, cuando más tiempo pasan en pantalla. */
 .terminal-header--idle .terminal-mode-badge,
 .terminal-header--idle .terminal-clock {
     opacity: 0;
@@ -127,24 +126,8 @@ body {
     text-overflow: ellipsis;
     min-width: 0;
 }
-/* Fila secundaria bajo sucursal/empresa: dispositivo, conectividad, última sincronización. */
-.terminal-header-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-3);
-    flex-wrap: wrap;
-}
-.terminal-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: .75rem;
-    font-weight: 500;
-    color: var(--c-muted);
-    white-space: nowrap;
-}
 .connectivity-dot {
-    width: 7px; height: 7px;
+    width: 9px; height: 9px;
     border-radius: 50%;
     background: var(--c-success);
     flex-shrink: 0;
@@ -160,6 +143,7 @@ body {
     object-fit: contain;
     flex-shrink: 0;
 }
+.terminal-header-right { display: flex; align-items: center; gap: var(--sp-3); }
 .terminal-clock {
     display: flex;
     flex-direction: column;
@@ -167,6 +151,92 @@ body {
     font-variant-numeric: tabular-nums;
     line-height: 1.2;
 }
+/* En idle se atenúa junto con el resto de acciones del header (ver .terminal-header--idle) */
+.terminal-header--idle .menu-trigger,
+.terminal-header--idle .connectivity-dot {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 400ms ease, visibility 400ms ease;
+}
+
+/* ============================================================
+   BOTÓN ⋮ Y MENÚ (HOJA INFERIOR) — estado del terminal + tema
+   ============================================================ */
+.menu-trigger {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--c-border);
+    background: transparent;
+    color: var(--c-muted);
+    cursor: pointer;
+    transition: background var(--tr-f), color var(--tr-f), border-color var(--tr-f);
+    flex-shrink: 0;
+}
+.menu-trigger:hover { background: var(--c-primary-bg); color: var(--c-primary); border-color: var(--c-primary); }
+.menu-trigger svg { width: 19px; height: 19px; display: block; }
+
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+.menu-sheet {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; align-items: flex-end; justify-content: center;
+    visibility: hidden;
+    pointer-events: none;
+}
+.menu-sheet.is-open { visibility: visible; pointer-events: auto; }
+.menu-sheet-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(15,23,42,.72);
+    opacity: 0;
+    transition: opacity var(--tr);
+}
+.menu-sheet.is-open .menu-sheet-backdrop { opacity: 1; }
+.menu-sheet-panel {
+    position: relative;
+    width: 100%;
+    max-width: 540px;
+    background: var(--c-surface);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    padding: var(--sp-3) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+    box-shadow: var(--sh-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    transform: translateY(100%);
+    transition: transform var(--tr-s);
+}
+.menu-sheet.is-open .menu-sheet-panel { transform: translateY(0); }
+.menu-sheet-handle {
+    width: 36px; height: 4px;
+    border-radius: 99px;
+    background: var(--c-border-s);
+    margin: 0 auto var(--sp-2);
+}
+.menu-sheet-item-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--c-muted); }
+.menu-sheet-item-label { font-size: .9375rem; font-weight: 500; color: var(--c-text); }
+
+/* Filas informativas de solo lectura (dispositivo, conectividad, última sync) —
+   mismo padding que menu-sheet-item pero sin hover/cursor de acción. */
+.menu-sheet-info-item {
+    display: flex; align-items: center; gap: var(--sp-3);
+    width: 100%;
+    padding: var(--sp-3) var(--sp-2);
+}
+.menu-sheet-info-item .menu-sheet-item-icon { color: var(--c-subtle); }
+.menu-sheet-info-item + .menu-sheet-info-item { border-top: 1px solid var(--c-border); }
+
+.menu-sheet-item--theme {
+    display: flex; align-items: center; gap: var(--sp-3);
+    width: 100%;
+    padding: var(--sp-3) var(--sp-2);
+    border-top: 1px solid var(--c-border);
+    margin-top: var(--sp-1);
+}
+.menu-sheet-item--theme .theme-toggle { width: 32px; height: 32px; }
 .clock-time {
     font-size: clamp(1.25rem, 3.5vw, 1.75rem);
     font-weight: 700;
@@ -253,6 +323,15 @@ body {
     text-align: center;
 }
 
+/* Logo de la empresa — le da identidad de marca a la pantalla de reposo, que
+   antes era solo un reloj sobre fondo vacío. */
+.idle-company-logo {
+    max-height: 56px;
+    max-width: 200px;
+    object-fit: contain;
+    margin-bottom: var(--sp-2);
+}
+
 .idle-clock {
     font-size: clamp(4rem, 14vw, 8rem);
     font-weight: 700;
@@ -270,26 +349,30 @@ body {
     text-transform: capitalize;
 }
 
+/* Chip con ícono — antes era texto gris suelto, poco legible sobre la pantalla vacía */
 .idle-terminal-info {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2px;
-    margin-top: var(--sp-2);
+    gap: var(--sp-2);
+    margin-top: var(--sp-4);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: 99px;
 }
-
+.idle-terminal-info-icon { width: 14px; height: 14px; color: var(--c-subtle); flex-shrink: 0; }
 .idle-terminal-info #idleTerminalName {
     font-size: clamp(.75rem, 2vw, .9375rem);
     font-weight: 600;
-    color: var(--c-subtle);
+    color: var(--c-text);
     letter-spacing: .02em;
 }
 
 .idle-terminal-info #idleTerminalBranch {
     font-size: clamp(.6875rem, 1.75vw, .875rem);
     color: var(--c-muted);
-    opacity: .7;
 }
+.idle-terminal-info #idleTerminalBranch::before { content: '· '; }
 
 .idle-sync-row {
     display: flex;
@@ -305,13 +388,24 @@ body {
     min-width: 0;
 }
 
+/* Botón con ícono propio — antes era un ghost-button genérico que se perdía
+   junto al texto de estado. */
 .idle-sync-btn {
-    min-height: 32px;
+    display: flex; align-items: center; gap: var(--sp-2);
+    min-height: 34px;
     padding: var(--sp-2) var(--sp-4);
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-s);
+    border-radius: var(--r-lg);
+    color: var(--c-text);
+    font-family: var(--font);
     font-size: clamp(.6875rem, 1.5vw, .8125rem);
-    text-transform: none;
-    letter-spacing: normal;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--tr-f), border-color var(--tr-f), color var(--tr-f);
 }
+.idle-sync-btn:hover { background: var(--c-primary-bg); border-color: var(--c-primary); color: var(--c-primary); }
+.idle-sync-btn-icon { width: 15px; height: 15px; flex-shrink: 0; }
 
 .idle-hint {
     position: absolute;
@@ -474,12 +568,14 @@ body {
 .terminal-type-btn:hover { transform: translateY(-3px); box-shadow: var(--sh-lg); }
 .terminal-type-btn:active { transform: translateY(-1px); box-shadow: var(--sh-md); }
 
-/* Iconos de color por tipo */
+/* Iconos de color por tipo — círculo en vez de cuadrado, más grande, para un
+   look más táctil/moderno. */
 .type-icon {
-    width: 36px; height: 36px;
-    border-radius: var(--r-lg);
+    width: 52px; height: 52px;
+    border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
+    margin-bottom: var(--sp-1);
 }
 .type-icon-dot { width: 14px; height: 14px; border-radius: 50%; }
 
@@ -519,34 +615,54 @@ body {
     gap: var(--sp-4);
 }
 
+/* Envoltorio que fusiona visualmente el video y el panel de estado — borde/sombra
+   únicos para todo el bloque; el video y el panel de estado por dentro no llevan
+   border/box-shadow propios (ver más abajo). */
+.identification-frame {
+    border-radius: var(--r-2xl);
+    border: 2px solid var(--c-border);
+    box-shadow: var(--sh-xl);
+    overflow: hidden;
+    transition: border-color var(--tr-s);
+}
+
 /* Contenedor de video */
 .video-wrapper {
     position: relative;
     width: 100%;
     aspect-ratio: 4 / 3;
     background: #000;
-    border-radius: var(--r-2xl);
-    overflow: hidden;
-    border: 2px solid var(--c-border);
-    box-shadow: var(--sh-xl);
-    transition: border-color var(--tr-s), box-shadow var(--tr-s);
+    display: block;
 }
-.video-wrapper--detecting {
-    border-color: var(--c-warning);
-    box-shadow: var(--sh-xl), 0 0 0 4px var(--c-warning-ring);
+
+/* El color de estado se aplica al frame completo (video + panel) para que ambos
+   cambien juntos — setTerminalVideoState() solo togglea la clase en #terminalVideoWrap,
+   así que el frame la hereda vía :has(). */
+.identification-frame:has(.video-wrapper--detecting)   { border-color: var(--c-warning); }
+.identification-frame:has(.video-wrapper--face-found)  { border-color: var(--c-primary); }
+.identification-frame:has(.video-wrapper--success)     { border-color: var(--c-success); }
+.identification-frame:has(.video-wrapper--error)       { border-color: var(--c-danger); }
+
+/* ============================================================
+   MARCO DE ESCANEO — corchetes en las esquinas del óvalo guía
+   (reemplaza el anillo con glow que rodeaba todo el video)
+   ============================================================ */
+.terminal-scan-corner {
+    position: absolute;
+    width: 28px; height: 28px;
+    border: 3px solid rgba(255,255,255,.5);
+    z-index: 2;
+    pointer-events: none;
+    transition: border-color var(--tr);
 }
-.video-wrapper--face-found {
-    border-color: var(--c-primary);
-    box-shadow: var(--sh-xl), 0 0 0 4px var(--c-primary-ring);
-}
-.video-wrapper--success {
-    border-color: var(--c-success);
-    box-shadow: var(--sh-xl), 0 0 0 4px var(--c-success-ring);
-}
-.video-wrapper--error {
-    border-color: var(--c-danger);
-    box-shadow: var(--sh-xl), 0 0 0 4px var(--c-danger-ring);
-}
+.terminal-scan-corner--tl { top: 5%;  left: 25%;  border-right: none; border-bottom: none; border-radius: var(--r-lg) 0 0 0; }
+.terminal-scan-corner--tr { top: 5%;  right: 25%; border-left: none;  border-bottom: none; border-radius: 0 var(--r-lg) 0 0; }
+.terminal-scan-corner--bl { bottom: 5%; left: 25%;  border-right: none; border-top: none; border-radius: 0 0 0 var(--r-lg); }
+.terminal-scan-corner--br { bottom: 5%; right: 25%; border-left: none;  border-top: none; border-radius: 0 0 var(--r-lg) 0; }
+.video-wrapper--detecting   .terminal-scan-corner { border-color: var(--c-warning); }
+.video-wrapper--face-found  .terminal-scan-corner { border-color: var(--c-primary); }
+.video-wrapper--success     .terminal-scan-corner { border-color: var(--c-success); }
+.video-wrapper--error       .terminal-scan-corner { border-color: var(--c-danger); }
 
 #terminalVideo {
     width: 100%; height: 100%;
@@ -585,15 +701,20 @@ body {
 .video-wrapper--face-found  .terminal-face-oval { border-color: rgba(13,148,136,.85); }
 .video-wrapper--success     .terminal-face-oval { border-color: rgba(34,197,94,.9); }
 
-/* Panel de estado */
+/* Panel de estado — fusionado bajo el video dentro de .identification-frame, sin
+   borde/sombra propios (los tiene el frame); un borde superior sutil marca la
+   costura, y el fondo sigue el color de estado (ver .video-wrapper--* ~ .identification-status). */
 .identification-status {
     background: var(--c-surface);
-    border: 1px solid var(--c-border);
-    border-radius: var(--r-xl);
+    border-top: 1px solid var(--c-border);
     padding: var(--sp-4) var(--sp-5);
     display: flex; align-items: center; gap: var(--sp-4);
-    box-shadow: var(--sh);
+    transition: background var(--tr), border-color var(--tr);
 }
+.video-wrapper--detecting  ~ .identification-status { background: var(--c-warning-bg); border-color: var(--c-warning-ring); }
+.video-wrapper--face-found ~ .identification-status { background: var(--c-primary-bg); border-color: var(--c-primary-ring); }
+.video-wrapper--success    ~ .identification-status { background: var(--c-success-bg); border-color: var(--c-success-ring); }
+.video-wrapper--error      ~ .identification-status { background: var(--c-danger-bg);  border-color: var(--c-danger-ring); }
 
 /* Override del contenido inyectado por JS */
 .identification-status .status-icon { display: none; }
@@ -620,17 +741,24 @@ body {
 /* Botón cancelar — OCULTO */
 .terminal-btn.terminal-btn-secondary { display: none !important; }
 
-/* Link "¿No te reconoce? Buscar por CI" — aparece tras varios intentos fallidos */
+/* Chip "¿No te reconoce? Buscar por CI" — aparece tras varios intentos fallidos.
+   Chip con ícono en vez de link subrayado suelto, para que sea más fácil de
+   notar y de tocar cuando aparece. */
 .manual-search-link {
-    background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; gap: var(--sp-2);
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: 99px;
+    cursor: pointer;
+    font-family: var(--font);
     font-size: .8125rem; font-weight: 600;
     color: var(--c-muted);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    padding: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
     align-self: center;
+    transition: background var(--tr-f), color var(--tr-f), border-color var(--tr-f);
 }
-.manual-search-link:hover { color: var(--c-primary); }
+.manual-search-link-icon { width: 15px; height: 15px; flex-shrink: 0; }
+.manual-search-link:hover { color: var(--c-primary); border-color: var(--c-primary); background: var(--c-primary-bg); }
 
 /* ============================================================
    OVERLAY DE BÚSQUEDA MANUAL POR CI
@@ -692,7 +820,7 @@ body {
 
 
 /* SVG dentro del icono de tipo */
-.type-icon svg { width: 22px; height: 22px; flex-shrink: 0; }
+.type-icon svg { width: 28px; height: 28px; flex-shrink: 0; }
 .btn-check-in    .type-icon svg { stroke: var(--c-success); }
 .btn-break-start .type-icon svg { stroke: var(--c-warning); }
 .btn-break-end   .type-icon svg { stroke: var(--c-info); }
@@ -952,17 +1080,21 @@ body {
     .result-bottom        { padding: var(--sp-4) var(--sp-5) var(--sp-6); }
     /* Video portrait en móvil: más alto, centrado y acotado en ancho */
     .identification-layout { width: min(100%, 320px); }
-    .video-wrapper {
-        aspect-ratio: 3 / 4;
+    .identification-frame {
         max-width: 320px;
         margin-inline: auto;
     }
+    .video-wrapper { aspect-ratio: 3 / 4; }
     /* Óvalo más grande en portrait: 70% ancho → rx=35% ry=35% */
     .terminal-face-oval { width: 70%; }
     .terminal-blur-overlay {
         mask-image: radial-gradient(ellipse 35% 35% at 50% 50%, transparent 70%, black 100%);
         -webkit-mask-image: radial-gradient(ellipse 35% 35% at 50% 50%, transparent 70%, black 100%);
     }
+    .terminal-scan-corner--tl, .terminal-scan-corner--tr { top: 8%; }
+    .terminal-scan-corner--bl, .terminal-scan-corner--br { bottom: 8%; }
+    .terminal-scan-corner--tl, .terminal-scan-corner--bl { left: 14%; }
+    .terminal-scan-corner--tr, .terminal-scan-corner--br { right: 14%; }
 }
 @media (orientation: landscape) and (max-height: 560px) {
     .terminal-header     { padding: var(--sp-2) var(--sp-4); }

@@ -1,14 +1,15 @@
 /**
  * =============================================================================
- * MARK.JS — MENÚ DE ACCIONES SECUNDARIAS (HOJA INFERIOR)
+ * MENÚ DE ACCIONES SECUNDARIAS (HOJA INFERIOR) — compartido mark.js/terminal.js
  * =============================================================================
  *
- * @fileoverview Abrir/cerrar el menú `⋮` de mark.js con foco atrapado dentro
- * mientras está abierto (accesibilidad). Elementos DOM inyectados como
- * parámetros, no `document.getElementById` interno — mismo patrón de
- * `resources/js/shared/theme-toggle.js` (doc = document inyectable) y
- * `resources/js/attendances/terminal/screen-state.js` (elementos por
- * parámetro), para poder testear con objetos falsos sin jsdom.
+ * @fileoverview Abrir/cerrar un menú `⋮` en hoja inferior con foco atrapado
+ * dentro mientras está abierto (accesibilidad). Usado por mark.js (menú de
+ * acciones del empleado) y terminal.js (estado del terminal + tema). Elementos
+ * DOM inyectados como parámetros, no `document.getElementById` interno —
+ * mismo patrón de `resources/js/shared/theme-toggle.js` (doc = document
+ * inyectable) y `resources/js/attendances/terminal/screen-state.js`
+ * (elementos por parámetro), para poder testear con objetos falsos sin jsdom.
  */
 
 /**

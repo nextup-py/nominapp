@@ -28,13 +28,19 @@ export function setOffline(isOffline) {
     const offlineBanner = document.getElementById("offlineBanner");
     const connectivityDot = document.getElementById("connectivityDot");
     const connectivityLabel = document.getElementById("connectivityLabel");
+    // Mirror del estado para lectores de pantalla — el dot del header es aria-hidden
+    // (decorativo) y el texto real vive dentro del menú ⋮, oculto (aria-hidden) mientras
+    // está cerrado, así que ninguno de los dos anuncia cambios por sí solo.
+    const connectivityLabelSr = document.getElementById("connectivityLabelSr");
+    const label = isOffline ? "Sin conexión" : "En línea";
 
     if (offlineBanner) {
         offlineBanner.classList.toggle("is-visible", isOffline);
         offlineBanner.setAttribute("aria-hidden", String(!isOffline));
     }
-    if (connectivityDot)   connectivityDot.classList.toggle("is-offline", isOffline);
-    if (connectivityLabel) connectivityLabel.textContent = isOffline ? "Sin conexión" : "En línea";
+    if (connectivityDot)     connectivityDot.classList.toggle("is-offline", isOffline);
+    if (connectivityLabel)   connectivityLabel.textContent = label;
+    if (connectivityLabelSr) connectivityLabelSr.textContent = label;
 }
 
 /** @param {string} text */

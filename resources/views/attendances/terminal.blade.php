@@ -27,19 +27,27 @@
                 <div class="terminal-header-titles">
                     <span class="terminal-mode-badge">Modo Terminal</span>
                     <span id="terminalHeaderLocation" class="terminal-location-badge"></span>
-                    <div class="terminal-header-meta" id="terminalHeaderMeta">
-                        <span id="terminalHeaderDevice" class="terminal-meta-item hidden"></span>
-                        <span class="terminal-meta-item terminal-connectivity" id="terminalConnectivity">
-                            <span class="connectivity-dot" id="connectivityDot" aria-hidden="true"></span>
-                            <span id="connectivityLabel">En línea</span>
-                        </span>
-                        <span id="terminalHeaderLastSync" class="terminal-meta-item hidden"></span>
-                    </div>
                 </div>
-                <x-theme-toggle-button />
             </div>
-            <div class="terminal-clock" id="terminalHeaderClock" aria-live="off" aria-label="Hora actual">--:--:--</div>
+            <div class="terminal-header-right">
+                <span class="connectivity-dot" id="connectivityDot" aria-hidden="true"></span>
+                {{-- Región viva accesible: el dot es solo visual y el texto vive dentro del
+                sheet (aria-hidden mientras está cerrado), así que ninguno de los dos anuncia
+                cambios a lectores de pantalla — este span espejo sí lo hace. --}}
+                <span id="connectivityLabelSr" class="sr-only" aria-live="polite"></span>
+                <button type="button" id="btnTerminalMenu" class="menu-trigger" aria-haspopup="dialog"
+                    aria-expanded="false" aria-controls="terminalMenuSheet" aria-label="Más opciones">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="5" r="1.5"/>
+                        <circle cx="12" cy="12" r="1.5"/>
+                        <circle cx="12" cy="19" r="1.5"/>
+                    </svg>
+                </button>
+                <div class="terminal-clock" id="terminalHeaderClock" aria-live="off" aria-label="Hora actual">--:--:--</div>
+            </div>
         </header>
+
+        <x-attendance.terminal-menu-sheet />
 
         <div id="offlineBanner" class="offline-banner" role="alert" aria-live="assertive" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
