@@ -8,6 +8,11 @@
    enrollments/already-submitted, enrollments/expired).
    Sin toggle de tema manual: son pantallas de una sola visita,
    sin interacción — solo siguen prefers-color-scheme.
+
+   Variantes de color soportadas: "danger" y "success" (las únicas usadas
+   hoy). Si se necesita una nueva variante (ej. "warning"), agregar sus
+   reglas --icon/--label/--divider acá antes de usarla — pasar un $variant
+   sin CSS propio deja el ícono/label sin color de acento.
    ============================================================ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -15,13 +20,26 @@ body {
     background: var(--c-bg);
     color: var(--c-text);
     min-height: 100dvh;
+    text-align: center;
+}
+.page-wrapper {
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    padding: var(--sp-8);
+    padding: var(--sp-6) var(--sp-4);
 }
-.status-page-container { max-width: 480px; }
+.status-page-card {
+    max-width: 480px;
+    width: 100%;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-sm);
+    overflow: hidden;
+}
+.status-page-card .card-body { padding: var(--sp-8) var(--sp-6) var(--sp-6); }
+
 .status-page-icon {
     width: 80px; height: 80px;
     border-radius: 50%;
@@ -35,8 +53,6 @@ body {
 .status-page-icon--danger svg  { color: var(--c-danger-l); }
 .status-page-icon--success { background: var(--c-success-bg); border-color: var(--c-success-l); }
 .status-page-icon--success svg { color: var(--c-success-l); }
-.status-page-icon--warning { background: var(--c-warning-bg); border-color: var(--c-warning-l); }
-.status-page-icon--warning svg { color: var(--c-warning-l); }
 
 .status-page-label {
     font-size: .75rem; font-weight: 600; letter-spacing: .15em;
@@ -44,8 +60,18 @@ body {
 }
 .status-page-label--danger  { color: var(--c-danger-l); }
 .status-page-label--success { color: var(--c-success-l); }
-.status-page-label--warning { color: var(--c-warning-l); }
 
 .status-page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: var(--sp-3); color: var(--c-text); }
 .status-page-description { font-size: 1rem; color: var(--c-muted); line-height: 1.6; margin-bottom: var(--sp-2); }
-.status-page-extra { font-size: .875rem; color: var(--c-subtle); margin-top: var(--sp-8); }
+
+/* Acento semántico al pie del contenido — mismo color que el ícono/label de
+   la variante, cierra visualmente la tarjeta antes del slot opcional "extra". */
+.status-page-divider {
+    width: 48px; height: 2px;
+    margin: var(--sp-6) auto var(--sp-2);
+    border-radius: 1px;
+}
+.status-page-divider--danger  { background: linear-gradient(90deg, transparent, var(--c-danger-l),  transparent); }
+.status-page-divider--success { background: linear-gradient(90deg, transparent, var(--c-success-l), transparent); }
+
+.status-page-extra { font-size: .875rem; color: var(--c-subtle); margin-top: var(--sp-4); }
