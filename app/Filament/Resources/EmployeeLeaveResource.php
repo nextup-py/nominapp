@@ -340,7 +340,7 @@ class EmployeeLeaveResource extends Resource
                             return $base;
                         })
                         ->modalSubmitActionLabel('Sí, aprobar')
-                        ->visible(fn (EmployeeLeave $record) => $record->status === 'pending')
+                        ->visible(fn (EmployeeLeave $record) => $record->status === 'pending' && auth()->user()->can('approve_employee_leave'))
                         ->action(function (EmployeeLeave $record) {
                             $result = $record->approve(Auth::id());
 
@@ -380,7 +380,7 @@ class EmployeeLeaveResource extends Resource
                         ->modalHeading('Rechazar Licencia')
                         ->modalDescription('Se rechazará esta solicitud de licencia.')
                         ->modalSubmitActionLabel('Sí, rechazar')
-                        ->visible(fn (EmployeeLeave $record) => $record->status === 'pending')
+                        ->visible(fn (EmployeeLeave $record) => $record->status === 'pending' && auth()->user()->can('reject_employee_leave'))
                         ->action(function (EmployeeLeave $record) {
                             $record->reject();
 

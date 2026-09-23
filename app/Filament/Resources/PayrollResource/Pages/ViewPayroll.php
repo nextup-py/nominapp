@@ -64,7 +64,7 @@ class ViewPayroll extends ViewRecord
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->status === 'draft'),
+                ->visible(fn () => $this->record->status === 'draft' && auth()->user()->can('approve_payroll')),
 
             Action::make('mark_disbursed')
                 ->label('Marcar Acreditado')
@@ -85,7 +85,7 @@ class ViewPayroll extends ViewRecord
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->isApproved()),
+                ->visible(fn () => $this->record->isApproved() && auth()->user()->can('disburse_payroll')),
 
             Action::make('mark_paid')
                 ->label('Marcar Pagado')
@@ -105,7 +105,7 @@ class ViewPayroll extends ViewRecord
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->isDisbursed()),
+                ->visible(fn () => $this->record->isDisbursed() && auth()->user()->can('mark_paid_payroll')),
 
             Action::make('revert_paid')
                 ->label('Revertir Pago')
@@ -126,7 +126,7 @@ class ViewPayroll extends ViewRecord
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->isPaid()),
+                ->visible(fn () => $this->record->isPaid() && auth()->user()->can('revert_payroll')),
 
             Action::make('revert_to_approved')
                 ->label('Revertir a Aprobado')
@@ -147,7 +147,7 @@ class ViewPayroll extends ViewRecord
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->isDisbursed() && $this->record->disbursement_batch_id === null),
+                ->visible(fn () => $this->record->isDisbursed() && $this->record->disbursement_batch_id === null && auth()->user()->can('revert_payroll')),
 
             Action::make('unapprove')
                 ->label('Desaprobar')
@@ -172,7 +172,7 @@ class ViewPayroll extends ViewRecord
 
                     $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->visible(fn () => $this->record->isApproved()),
+                ->visible(fn () => $this->record->isApproved() && auth()->user()->can('revert_payroll')),
 
             Action::make('regenerate')
                 ->label('Regenerar')
@@ -209,7 +209,7 @@ class ViewPayroll extends ViewRecord
                             ->send();
                     }
                 })
-                ->visible(fn () => $this->record->status === 'draft'),
+                ->visible(fn () => $this->record->status === 'draft' && auth()->user()->can('regenerate_payroll')),
 
             Action::make('edit_draft')
                 ->label('Editar')

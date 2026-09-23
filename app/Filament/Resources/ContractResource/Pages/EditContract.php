@@ -95,7 +95,7 @@ class EditContract extends EditRecord
                 ->modalHeading('Activar contrato')
                 ->modalDescription('¿Confirmás que querés activar este contrato? Pasará a estado Vigente.')
                 ->modalSubmitActionLabel('Sí, activar')
-                ->visible(fn (Contract $record) => $record->status === 'draft')
+                ->visible(fn (Contract $record) => $record->status === 'draft' && auth()->user()->can('activate_contract'))
                 ->action(function (Contract $record) {
                     $record->update(['status' => 'active']);
                     Notification::make()->success()->title('Contrato activado')->send();
@@ -105,7 +105,7 @@ class EditContract extends EditRecord
                 ->label('Suspender')
                 ->icon('heroicon-o-pause-circle')
                 ->color('warning')
-                ->visible(fn (Contract $record) => $record->status === 'active')
+                ->visible(fn (Contract $record) => $record->status === 'active' && auth()->user()->can('suspend_contract'))
                 ->requiresConfirmation()
                 ->modalHeading('Suspender contrato')
                 ->modalDescription(fn (Contract $record) => "Se suspenderá el contrato de {$record->employee->full_name}. Sus percepciones y deducciones serán desactivadas temporalmente.")
@@ -119,7 +119,7 @@ class EditContract extends EditRecord
                 ->label('Reactivar')
                 ->icon('heroicon-o-play-circle')
                 ->color('success')
-                ->visible(fn (Contract $record) => $record->status === 'suspended')
+                ->visible(fn (Contract $record) => $record->status === 'suspended' && auth()->user()->can('reactivate_contract'))
                 ->requiresConfirmation()
                 ->modalHeading('Reactivar contrato')
                 ->modalDescription(fn (Contract $record) => "Se reactivará el contrato de {$record->employee->full_name}. Sus percepciones y deducciones serán restauradas.")
@@ -133,7 +133,7 @@ class EditContract extends EditRecord
                 ->label('Renovar')
                 ->icon('heroicon-o-arrow-path')
                 ->color('success')
-                ->visible(fn (Contract $record) => $record->status === 'active' && $record->type !== 'indefinido')
+                ->visible(fn (Contract $record) => $record->status === 'active' && $record->type !== 'indefinido' && auth()->user()->can('renew_contract'))
                 ->requiresConfirmation()
                 ->modalHeading('Renovar Contrato')
                 ->modalDescription(function (Contract $record) {
@@ -197,7 +197,7 @@ class EditContract extends EditRecord
                 ->label('Terminar')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->visible(fn (Contract $record) => $record->status === 'active')
+                ->visible(fn (Contract $record) => $record->status === 'active' && auth()->user()->can('terminate_contract'))
                 ->requiresConfirmation()
                 ->modalHeading('Terminar Contrato')
                 ->modalDescription(fn (Contract $record) => "¿Está seguro de que desea terminar el contrato de {$record->employee->full_name}?")

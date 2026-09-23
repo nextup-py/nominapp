@@ -13,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Auth;
@@ -63,7 +64,7 @@ class ViewAguinaldoPeriod extends ViewRecord
 
                     $this->refreshFormData(['status']);
                 })
-                ->visible(fn () => $this->record->isDraft()),
+                ->visible(fn () => $this->record->isDraft() && auth()->user()->can('generate_aguinaldos_period')),
 
             Action::make('mark_all_paid')
                 ->label('Pagar Todos')
@@ -92,13 +93,13 @@ class ViewAguinaldoPeriod extends ViewRecord
 
                     $this->refreshFormData(['status']);
                 })
-                ->visible(fn () => $this->record->isProcessing() && $this->record->pending_aguinaldos_count > 0),
+                ->visible(fn () => $this->record->isProcessing() && $this->record->pending_aguinaldos_count > 0 && auth()->user()->can('mark_paid_aguinaldo')),
 
             Action::make('send_to_bank')
                 ->label('Enviar al Banco')
                 ->icon('heroicon-o-building-library')
                 ->color('info')
-                ->mountUsing(function (\Filament\Forms\Form $form, Action $action) {
+                ->mountUsing(function (Form $form, Action $action) {
                     $hasAguinaldos = Aguinaldo::query()
                         ->where('aguinaldo_period_id', $this->record->id)
                         ->where('status', 'pending')
@@ -214,7 +215,7 @@ class ViewAguinaldoPeriod extends ViewRecord
 
                     $this->redirect(DisbursementBatchResource::getUrl('view', ['record' => $batch]));
                 })
-                ->visible(fn () => $this->record->isProcessing()),
+                ->visible(fn () => $this->record->isProcessing() && auth()->user()->can('create_disbursement_batch')),
 
             Action::make('export_excel')
                 ->label('Exportar')
@@ -262,7 +263,7 @@ class ViewAguinaldoPeriod extends ViewRecord
 
                     $this->refreshFormData(['status', 'closed_at']);
                 })
-                ->visible(fn () => $this->record->isClosed()),
+                ->visible(fn () => $this->record->isClosed() && auth()->user()->can('reopen_aguinaldo_period')),
 
             EditAction::make()
                 ->label('Editar')
@@ -299,7 +300,7 @@ class ViewAguinaldoPeriod extends ViewRecord
 
                     $this->refreshFormData(['status', 'closed_at']);
                 })
-                ->visible(fn () => $this->record->isProcessing()),
+                ->visible(fn () => $this->record->isProcessing() && auth()->user()->can('close_aguinaldo_period')),
 
             Action::make('force_delete')
                 ->label('Eliminar')
@@ -325,7 +326,7 @@ class ViewAguinaldoPeriod extends ViewRecord
 
                     $this->redirect($this->getResource()::getUrl('index'));
                 })
-                ->visible(fn () => $this->record->isProcessing() || $this->record->isClosed()),
+                ->visible(fn () => ($this->record->isProcessing() || $this->record->isClosed()) && auth()->user()->can('delete_aguinaldo_period')),
         ];
     }
 }

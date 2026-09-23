@@ -239,7 +239,7 @@ class AguinaldoResource extends Resource
                             ->body('El aguinaldo de '.($record->employee?->full_name ?? 'empleado eliminado').' ha sido marcado como pagado.')
                             ->send();
                     })
-                    ->visible(fn (Aguinaldo $record) => $record->isPending() && $record->period?->isProcessing()),
+                    ->visible(fn (Aguinaldo $record) => $record->isPending() && $record->period?->isProcessing() && auth()->user()->can('mark_paid_aguinaldo')),
 
                 Action::make('unmark_paid')
                     ->label('Marcar Pendiente')
@@ -258,7 +258,7 @@ class AguinaldoResource extends Resource
                             ->body('El aguinaldo de '.($record->employee?->full_name ?? 'empleado eliminado').' volvió a estado Pendiente.')
                             ->send();
                     })
-                    ->visible(fn (Aguinaldo $record) => $record->isPaid() && $record->period?->isProcessing()),
+                    ->visible(fn (Aguinaldo $record) => $record->isPaid() && $record->period?->isProcessing() && auth()->user()->can('mark_paid_aguinaldo')),
 
                 Action::make('regenerate')
                     ->label('Regenerar')
@@ -345,7 +345,8 @@ class AguinaldoResource extends Resource
                                 ->body("{$count} aguinaldo(s) han sido marcados como pagados.")
                                 ->send();
                         })
-                        ->deselectRecordsAfterCompletion(),
+                        ->deselectRecordsAfterCompletion()
+                        ->visible(fn () => auth()->user()->can('mark_paid_aguinaldo')),
 
                     BulkAction::make('bulk_unmark_paid')
                         ->label('Marcar como Pendientes')
@@ -367,7 +368,8 @@ class AguinaldoResource extends Resource
                                 ->body("{$count} aguinaldo(s) han sido revertidos a Pendiente.")
                                 ->send();
                         })
-                        ->deselectRecordsAfterCompletion(),
+                        ->deselectRecordsAfterCompletion()
+                        ->visible(fn () => auth()->user()->can('mark_paid_aguinaldo')),
 
                     BulkAction::make('bulk_regenerate')
                         ->label('Regenerar')

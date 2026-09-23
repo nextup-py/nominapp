@@ -387,7 +387,7 @@ class LiquidacionResource extends Resource
                     )
                     ->action(fn (Liquidacion $record, LiquidacionService $service) => static::performCalculation($record, $service, 'Liquidación calculada')
                     )
-                    ->visible(fn (Liquidacion $record) => $record->isDraft()),
+                    ->visible(fn (Liquidacion $record) => $record->isDraft() && auth()->user()->can('calculate_liquidacion')),
 
                 Action::make('recalculate')
                     ->label('Recalcular')
@@ -402,7 +402,7 @@ class LiquidacionResource extends Resource
                     )
                     ->action(fn (Liquidacion $record, LiquidacionService $service) => static::performCalculation($record, $service, 'Liquidación recalculada')
                     )
-                    ->visible(fn (Liquidacion $record) => $record->isCalculated()),
+                    ->visible(fn (Liquidacion $record) => $record->isCalculated() && auth()->user()->can('calculate_liquidacion')),
 
                 Action::make('close')
                     ->label('Cerrar')
@@ -417,7 +417,7 @@ class LiquidacionResource extends Resource
                     )
                     ->action(fn (Liquidacion $record, LiquidacionService $service) => static::performClose($record, $service)
                     )
-                    ->visible(fn (Liquidacion $record) => $record->isCalculated()),
+                    ->visible(fn (Liquidacion $record) => $record->isCalculated() && auth()->user()->can('close_liquidacion')),
 
                 Action::make('download_pdf')
                     ->label('PDF')
@@ -718,6 +718,7 @@ class LiquidacionResource extends Resource
             ->icon('heroicon-o-arrow-down-tray')
             ->color('info')
             ->tooltip('Exportar registros visibles (respeta filtros y tabs activos)')
+            ->visible(fn () => auth()->user()->can('export_liquidacion'))
             ->exports([
                 ExcelExport::make()
                     ->withColumns([

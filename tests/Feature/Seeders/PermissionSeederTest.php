@@ -7,7 +7,7 @@ use Spatie\Permission\Models\Permission;
 uses(RefreshDatabase::class);
 
 it('creates the 5 crud permissions for every model in the catalog', function () {
-    (new PermissionSeeder())->run();
+    (new PermissionSeeder)->run();
 
     $expected = count(PermissionSeeder::MODELS) * count(PermissionSeeder::ABILITIES);
 
@@ -17,14 +17,17 @@ it('creates the 5 crud permissions for every model in the catalog', function () 
 });
 
 it('is idempotent', function () {
-    (new PermissionSeeder())->run();
-    (new PermissionSeeder())->run();
+    (new PermissionSeeder)->run();
+    (new PermissionSeeder)->run();
 
     expect(Permission::count())->toBe(count(PermissionSeeder::MODELS) * count(PermissionSeeder::ABILITIES));
 });
 
 it('every group in GROUPS only references models present in MODELS', function () {
-    $modelsInGroups = collect(PermissionSeeder::GROUPS)->flatten()->all();
+    $modelsInGroups = collect(PermissionSeeder::GROUPS)->flatten()
+        ->filter(fn ($m) => $m !== 'period') // Pseudo-model for business actions only (BusinessActionPermissionSeeder)
+        ->values()
+        ->all();
 
     expect($modelsInGroups)->toEqualCanonicalizing(PermissionSeeder::MODELS);
 });

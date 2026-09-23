@@ -18,7 +18,7 @@ class ViewMerchandiseWithdrawal extends ViewRecord
     /**
      * Acciones del encabezado según el estado del retiro.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
@@ -27,7 +27,7 @@ class ViewMerchandiseWithdrawal extends ViewRecord
                 ->label('Aprobar')
                 ->icon('heroicon-o-play')
                 ->color('success')
-                ->visible(fn () => $this->record->isPending())
+                ->visible(fn () => $this->record->isPending() && auth()->user()->can('approve_merchandise_withdrawal'))
                 ->requiresConfirmation()
                 ->modalHeading('Aprobar Retiro')
                 ->modalDescription(function () {
@@ -62,7 +62,7 @@ class ViewMerchandiseWithdrawal extends ViewRecord
                 ->label('Rechazar')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->visible(fn () => $this->record->isPending())
+                ->visible(fn () => $this->record->isPending() && auth()->user()->can('reject_merchandise_withdrawal'))
                 ->requiresConfirmation()
                 ->modalHeading('Rechazar Retiro')
                 ->modalDescription('¿Está seguro de que desea rechazar esta solicitud? El retiro quedará en estado Rechazado.')
@@ -97,7 +97,7 @@ class ViewMerchandiseWithdrawal extends ViewRecord
                 ->label('Cancelar')
                 ->icon('heroicon-o-minus-circle')
                 ->color('warning')
-                ->visible(fn () => $this->record->isApproved() && $this->record->paid_installments_count === 0)
+                ->visible(fn () => $this->record->isApproved() && $this->record->paid_installments_count === 0 && auth()->user()->can('cancel_merchandise_withdrawal'))
                 ->requiresConfirmation()
                 ->modalHeading('Cancelar Retiro')
                 ->modalDescription(function () {

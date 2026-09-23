@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\UserResource\Pages\ManageUsers;
 use App\Models\User;
+use Database\Seeders\BusinessActionPermissionSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -12,6 +13,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     (new PermissionSeeder)->run();
+    (new BusinessActionPermissionSeeder)->run();
     (new RoleSeeder)->run();
 });
 

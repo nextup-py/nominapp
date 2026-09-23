@@ -43,7 +43,7 @@ class ViewAguinaldo extends ViewRecord
 
                     $this->refreshFormData(['status', 'paid_at']);
                 })
-                ->visible(fn () => $this->record->isPending() && $this->record->period->isProcessing()),
+                ->visible(fn () => $this->record->isPending() && $this->record->period->isProcessing() && auth()->user()->can('mark_paid_aguinaldo')),
 
             Action::make('unmark_paid')
                 ->label('Marcar Pendiente')
@@ -64,7 +64,7 @@ class ViewAguinaldo extends ViewRecord
 
                     $this->refreshFormData(['status', 'paid_at']);
                 })
-                ->visible(fn () => $this->record->isPaid() && $this->record->period->isProcessing()),
+                ->visible(fn () => $this->record->isPaid() && $this->record->period->isProcessing() && auth()->user()->can('mark_paid_aguinaldo')),
 
             Action::make('regenerate')
                 ->label('Regenerar')

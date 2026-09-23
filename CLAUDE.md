@@ -335,7 +335,7 @@ Salario del mes 13, pagadero en diciembre. Se gestiona por `AguinaldoPeriod` (un
 
 ### Módulo de Roles y Permisos
 
-Fundación de control de acceso vía `spatie/laravel-permission`. Cubre permisos CRUD por modelo y administración de roles — **no** cubre permisos de acciones de negocio (aprobar, cerrar, exportar, etc.) ni auditoría completa, que quedan para planes posteriores.
+Control de acceso vía `spatie/laravel-permission`. Cubre permisos CRUD por modelo (`PermissionSeeder`) y permisos de acciones de negocio — aprobar, rechazar, cerrar, desembolsar, exportar, etc. (`BusinessActionPermissionSeeder`) — para los 12 módulos con workflow real: Loan, Advance, MerchandiseWithdrawal, DisbursementBatch, Payroll, PayrollPeriod, Liquidación, Aguinaldo, AguinaldoPeriod, EmployeeLeave, Absence, Contract. Warning queda fuera (sin lifecycle). **No** cubre auditoría completa, que queda para un plan posterior (Plan 3).
 
 **Patrón `BasePolicy`:** cada uno de los 33 modelos con Resource en Filament tiene una Policy real (`app/Policies/{Modelo}Policy.php`) que solo extiende `App\Policies\BasePolicy` — sin lógica propia. `BasePolicy` resuelve el nombre del permiso por convención a partir del nombre de la clase (`EmployeePolicy` → abilities `view_any_employee`, `view_employee`, `create_employee`, `update_employee`, `delete_employee`) y delega en `$user->can(...)`. Laravel descubre las Policies automáticamente por convención de nombres — no requieren registro manual.
 
@@ -348,6 +348,8 @@ Fundación de control de acceso vía `spatie/laravel-permission`. Cubre permisos
 - **Solo Lectura** — `view_any`/`view` sobre todos los 33 modelos, sin permisos de mutación.
 
 `RoleSeeder` también asigna Super Admin a cualquier usuario existente sin rol (`User::doesntHave('roles')`), tanto en la primera siembra como en reejecuciones — útil para instalaciones que migran a este sistema.
+
+**Permisos de acciones de negocio (`BusinessActionPermissionSeeder`):** convención `{accion}_{modelo}` (ej. `approve_loan`, `close_payroll_period`), un permiso por recurso+verbo — no por cada ocurrencia del botón en fila/header/bulk, que comparten el mismo permiso. Se agrega como `&& auth()->user()->can('{permiso}')` a la condición de estado ya existente en cada `->visible()`. Acciones puramente administrativas (cambiar método de pago, editar borrador, descargar un archivo ya generado) quedan cubiertas por los permisos CRUD de Plan 1 (`update_{modelo}`/`view_{modelo}`), sin permiso de negocio propio. `RoleResource` muestra los permisos de negocio junto a los CRUD de cada modelo, dentro del mismo `CheckboxList` agrupado por módulo — no en una sección aparte.
 
 **Bloqueo de panel sin rol:** `User::canAccessPanel()` requiere al menos un rol asignado — un usuario recién creado sin rol no puede entrar a `/admin` hasta que se le asigne uno.
 

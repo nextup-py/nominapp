@@ -214,7 +214,7 @@ class AguinaldosRelationManager extends RelationManager
                             ->body("El aguinaldo de {$record->employee->full_name} por ".Aguinaldo::formatCurrency($record->aguinaldo_amount).' ha sido marcado como pagado.')
                             ->send();
                     })
-                    ->visible(fn (Aguinaldo $record) => $record->isPending() && $this->getOwnerRecord()->isProcessing()),
+                    ->visible(fn (Aguinaldo $record) => $record->isPending() && $this->getOwnerRecord()->isProcessing() && auth()->user()->can('mark_paid_aguinaldo')),
 
                 Action::make('unmark_paid')
                     ->label('Marcar Pendiente')
@@ -233,7 +233,7 @@ class AguinaldosRelationManager extends RelationManager
                             ->body("El aguinaldo de {$record->employee->full_name} volvió a estado Pendiente.")
                             ->send();
                     })
-                    ->visible(fn (Aguinaldo $record) => $record->isPaid() && $this->getOwnerRecord()->isProcessing()),
+                    ->visible(fn (Aguinaldo $record) => $record->isPaid() && $this->getOwnerRecord()->isProcessing() && auth()->user()->can('mark_paid_aguinaldo')),
 
                 Action::make('regenerate')
                     ->label('Regenerar')
@@ -317,7 +317,7 @@ class AguinaldosRelationManager extends RelationManager
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->visible(fn () => $this->getOwnerRecord()->isProcessing())
+                        ->visible(fn () => $this->getOwnerRecord()->isProcessing() && auth()->user()->can('mark_paid_aguinaldo'))
                         ->action(function (Collection $records) {
                             $count = $records->filter->isPending()->each->markAsPaid()->count();
 
@@ -337,7 +337,7 @@ class AguinaldosRelationManager extends RelationManager
                         ->modalHeading('¿Marcar como Pendientes?')
                         ->modalDescription('Se revertirá el pago de los aguinaldos pagados seleccionados y volverán a estado Pendiente.')
                         ->modalSubmitActionLabel('Sí, marcar como pendientes')
-                        ->visible(fn () => $this->getOwnerRecord()->isProcessing())
+                        ->visible(fn () => $this->getOwnerRecord()->isProcessing() && auth()->user()->can('mark_paid_aguinaldo'))
                         ->action(function (Collection $records) {
                             $count = $records->filter->isPaid()->each->markAsPending()->count();
 

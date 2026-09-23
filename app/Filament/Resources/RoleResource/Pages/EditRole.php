@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\RoleResource\Pages;
 
 use App\Filament\Resources\RoleResource;
+use Database\Seeders\BusinessActionPermissionSeeder;
 use Database\Seeders\PermissionSeeder;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -35,8 +36,13 @@ class EditRole extends EditRecord
         foreach (PermissionSeeder::GROUPS as $groupName => $models) {
             $groupPermissionNames = [];
             foreach ($models as $model) {
-                foreach (PermissionSeeder::ABILITIES as $ability) {
-                    $groupPermissionNames[] = "{$ability}_{$model}";
+                if (in_array($model, PermissionSeeder::MODELS, true)) {
+                    foreach (PermissionSeeder::ABILITIES as $ability) {
+                        $groupPermissionNames[] = "{$ability}_{$model}";
+                    }
+                }
+                foreach (array_keys(BusinessActionPermissionSeeder::ACTIONS[$model] ?? []) as $action) {
+                    $groupPermissionNames[] = "{$action}_{$model}";
                 }
             }
 

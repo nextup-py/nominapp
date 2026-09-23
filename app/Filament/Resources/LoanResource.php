@@ -519,7 +519,7 @@ class LoanResource extends Resource
                     ->label('Aprobar')
                     ->icon('heroicon-o-check')
                     ->color('success')
-                    ->visible(fn (Loan $record) => $record->isPending())
+                    ->visible(fn (Loan $record) => $record->isPending() && auth()->user()->can('approve_loan'))
                     ->requiresConfirmation()
                     ->modalHeading('Aprobar Préstamo')
                     ->modalDescription(function (Loan $record) {
@@ -542,7 +542,7 @@ class LoanResource extends Resource
                     ->label('Rechazar')
                     ->icon('heroicon-o-x-circle')
                     ->color('warning')
-                    ->visible(fn (Loan $record) => $record->isPending())
+                    ->visible(fn (Loan $record) => $record->isPending() && auth()->user()->can('reject_loan'))
                     ->requiresConfirmation()
                     ->modalHeading('Rechazar Préstamo')
                     ->modalDescription(fn (Loan $record) => 'Se rechazará la solicitud de préstamo de '.number_format((float) $record->amount, 0, ',', '.').' Gs. para '.$record->employee->full_name.'. El préstamo quedará en estado Rechazado.')
@@ -567,7 +567,7 @@ class LoanResource extends Resource
                     ->label('Marcar Entregado')
                     ->icon('heroicon-o-banknotes')
                     ->color('primary')
-                    ->visible(fn (Loan $record) => $record->isApproved())
+                    ->visible(fn (Loan $record) => $record->isApproved() && auth()->user()->can('disburse_loan'))
                     ->requiresConfirmation()
                     ->modalHeading('Marcar Préstamo como Entregado')
                     ->modalDescription(fn (Loan $record) => 'Confirme que el dinero de Gs. '.number_format((float) $record->amount, 0, ',', '.').' fue entregado a '.($record->employee?->full_name ?? 'empleado eliminado').'. Las cuotas comenzarán a descontarse en la próxima nómina.')
@@ -624,6 +624,7 @@ class LoanResource extends Resource
                         ->label('Aprobar')
                         ->icon('heroicon-o-check')
                         ->color('success')
+                        ->visible(fn () => auth()->user()->can('approve_loan'))
                         ->requiresConfirmation()
                         ->modalHeading('Aprobar Préstamos')
                         ->modalDescription('Se aprobarán los préstamos seleccionados que estén en estado Pendiente. Los demás serán ignorados.')
@@ -665,6 +666,7 @@ class LoanResource extends Resource
                         ->label('Rechazar')
                         ->icon('heroicon-o-x-circle')
                         ->color('warning')
+                        ->visible(fn () => auth()->user()->can('reject_loan'))
                         ->requiresConfirmation()
                         ->modalHeading('Rechazar Préstamos')
                         ->modalDescription('Se rechazarán los préstamos seleccionados que estén en estado Pendiente. Los demás serán ignorados.')
@@ -712,7 +714,8 @@ class LoanResource extends Resource
                         ])
                         ->label('Exportar a Excel')
                         ->color('info')
-                        ->icon('heroicon-o-arrow-down-tray'),
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->visible(fn () => auth()->user()->can('export_loan')),
                 ]),
             ])
             ->defaultSort('created_at', 'desc')

@@ -226,7 +226,7 @@ class ViewDisbursementBatch extends ViewRecord
                 ->label('Confirmar Lote')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn () => $this->record->isPending())
+                ->visible(fn () => $this->record->isPending() && auth()->user()->can('confirm_disbursement_batch'))
                 ->modalHeading('Confirmar resultado bancario')
                 ->modalDescription(fn () => match ($this->record->type) {
                     'payroll' => 'Adjuntá el comprobante del banco. Marcá los recibos rechazados (si los hay); los demás quedarán como Acreditados.',
@@ -334,7 +334,7 @@ class ViewDisbursementBatch extends ViewRecord
                 ->label('Cancelar Lote')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->visible(fn () => $this->record->isPending())
+                ->visible(fn () => $this->record->isPending() && auth()->user()->can('cancel_disbursement_batch'))
                 ->requiresConfirmation()
                 ->modalHeading('Cancelar lote de pago')
                 ->modalDescription(fn () => $this->record->type === 'payroll'

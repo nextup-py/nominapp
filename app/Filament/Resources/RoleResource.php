@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\RoleResource\Pages;
+use Database\Seeders\BusinessActionPermissionSeeder;
 use Database\Seeders\PermissionSeeder;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Section;
@@ -72,8 +73,13 @@ class RoleResource extends Resource
         foreach (PermissionSeeder::GROUPS as $groupName => $models) {
             $options = [];
             foreach ($models as $model) {
-                foreach (PermissionSeeder::ABILITIES as $ability) {
-                    $options["{$ability}_{$model}"] = PermissionSeeder::ABILITY_LABELS[$ability].' — '.PermissionSeeder::MODEL_LABELS[$model];
+                if (in_array($model, PermissionSeeder::MODELS, true)) {
+                    foreach (PermissionSeeder::ABILITIES as $ability) {
+                        $options["{$ability}_{$model}"] = PermissionSeeder::ABILITY_LABELS[$ability].' — '.PermissionSeeder::MODEL_LABELS[$model];
+                    }
+                }
+                foreach (BusinessActionPermissionSeeder::ACTIONS[$model] ?? [] as $action => $label) {
+                    $options["{$action}_{$model}"] = $label.' — '.PermissionSeeder::MODEL_LABELS[$model];
                 }
             }
 

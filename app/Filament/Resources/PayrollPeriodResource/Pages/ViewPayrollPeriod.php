@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PayrollPeriodResource\Pages;
 
+use App\Filament\Pages\ContractReport;
 use App\Filament\Pages\SalaryReport;
 use App\Filament\Resources\DisbursementBatchResource;
 use App\Filament\Resources\PayrollPeriodResource;
@@ -20,6 +21,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -51,7 +53,7 @@ class ViewPayrollPeriod extends ViewRecord
                 ->label('Generar Recibos')
                 ->icon('heroicon-o-document-plus')
                 ->color('success')
-                ->mountUsing(function (?\Filament\Forms\Form $form, Action $action) {
+                ->mountUsing(function (?Form $form, Action $action) {
                     $existingIds = $this->record->payrolls()->pluck('employee_id');
 
                     $pending = Employee::where('status', 'active')
@@ -136,7 +138,7 @@ class ViewPayrollPeriod extends ViewRecord
                                 ->actions([
                                     \Filament\Notifications\Actions\Action::make('ver_reporte')
                                         ->label('Ver reporte')
-                                        ->url(\App\Filament\Pages\ContractReport::getUrl())
+                                        ->url(ContractReport::getUrl())
                                         ->button(),
                                 ])
                                 ->send();
@@ -166,7 +168,7 @@ class ViewPayrollPeriod extends ViewRecord
 
                     $this->js('window.location.reload()');
                 })
-                ->visible(fn () => in_array($this->record->status, ['draft', 'processing'])),
+                ->visible(fn () => in_array($this->record->status, ['draft', 'processing']) && auth()->user()->can('generate_payrolls_period')),
 
             Action::make('approve_all_payrolls')
                 ->label('Aprobar Todos')
@@ -200,7 +202,8 @@ class ViewPayrollPeriod extends ViewRecord
                     $this->js('window.location.reload()');
                 })
                 ->visible(fn () => $this->record->status === 'processing'
-                    && $this->record->payrolls()->where('status', 'draft')->exists()),
+                    && $this->record->payrolls()->where('status', 'draft')->exists()
+                    && auth()->user()->can('approve_payroll')),
 
             Action::make('close_period')
                 ->label('Cerrar Planilla')
@@ -285,7 +288,8 @@ class ViewPayrollPeriod extends ViewRecord
                     $this->refreshFormData(['status', 'closed_at', 'updated_at']);
                 })
                 ->visible(fn () => $this->record->status === 'processing'
-                    && $this->record->payrolls()->exists()),
+                    && $this->record->payrolls()->exists()
+                    && auth()->user()->can('close_payroll_period')),
 
             Action::make('reopen_period')
                 ->label('Reabrir Planilla')
@@ -311,14 +315,14 @@ class ViewPayrollPeriod extends ViewRecord
 
                     $this->refreshFormData(['status', 'closed_at', 'updated_at']);
                 })
-                ->visible(fn () => $this->record->status === 'closed'),
+                ->visible(fn () => $this->record->status === 'closed' && auth()->user()->can('reopen_payroll_period')),
 
             ActionGroup::make([
                 Action::make('create_payroll_batch')
                     ->label('Enviar al Banco')
                     ->icon('heroicon-o-building-library')
                     ->color('info')
-                    ->mountUsing(function (\Filament\Forms\Form $form, Action $action) {
+                    ->mountUsing(function (Form $form, Action $action) {
                         $hasPayrolls = Payroll::query()
                             ->where('payroll_period_id', $this->record->id)
                             ->where('status', 'approved')
@@ -500,7 +504,7 @@ class ViewPayrollPeriod extends ViewRecord
 
                         $this->redirect(DisbursementBatchResource::getUrl('view', ['record' => $batch]));
                     })
-                    ->visible(fn () => $this->record->status === 'processing'),
+                    ->visible(fn () => $this->record->status === 'processing' && auth()->user()->can('create_disbursement_batch')),
 
                 Action::make('mark_cash_paid')
                     ->label('Marcar Efectivo como Pagado')
@@ -548,7 +552,8 @@ class ViewPayrollPeriod extends ViewRecord
                         $this->js('window.location.reload()');
                     })
                     ->visible(fn () => in_array($this->record->status, ['processing', 'closed'])
-                        && $this->record->payrolls()->where('payment_method', 'cash')->where('status', 'approved')->exists()),
+                        && $this->record->payrolls()->where('payment_method', 'cash')->where('status', 'approved')->exists()
+                        && auth()->user()->can('mark_paid_payroll')),
 
                 Action::make('salary_report')
                     ->label('Reporte de Salarios')
