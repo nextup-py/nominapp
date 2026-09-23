@@ -80,19 +80,30 @@ export async function handleLinkSubmit(formValues, endpoint, csrfToken, storage 
 function initLinkForm() {
     const form = document.getElementById('linkForm');
     const btn = document.getElementById('btnLink');
+    const btnLabel = btn?.querySelector('.btn-label');
+    const btnSpinner = btn?.querySelector('.btn-spinner');
     const statusEl = document.getElementById('status');
     if (!form || !btn || !statusEl) return;
 
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    const successCard = document.getElementById('linkSuccessCard');
+    const successMessage = document.getElementById('linkSuccessMessage');
     const brandingEl = document.getElementById('linkSuccessBranding');
     const brandingLogo = document.getElementById('linkSuccessLogo');
     const brandingName = document.getElementById('linkSuccessCompanyName');
 
+    const setLoading = (isLoading) => {
+        btn.disabled = isLoading;
+        btnSpinner?.classList.toggle('hidden', !isLoading);
+        if (btnLabel) {
+            btnLabel.textContent = isLoading ? 'Vinculando...' : 'Vincular este dispositivo';
+        }
+    };
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        btn.disabled = true;
-        statusEl.textContent = 'Vinculando...';
-        statusEl.className = 'status';
+        statusEl.classList.add('hidden');
+        setLoading(true);
 
         const endpoint = window.location.pathname.replace(/\/$/, '');
         const result = await handleLinkSubmit(
@@ -106,8 +117,8 @@ function initLinkForm() {
 
         if (!result.ok) {
             statusEl.textContent = result.message;
-            statusEl.className = 'status status--error';
-            btn.disabled = false;
+            statusEl.className = 'status alert-box alert-box-error';
+            setLoading(false);
             return;
         }
 
@@ -122,8 +133,11 @@ function initLinkForm() {
             brandingEl?.classList.remove('hidden');
         }
 
-        statusEl.textContent = `Dispositivo vinculado. ¡Hola, ${result.employee.first_name}! Redirigiendo...`;
-        statusEl.className = 'status status--success';
+        if (successMessage) {
+            successMessage.textContent = `Dispositivo vinculado. ¡Hola, ${result.employee.first_name}! Redirigiendo...`;
+        }
+        form.classList.add('hidden');
+        successCard?.classList.remove('hidden');
 
         setTimeout(() => {
             window.location.href = '/marcar';
