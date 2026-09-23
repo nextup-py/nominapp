@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\Position;
+use App\Services\PayrollPDFGenerator;
 use App\Services\PayrollService;
 use App\Settings\PayrollSettings;
 use Filament\Forms\Components\Hidden;
@@ -16,6 +17,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select as FormSelect;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Infolists\Components\Group;
@@ -39,6 +41,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Excel;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -229,7 +232,7 @@ class PayrollsRelationManager extends RelationManager
                     ->label('Agregar Recibo')
                     ->icon('heroicon-o-user-plus')
                     ->color('primary')
-                    ->mountUsing(function (\Filament\Forms\Form $form) {
+                    ->mountUsing(function (Form $form) {
                         $period = $this->getOwnerRecord();
                         $existingIds = $period->payrolls()->pluck('employee_id');
 
@@ -354,7 +357,7 @@ class PayrollsRelationManager extends RelationManager
                                 ->title('Recibo aprobado')
                                 ->send();
                         })
-                        ->visible(fn (Payroll $record) => $record->status === 'draft' && $this->getOwnerRecord()->status !== 'closed'),
+                        ->visible(fn (Payroll $record) => $record->status === 'draft' && $this->getOwnerRecord()->status !== 'closed' && auth()->user()->can('approve_payroll')),
 
                     // Transición manual approved → disbursed para transferencias (sin lote bancario)
                     Action::make('mark_disbursed')
@@ -376,7 +379,8 @@ class PayrollsRelationManager extends RelationManager
                         })
                         ->visible(fn (Payroll $record) => $record->status === 'approved'
                             && $record->payment_method === 'transfer'
-                            && $this->getOwnerRecord()->status !== 'closed'),
+                            && $this->getOwnerRecord()->status !== 'closed'
+                            && auth()->user()->can('disburse_payroll')),
 
                     // Marca como pagado: efectivo aprobado (sin pasar por disbursed) o transferencia ya acreditada
                     Action::make('mark_paid')
@@ -402,7 +406,8 @@ class PayrollsRelationManager extends RelationManager
                             && (
                                 ($record->status === 'approved' && $record->payment_method === 'cash')
                                 || $record->status === 'disbursed'
-                            )),
+                            )
+                            && auth()->user()->can('mark_paid_payroll')),
 
                     // Revierte disbursed → approved solo si no está en un lote bancario
                     Action::make('revert_disbursed')
@@ -424,7 +429,8 @@ class PayrollsRelationManager extends RelationManager
                         })
                         ->visible(fn (Payroll $record) => $record->status === 'disbursed'
                             && $record->disbursement_batch_id === null
-                            && $this->getOwnerRecord()->status !== 'closed'),
+                            && $this->getOwnerRecord()->status !== 'closed'
+                            && auth()->user()->can('revert_payroll')),
 
                     // Revierte paid → disbursed (transferencia) o paid → approved (efectivo)
                     Action::make('revert_paid')
@@ -449,7 +455,7 @@ class PayrollsRelationManager extends RelationManager
                                 ->body("El recibo de {$record->employee->full_name} ha vuelto a estado {$label}.")
                                 ->send();
                         })
-                        ->visible(fn (Payroll $record) => $record->status === 'paid' && $this->getOwnerRecord()->status !== 'closed'),
+                        ->visible(fn (Payroll $record) => $record->status === 'paid' && $this->getOwnerRecord()->status !== 'closed' && auth()->user()->can('revert_payroll')),
 
                     Action::make('unapprove')
                         ->label('Desaprobar')
@@ -472,7 +478,7 @@ class PayrollsRelationManager extends RelationManager
                                 ->body("El recibo de {$record->employee->full_name} ha vuelto a estado Borrador.")
                                 ->send();
                         })
-                        ->visible(fn (Payroll $record) => $record->status === 'approved' && $this->getOwnerRecord()->status !== 'closed'),
+                        ->visible(fn (Payroll $record) => $record->status === 'approved' && $this->getOwnerRecord()->status !== 'closed' && auth()->user()->can('revert_payroll')),
 
                     Action::make('add_manual_extra_hours')
                         ->label('Agregar ajuste HE')
@@ -481,7 +487,7 @@ class PayrollsRelationManager extends RelationManager
                         ->tooltip('Agregar horas extras manuales a este recibo')
                         ->visible(fn (Payroll $record) => $record->status === 'draft'
                             && $this->getOwnerRecord()->status !== 'closed')
-                        ->mountUsing(function (\Filament\Forms\Form $form, Payroll $record) {
+                        ->mountUsing(function (Form $form, Payroll $record) {
                             $settings = app(PayrollSettings::class);
                             $employee = $record->employee;
                             $period = $record->period;
@@ -635,7 +641,7 @@ class PayrollsRelationManager extends RelationManager
                         ->visible(fn (Payroll $record) => $record->status === 'draft'
                             && $record->items()->where('is_manual_override', true)->exists()
                             && $this->getOwnerRecord()->status !== 'closed')
-                        ->mountUsing(function (\Filament\Forms\Form $form, Payroll $record) {
+                        ->mountUsing(function (Form $form, Payroll $record) {
                             $settings = app(PayrollSettings::class);
                             $employee = $record->employee;
                             $period = $record->period;
@@ -904,7 +910,7 @@ class PayrollsRelationManager extends RelationManager
                                     ->send();
                             }
                         })
-                        ->visible(fn (Payroll $record) => $record->status === 'draft' && $this->getOwnerRecord()->status !== 'closed'),
+                        ->visible(fn (Payroll $record) => $record->status === 'draft' && $this->getOwnerRecord()->status !== 'closed' && auth()->user()->can('regenerate_payroll')),
 
                     DeleteAction::make()
                         ->visible(fn (Payroll $record) => $record->status === 'draft' && $this->getOwnerRecord()->status !== 'closed')
@@ -940,7 +946,7 @@ class PayrollsRelationManager extends RelationManager
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion()
-                        ->visible(fn () => $this->getOwnerRecord()->status !== 'closed'),
+                        ->visible(fn () => $this->getOwnerRecord()->status !== 'closed' && auth()->user()->can('approve_payroll')),
 
                     BulkAction::make('mark_disbursed_selected')
                         ->label('Marcar Acreditados')
@@ -965,7 +971,7 @@ class PayrollsRelationManager extends RelationManager
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion()
-                        ->visible(fn () => $this->getOwnerRecord()->status !== 'closed'),
+                        ->visible(fn () => $this->getOwnerRecord()->status !== 'closed' && auth()->user()->can('disburse_payroll')),
 
                     // Marca como pagados: efectivo aprobado o cualquier recibo acreditado
                     BulkAction::make('mark_paid_selected')
@@ -992,7 +998,8 @@ class PayrollsRelationManager extends RelationManager
                                 ->title("{$count} recibos marcados como pagados")
                                 ->send();
                         })
-                        ->deselectRecordsAfterCompletion(),
+                        ->deselectRecordsAfterCompletion()
+                        ->visible(fn () => auth()->user()->can('mark_paid_payroll')),
 
                     // Revierte paid → disbursed (transferencia) o paid → approved (efectivo)
                     BulkAction::make('revert_paid_selected')
@@ -1019,7 +1026,7 @@ class PayrollsRelationManager extends RelationManager
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion()
-                        ->visible(fn () => $this->getOwnerRecord()->status !== 'closed'),
+                        ->visible(fn () => $this->getOwnerRecord()->status !== 'closed' && auth()->user()->can('revert_payroll')),
 
                     BulkAction::make('unapprove_selected')
                         ->label('Desaprobar Seleccionados')
@@ -1048,7 +1055,7 @@ class PayrollsRelationManager extends RelationManager
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion()
-                        ->visible(fn () => $this->getOwnerRecord()->status !== 'closed'),
+                        ->visible(fn () => $this->getOwnerRecord()->status !== 'closed' && auth()->user()->can('revert_payroll')),
 
                     BulkAction::make('download_pdfs')
                         ->label('Descargar PDFs')
@@ -1069,7 +1076,7 @@ class PayrollsRelationManager extends RelationManager
                         ->action(function (Collection $records, array $data) {
                             $records->load(['employee.activeContract.position.department', 'items']);
                             $mode = $data['mode'];
-                            $generator = app(\App\Services\PayrollPDFGenerator::class);
+                            $generator = app(PayrollPDFGenerator::class);
 
                             $tempDir = storage_path('app/public/temp');
                             if (! is_dir($tempDir)) {
@@ -1112,7 +1119,7 @@ class PayrollsRelationManager extends RelationManager
                                 return;
                             }
 
-                            $uniqueId = \Illuminate\Support\Str::uuid();
+                            $uniqueId = Str::uuid();
                             $suffix = $mode === 'employee' ? '_empleado' : '';
 
                             if (count($pdfs) === 1) {
@@ -1137,7 +1144,8 @@ class PayrollsRelationManager extends RelationManager
                                 ->body('Los recibos se están descargando.')
                                 ->send();
                         })
-                        ->deselectRecordsAfterCompletion(),
+                        ->deselectRecordsAfterCompletion()
+                        ->visible(fn () => auth()->user()->can('export_payroll')),
 
                     ExportBulkAction::make()
                         ->exports([

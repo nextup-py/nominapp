@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Resources\AguinaldoPeriodResource\Pages\ViewAguinaldoPeriod;
+use App\Filament\Resources\AguinaldoPeriodResource\RelationManagers\AguinaldosRelationManager;
 use App\Models\Aguinaldo;
 use App\Models\AguinaldoPeriod;
 use App\Models\Branch;
@@ -204,6 +205,99 @@ it('muestra reabrir período en ViewAguinaldoPeriod con el permiso reopen_aguina
 
     Livewire::test(ViewAguinaldoPeriod::class, ['record' => $period->getRouteKey()])
         ->assertActionVisible('reopen_period');
+});
+
+/*
+|--------------------------------------------------------------------------
+| AguinaldosRelationManager (superficie duplicada dentro de ViewAguinaldoPeriod)
+|--------------------------------------------------------------------------
+|
+| Mismo bypass que AguinaldoResource (hallazgo C3 del review final de rama
+| completa): mark_paid/unmark_paid y sus bulk actions no tenían gate propio.
+*/
+
+it('oculta marcar pagado en la fila de AguinaldosRelationManager sin el permiso mark_paid_aguinaldo', function () {
+    actingAsWithAguinaldoPeriodPerms([]);
+    $period = makeAguinaldoPeriodPermTest('processing');
+    $aguinaldo = Aguinaldo::create([
+        'aguinaldo_period_id' => $period->id,
+        'employee_id' => makeAguinaldoPeriodPermTestEmployee($period->company)->id,
+        'total_earned' => 2_550_000,
+        'months_worked' => 12,
+        'aguinaldo_amount' => 212_500,
+        'status' => 'pending',
+        'generated_at' => now(),
+    ]);
+
+    Livewire::test(AguinaldosRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewAguinaldoPeriod::class])
+        ->assertTableActionHidden('mark_paid', $aguinaldo);
+});
+
+it('muestra marcar pagado en la fila de AguinaldosRelationManager con el permiso mark_paid_aguinaldo', function () {
+    actingAsWithAguinaldoPeriodPerms(['mark_paid_aguinaldo']);
+    $period = makeAguinaldoPeriodPermTest('processing');
+    $aguinaldo = Aguinaldo::create([
+        'aguinaldo_period_id' => $period->id,
+        'employee_id' => makeAguinaldoPeriodPermTestEmployee($period->company)->id,
+        'total_earned' => 2_550_000,
+        'months_worked' => 12,
+        'aguinaldo_amount' => 212_500,
+        'status' => 'pending',
+        'generated_at' => now(),
+    ]);
+
+    Livewire::test(AguinaldosRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewAguinaldoPeriod::class])
+        ->assertTableActionVisible('mark_paid', $aguinaldo);
+});
+
+it('oculta marcar pendiente en la fila de AguinaldosRelationManager sin el permiso mark_paid_aguinaldo', function () {
+    actingAsWithAguinaldoPeriodPerms([]);
+    $period = makeAguinaldoPeriodPermTest('processing');
+    $aguinaldo = Aguinaldo::create([
+        'aguinaldo_period_id' => $period->id,
+        'employee_id' => makeAguinaldoPeriodPermTestEmployee($period->company)->id,
+        'total_earned' => 2_550_000,
+        'months_worked' => 12,
+        'aguinaldo_amount' => 212_500,
+        'status' => 'paid',
+        'generated_at' => now(),
+        'paid_at' => now(),
+    ]);
+
+    Livewire::test(AguinaldosRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewAguinaldoPeriod::class])
+        ->assertTableActionHidden('unmark_paid', $aguinaldo);
+});
+
+it('muestra marcar pendiente en la fila de AguinaldosRelationManager con el permiso mark_paid_aguinaldo', function () {
+    actingAsWithAguinaldoPeriodPerms(['mark_paid_aguinaldo']);
+    $period = makeAguinaldoPeriodPermTest('processing');
+    $aguinaldo = Aguinaldo::create([
+        'aguinaldo_period_id' => $period->id,
+        'employee_id' => makeAguinaldoPeriodPermTestEmployee($period->company)->id,
+        'total_earned' => 2_550_000,
+        'months_worked' => 12,
+        'aguinaldo_amount' => 212_500,
+        'status' => 'paid',
+        'generated_at' => now(),
+        'paid_at' => now(),
+    ]);
+
+    Livewire::test(AguinaldosRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewAguinaldoPeriod::class])
+        ->assertTableActionVisible('unmark_paid', $aguinaldo);
+});
+
+it('respeta el permiso mark_paid_aguinaldo en las bulk actions bulk_mark_paid y bulk_unmark_paid de AguinaldosRelationManager', function () {
+    $period = makeAguinaldoPeriodPermTest('processing');
+
+    actingAsWithAguinaldoPeriodPerms([]);
+    $livewire = Livewire::test(AguinaldosRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewAguinaldoPeriod::class]);
+    expect($livewire->instance()->getTable()->getBulkAction('bulk_mark_paid')->isVisible())->toBeFalse();
+    expect($livewire->instance()->getTable()->getBulkAction('bulk_unmark_paid')->isVisible())->toBeFalse();
+
+    actingAsWithAguinaldoPeriodPerms(['mark_paid_aguinaldo']);
+    $livewire = Livewire::test(AguinaldosRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewAguinaldoPeriod::class]);
+    expect($livewire->instance()->getTable()->getBulkAction('bulk_mark_paid')->isVisible())->toBeTrue();
+    expect($livewire->instance()->getTable()->getBulkAction('bulk_unmark_paid')->isVisible())->toBeTrue();
 });
 
 it('oculta eliminar período en ViewAguinaldoPeriod sin el permiso delete_aguinaldo_period', function () {

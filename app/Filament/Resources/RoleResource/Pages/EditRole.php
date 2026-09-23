@@ -36,8 +36,10 @@ class EditRole extends EditRecord
         foreach (PermissionSeeder::GROUPS as $groupName => $models) {
             $groupPermissionNames = [];
             foreach ($models as $model) {
-                foreach (PermissionSeeder::ABILITIES as $ability) {
-                    $groupPermissionNames[] = "{$ability}_{$model}";
+                if (in_array($model, PermissionSeeder::MODELS, true)) {
+                    foreach (PermissionSeeder::ABILITIES as $ability) {
+                        $groupPermissionNames[] = "{$ability}_{$model}";
+                    }
                 }
                 foreach (array_keys(BusinessActionPermissionSeeder::ACTIONS[$model] ?? []) as $action) {
                     $groupPermissionNames[] = "{$action}_{$model}";

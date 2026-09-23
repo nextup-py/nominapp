@@ -104,3 +104,75 @@ it('keeps business-action permissions after saving an edit that only touches CRU
 
     expect($role->fresh()->hasPermissionTo('approve_loan'))->toBeTrue();
 });
+
+/*
+|--------------------------------------------------------------------------
+| 'period' pseudo-modelo — sin CRUD real (hallazgo I2 del review final)
+|--------------------------------------------------------------------------
+|
+| 'period' vive en PermissionSeeder::GROUPS/MODEL_LABELS (para agrupar las
+| acciones de negocio generate_payrolls_period/generate_aguinaldos_period)
+| pero deliberadamente NO está en PermissionSeeder::MODELS porque no tiene
+| permisos CRUD sembrados. Antes del fix, RoleResource::form() igual
+| generaba 5 checkboxes CRUD fantasma ("Ver listado/Ver detalle/Crear/
+| Editar/Eliminar — Generación de Períodos") que no correspondían a
+| ningún Permission sembrado; marcarlos y guardar lanzaba
+| PermissionDoesNotExist (500) porque Spatie no encuentra el permiso al
+| sincronizar.
+*/
+
+it('no ofrece checkboxes CRUD fantasma para el pseudo-modelo period en el formulario de RoleResource', function () {
+    $this->actingAs($this->admin);
+
+    $form = Livewire::test(CreateRole::class)->instance()->getForm('form');
+    $options = $form->getFlatFields()['group_nomina_y_creditos']->getOptions();
+
+    foreach (['view_any_period', 'view_period', 'create_period', 'update_period', 'delete_period'] as $phantomPermission) {
+        expect($options)->not->toHaveKey($phantomPermission);
+    }
+});
+
+it('sigue ofreciendo los checkboxes de acciones de negocio de period en el formulario de RoleResource', function () {
+    $this->actingAs($this->admin);
+
+    $form = Livewire::test(CreateRole::class)->instance()->getForm('form');
+    $options = $form->getFlatFields()['group_nomina_y_creditos']->getOptions();
+
+    expect($options)->toHaveKey('generate_payrolls_period')
+        ->and($options)->toHaveKey('generate_aguinaldos_period');
+});
+
+it('crea un rol seleccionando los permisos de negocio de period sin lanzar PermissionDoesNotExist', function () {
+    $this->actingAs($this->admin);
+
+    Livewire::test(CreateRole::class)
+        ->fillForm([
+            'name' => 'Generador de Períodos',
+            'group_nomina_y_creditos' => ['generate_payrolls_period', 'generate_aguinaldos_period'],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $role = Role::findByName('Generador de Períodos');
+    expect($role->hasPermissionTo('generate_payrolls_period'))->toBeTrue();
+    expect($role->hasPermissionTo('generate_aguinaldos_period'))->toBeTrue();
+});
+
+it('edita un rol y preserva únicamente los permisos de negocio de period, sin fantasmas CRUD', function () {
+    $this->actingAs($this->admin);
+
+    $role = Role::create(['name' => 'Rol Period Test', 'guard_name' => 'web']);
+    $role->syncPermissions(['generate_payrolls_period', 'generate_aguinaldos_period']);
+
+    Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
+        ->assertFormSet([
+            'group_nomina_y_creditos' => fn ($state) => in_array('generate_payrolls_period', $state, true)
+                && in_array('generate_aguinaldos_period', $state, true)
+                && ! in_array('view_any_period', $state, true),
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($role->fresh()->hasPermissionTo('generate_payrolls_period'))->toBeTrue();
+    expect($role->fresh()->hasPermissionTo('generate_aguinaldos_period'))->toBeTrue();
+});

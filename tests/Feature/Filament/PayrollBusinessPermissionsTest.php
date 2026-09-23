@@ -1,5 +1,7 @@
 <?php
 
+use App\Filament\Resources\PayrollPeriodResource\Pages\ViewPayrollPeriod;
+use App\Filament\Resources\PayrollPeriodResource\RelationManagers\PayrollsRelationManager;
 use App\Filament\Resources\PayrollResource\Pages\ViewPayroll;
 use App\Models\Branch;
 use App\Models\Company;
@@ -178,4 +180,122 @@ it('respeta el permiso regenerate_payroll en la acción Regenerar', function () 
     $this->actingAs(actingAsPayrollPermUser(['regenerate_payroll']));
     Livewire::test(ViewPayroll::class, ['record' => $payroll->getRouteKey()])
         ->assertActionVisible('regenerate');
+});
+
+/*
+|--------------------------------------------------------------------------
+| PayrollsRelationManager (superficie primaria dentro de ViewPayrollPeriod)
+|--------------------------------------------------------------------------
+|
+| Duplica la misma matriz de permisos que ViewPayroll/PayrollResource, ya
+| que esta RelationManager reimplementa las mismas transiciones de estado
+| de forma independiente (hallazgo C2 del review final de rama completa).
+*/
+
+it('respeta el permiso approve_payroll en la fila Aprobar de PayrollsRelationManager', function () {
+    $payroll = makePayrollPermRecord('draft');
+    $payroll->update(['payment_method' => 'cash']);
+    $period = $payroll->period;
+
+    $this->actingAs(actingAsPayrollPermUser([]));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionHidden('approve', $payroll);
+
+    $this->actingAs(actingAsPayrollPermUser(['approve_payroll']));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionVisible('approve', $payroll);
+});
+
+it('respeta el permiso disburse_payroll en la fila Marcar Acreditado de PayrollsRelationManager', function () {
+    $payroll = makePayrollPermRecord('approved');
+    $payroll->update(['payment_method' => 'transfer']);
+    $period = $payroll->period;
+
+    $this->actingAs(actingAsPayrollPermUser([]));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionHidden('mark_disbursed', $payroll);
+
+    $this->actingAs(actingAsPayrollPermUser(['disburse_payroll']));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionVisible('mark_disbursed', $payroll);
+});
+
+it('respeta el permiso mark_paid_payroll en la fila Marcar Pagado de PayrollsRelationManager', function () {
+    $payroll = makePayrollPermRecord('disbursed');
+    $payroll->update(['payment_method' => 'transfer']);
+    $period = $payroll->period;
+
+    $this->actingAs(actingAsPayrollPermUser([]));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionHidden('mark_paid', $payroll);
+
+    $this->actingAs(actingAsPayrollPermUser(['mark_paid_payroll']));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionVisible('mark_paid', $payroll);
+});
+
+it('respeta el permiso revert_payroll en revert_disbursed, revert_paid y unapprove de PayrollsRelationManager', function () {
+    $disbursed = makePayrollPermRecord('disbursed');
+    $disbursed->update(['payment_method' => 'transfer']);
+    $paid = makePayrollPermRecord('paid');
+    $paid->update(['payment_method' => 'transfer']);
+    $approved = makePayrollPermRecord('approved');
+    $approved->update(['payment_method' => 'cash']);
+
+    $this->actingAs(actingAsPayrollPermUser([]));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $disbursed->period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionHidden('revert_disbursed', $disbursed);
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $paid->period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionHidden('revert_paid', $paid);
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $approved->period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionHidden('unapprove', $approved);
+
+    $this->actingAs(actingAsPayrollPermUser(['revert_payroll']));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $disbursed->period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionVisible('revert_disbursed', $disbursed);
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $paid->period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionVisible('revert_paid', $paid);
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $approved->period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionVisible('unapprove', $approved);
+});
+
+it('respeta el permiso regenerate_payroll en la fila Regenerar de PayrollsRelationManager', function () {
+    $payroll = makePayrollPermRecord('draft');
+    $payroll->update(['payment_method' => 'cash']);
+    $period = $payroll->period;
+
+    $this->actingAs(actingAsPayrollPermUser([]));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionHidden('regenerate', $payroll);
+
+    $this->actingAs(actingAsPayrollPermUser(['regenerate_payroll']));
+    Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class])
+        ->assertTableActionVisible('regenerate', $payroll);
+});
+
+it('respeta los permisos de negocio en las bulk actions de PayrollsRelationManager', function () {
+    $period = makePayrollPermPeriod();
+
+    $bulkActionsToPermissions = [
+        'approve_selected' => 'approve_payroll',
+        'mark_disbursed_selected' => 'disburse_payroll',
+        'mark_paid_selected' => 'mark_paid_payroll',
+        'revert_paid_selected' => 'revert_payroll',
+        'unapprove_selected' => 'revert_payroll',
+        'download_pdfs' => 'export_payroll',
+    ];
+
+    $this->actingAs(actingAsPayrollPermUser([]));
+    $livewire = Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class]);
+    foreach (array_keys($bulkActionsToPermissions) as $name) {
+        expect($livewire->instance()->getTable()->getBulkAction($name)->isVisible())
+            ->toBeFalse("Se esperaba que la bulk action [{$name}] estuviera oculta sin el permiso correspondiente.");
+    }
+
+    foreach ($bulkActionsToPermissions as $name => $permission) {
+        $this->actingAs(actingAsPayrollPermUser([$permission]));
+        $livewire = Livewire::test(PayrollsRelationManager::class, ['ownerRecord' => $period, 'pageClass' => ViewPayrollPeriod::class]);
+        expect($livewire->instance()->getTable()->getBulkAction($name)->isVisible())
+            ->toBeTrue("Se esperaba que la bulk action [{$name}] fuera visible con el permiso [{$permission}].");
+    }
 });

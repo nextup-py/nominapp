@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Resources\ContractResource\Pages\EditContract;
 use App\Filament\Resources\ContractResource\Pages\ListContracts;
 use App\Filament\Resources\ContractResource\Pages\ViewContract;
 use App\Models\Branch;
@@ -218,6 +219,126 @@ it('oculta terminate sin terminate_contract y la muestra con él', function () {
 
     $this->actingAs($userWith);
     Livewire::test(ViewContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionVisible('terminate');
+});
+
+/*
+|--------------------------------------------------------------------------
+| EditContract (superficie duplicada respecto a ViewContract/tabla)
+|--------------------------------------------------------------------------
+|
+| Las mismas acciones de gestión (activate/suspend/reactivate/renew/
+| terminate) también viven en el header de EditContract, y no tenían gate
+| propio (hallazgo I1 del review final de rama completa).
+*/
+
+it('oculta activate en EditContract sin activate_contract y la muestra con él', function () {
+    $contract = makeTestContract('draft');
+
+    $roleWithout = Role::create(['name' => 'Sin Activar Edit', 'guard_name' => 'web']);
+    $roleWithout->syncPermissions(['view_contract', 'view_any_contract', 'update_contract']);
+    $userWithout = User::factory()->create();
+    $userWithout->assignRole($roleWithout);
+
+    $this->actingAs($userWithout);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionHidden('activate');
+
+    $roleWith = Role::create(['name' => 'Con Activar Edit', 'guard_name' => 'web']);
+    $roleWith->syncPermissions(['view_contract', 'view_any_contract', 'update_contract', 'activate_contract']);
+    $userWith = User::factory()->create();
+    $userWith->assignRole($roleWith);
+
+    $this->actingAs($userWith);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionVisible('activate');
+});
+
+it('oculta suspend en EditContract sin suspend_contract y la muestra con él', function () {
+    $contract = makeTestContract('active');
+
+    $roleWithout = Role::create(['name' => 'Sin Suspender Edit', 'guard_name' => 'web']);
+    $roleWithout->syncPermissions(['view_contract', 'view_any_contract', 'update_contract']);
+    $userWithout = User::factory()->create();
+    $userWithout->assignRole($roleWithout);
+
+    $this->actingAs($userWithout);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionHidden('suspend');
+
+    $roleWith = Role::create(['name' => 'Con Suspender Edit', 'guard_name' => 'web']);
+    $roleWith->syncPermissions(['view_contract', 'view_any_contract', 'update_contract', 'suspend_contract']);
+    $userWith = User::factory()->create();
+    $userWith->assignRole($roleWith);
+
+    $this->actingAs($userWith);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionVisible('suspend');
+});
+
+it('oculta reactivate en EditContract sin reactivate_contract y la muestra con él', function () {
+    $contract = makeTestContract('suspended');
+
+    $roleWithout = Role::create(['name' => 'Sin Reactivar Edit', 'guard_name' => 'web']);
+    $roleWithout->syncPermissions(['view_contract', 'view_any_contract', 'update_contract']);
+    $userWithout = User::factory()->create();
+    $userWithout->assignRole($roleWithout);
+
+    $this->actingAs($userWithout);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionHidden('reactivate');
+
+    $roleWith = Role::create(['name' => 'Con Reactivar Edit', 'guard_name' => 'web']);
+    $roleWith->syncPermissions(['view_contract', 'view_any_contract', 'update_contract', 'reactivate_contract']);
+    $userWith = User::factory()->create();
+    $userWith->assignRole($roleWith);
+
+    $this->actingAs($userWith);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionVisible('reactivate');
+});
+
+it('oculta renew en EditContract sin renew_contract y la muestra con él', function () {
+    $contract = makeTestContract('active', 'plazo_fijo');
+
+    $roleWithout = Role::create(['name' => 'Sin Renovar Edit', 'guard_name' => 'web']);
+    $roleWithout->syncPermissions(['view_contract', 'view_any_contract', 'update_contract']);
+    $userWithout = User::factory()->create();
+    $userWithout->assignRole($roleWithout);
+
+    $this->actingAs($userWithout);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionHidden('renew');
+
+    $roleWith = Role::create(['name' => 'Con Renovar Edit', 'guard_name' => 'web']);
+    $roleWith->syncPermissions(['view_contract', 'view_any_contract', 'update_contract', 'renew_contract']);
+    $userWith = User::factory()->create();
+    $userWith->assignRole($roleWith);
+
+    $this->actingAs($userWith);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionVisible('renew');
+});
+
+it('oculta terminate en EditContract sin terminate_contract y la muestra con él', function () {
+    $contract = makeTestContract('active');
+
+    $roleWithout = Role::create(['name' => 'Sin Terminar Edit', 'guard_name' => 'web']);
+    $roleWithout->syncPermissions(['view_contract', 'view_any_contract', 'update_contract']);
+    $userWithout = User::factory()->create();
+    $userWithout->assignRole($roleWithout);
+
+    $this->actingAs($userWithout);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionHidden('terminate');
+
+    $roleWith = Role::create(['name' => 'Con Terminar Edit', 'guard_name' => 'web']);
+    $roleWith->syncPermissions(['view_contract', 'view_any_contract', 'update_contract', 'terminate_contract']);
+    $userWith = User::factory()->create();
+    $userWith->assignRole($roleWith);
+
+    $this->actingAs($userWith);
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
         ->assertActionVisible('terminate');
 });
 

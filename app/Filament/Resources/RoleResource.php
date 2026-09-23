@@ -73,8 +73,10 @@ class RoleResource extends Resource
         foreach (PermissionSeeder::GROUPS as $groupName => $models) {
             $options = [];
             foreach ($models as $model) {
-                foreach (PermissionSeeder::ABILITIES as $ability) {
-                    $options["{$ability}_{$model}"] = PermissionSeeder::ABILITY_LABELS[$ability].' — '.PermissionSeeder::MODEL_LABELS[$model];
+                if (in_array($model, PermissionSeeder::MODELS, true)) {
+                    foreach (PermissionSeeder::ABILITIES as $ability) {
+                        $options["{$ability}_{$model}"] = PermissionSeeder::ABILITY_LABELS[$ability].' — '.PermissionSeeder::MODEL_LABELS[$model];
+                    }
                 }
                 foreach (BusinessActionPermissionSeeder::ACTIONS[$model] ?? [] as $action => $label) {
                     $options["{$action}_{$model}"] = $label.' — '.PermissionSeeder::MODEL_LABELS[$model];

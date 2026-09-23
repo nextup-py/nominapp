@@ -152,6 +152,50 @@ it('muestra marcar pendiente en ViewAguinaldo con el permiso mark_paid_aguinaldo
         ->assertActionVisible('unmark_paid');
 });
 
+it('oculta marcar pagado en la tabla de ListAguinaldos sin el permiso mark_paid_aguinaldo', function () {
+    actingAsWithAguinaldoPerms([]);
+    $aguinaldo = makeAguinaldoPermTest('pending');
+
+    Livewire::test(ListAguinaldos::class)
+        ->assertTableActionHidden('mark_paid', $aguinaldo);
+});
+
+it('muestra marcar pagado en la tabla de ListAguinaldos con el permiso mark_paid_aguinaldo', function () {
+    actingAsWithAguinaldoPerms(['mark_paid_aguinaldo']);
+    $aguinaldo = makeAguinaldoPermTest('pending');
+
+    Livewire::test(ListAguinaldos::class)
+        ->assertTableActionVisible('mark_paid', $aguinaldo);
+});
+
+it('oculta marcar pendiente en la tabla de ListAguinaldos sin el permiso mark_paid_aguinaldo', function () {
+    actingAsWithAguinaldoPerms([]);
+    $aguinaldo = makeAguinaldoPermTest('paid');
+
+    Livewire::test(ListAguinaldos::class)
+        ->assertTableActionHidden('unmark_paid', $aguinaldo);
+});
+
+it('muestra marcar pendiente en la tabla de ListAguinaldos con el permiso mark_paid_aguinaldo', function () {
+    actingAsWithAguinaldoPerms(['mark_paid_aguinaldo']);
+    $aguinaldo = makeAguinaldoPermTest('paid');
+
+    Livewire::test(ListAguinaldos::class)
+        ->assertTableActionVisible('unmark_paid', $aguinaldo);
+});
+
+it('respeta el permiso mark_paid_aguinaldo en las bulk actions bulk_mark_paid y bulk_unmark_paid de ListAguinaldos', function () {
+    actingAsWithAguinaldoPerms([]);
+    $livewire = Livewire::test(ListAguinaldos::class);
+    expect($livewire->instance()->getTable()->getBulkAction('bulk_mark_paid')->isVisible())->toBeFalse();
+    expect($livewire->instance()->getTable()->getBulkAction('bulk_unmark_paid')->isVisible())->toBeFalse();
+
+    actingAsWithAguinaldoPerms(['mark_paid_aguinaldo']);
+    $livewire = Livewire::test(ListAguinaldos::class);
+    expect($livewire->instance()->getTable()->getBulkAction('bulk_mark_paid')->isVisible())->toBeTrue();
+    expect($livewire->instance()->getTable()->getBulkAction('bulk_unmark_paid')->isVisible())->toBeTrue();
+});
+
 it('oculta exportar en ListAguinaldos sin el permiso export_aguinaldo', function () {
     actingAsWithAguinaldoPerms([]);
 
