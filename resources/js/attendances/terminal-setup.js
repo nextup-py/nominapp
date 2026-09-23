@@ -8,12 +8,22 @@
 import { captureInstallPrompt, triggerInstallPrompt, isStandalone, isIOS } from '../shared/install-prompt.js';
 
 const btn = document.getElementById('btnClaim');
+const btnLabel = btn.querySelector('.btn-label');
+const btnSpinner = btn.querySelector('.btn-spinner');
 const statusEl = document.getElementById('status');
 const installSection = document.getElementById('installSection');
 const installInstructionsIos = document.getElementById('installInstructionsIos');
 const btnInstallNow = document.getElementById('btnInstallNow');
 const btnContinue = document.getElementById('btnContinue');
 const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+function setLoading(isLoading) {
+    btn.disabled = isLoading;
+    btnSpinner?.classList.toggle('hidden', !isLoading);
+    if (btnLabel) {
+        btnLabel.textContent = isLoading ? 'Vinculando...' : 'Vincular este dispositivo';
+    }
+}
 
 let terminalCode = null;
 
@@ -40,9 +50,8 @@ captureInstallPrompt(() => {
 });
 
 btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    statusEl.textContent = 'Vinculando...';
-    statusEl.className = 'status';
+    statusEl.classList.add('hidden');
+    setLoading(true);
 
     try {
         const response = await fetch(window.location.pathname.replace(/\/$/, '') + '/claim', {
@@ -54,8 +63,8 @@ btn.addEventListener('click', async () => {
 
         if (!data.ok) {
             statusEl.textContent = data.message || 'No se pudo vincular el dispositivo.';
-            statusEl.className = 'status status--error';
-            btn.disabled = false;
+            statusEl.className = 'status alert-box alert-box-error';
+            setLoading(false);
             return;
         }
 
@@ -71,7 +80,7 @@ btn.addEventListener('click', async () => {
 
         terminalCode = data.terminal.code;
         statusEl.textContent = 'Dispositivo vinculado correctamente.';
-        statusEl.className = 'status status--success';
+        statusEl.className = 'status alert-box alert-box-success-inline';
         btn.hidden = true;
 
         const standalone = isStandalone(
@@ -94,8 +103,8 @@ btn.addEventListener('click', async () => {
         }
     } catch (error) {
         statusEl.textContent = 'Error de conexión. Intente nuevamente.';
-        statusEl.className = 'status status--error';
-        btn.disabled = false;
+        statusEl.className = 'status alert-box alert-box-error';
+        setLoading(false);
     }
 });
 
