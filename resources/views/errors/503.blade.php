@@ -72,7 +72,7 @@
         }
 
         h1 {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: #f1f5f9;
             margin-bottom: 0.75rem;
@@ -118,6 +118,22 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
+
+        /* Mismo footer de atribución que el resto de las vistas públicas —
+           colores calcados a mano de tokens.css (--c-subtle/--c-muted en oscuro),
+           ya que esta página no puede depender de @vite durante un deploy. */
+        .branding-footer {
+            position: relative;
+            margin-top: 2.5rem;
+            text-align: center;
+        }
+        .branding-footer-link {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-decoration: none;
+            transition: color 150ms ease-in-out;
+        }
+        .branding-footer-link:hover { color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -140,6 +156,10 @@
             <span class="status-dot"></span>
             Trabajando en ello
         </div>
+
+        <footer class="branding-footer">
+            <a href="https://nextup.com.py" target="_blank" rel="noopener" class="branding-footer-link">Desarrollado por NextUp</a>
+        </footer>
     </div>
 </body>
 </html>
