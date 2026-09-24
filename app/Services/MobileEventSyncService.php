@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Throwable;
 
 /**
@@ -42,7 +43,40 @@ class MobileEventSyncService
      */
     private function syncOne(Employee $employee, array $eventData): array
     {
-        $clientEventId = $eventData['client_event_id'];
+        // Se usa tal cual venga (aunque no pase la validación de tamaño de más abajo)
+        // para que el cliente pueda igual encontrar este resultado en su cola local por
+        // client_event_id — solo cae a null si el campo directamente no vino o no es un
+        // string, caso en el que no hay forma de correlacionarlo del lado del cliente.
+        $clientEventId = is_string($eventData['client_event_id'] ?? null) ? $eventData['client_event_id'] : null;
+
+        // Antes de esto, el controller validaba el array COMPLETO de eventos en un solo
+        // $request->validate() — un solo evento malformado hacía fallar el batch entero
+        // con un 422, sin resultados por evento. El cliente (submitInChunks) interpretaba
+        // eso igual que una caída de red: reintentaba indefinidamente sin nunca sacar el
+        // evento de la cola, bloqueando también a TODOS los eventos encolados detrás de
+        // él. Ahora el controller solo valida la forma del array (tamaño del lote); cada
+        // evento se valida acá individualmente, y uno malformado se descarta con su
+        // propio resultado sin afectar al resto.
+        if (($validationErrors = $this->validateEventShape($eventData)) !== null) {
+            $this->recordSyncFailure(
+                $employee,
+                'invalid_payload',
+                'El evento recibido no pasó la validación de formato y fue descartado.',
+                [
+                    'client_event_id' => $clientEventId,
+                    'raw_event' => $eventData,
+                    'validation_errors' => $validationErrors,
+                ],
+                null,
+            );
+
+            return [
+                'client_event_id' => $clientEventId ?? 'unknown',
+                'status' => 'rejected',
+                'conflict_reason' => 'invalid_payload',
+                'message' => 'El evento tiene datos inválidos y fue descartado.',
+            ];
+        }
 
         // Idempotencia: reintentar el mismo lote (ej. la respuesta anterior se perdió
         // en el camino) no debe duplicar el evento ya sincronizado.
@@ -126,6 +160,7 @@ class MobileEventSyncService
 
             $this->recordSyncFailure(
                 $employee,
+                'sync_conflict',
                 'La secuencia de marcación ya no es válida en el servidor al sincronizar (último evento registrado: '.($last->event_type ?? 'ninguno').').',
                 [
                     'client_event_id' => $clientEventId,
@@ -173,13 +208,22 @@ class MobileEventSyncService
      *
      * @param  array<string, mixed>  $metadata
      */
-    private function recordSyncFailure(Employee $employee, string $message, array $metadata, string $eventType): void
-    {
+    private function recordSyncFailure(
+        Employee $employee,
+        string $failureType,
+        string $message,
+        array $metadata,
+        ?string $eventType,
+    ): void {
         try {
             AttendanceMarkFailure::record([
                 'mode' => 'mobile',
-                'failure_type' => 'sync_conflict',
-                'employee_id' => $employee->id,
+                'failure_type' => $failureType,
+                // `invalid_payload` deliberadamente NO vincula employee_id — el dato en sí
+                // está corrupto (no hay nada válido que reconstruir), así que
+                // AttendanceMarkFailure::canBeResolved() debe quedar en false, no
+                // ofrecerse como "aprobar/descartar" igual que un sync_conflict real.
+                'employee_id' => $failureType === 'invalid_payload' ? null : $employee->id,
                 'branch_id' => $employee->branch_id,
                 'attempted_event_type' => $eventType,
                 'failure_message' => $message,
@@ -191,5 +235,26 @@ class MobileEventSyncService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Valida la forma de un evento individual — mismas reglas que antes vivían en
+     * `MobileEventSyncController` como validación de todo el array de una vez.
+     *
+     * @param  array<string, mixed>  $eventData
+     * @return array<string, mixed>|null null si pasa; los errores de Validator si no.
+     */
+    private function validateEventShape(array $eventData): ?array
+    {
+        $validator = Validator::make($eventData, [
+            'client_event_id' => ['required', 'string', 'size:36'],
+            'event_type' => ['required', 'string', 'in:check_in,break_start,break_end,check_out'],
+            'recorded_at' => ['required', 'date'],
+            'location' => ['nullable', 'array'],
+            'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
+            'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
+        ]);
+
+        return $validator->fails() ? $validator->errors()->toArray() : null;
     }
 }

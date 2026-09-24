@@ -108,6 +108,7 @@ class AttendanceMarkFailure extends Model
             'invalid_location' => 'Ubicación inválida',
             'internal_error' => 'Error interno',
             'sync_conflict' => 'Conflicto al sincronizar (offline)',
+            'invalid_payload' => 'Datos de marcación inválidos (offline)',
             default => $type,
         };
     }
@@ -126,6 +127,7 @@ class AttendanceMarkFailure extends Model
             'invalid_location' => 'warning',
             'face_invalid_descriptor' => 'gray',
             'sync_conflict' => 'danger',
+            'invalid_payload' => 'gray',
             default => 'gray',
         };
     }
@@ -174,6 +176,7 @@ class AttendanceMarkFailure extends Model
             'invalid_location' => 'Ubicación inválida',
             'internal_error' => 'Error interno',
             'sync_conflict' => 'Conflicto al sincronizar (offline)',
+            'invalid_payload' => 'Datos de marcación inválidos (offline)',
         ];
     }
 

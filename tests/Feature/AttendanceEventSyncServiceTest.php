@@ -165,6 +165,47 @@ it('rechaza como conflict un evento cuya secuencia ya no es válida en el servid
         ->and($failure->branch_id)->toBe($terminal->branch_id);
 });
 
+/**
+ * Regresión: antes de este fix, la validación de forma de cada evento vivía
+ * en TerminalEventSyncController como un solo $request->validate() sobre TODO
+ * el array — un único evento malformado (ej. event_type inválido) hacía
+ * fallar el batch entero con 422, sin llegar nunca a syncBatch(). Ahora
+ * AttendanceEventSyncService valida cada evento individualmente, así que un
+ * evento malformado se descarta sin afectar a los demás del mismo lote.
+ */
+it('descarta un evento malformado como invalid_payload sin afectar a los demás del lote', function () {
+    $employee = makeSyncEmployee();
+    $terminal = makeSyncTerminal($employee);
+    $goodClientEventId = (string) Str::uuid();
+
+    $results = app(AttendanceEventSyncService::class)->syncBatch($terminal, [
+        [
+            'client_event_id' => 'not-a-uuid',
+            'employee_id' => $employee->id,
+            'event_type' => 'an_invalid_type_from_a_newer_client',
+            'recorded_at' => '2026-08-19 08:00:00',
+        ],
+        [
+            'client_event_id' => $goodClientEventId,
+            'employee_id' => $employee->id,
+            'event_type' => 'check_in',
+            'recorded_at' => '2026-08-19 08:01:00',
+        ],
+    ]);
+
+    $malformed = collect($results)->firstWhere('client_event_id', 'not-a-uuid');
+    $good = collect($results)->firstWhere('client_event_id', $goodClientEventId);
+
+    expect($malformed['status'])->toBe('rejected')
+        ->and($malformed['conflict_reason'])->toBe('invalid_payload')
+        ->and($good['status'])->toBe('synced');
+
+    $failure = AttendanceMarkFailure::where('failure_type', 'invalid_payload')->first();
+    expect($failure)->not->toBeNull()
+        // No debe ser "aprobable" — el dato en sí está corrupto, no hay nada válido que reconstruir.
+        ->and($failure->canBeResolved())->toBeFalse();
+});
+
 it('rechaza un evento de un empleado inexistente o inactivo y lo registra para revisión', function () {
     $employee = makeSyncEmployee();
     $terminal = makeSyncTerminal($employee);

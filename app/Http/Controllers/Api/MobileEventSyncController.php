@@ -23,16 +23,17 @@ class MobileEventSyncController extends Controller
     public function store(Request $request): JsonResponse
     {
         try {
+            // Solo se valida la forma del ARRAY acá (tamaño del lote, y que cada elemento
+            // sea un objeto) — la forma de cada evento individual la valida
+            // MobileEventSyncService::syncOne() (ver validateEventShape()). Antes esta
+            // validación cubría también cada campo de cada evento (events.*.*) en un solo
+            // $request->validate(): un solo evento malformado en el lote hacía fallar TODO
+            // el request con 422, sin resultados por evento — el cliente lo interpretaba
+            // como una caída de red y reintentaba indefinidamente, bloqueando también a
+            // todos los eventos encolados detrás.
             $data = $request->validate([
                 'events' => ['required', 'array', 'min:1', 'max:200'],
-                'events.*.client_event_id' => ['required', 'string', 'size:36'],
-                'events.*.event_type' => ['required', 'string', 'in:check_in,break_start,break_end,check_out'],
-                'events.*.recorded_at' => ['required', 'date'],
-                'events.*.location' => ['nullable', 'array'],
-                'events.*.location.lat' => ['required_with:events.*.location', 'numeric', 'between:-90,90'],
-                'events.*.location.lng' => ['required_with:events.*.location', 'numeric', 'between:-180,180'],
-            ], [
-                'events.*.client_event_id.size' => 'client_event_id debe ser un UUID (36 caracteres).',
+                'events.*' => ['array'],
             ]);
         } catch (ValidationException $e) {
             return response()->json([

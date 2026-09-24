@@ -190,6 +190,44 @@ it('rechaza como conflict un evento cuya secuencia ya no es válida en el servid
         ->and($failure->canBeResolved())->toBeTrue();
 });
 
+/**
+ * Regresión: mismo bug que en el terminal — antes, un solo evento malformado
+ * en el lote hacía fallar el $request->validate() completo en
+ * MobileEventSyncController, bloqueando también a los demás eventos del
+ * mismo lote (y a los que quedaran encolados detrás). Ahora se valida cada
+ * evento individualmente dentro del servicio.
+ */
+it('descarta un evento malformado como invalid_payload sin afectar a los demás del lote', function () {
+    $employee = makeMobileSyncEmployee();
+    $goodClientEventId = (string) Str::uuid();
+
+    $results = app(MobileEventSyncService::class)->syncBatch($employee, [
+        [
+            'client_event_id' => 'not-a-uuid',
+            'event_type' => 'an_invalid_type_from_a_newer_client',
+            'recorded_at' => '2026-08-19 08:00:00',
+        ],
+        [
+            'client_event_id' => $goodClientEventId,
+            'event_type' => 'check_in',
+            'recorded_at' => '2026-08-19 08:01:00',
+        ],
+    ]);
+
+    $malformed = collect($results)->firstWhere('client_event_id', 'not-a-uuid');
+    $good = collect($results)->firstWhere('client_event_id', $goodClientEventId);
+
+    expect($malformed['status'])->toBe('rejected')
+        ->and($malformed['conflict_reason'])->toBe('invalid_payload')
+        ->and($good['status'])->toBe('synced');
+
+    $failure = AttendanceMarkFailure::where('failure_type', 'invalid_payload')
+        ->where('mode', 'mobile')
+        ->first();
+    expect($failure)->not->toBeNull()
+        ->and($failure->canBeResolved())->toBeFalse();
+});
+
 it('aprobar un conflicto mobile reconstruye el evento con source mobile', function () {
     $employee = makeMobileSyncEmployee();
     assignMobileSyncBreakSchedule($employee);

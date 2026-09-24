@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Throwable;
 
 /**
@@ -67,7 +68,35 @@ class AttendanceEventSyncService
      */
     private function syncOne(Terminal $terminal, ?Employee $employee, array $eventData): array
     {
-        $clientEventId = $eventData['client_event_id'];
+        // Se usa tal cual venga (aunque no pase la validación de tamaño de más abajo)
+        // para que el cliente pueda igual encontrar este resultado en su cola local por
+        // client_event_id — solo cae a null si el campo directamente no vino o no es un
+        // string, caso en el que no hay forma de correlacionarlo del lado del cliente.
+        $clientEventId = is_string($eventData['client_event_id'] ?? null) ? $eventData['client_event_id'] : null;
+
+        // Antes de esto, el controller validaba el array COMPLETO de eventos en un solo
+        // $request->validate() — un solo evento malformado (dato corrupto en IndexedDB,
+        // event_type de una versión de cliente más nueva que el servidor, etc.) hacía
+        // fallar el batch entero con un 422, sin resultados por evento. El cliente
+        // (submitInChunks) interpretaba eso igual que una caída de red: reintentaba
+        // indefinidamente sin nunca sacar el evento de la cola, bloqueando también a
+        // TODOS los eventos encolados detrás de él. Ahora el controller solo valida la
+        // forma del array (tamaño del lote); cada evento se valida acá individualmente,
+        // y uno malformado se descarta con su propio resultado sin afectar al resto.
+        if (($validationErrors = $this->validateEventShape($eventData)) !== null) {
+            $this->recordSyncFailure($terminal, 'invalid_payload', 'El evento recibido no pasó la validación de formato y fue descartado.', [
+                'client_event_id' => $clientEventId,
+                'raw_event' => $eventData,
+                'validation_errors' => $validationErrors,
+            ]);
+
+            return [
+                'client_event_id' => $clientEventId ?? 'unknown',
+                'status' => 'rejected',
+                'conflict_reason' => 'invalid_payload',
+                'message' => 'El evento tiene datos inválidos y fue descartado.',
+            ];
+        }
 
         if (! $employee) {
             $this->recordSyncFailure($terminal, 'employee_not_found', 'Empleado no encontrado o inactivo al sincronizar marcación offline.', [
@@ -251,6 +280,31 @@ class AttendanceEventSyncService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Valida la forma de un evento individual — mismas reglas que antes vivían en
+     * `TerminalEventSyncController` como validación de todo el array de una vez.
+     * No valida `employee_id` acá: un empleado inexistente/inactivo ya se maneja
+     * de forma resiliente más arriba en `syncOne()` (status `rejected` con
+     * `employee_not_found`), sin necesidad de descartar el evento como payload
+     * inválido.
+     *
+     * @param  array<string, mixed>  $eventData
+     * @return array<string, mixed>|null null si pasa; los errores de Validator si no.
+     */
+    private function validateEventShape(array $eventData): ?array
+    {
+        $validator = Validator::make($eventData, [
+            'client_event_id' => ['required', 'string', 'size:36'],
+            'event_type' => ['required', 'string', 'in:check_in,break_start,break_end,check_out'],
+            'recorded_at' => ['required', 'date'],
+            'location' => ['nullable', 'array'],
+            'location.lat' => ['required_with:location', 'numeric', 'between:-90,90'],
+            'location.lng' => ['required_with:location', 'numeric', 'between:-180,180'],
+        ]);
+
+        return $validator->fails() ? $validator->errors()->toArray() : null;
     }
 
     /**
