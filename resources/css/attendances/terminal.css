@@ -219,7 +219,7 @@ body {
 .menu-sheet-item-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--c-muted); }
 .menu-sheet-item-label { font-size: .9375rem; font-weight: 500; color: var(--c-text); }
 
-/* Filas informativas de solo lectura (dispositivo, conectividad, última sync) —
+/* Filas informativas de solo lectura (dispositivo, conectividad) —
    mismo padding que menu-sheet-item pero sin hover/cursor de acción. */
 .menu-sheet-info-item {
     display: flex; align-items: center; gap: var(--sp-3);
@@ -228,6 +228,32 @@ body {
 }
 .menu-sheet-info-item .menu-sheet-item-icon { color: var(--c-subtle); }
 .menu-sheet-info-item + .menu-sheet-info-item { border-top: 1px solid var(--c-border); }
+
+/* Único botón accionable de la hoja (aparte del toggle de tema) — mismo
+   vocabulario que styles.css (mark.js), no importado acá para no arrastrar
+   el resto de ese bundle. */
+.menu-sheet-item {
+    display: flex; align-items: center; gap: var(--sp-3);
+    width: 100%;
+    padding: var(--sp-3) var(--sp-2);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-md);
+    font: inherit;
+    font-size: .9375rem;
+    font-weight: 500;
+    color: var(--c-text);
+    cursor: pointer;
+    text-align: left;
+    transition: background var(--tr-f);
+}
+.menu-sheet-item:hover:not(:disabled) { background: var(--c-bg); }
+.menu-sheet-item:disabled { opacity: .6; cursor: not-allowed; }
+.menu-sheet-info-item + .menu-sheet-item { border-top: 1px solid var(--c-border); }
+
+.menu-sheet-item-label-group { display: flex; flex-direction: column; gap: 2px; }
+.menu-sheet-item-sublabel { font-size: .75rem; font-weight: 400; color: var(--c-subtle); }
+.menu-sheet-item-icon.is-syncing { animation: spin .7s linear infinite; }
 
 .menu-sheet-item--theme {
     display: flex; align-items: center; gap: var(--sp-3);

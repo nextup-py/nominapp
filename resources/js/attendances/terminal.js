@@ -5,7 +5,7 @@ import * as markRegistration from './terminal/mark-registration.js';
 import * as identificationFlow from './terminal/identification-flow.js';
 import * as bootstrap from './terminal/bootstrap.js';
 import { updateClock, updateIdleDate } from './terminal/ui-feedback.js';
-import { setOffline, updateIdleSyncStatus, refreshIdleSyncStatus } from './terminal/sync-status-ui.js';
+import { setOffline, updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './terminal/sync-status-ui.js';
 import { initManualSearch } from './terminal/manual-search.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
 import { createMenuSheet } from '../shared/menu-sheet.js';
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initThemeToggle('terminal-theme');
 
     // ============================================================================
-    // MENÚ ⋮ — estado del terminal (dispositivo, conectividad, última sync) + tema
+    // MENÚ ⋮ — estado del terminal (dispositivo, conectividad) + sync + tema
     // ============================================================================
     (function initTerminalMenu() {
         const sheet = document.getElementById('terminalMenuSheet');
@@ -274,6 +274,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         createMenuSheet({ sheet, backdrop, panel, trigger });
     })();
+
+    // Botón "Sincronizar ahora" del menú ⋮ — misma acción que #btnForceSync
+    // (pantalla idle), pero accesible desde cualquier pantalla del terminal,
+    // no solo en reposo.
+    const btnMenuSync = document.getElementById('btnMenuSync');
+    const btnMenuSyncIcon = document.getElementById('btnMenuSyncIcon');
+    if (btnMenuSync) {
+        btnMenuSync.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            btnMenuSync.disabled = true;
+            btnMenuSyncIcon?.classList.add('is-syncing');
+            try {
+                await heartbeat();
+                await syncEmployees();
+                await flushQueue();
+                await refreshIdleSyncStatus();
+            } catch (error) {
+                await refreshLastSyncLabel();
+            } finally {
+                btnMenuSync.disabled = false;
+                btnMenuSyncIcon?.classList.remove('is-syncing');
+            }
+        });
+    }
 
     // ============================================================================
     // INICIALIZACIÓN
