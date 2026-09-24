@@ -489,7 +489,7 @@ export class FaceCaptureApp {
 
             if (this.loadingMessage) {
                 this.loadingMessage.textContent = `Error: ${error.message}`;
-                this.loadingMessage.style.color = "#ef4444";
+                this.loadingMessage.style.color = "var(--c-danger)";
             }
 
             await this.sleep(3000);

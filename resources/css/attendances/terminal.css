@@ -1126,9 +1126,6 @@ body {
     .terminal-header     { padding: var(--sp-2) var(--sp-4); }
     .clock-time          { font-size: 1.25rem; }
     .clock-date          { font-size: .7rem; }
-    /* Poco alto para la fila de meta (dispositivo/conectividad/sync) — se prioriza
-       sucursal/empresa, que sigue visible. */
-    .terminal-header-meta { display: none; }
     .screen-body         { padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); }
     .terminal-type-btn   { min-height: 70px; padding: var(--sp-3) var(--sp-4); }
     .loading-card        { padding: var(--sp-5); }

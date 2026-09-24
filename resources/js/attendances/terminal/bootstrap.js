@@ -115,7 +115,7 @@ export async function initializeSystem(loadingDom, { onReady, onError }) {
         console.error('Error en la inicialización:', error);
         if (loadingDom.loadingMessage) {
             loadingDom.loadingMessage.textContent = `Error: ${error.message}`;
-            loadingDom.loadingMessage.style.color = '#ef4444';
+            loadingDom.loadingMessage.style.color = 'var(--c-danger)';
         }
         await sleep(3000);
         onError('Error al inicializar el sistema. ' + error.message + ' Por favor, recargue la página.');
