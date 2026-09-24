@@ -21,17 +21,17 @@ vi.mock('./db.js', () => ({
     getEmployeeStatusCache: vi.fn(),
     setEmployeeStatusCache: vi.fn(),
 }));
-vi.mock('./sync.js', () => ({
-    submitEvents: vi.fn(),
-    fetchEmployeeStatus: vi.fn(),
-}));
+vi.mock('./sync.js', () => {
+    class TerminalAuthErrorImpl extends Error {}
+    return { submitEvents: vi.fn(), fetchEmployeeStatus: vi.fn(), TerminalAuthError: TerminalAuthErrorImpl };
+});
 
 import {
     getMeta, queueEvent, getPendingEvents, getEventsForEmployeeOnDate, getCachedEmployee,
     removeQueuedEvent, markQueuedEventConflict, incrementQueuedEventAttempts,
     countPendingEvents, getEmployeeStatusCache, setEmployeeStatusCache,
 } from './db.js';
-import { submitEvents, fetchEmployeeStatus } from './sync.js';
+import { submitEvents, fetchEmployeeStatus, TerminalAuthError } from './sync.js';
 import { allowedNextEventTypes, resolveEmployeeStatus, getEmployeeStatus, enqueueMark, flushQueue } from './queue.js';
 
 beforeEach(() => {
@@ -219,6 +219,24 @@ describe('flushQueue', () => {
         expect(incrementQueuedEventAttempts).toHaveBeenCalledWith('e1');
         expect(result.stillPending).toBe(1);
         expect(removeQueuedEvent).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Regresión: antes de este fix, terminal-offline/queue.js no distinguía
+     * TerminalAuthError de una falla de red genérica (a diferencia de
+     * mobile-offline/queue.js, que ya chequeaba MobileAuthError) — un token
+     * revocado incrementaba attempts como si fuera wifi caída, y flushQueue()
+     * nunca lanzaba el error, así que runQueueFlush() (bootstrap.js) no
+     * llegaba a mostrar "Terminal sin configurar".
+     */
+    it('propaga TerminalAuthError inmediatamente (no la trata como fallo de red reintentable)', async () => {
+        getPendingEvents.mockResolvedValue([
+            { client_event_id: 'e1', employee_id: 1, event_type: 'check_in', recorded_at: '2026-01-01T10:00:00Z' },
+        ]);
+        submitEvents.mockRejectedValue(new TerminalAuthError('revocado'));
+
+        await expect(flushQueue()).rejects.toThrow(TerminalAuthError);
+        expect(incrementQueuedEventAttempts).not.toHaveBeenCalled();
     });
 
     it('parte la cola en lotes de a lo sumo 200 eventos', async () => {

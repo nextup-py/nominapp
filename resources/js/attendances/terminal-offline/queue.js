@@ -26,7 +26,7 @@ import {
     getEmployeeStatusCache,
     setEmployeeStatusCache,
 } from './db.js';
-import { submitEvents, fetchEmployeeStatus } from './sync.js';
+import { submitEvents, fetchEmployeeStatus, TerminalAuthError } from './sync.js';
 import { submitInChunks } from '../offline-shared/submit-in-chunks.js';
 
 /**
@@ -290,6 +290,15 @@ export async function flushQueue() {
             );
             return { synced, conflicts, stillPending: await countPendingEvents(), results };
         } catch (error) {
+            // Token revocado — no es un fallo de red recuperable, el caller (terminal.js)
+            // debe mostrar "Terminal sin configurar" y no seguir reintentando como si fuera
+            // wifi caída. NO se incrementa attempts acá — mismo criterio que ya usa
+            // mobile-offline/queue.js para MobileAuthError (ver su comentario). Sin este
+            // chequeo, un token revocado caía al branch genérico de abajo y quedaba
+            // silenciosamente confundido con una falla de red — el flush nunca lanzaba el
+            // error, así que runQueueFlush() en bootstrap.js no llegaba a mostrar el aviso.
+            if (error instanceof TerminalAuthError) throw error;
+
             // Solo los fallos de lote (submitInChunks los decora con `remainingEvents`) se
             // absorben acá. Cualquier otro error (ej. una escritura fallida en IndexedDB dentro
             // de onSynced/onConflict) debe propagarse sin tocar — mismo comportamiento que el
