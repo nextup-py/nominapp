@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AguinaldoResource\Pages;
 use App\Filament\Resources\AguinaldoResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\AguinaldoResource\RelationManagers\ItemsRelationManager;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Aguinaldo;
 use App\Models\AguinaldoPeriod;
 use App\Models\Company;
@@ -28,6 +29,10 @@ use Illuminate\Database\Eloquent\Collection;
 
 class AguinaldoResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'aguinaldo_enabled';
+
     protected static ?string $model = Aguinaldo::class;
 
     protected static ?string $navigationGroup = 'Nóminas';
@@ -45,6 +50,18 @@ class AguinaldoResource extends Resource
     protected static bool $shouldRegisterNavigation = false;
 
     protected static ?int $navigationSort = 10;
+
+    /**
+     * Siempre oculto de la navegación: es un recurso "hijo" accesible solo
+     * desde AguinaldoPeriodResource, sin importar el estado de
+     * `aguinaldo_enabled`. HasModuleAccess aporta shouldRegisterNavigation()
+     * como método, que de otro modo pisaría la property estática de arriba
+     * — este override explícito blinda el comportamiento actual.
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     /**
      * Define la tabla de listados para los recibos de aguinaldo, incluyendo columnas, filtros, acciones y estado vacío.

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\VacationResource\Pages;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Vacation;
@@ -41,6 +42,10 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class VacationResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'vacations_enabled';
+
     protected static ?string $model = Vacation::class;
 
     protected static ?string $navigationGroup = 'Empleados';

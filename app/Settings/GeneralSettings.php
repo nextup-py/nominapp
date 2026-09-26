@@ -20,6 +20,8 @@ class GeneralSettings extends Settings
 
     public int $terminal_stale_threshold_hours;
 
+    public bool $setup_completed;
+
     public static function group(): string
     {
         return 'general';

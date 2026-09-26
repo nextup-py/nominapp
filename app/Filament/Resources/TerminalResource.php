@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
 use App\Models\Terminal;
 use App\Settings\GeneralSettings;
@@ -35,6 +36,10 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 /** Gestión de terminales físicas de marcación de asistencia. */
 class TerminalResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'biometric_attendance_enabled';
+
     protected static ?string $model = Terminal::class;
 
     protected static ?string $navigationLabel = 'Terminales';

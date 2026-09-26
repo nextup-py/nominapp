@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Settings\GeneralSettings;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -22,6 +23,29 @@ class ManageGeneralSettings extends SettingsPage
     protected static ?int $navigationSort = 3;
 
     protected static string $settings = GeneralSettings::class;
+
+    /**
+     * Botón para volver a abrir el asistente de configuración inicial —
+     * solo Super Admin, y no bloqueante (setup_completed ya está en true
+     * en este punto, así que EnsureSetupIsComplete nunca redirige durante
+     * la reapertura).
+     *
+     * @return array<int, Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('reopenSetupWizard')
+                ->label('Reabrir asistente de configuración inicial')
+                ->icon('heroicon-o-rocket-launch')
+                ->color('gray')
+                ->visible(fn () => auth()->user()?->hasRole('Super Admin') ?? false)
+                ->requiresConfirmation()
+                ->modalDescription('Podrás revisar y ajustar empresa, módulos y parámetros de nómina. Esto no bloqueará el acceso al resto del panel.')
+                ->modalSubmitActionLabel('Sí, abrir asistente')
+                ->url(fn () => SetupWizardPage::getUrl()),
+        ];
+    }
 
     /**
      * Define el formulario de configuración general del sistema.

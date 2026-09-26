@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\LoanResource\Pages;
 use App\Filament\Resources\LoanResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\LoanResource\RelationManagers\InstallmentsRelationManager;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Loan;
 use App\Settings\PayrollSettings;
 use Filament\Forms\Components\DatePicker;
@@ -40,6 +41,10 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class LoanResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'loans_enabled';
+
     protected static ?string $model = Loan::class;
 
     protected static ?string $navigationLabel = 'Préstamos';
