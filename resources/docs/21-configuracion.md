@@ -138,6 +138,8 @@ Acceder desde **Configuración → Usuarios**.
 
 Cada usuario puede gestionar su propio perfil (nombre, email, contraseña, foto) desde el menú de perfil en la esquina del panel.
 
+> Un usuario recién creado **no puede entrar al panel** hasta que se le asigne al menos un rol. Ver el capítulo **Roles y Permisos** para asignar roles y entender qué puede hacer cada uno.
+
 ---
 
 ## Feriados
@@ -179,3 +181,13 @@ El botón **Cargar Feriados Nacionales** agrega automáticamente, para el año a
 3. Guardar
 
 > Se recomienda usar **Cargar Feriados Nacionales** al inicio de cada año y completar manualmente los feriados de fecha variable (Semana Santa) y cualquier feriado local o extraordinario.
+
+---
+
+## Visor de Logs
+
+Acceder desde **Configuración → Visor de Logs**.
+
+Herramienta técnica de diagnóstico: muestra los registros de error y advertencia (`storage/logs/laravel.log`) directamente desde el panel, con columnas de **Nivel**, **Entorno**, **Archivo**, **Mensaje** y **Fecha**.
+
+> Pensada para soporte técnico y desarrolladores al investigar un problema puntual (ej. un PDF que no se generó, un job que falló) — no forma parte del uso diario del sistema por parte de RR.HH. o Contaduría.

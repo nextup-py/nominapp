@@ -130,50 +130,11 @@ También es posible descargar los PDFs de varios recibos a la vez seleccionándo
 
 ---
 
-## Percepciones
+## Percepciones y Deducciones
 
-Las percepciones son conceptos de ingreso adicional al salario base.
+Las percepciones son ingresos adicionales al salario base (bonos, viáticos); las deducciones son descuentos (IPS, préstamos, embargos). Ambas se administran desde **Nóminas → Percepciones** / **Nóminas → Deducciones** y se asignan a cada empleado desde su perfil, pestañas **Percepciones** / **Deducciones**.
 
-### Crear una percepción
-
-1. Ir a **Nóminas → Percepciones**
-2. Clic en **Nueva Percepción**
-3. Completar:
-   - **Nombre** y **código** (único, ej: `BON-TRANS`)
-   - **Tipo de cálculo:** Fijo (monto en Gs.) o Porcentaje del salario
-   - **Monto** o **porcentaje**
-   - **Tipo de percepción:** Salarial, Viáticos, Subsidio u Otro — determina automáticamente si **afecta IPS**; solo con el tipo "Otro" ese toggle se puede editar a mano
-4. Guardar
-
-### Asignar una percepción a un empleado
-
-Desde el perfil del empleado, pestaña **Percepciones**:
-
-1. Clic en **Agregar percepción**
-2. Seleccionar la percepción global
-3. Ingresar la fecha de inicio (y fin si aplica)
-4. Opcionalmente, definir un **monto personalizado** que reemplaza al monto global
-5. Guardar
-
----
-
-## Deducciones
-
-Las deducciones son descuentos aplicados al salario.
-
-### Crear una deducción
-
-1. Ir a **Nóminas → Deducciones**
-2. Clic en **Nueva Deducción**
-3. Completar nombre, código, **tipo** (Legal, Judicial, Voluntaria, Préstamo/Adelanto u Otros), tipo de cálculo (fijo o porcentaje), y si es **obligatoria**
-4. Si corresponde, activar **Aplicar tope legal (Art. 245 CLT)** — limita la deducción al porcentaje máximo del salario configurado en Ajustes → Nómina
-5. Guardar
-
-> Las deducciones marcadas como **obligatorias** deben asignarse a los empleados: desde el perfil del empleado, pestaña **Deducciones**, el botón **Asignar obligatorias** agrega de una sola vez todas las que el empleado todavía no tenga.
-
-### Asignar una deducción a un empleado
-
-Misma lógica que las percepciones: desde el perfil del empleado, pestaña **Deducciones**, botón **Agregar deducción**.
+> Ver el capítulo **Percepciones y Deducciones** para el detalle completo: tipos, creación, asignación individual y masiva, y la lista de códigos reservados que usa el sistema internamente (`IPS001`, `PRE001`, `ADE001`, `MER001`, `LIC001`, `AUS-INJ`).
 
 ---
 

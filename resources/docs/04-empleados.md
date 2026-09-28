@@ -1,6 +1,6 @@
-# Empleados y Contratos
+# Empleados
 
-## Empleados
+## Datos del empleado
 
 El módulo de Empleados gestiona todos los datos personales y laborales del personal.
 
@@ -70,3 +70,24 @@ El legajo es un resumen completo del empleado en PDF. Para generarlo:
 2. Clic en el botón **Legajo** en el encabezado de la página
 
 El documento incluye datos personales, contrato activo e historial relevante.
+
+---
+
+## Reporte de Empleados
+
+Ir a **Reportes → Reporte de Empleados** para ver una nómina completa de todos los empleados con antigüedad, salario, cumpleaños y datos de contrato — útil para RR.HH. y para auditorías generales del personal. Los datos de contrato (salario, cargo, departamento, fecha de ingreso) provienen siempre del **contrato activo**.
+
+Por defecto la tabla muestra solo empleados **Activos** — cambiar el filtro **Estado** para ver también inactivos.
+
+### Columnas disponibles
+
+Empleado, CI, Género, Edad, Cumpleaños, Fecha de ingreso, Antigüedad, Salario, Tipo de contrato, Método de pago, Cargo, Departamento, Sucursal, Empresa, Estado, Teléfono, Fecha de registro, Fecha de baja.
+
+### Filtros disponibles
+
+**Empresa**, **Sucursal**, **Departamento** (en cascada), **Tipo de contrato**, **Método de pago**, **Género**, **Mes de cumpleaños** (útil para planificar saludos o beneficios por cumpleaños) y **Rango de fecha de registro**.
+
+### Exportar
+
+- **Exportar PDF** — con selector de columnas y orientación de página (Vertical/Horizontal)
+- **Exportar Excel** — con selector de columnas
