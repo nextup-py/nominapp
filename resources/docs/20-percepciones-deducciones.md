@@ -13,8 +13,9 @@ El catálogo de Percepciones y Deducciones define los conceptos que se pueden as
 
 | Tipo | Afecta IPS | Descripción |
 |------|-----------|-------------|
-| **Salarial** | Sí (automático) | Forma parte del salario cotizable para IPS |
-| **No Salarial** | No | No entra en la base de cálculo del IPS |
+| **Salarial** | Sí (automático) | Bono, comisión y similares — forma parte del salario cotizable para IPS |
+| **Viáticos** | No (automático) | Viáticos y gastos de representación |
+| **Subsidio** | No (automático) | Subsidio de alimentación, transporte, etc. |
 | **Otro** | Configurable | El usuario decide si afecta o no al IPS |
 
 ### Crear una percepción
@@ -23,10 +24,10 @@ El catálogo de Percepciones y Deducciones define los conceptos que se pueden as
 2. Clic en **Nueva percepción**
 3. Completar:
    - **Nombre** y **Código** (único, ej: `BON-TRANS`)
-   - **Tipo:** Salarial, No Salarial u Otro
+   - **Tipo:** Salarial, Viáticos, Subsidio u Otro
    - **Tipo de cálculo:** Monto Fijo (Gs.) o Porcentaje del salario
    - **Monto** o **porcentaje** según el tipo de cálculo elegido
-   - **Afecta IPS** (solo editable si el tipo es "Otro")
+   - **Afecta IPS** (solo editable si el tipo es "Otro" — en los demás tipos el sistema lo fija automáticamente)
 4. Guardar
 
 ### Activar / desactivar una percepción
@@ -121,7 +122,7 @@ El sistema usa códigos reservados para descuentos generados automáticamente. N
 
 | Filtro | Opciones |
 |--------|----------|
-| Tipo de Percepción | Salarial / No Salarial / Otro |
+| Tipo de Percepción | Salarial / Viáticos / Subsidio / Otro |
 | Tipo de Cálculo | Monto Fijo / Porcentaje |
 | Afecta IPS | Todos / Sí / No |
 | Estado | Todos / Activos / Inactivos |

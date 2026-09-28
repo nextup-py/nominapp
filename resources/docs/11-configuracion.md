@@ -99,7 +99,7 @@ Acceder desde **Configuración → Configuración de Nómina**.
 
 ### Préstamos
 
-- **Monto máximo de préstamo**
+- **Monto máximo de préstamo:** por defecto Gs. 5.000.000
 - **Tope de cuota (% salario):** por defecto 25% (Art. 245 CLT)
 - **Máximo de cuotas:** por defecto 60
 - **Tasa de interés máxima:** por defecto 100% anual

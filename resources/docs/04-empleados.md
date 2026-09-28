@@ -12,7 +12,7 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 - **Teléfono:** con 0 inicial, sin espacios (ej: `0981123456`)
 - **Email**
 - **Sucursal** a la que pertenece
-- **Estado:** Activo, Inactivo o Suspendido
+- **Estado:** Activo o Inactivo
 
 ### Crear un empleado
 
@@ -29,8 +29,9 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 | Estado | Descripción |
 |--------|-------------|
 | **Activo** | Empleado vigente en nómina |
-| **Inactivo** | Relación laboral terminada |
-| **Suspendido** | Suspensión temporal |
+| **Inactivo** | Relación laboral terminada (se marca automáticamente al vencer o terminar su contrato, o al cerrar una liquidación) |
+
+> El estado se puede cambiar manualmente con la acción **Cambiar estado** desde el perfil del empleado, entre Activo e Inactivo.
 
 ---
 
