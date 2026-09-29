@@ -111,7 +111,7 @@ Ir a **Reportes → Reporte de Préstamos** para ver todos los préstamos de la 
 
 **Exportar:** solo a **Excel** (con selector de columnas) — este reporte no ofrece exportación a PDF; para el contrato en PDF de un préstamo individual usar **Descargar PDF** desde su vista de detalle.
 
-![Listado de préstamos](/docs-images/14-reporte-prestamos.png)
+![Reporte de Préstamos](/docs-images/14-reporte-prestamos.png)
 
 ## Límites y validaciones
 

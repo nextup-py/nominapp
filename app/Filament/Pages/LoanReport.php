@@ -261,7 +261,7 @@ class LoanReport extends Page implements HasTable
                 'employees.ci',
                 'branches.name AS branch_name',
                 'companies.name AS company_name',
-                DB::raw("CONCAT(users.first_name, ' ', users.last_name) AS granted_by_name"),
+                'users.name AS granted_by_name',
                 DB::raw('(SELECT COUNT(*) FROM loan_installments WHERE loan_installments.loan_id = loans.id AND loan_installments.status = "paid") AS paid_installments_count'),
                 DB::raw('(SELECT COUNT(*) FROM loan_installments WHERE loan_installments.loan_id = loans.id AND loan_installments.status = "pending") AS pending_installments_count'),
             ])
