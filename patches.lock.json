@@ -1,0 +1,17 @@
+{
+    "_hash": "a722aa9f279b898267e55d542ba40a54c0bae078168d192b205b4c64467e85dd",
+    "patches": {
+        "eightynine/filament-docs": [
+            {
+                "package": "eightynine/filament-docs",
+                "description": "Fix parseMarkdown() passing an Environment to CommonMarkConverter, which league/commonmark 2.x ignores (silently drops all configured extensions, incl. GFM tables)",
+                "url": "patches/eightynine-filament-docs-fix-commonmark-converter.patch",
+                "sha256": "638ad2e05ad2a64b8766dd8aeca1988942f3a01051ada006db48a52ee4210993",
+                "depth": 1,
+                "extra": {
+                    "provenance": "root"
+                }
+            }
+        ]
+    }
+}
