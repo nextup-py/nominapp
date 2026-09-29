@@ -53,6 +53,7 @@
     },
     "scripts": {
         "post-autoload-dump": [
+            "@php scripts/composer/ensure-filament-docs-patch.php",
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",
             "@php artisan filament:upgrade"
