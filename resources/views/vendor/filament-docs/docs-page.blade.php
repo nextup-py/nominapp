@@ -79,6 +79,15 @@
                 .dark .prose a {
                     color: white !important;
                 }
+                .prose .heading-permalink {
+                    /* Nunca visible: la tabla de contenidos generada arriba de cada
+                       capítulo ya cubre la navegación a secciones, y el símbolo ¶
+                       no aporta nada por sí solo. opacity (no display:none) para
+                       conservar su posición en el layout, por si algún enlace
+                       externo depende del fragmento #content-... que expone. */
+                    opacity: 0;
+                    text-decoration: none;
+                }
                 .prose table {
                     width: 100%;
                     border-collapse: collapse;
