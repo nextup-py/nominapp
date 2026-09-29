@@ -6,6 +6,8 @@ El módulo de Organización define la estructura legal y física de la empresa. 
 
 Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
+![Listado de empresas](/docs-images/02-empresas.png)
+
 **Campos principales:**
 - **Razón social** y **nombre comercial** (nombre de fantasía)
 - **Tipo societario:** SA, SRL, EU, Cooperativa, Fundación, etc.

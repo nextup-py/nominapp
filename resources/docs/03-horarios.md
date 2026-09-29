@@ -26,6 +26,8 @@ El tipo de jornada determina las horas mensuales de referencia y los multiplicad
 3. Ingresar el nombre (ej: "Administrativo 08:00–17:00") y seleccionar el tipo de jornada
 4. Guardar
 
+![Detalle de un horario con sus días configurados](/docs-images/03-horario-detalle.png)
+
 ### Configurar los días del horario
 
 Dentro del horario creado, la pestaña **Días** muestra los 7 días de la semana. Para cada día:
@@ -121,6 +123,8 @@ Ir a **Asistencias → Planificador de Turnos** para ver y ajustar, en una sola 
 ## Qué muestra la grilla
 
 Una tabla de **empleados × días** (filtrable por empresa y sucursal) donde cada celda muestra el turno que le corresponde a ese empleado ese día, ya sea por horario fijo o por su patrón de rotación resuelto para esa fecha. Las celdas con un punto (●) indican un **override puntual** — un cambio manual que reemplaza, solo para ese día, lo que el patrón o el horario asignarían normalmente.
+
+![Planificador de Turnos con overrides puntuales](/docs-images/03-planificador-turnos.png)
 
 ## Asignar un turno puntual (override)
 

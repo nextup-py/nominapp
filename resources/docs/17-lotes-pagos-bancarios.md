@@ -13,6 +13,8 @@ Un lote puede agrupar **cuatro tipos** de pago distintos — cada uno se crea de
 
 ---
 
+![Listado de lotes de pagos bancarios](/docs-images/17-lotes-bancarios.png)
+
 ## Requisitos previos
 
 Para poder generar y descargar el archivo TXT, deben estar configurados:

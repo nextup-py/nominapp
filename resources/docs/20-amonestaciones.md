@@ -24,6 +24,8 @@ El módulo de Amonestaciones permite registrar formalmente las sanciones discipl
 
 ### Desde el listado general
 
+![Nueva amonestación](/docs-images/20-amonestacion-nueva.png)
+
 1. Ir a **Empleados → Amonestaciones**
 2. Clic en **Nueva Amonestación**
 3. Completar:

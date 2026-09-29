@@ -36,6 +36,8 @@ Aprobado  → Cancelado
 
 > El préstamo pasa a **Pagado** automáticamente al procesar en nómina la última cuota pendiente.
 
+![Detalle de un préstamo aprobado](/docs-images/14-prestamo-detalle.png)
+
 ## Crear un préstamo
 
 1. Ir a **Créditos → Préstamos**
@@ -108,6 +110,8 @@ Ir a **Reportes → Reporte de Préstamos** para ver todos los préstamos de la 
 **Filtros:** Estado, Empresa, Sucursal, Empleado, Método de pago, Período (fecha de otorgamiento).
 
 **Exportar:** solo a **Excel** (con selector de columnas) — este reporte no ofrece exportación a PDF; para el contrato en PDF de un préstamo individual usar **Descargar PDF** desde su vista de detalle.
+
+![Listado de préstamos](/docs-images/14-reporte-prestamos.png)
 
 ## Límites y validaciones
 

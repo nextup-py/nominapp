@@ -37,6 +37,8 @@ Además, los módulos con flujo de aprobación (Préstamos, Adelantos, Retiros d
 
 ---
 
+![Edición de permisos de un rol](/docs-images/22-rol-editar.png)
+
 ## Crear o editar un rol
 
 1. Ir a **Configuración → Roles** (solo visible para usuarios con rol Super Admin)

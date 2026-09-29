@@ -2,6 +2,8 @@
 
 Bienvenido al sistema de Gestión de Recursos Humanos. Esta guía explica cómo usar cada módulo del panel administrativo.
 
+![Escritorio del panel](/docs-images/01-dashboard.png)
+
 ## ¿Qué puede hacer el sistema?
 
 El sistema cubre el ciclo completo de gestión del personal:

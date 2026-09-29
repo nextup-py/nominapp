@@ -14,6 +14,8 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 - **Sucursal** a la que pertenece
 - **Estado:** Activo o Inactivo
 
+![Formulario de creación de empleado](/docs-images/04-empleado-nuevo.png)
+
 ### Crear un empleado
 
 1. Ir a **Empleados → Empleados**
@@ -78,6 +80,8 @@ El documento incluye datos personales, contrato activo e historial relevante.
 Ir a **Reportes → Reporte de Empleados** para ver una nómina completa de todos los empleados con antigüedad, salario, cumpleaños y datos de contrato — útil para RR.HH. y para auditorías generales del personal. Los datos de contrato (salario, cargo, departamento, fecha de ingreso) provienen siempre del **contrato activo**.
 
 Por defecto la tabla muestra solo empleados **Activos** — cambiar el filtro **Estado** para ver también inactivos.
+
+![Reporte de Empleados](/docs-images/04-reporte-empleados.png)
 
 ### Columnas disponibles
 

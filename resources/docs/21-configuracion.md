@@ -37,6 +37,8 @@ Acceder desde **Configuración → Configuración General**.
 
 Acceder desde **Configuración → Configuración de Nómina**.
 
+![Configuración de Nómina](/docs-images/21-config-nomina.png)
+
 ### Horas de trabajo — Jornada Diurna
 
 | Parámetro | Valor por defecto |
@@ -145,6 +147,8 @@ Cada usuario puede gestionar su propio perfil (nombre, email, contraseña, foto)
 ## Feriados
 
 Acceder desde **Configuración → Feriados**.
+
+![Listado de feriados](/docs-images/21-feriados.png)
 
 Los feriados se usan para:
 - Excluir días no laborales del cálculo de días hábiles en vacaciones

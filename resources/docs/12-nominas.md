@@ -72,6 +72,8 @@ El botón **Cerrar Planilla** solo está habilitado cuando **no** quedan recibos
 
 Cada recibo corresponde a la liquidación de un empleado en una planilla.
 
+![Detalle de una planilla con sus recibos](/docs-images/12-planilla-detalle.png)
+
 ### Flujo de estados
 
 El flujo varía según el método de pago del recibo:

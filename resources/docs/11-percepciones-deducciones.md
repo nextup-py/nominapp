@@ -9,6 +9,8 @@ El catálogo de Percepciones y Deducciones define los conceptos que se pueden as
 
 ## Percepciones
 
+![Catálogo de Percepciones](/docs-images/11-percepciones.png)
+
 ### Tipos de percepción
 
 | Tipo | Afecta IPS | Descripción |
@@ -37,6 +39,8 @@ Desde el listado o el detalle, usar el campo **Activo**. Una percepción inactiv
 ---
 
 ## Deducciones
+
+![Catálogo de Deducciones](/docs-images/11-deducciones.png)
 
 ### Tipos de deducción
 

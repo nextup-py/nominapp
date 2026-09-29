@@ -271,6 +271,8 @@ Cuando el conflicto ya no aplica — por ejemplo, la marcación real se cargó m
 
 Ir a **Asistencias → Asistencias** para ver el resumen calculado de cada empleado por día. La tabla muestra únicamente los días con estado **Presente**.
 
+![Resumen diario de asistencias](/docs-images/07-asistencias-resumen.png)
+
 ### Pestañas de filtrado
 
 | Pestaña | Descripción |

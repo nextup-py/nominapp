@@ -44,6 +44,8 @@ Ir a **Reportes → Reporte de Vacaciones**.
 
 ## Registrar una solicitud de vacaciones
 
+![Nueva solicitud de vacaciones](/docs-images/08-vacacion-nueva.png)
+
 1. Ir a **Empleados → Vacaciones** (o a la pestaña **Vacaciones** del empleado)
 2. Clic en **Nueva Solicitud**
 3. Seleccionar el **empleado** — el formulario muestra de inmediato su antigüedad, el derecho anual y los días disponibles; si no tiene antigüedad suficiente o no le quedan días disponibles, la sección de fechas ni siquiera se muestra

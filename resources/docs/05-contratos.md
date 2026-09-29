@@ -19,6 +19,8 @@ El módulo de contratos gestiona el ciclo de vida laboral de cada empleado, desd
 
 ---
 
+![Detalle de un contrato](/docs-images/05-contrato-detalle.png)
+
 ## Crear un contrato
 
 1. Ir a **Empleados → Contratos**
