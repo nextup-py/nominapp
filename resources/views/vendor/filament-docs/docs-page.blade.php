@@ -79,6 +79,14 @@
                 .dark .prose a {
                     color: white !important;
                 }
+                .prose .heading-permalink {
+                    opacity: 0;
+                    text-decoration: none;
+                    transition: opacity 0.15s ease;
+                }
+                .prose :where(h1, h2, h3, h4, h5, h6):hover .heading-permalink {
+                    opacity: 1;
+                }
                 .prose table {
                     width: 100%;
                     border-collapse: collapse;
