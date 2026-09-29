@@ -76,6 +76,9 @@
                 .dark .prose ol > li::marker {
                     color: white !important;
                 }
+                .dark .prose a {
+                    color: white !important;
+                }
                 .prose table {
                     width: 100%;
                     border-collapse: collapse;
