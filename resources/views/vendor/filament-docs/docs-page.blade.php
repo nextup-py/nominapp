@@ -80,12 +80,13 @@
                     color: white !important;
                 }
                 .prose .heading-permalink {
+                    /* Nunca visible: la tabla de contenidos generada arriba de cada
+                       capítulo ya cubre la navegación a secciones, y el símbolo ¶
+                       no aporta nada por sí solo. opacity (no display:none) para
+                       conservar su posición en el layout, por si algún enlace
+                       externo depende del fragmento #content-... que expone. */
                     opacity: 0;
                     text-decoration: none;
-                    transition: opacity 0.15s ease;
-                }
-                .prose :where(h1, h2, h3, h4, h5, h6):hover .heading-permalink {
-                    opacity: 1;
                 }
                 .prose table {
                     width: 100%;
