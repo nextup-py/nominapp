@@ -13,6 +13,7 @@
         "achyutn/filament-log-viewer": "^0",
         "barryvdh/laravel-dompdf": "^3.1",
         "cheesegrits/filament-google-maps": "^4.0",
+        "cweagans/composer-patches": "^2.0",
         "eightynine/filament-docs": "^3.0",
         "filament/filament": "^3.3",
         "filament/spatie-laravel-settings-plugin": "^3.2",
@@ -79,6 +80,11 @@
     "extra": {
         "laravel": {
             "dont-discover": []
+        },
+        "patches": {
+            "eightynine/filament-docs": {
+                "Fix parseMarkdown() passing an Environment to CommonMarkConverter, which league/commonmark 2.x ignores (silently drops all configured extensions, incl. GFM tables)": "patches/eightynine-filament-docs-fix-commonmark-converter.patch"
+            }
         }
     },
     "config": {
@@ -86,6 +92,7 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
+            "cweagans/composer-patches": true,
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }

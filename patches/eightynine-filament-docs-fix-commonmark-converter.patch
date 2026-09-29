@@ -1,0 +1,22 @@
+--- a/src/Pages/DocsPage.php	2026-09-29 20:28:30.465320922 +0000
++++ b/src/Pages/DocsPage.php	2026-09-29 20:28:37.515926026 +0000
+@@ -7,9 +7,9 @@
+ use Illuminate\Support\Str;
+ use Illuminate\Support\Carbon;
+ use Illuminate\Http\Response;
+-use League\CommonMark\CommonMarkConverter;
+ use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+ use League\CommonMark\Environment\Environment;
++use League\CommonMark\MarkdownConverter;
+ 
+ 
+ abstract class DocsPage extends Page
+@@ -342,7 +342,7 @@
+         // Add extensions based on configuration
+         $this->addConfiguredExtensions($environment, $extensionsConfig);
+         
+-        $converter = new CommonMarkConverter([], $environment);
++        $converter = new MarkdownConverter($environment);
+         return $converter->convert($markdown)->getContent();
+     }
+ 
