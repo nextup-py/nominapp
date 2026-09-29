@@ -1,6 +1,6 @@
-# Empleados y Contratos
+# Empleados
 
-## Empleados
+## Datos del empleado
 
 El módulo de Empleados gestiona todos los datos personales y laborales del personal.
 
@@ -12,7 +12,9 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 - **Teléfono:** con 0 inicial, sin espacios (ej: `0981123456`)
 - **Email**
 - **Sucursal** a la que pertenece
-- **Estado:** Activo, Inactivo o Suspendido
+- **Estado:** Activo o Inactivo
+
+![Formulario de creación de empleado](/docs-images/04-empleado-nuevo.png)
 
 ### Crear un empleado
 
@@ -29,8 +31,9 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 | Estado | Descripción |
 |--------|-------------|
 | **Activo** | Empleado vigente en nómina |
-| **Inactivo** | Relación laboral terminada |
-| **Suspendido** | Suspensión temporal |
+| **Inactivo** | Relación laboral terminada (se marca automáticamente al vencer o terminar su contrato, o al cerrar una liquidación) |
+
+> El estado se puede cambiar manualmente con la acción **Cambiar estado** desde el perfil del empleado, entre Activo e Inactivo.
 
 ---
 
@@ -69,3 +72,26 @@ El legajo es un resumen completo del empleado en PDF. Para generarlo:
 2. Clic en el botón **Legajo** en el encabezado de la página
 
 El documento incluye datos personales, contrato activo e historial relevante.
+
+---
+
+## Reporte de Empleados
+
+Ir a **Reportes → Reporte de Empleados** para ver una nómina completa de todos los empleados con antigüedad, salario, cumpleaños y datos de contrato — útil para RR.HH. y para auditorías generales del personal. Los datos de contrato (salario, cargo, departamento, fecha de ingreso) provienen siempre del **contrato activo**.
+
+Por defecto la tabla muestra solo empleados **Activos** — cambiar el filtro **Estado** para ver también inactivos.
+
+![Reporte de Empleados](/docs-images/04-reporte-empleados.png)
+
+### Columnas disponibles
+
+Empleado, CI, Género, Edad, Cumpleaños, Fecha de ingreso, Antigüedad, Salario, Tipo de contrato, Método de pago, Cargo, Departamento, Sucursal, Empresa, Estado, Teléfono, Fecha de registro, Fecha de baja.
+
+### Filtros disponibles
+
+**Empresa**, **Sucursal**, **Departamento** (en cascada), **Tipo de contrato**, **Método de pago**, **Género**, **Mes de cumpleaños** (útil para planificar saludos o beneficios por cumpleaños) y **Rango de fecha de registro**.
+
+### Exportar
+
+- **Exportar PDF** — con selector de columnas y orientación de página (Vertical/Horizontal)
+- **Exportar Excel** — con selector de columnas

@@ -37,6 +37,8 @@ Todo el proceso se gestiona desde **Nóminas → Aguinaldo**.
 
 ---
 
+![Período de aguinaldo con sus registros individuales](/docs-images/18-aguinaldo-periodo.png)
+
 ## Paso 2 — Generar los aguinaldos individuales
 
 1. Abrir el período de aguinaldo

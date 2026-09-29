@@ -2,6 +2,8 @@
 
 Ir a **Nóminas → Reporte de Salarios** para ver el desglose salarial completo de todos los empleados de una planilla. Muestra salario base, percepciones, deducciones segmentadas por tipo y neto a pagar, con opciones de exportación a PDF y Excel.
 
+![Reporte de Salarios](/docs-images/13-reporte-salarios.png)
+
 ---
 
 ## Flujo de uso

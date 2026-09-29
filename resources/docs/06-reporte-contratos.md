@@ -2,6 +2,8 @@
 
 Ir a **Empleados → Reporte de Contratos** para ver 7 vistas especializadas del estado de contratos de todos los empleados. Útil para anticipar vencimientos, monitorear períodos de prueba y auditar el estado contractual.
 
+![Reporte de Contratos](/docs-images/06-reporte-contratos.png)
+
 ---
 
 ## Vistas disponibles (tabs)

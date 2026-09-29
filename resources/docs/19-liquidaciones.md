@@ -58,6 +58,8 @@ El listado tiene pestañas para filtrar rápido: **Todas**, **Borradores**, **Ca
 
 ---
 
+![Detalle de una liquidación calculada](/docs-images/19-liquidacion-detalle.png)
+
 ## Calcular la liquidación
 
 Desde la vista de la liquidación (o como acción de fila en el listado), ejecutar **Calcular Liquidación** (solo disponible en estado Borrador). El sistema genera automáticamente todos los conceptos aplicables y un PDF del recibo.

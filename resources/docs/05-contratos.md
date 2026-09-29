@@ -19,6 +19,8 @@ El módulo de contratos gestiona el ciclo de vida laboral de cada empleado, desd
 
 ---
 
+![Detalle de un contrato](/docs-images/05-contrato-detalle.png)
+
 ## Crear un contrato
 
 1. Ir a **Empleados → Contratos**
@@ -152,3 +154,5 @@ Cada contrato registra automáticamente todos los cambios de estado, salario, ca
 ## Reporte de contratos
 
 Ver **Empleados → Reporte de Contratos** para acceder a 7 vistas especializadas con filtros y exportación PDF/Excel. También accesible desde el botón **Ver Reporte** en el encabezado de la lista de contratos.
+
+> Ver el capítulo **Reporte de Contratos** para el detalle completo de las 7 vistas disponibles.

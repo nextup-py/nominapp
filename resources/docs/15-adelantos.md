@@ -2,6 +2,8 @@
 
 Un adelanto es un anticipo parcial del salario del mes en curso. A diferencia de los préstamos, no tiene cuotas: el monto se descuenta íntegro en la próxima liquidación de nómina.
 
+![Listado de adelantos](/docs-images/15-adelantos-listado.png)
+
 ## Estados de un adelanto
 
 | Estado | Descripción |

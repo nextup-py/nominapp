@@ -1,6 +1,8 @@
 # Asistencias
 
-El módulo de Asistencias registra las entradas y salidas de los empleados y calcula automáticamente horas trabajadas, horas extra, tardanzas y ausencias.
+El módulo de Asistencias registra las entradas y salidas de los empleados y calcula automáticamente horas trabajadas, horas extra, tardanzas y ausencias, en base al horario fijo o patrón de rotación vigente de cada empleado.
+
+> Para configurar horarios y patrones de rotación (incluyendo el planificador visual de turnos), ver el capítulo **Horarios**.
 
 ## Modos de marcación
 
@@ -268,6 +270,8 @@ Cuando el conflicto ya no aplica — por ejemplo, la marcación real se cargó m
 ## Resumen diario de asistencia
 
 Ir a **Asistencias → Asistencias** para ver el resumen calculado de cada empleado por día. La tabla muestra únicamente los días con estado **Presente**.
+
+![Resumen diario de asistencias](/docs-images/07-asistencias-resumen.png)
 
 ### Pestañas de filtrado
 

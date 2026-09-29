@@ -28,7 +28,23 @@ Hay dos formas de consultar el saldo:
 
 ---
 
+## Reporte de Vacaciones
+
+A diferencia de los Balances (que muestran el saldo acumulado por empleado y año), el **Reporte de Vacaciones** lista **cada período de vacación tomado individualmente** — útil para ver el detalle de solicitudes en un rango de fechas.
+
+Ir a **Reportes → Reporte de Vacaciones**.
+
+**Columnas:** Empleado, CI, Sucursal, Inicio, Fin, Días hábiles, Monto, Forma de pago, Estado.
+
+**Filtros:** Año, Mes, Empresa, Sucursal, Estado.
+
+**Exportar:** PDF (con selector de columnas y orientación) o Excel (con selector de columnas), desde los botones del encabezado.
+
+---
+
 ## Registrar una solicitud de vacaciones
+
+![Nueva solicitud de vacaciones](/docs-images/08-vacacion-nueva.png)
 
 1. Ir a **Empleados → Vacaciones** (o a la pestaña **Vacaciones** del empleado)
 2. Clic en **Nueva Solicitud**

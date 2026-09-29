@@ -26,6 +26,8 @@ El tipo de jornada determina las horas mensuales de referencia y los multiplicad
 3. Ingresar el nombre (ej: "Administrativo 08:00–17:00") y seleccionar el tipo de jornada
 4. Guardar
 
+![Detalle de un horario con sus días configurados](/docs-images/03-horario-detalle.png)
+
 ### Configurar los días del horario
 
 Dentro del horario creado, la pestaña **Días** muestra los 7 días de la semana. Para cada día:
@@ -111,3 +113,33 @@ Para quitar la rotación de un empleado, usar **Remover** en la fila del emplead
 
 - Un patrón de rotación tiene prioridad sobre el horario fijo: si un empleado tiene ambos (no debería ser el caso normal, pero el sistema no lo impide), se usa la rotación.
 - Desactivar un patrón (**Desactivar** en el listado) no elimina las asignaciones existentes, pero los empleados con ese patrón dejan de tener turno calculado — usar con cuidado.
+
+---
+
+# Planificador de Turnos
+
+Ir a **Asistencias → Planificador de Turnos** para ver y ajustar, en una sola grilla visual, el turno de cada empleado día por día — sin necesidad de editar patrones de rotación uno por uno.
+
+## Qué muestra la grilla
+
+Una tabla de **empleados × días** (filtrable por empresa y sucursal) donde cada celda muestra el turno que le corresponde a ese empleado ese día, ya sea por horario fijo o por su patrón de rotación resuelto para esa fecha. Las celdas con un punto (●) indican un **override puntual** — un cambio manual que reemplaza, solo para ese día, lo que el patrón o el horario asignarían normalmente.
+
+![Planificador de Turnos con overrides puntuales](/docs-images/03-planificador-turnos.png)
+
+## Asignar un turno puntual (override)
+
+1. Clic en la celda del empleado y día a modificar
+2. En el modal, elegir el nuevo turno para ese día puntual y, opcionalmente, un motivo/nota (ej: "Cambio solicitado por el empleado")
+3. Guardar
+
+La celda queda marcada como override (borde punteado). El patrón de rotación del empleado **no se modifica** — el cambio aplica únicamente a esa fecha.
+
+## Mover un turno arrastrando (drag & drop)
+
+Se puede arrastrar la celda de un empleado/día hacia la celda de otro empleado/día para intercambiar el turno entre ambos. Al soltar, el sistema crea automáticamente un override con el motivo "Cambio de turno" (o "Movido desde [empleado] ([día])" cuando corresponde) — sin necesidad de abrir el modal manualmente.
+
+## Restaurar un override
+
+Si una celda ya tiene un override aplicado, el modal de esa celda muestra el botón **Restaurar ciclo** — elimina el override puntual y la celda vuelve a mostrar el turno que le corresponde según el patrón de rotación o el horario fijo del empleado.
+
+> El planificador es una herramienta de ajuste visual sobre las asignaciones ya existentes (horarios y rotaciones) — no reemplaza la creación de patrones ni las asignaciones masivas descritas más arriba en este capítulo. Úsalo para excepciones puntuales, no para reorganizar turnos de forma permanente.

@@ -16,6 +16,8 @@ Las ausencias registran los días en que un empleado no asistió sin justificaci
 
 ## Revisar una ausencia
 
+![Detalle de una ausencia con sus acciones](/docs-images/09-ausencia-detalle.png)
+
 1. Ir a **Empleados → Ausencias**
 2. Clic sobre la ausencia a revisar
 3. Desde el detalle, según el estado actual, están disponibles:

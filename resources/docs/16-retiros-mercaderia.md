@@ -70,6 +70,8 @@ Para ver el detalle de cuotas, abrir el retiro y revisar la pestaña de cuotas (
 
 La lista de cuotas también se puede exportar con el botón **Exportar a Excel**.
 
+![Detalle de un retiro de mercadería](/docs-images/16-retiro-mercaderia.png)
+
 ## Documento PDF
 
 Desde la vista del retiro aprobado o pagado, el botón **Descargar PDF** genera el documento con:

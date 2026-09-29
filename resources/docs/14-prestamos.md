@@ -36,6 +36,8 @@ Aprobado  → Cancelado
 
 > El préstamo pasa a **Pagado** automáticamente al procesar en nómina la última cuota pendiente.
 
+![Detalle de un préstamo aprobado](/docs-images/14-prestamo-detalle.png)
+
 ## Crear un préstamo
 
 1. Ir a **Créditos → Préstamos**
@@ -98,6 +100,18 @@ Donde `n` es la cantidad de cuotas. Con tasa 0%, la cuota es simplemente `Capita
 ## Contrato de préstamo en PDF
 
 Desde la vista del préstamo, el botón **Descargar PDF** genera el contrato del préstamo listo para imprimir o archivar. Disponible en los estados **Aprobado**, **Desembolsado** y **Pagado**.
+
+## Reporte de Préstamos
+
+Ir a **Reportes → Reporte de Préstamos** para ver todos los préstamos de la empresa en una sola tabla, con saldo pendiente y cuota mensual calculados.
+
+**Columnas:** Empleado, CI, Empresa, Sucursal, Monto, Cuotas, Cuota Mensual, Saldo Pendiente, Método de pago, Estado, Fecha de Otorgamiento, Aprobado por.
+
+**Filtros:** Estado, Empresa, Sucursal, Empleado, Método de pago, Período (fecha de otorgamiento).
+
+**Exportar:** solo a **Excel** (con selector de columnas) — este reporte no ofrece exportación a PDF; para el contrato en PDF de un préstamo individual usar **Descargar PDF** desde su vista de detalle.
+
+![Reporte de Préstamos](/docs-images/14-reporte-prestamos.png)
 
 ## Límites y validaciones
 

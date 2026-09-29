@@ -31,6 +31,8 @@ El sistema distingue dos modalidades que coexisten en el mismo módulo:
 
 ## Registrar un permiso por días completos
 
+![Formulario de nueva licencia](/docs-images/10-licencia-nueva.png)
+
 1. Ir a **Empleados → Licencias**
 2. Clic en **Nueva Licencia**
 3. Completar:
