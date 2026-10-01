@@ -33,6 +33,8 @@ class SetupWizardPage extends Page implements HasForms
 
     protected static ?string $slug = 'setup-inicial';
 
+    protected static ?string $title = 'Configuración Inicial';
+
     protected static bool $shouldRegisterNavigation = false;
 
     protected static string $view = 'filament.pages.setup-wizard-page';
