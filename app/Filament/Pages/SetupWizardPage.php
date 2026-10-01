@@ -40,13 +40,22 @@ class SetupWizardPage extends Page implements HasForms
     /** @var array<string, mixed>|null */
     public ?array $data = [];
 
+    /** @var bool True si el setup ya estaba completo y el wizard se abrió en modo "editar" (reapertura), no en el primer setup. */
     public bool $isReopen = false;
 
+    /**
+     * Solo Super Admin puede acceder al asistente — tanto en el primer setup
+     * como al reabrirlo — igual que el botón de reapertura en
+     * ManageGeneralSettings. El primer usuario creado por ProductionSeeder ya
+     * recibe Super Admin automáticamente antes de loguearse, así que esto no
+     * rompe el bootstrap inicial.
+     */
     public static function canAccess(): bool
     {
-        return auth()->user()?->roles()->exists() ?? false;
+        return auth()->user()?->hasRole('Super Admin') ?? false;
     }
 
+    /** Inicializa $isReopen según el estado persistido y precarga el form con los datos correspondientes. */
     public function mount(): void
     {
         $this->isReopen = app(GeneralSettings::class)->setup_completed;
@@ -88,6 +97,10 @@ class SetupWizardPage extends Page implements HasForms
         ];
     }
 
+    /**
+     * Construye el wizard de 4 pasos (empresa/sucursales, estructura
+     * organizacional, módulos opcionales, parámetros de nómina).
+     */
     public function form(Form $form): Form
     {
         return $form
@@ -221,6 +234,7 @@ class SetupWizardPage extends Page implements HasForms
             ->statePath('data');
     }
 
+    /** Botón de envío del wizard, con label condicional según si es el primer setup o una reapertura. */
     protected function getSubmitAction(): HtmlString
     {
         $label = $this->isReopen ? 'Guardar cambios' : 'Finalizar configuración';
@@ -232,6 +246,12 @@ class SetupWizardPage extends Page implements HasForms
         BLADE));
     }
 
+    /**
+     * Persiste los datos del wizard: crea o actualiza la empresa, crea
+     * sucursales/departamentos/cargos solo en el primer setup (no en
+     * reapertura), y guarda ModuleSettings/PayrollSettings/GeneralSettings
+     * (incluido el flag setup_completed).
+     */
     public function submit(): void
     {
         $data = $this->form->getState();

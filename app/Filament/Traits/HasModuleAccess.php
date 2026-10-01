@@ -33,6 +33,11 @@ trait HasModuleAccess
         return static::isModuleEnabled() && static::can('viewAny');
     }
 
+    public static function canView($record): bool
+    {
+        return static::isModuleEnabled() && static::can('view', $record);
+    }
+
     public static function canCreate(): bool
     {
         return static::isModuleEnabled() && static::can('create');

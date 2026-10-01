@@ -77,6 +77,15 @@ it('permite saltar el paso de estructura organizacional sin crear departamentos'
     expect(app(GeneralSettings::class)->setup_completed)->toBeTrue();
 });
 
+it('niega acceso al wizard a un usuario sin rol Super Admin', function () {
+    $readOnlyUser = User::factory()->create();
+    $readOnlyUser->assignRole('Solo Lectura');
+
+    $this->actingAs($readOnlyUser)
+        ->get(SetupWizardPage::getUrl())
+        ->assertForbidden();
+});
+
 it('el modo de una sola sucursal crea la sucursal por defecto sin datos del repeater', function () {
     Livewire::test(SetupWizardPage::class)
         ->fillForm([
