@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AguinaldoPeriodResource\Pages;
 use App\Filament\Resources\AguinaldoPeriodResource\RelationManagers\AguinaldosRelationManager;
 use App\Filament\Resources\AguinaldoPeriodResource\RelationManagers\AuditsRelationManager;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\AguinaldoPeriod;
 use App\Models\Company;
 use App\Services\AguinaldoService;
@@ -27,6 +28,10 @@ use Illuminate\Validation\Rule;
 
 class AguinaldoPeriodResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'aguinaldo_enabled';
+
     protected static ?string $model = AguinaldoPeriod::class;
 
     protected static ?string $navigationGroup = 'Nóminas';

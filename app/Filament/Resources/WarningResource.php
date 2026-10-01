@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\WarningResource\Pages;
 use App\Filament\Resources\WarningResource\RelationManagers\AuditsRelationManager;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Warning;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -34,6 +35,10 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 /** Resource Filament para gestionar amonestaciones laborales. */
 class WarningResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'warnings_enabled';
+
     protected static ?string $model = Warning::class;
 
     protected static ?string $navigationLabel = 'Amonestaciones';

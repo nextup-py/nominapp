@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\EmployeeLeaveResource\Pages;
 use App\Filament\Resources\EmployeeLeaveResource\RelationManagers\AuditsRelationManager;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Absence;
 use App\Models\EmployeeLeave;
 use Carbon\Carbon;
@@ -37,6 +38,10 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 /** Recurso Filament para gestionar permisos y licencias de empleados. */
 class EmployeeLeaveResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'employee_leaves_enabled';
+
     protected static ?string $model = EmployeeLeave::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';

@@ -6,6 +6,7 @@ use App\Filament\Resources\MerchandiseWithdrawalResource\Pages;
 use App\Filament\Resources\MerchandiseWithdrawalResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\MerchandiseWithdrawalResource\RelationManagers\InstallmentsRelationManager;
 use App\Filament\Resources\MerchandiseWithdrawalResource\RelationManagers\ItemsRelationManager;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\MerchandiseWithdrawal;
@@ -35,6 +36,10 @@ use Illuminate\Support\Facades\Auth;
 /** Resource Filament para gestión de retiros de mercadería a crédito. */
 class MerchandiseWithdrawalResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'merchandise_withdrawals_enabled';
+
     protected static ?string $model = MerchandiseWithdrawal::class;
 
     protected static ?string $navigationLabel = 'Retiros de Mercadería';

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\AdvanceResource\Pages;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Advance;
 use App\Models\Branch;
 use App\Models\Company;
@@ -44,6 +45,10 @@ use Livewire\Component;
 
 class AdvanceResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'advances_enabled';
+
     protected static ?string $model = Advance::class;
 
     protected static ?string $navigationLabel = 'Adelantos';

@@ -4,11 +4,13 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\DisbursementBatchResource\Pages;
 use App\Filament\Resources\DisbursementBatchResource\RelationManagers;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Advance;
 use App\Models\Company;
 use App\Models\DisbursementBatch;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -29,6 +31,10 @@ use Illuminate\Database\Eloquent\Builder;
 /** Recurso Filament para gestionar lotes de acreditación bancaria masiva de adelantos y nóminas. */
 class DisbursementBatchResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'disbursement_batches_enabled';
+
     protected static ?string $model = DisbursementBatch::class;
 
     protected static ?string $navigationLabel = 'Pagos Bancarios';
@@ -132,7 +138,7 @@ class DisbursementBatchResource extends Resource
                             ->columnSpanFull()
                             ->visible(fn (Get $get) => filled($get('company_id'))),
 
-                        \Filament\Forms\Components\Placeholder::make('select_company_first')
+                        Placeholder::make('select_company_first')
                             ->label('')
                             ->content('Seleccioná una empresa para ver los adelantos disponibles.')
                             ->columnSpanFull()

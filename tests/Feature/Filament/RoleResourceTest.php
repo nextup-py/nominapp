@@ -5,6 +5,7 @@ use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
 use App\Models\User;
+use App\Settings\GeneralSettings;
 use Database\Seeders\BusinessActionPermissionSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
@@ -18,6 +19,12 @@ beforeEach(function () {
     (new PermissionSeeder)->run();
     (new BusinessActionPermissionSeeder)->run();
     (new RoleSeeder)->run();
+
+    // El asistente de configuración inicial bloquearía cualquier request HTTP
+    // real (no Livewire::test) hasta completarse — marcarlo como completo
+    // para que este test siga verificando autorización por rol, no onboarding.
+    app(GeneralSettings::class)->setup_completed = true;
+    app(GeneralSettings::class)->save();
 
     $this->admin = User::factory()->create();
     $this->admin->assignRole('Super Admin');

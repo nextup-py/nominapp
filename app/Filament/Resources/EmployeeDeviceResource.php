@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\EmployeeDeviceResource\Pages;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\EmployeeDevice;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
@@ -32,6 +33,10 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class EmployeeDeviceResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'biometric_attendance_enabled';
+
     protected static ?string $model = EmployeeDevice::class;
 
     protected static ?string $navigationLabel = 'Dispositivos de Empleados';

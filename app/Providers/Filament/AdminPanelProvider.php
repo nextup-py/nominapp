@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\EnsureSetupIsComplete;
 use App\Support\ThemeResolver;
 use EightyNine\FilamentDocs\FilamentDocsPlugin;
 use Filament\FontProviders\LocalFontProvider;
@@ -85,6 +86,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                EnsureSetupIsComplete::class,
             ]);
 
         // No basta con file_exists(manifest.json): un manifest presente pero

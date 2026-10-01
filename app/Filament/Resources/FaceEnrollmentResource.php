@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\FaceEnrollmentResource\Pages;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\Employee;
 use App\Models\FaceEnrollment;
 use Filament\Forms\Components\Select;
@@ -27,6 +28,10 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class FaceEnrollmentResource extends Resource
 {
+    use HasModuleAccess;
+
+    protected static string $moduleFlag = 'biometric_attendance_enabled';
+
     // Configuración general del recurso
     protected static ?string $model = FaceEnrollment::class;
 
