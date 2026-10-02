@@ -46,6 +46,56 @@ class CheckMissingAttendance extends Command
         $thresholdMinutes = app(GeneralSettings::class)->absence_threshold_minutes;
         $this->info("⏱️  Umbral configurado: {$thresholdMinutes} minutos después de la hora de entrada");
 
+        // Contadores acumulados entre las fechas procesadas
+        $totals = ['processed' => 0, 'created' => 0, 'on_leave' => 0, 'skipped' => 0];
+
+        // Se procesa siempre la fecha pedida Y el día anterior. Necesario para
+        // turnos que cruzan medianoche (ej. 22:00-06:00): el cron corre de
+        // 06:00 a 20:00, así que un turno nocturno que arranca a las 22:00
+        // nunca llega a pasar su propio umbral ese mismo día (ya terminó la
+        // ventana del cron) y al día siguiente el comando históricamente solo
+        // miraba "hoy", sin revisar si ayer quedó una ausencia sin detectar.
+        // Mirar siempre un día atrás evita tener que detectar explícitamente
+        // si el turno cruza medianoche: para un empleado de turno diurno
+        // normal, el registro de ayer ya existe (se creó el mismo día dentro
+        // de la ventana del cron), así que ese chequeo extra se salta casi
+        // gratis por "ya tiene registro" (ver processEmployee()).
+        foreach ([$date->copy()->subDay(), $date] as $dateToProcess) {
+            $this->newLine();
+            $this->info('📅 Procesando '.$dateToProcess->toDateString().'...');
+
+            $counts = $this->processDate($dateToProcess, $thresholdMinutes, $dryRun);
+
+            foreach ($totals as $key => $value) {
+                $totals[$key] += $counts[$key];
+            }
+        }
+
+        // Mostrar resumen de resultados
+        $this->newLine();
+        $this->info('✅ Proceso completado:');
+        $this->table(
+            ['Métrica', 'Cantidad'],
+            [
+                ['Empleados procesados', $totals['processed']],
+                ['Ausencias creadas', $totals['created']],
+                ['Licencias registradas', $totals['on_leave']],
+                ['Omitidos (ya tienen registro o no aplica)', $totals['skipped']],
+            ]
+        );
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Busca y procesa los empleados con horario/turno vigente para una fecha
+     * puntual. Extraído de handle() para poder llamarse una vez por cada
+     * fecha evaluada (la pedida y el día anterior).
+     *
+     * @return array{processed: int, created: int, on_leave: int, skipped: int}
+     */
+    protected function processDate(Carbon $date, int $thresholdMinutes, bool $dryRun): array
+    {
         // Obtener empleados activos con horario u turno vigente para esta fecha — horario
         // fijo (asignación nueva o campo legacy) o rotación (patrón asignado u override
         // puntual). Antes de este fix, un empleado con rotación nunca generaba ausencia
@@ -70,41 +120,25 @@ class CheckMissingAttendance extends Command
         $this->info('👥 Empleados activos con horario: '.$employees->count());
 
         // Contadores para estadísticas
-        $processed = 0;
-        $created = 0;
-        $onLeave = 0;
-        $skipped = 0;
+        $counts = ['processed' => 0, 'created' => 0, 'on_leave' => 0, 'skipped' => 0];
 
         // Procesar cada empleado
         foreach ($employees as $employee) {
             $result = $this->processEmployee($employee, $date, $thresholdMinutes, $dryRun);
 
-            $processed++;
+            $counts['processed']++;
 
             // Actualizar contadores según el resultado
             if ($result === 'created') {
-                $created++;
+                $counts['created']++;
             } elseif ($result === 'on_leave') {
-                $onLeave++;
+                $counts['on_leave']++;
             } elseif ($result === 'skipped') {
-                $skipped++;
+                $counts['skipped']++;
             }
         }
 
-        // Mostrar resumen de resultados
-        $this->newLine();
-        $this->info('✅ Proceso completado:');
-        $this->table(
-            ['Métrica', 'Cantidad'],
-            [
-                ['Empleados procesados', $processed],
-                ['Ausencias creadas', $created],
-                ['Licencias registradas', $onLeave],
-                ['Omitidos (ya tienen registro o no aplica)', $skipped],
-            ]
-        );
-
-        return Command::SUCCESS;
+        return $counts;
     }
 
     /**

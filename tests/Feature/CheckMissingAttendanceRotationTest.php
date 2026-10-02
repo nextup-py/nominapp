@@ -25,6 +25,13 @@ uses(RefreshDatabase::class);
  * fijo (scheduleAssignments / schedule.days) — un empleado con rotación
  * asignada (RotationAssignment / ShiftOverride) nunca generaba una ausencia
  * automática por más que faltara a marcar, sin importar el turno.
+ *
+ * Regresión 2: el comando solo evaluaba "hoy" contra "ahora" — un turno que
+ * arranca de noche (ej. 22:00) nunca generaba ausencia automática, porque el
+ * cron deja de correr a las 20:00 (nunca llega a pasar el umbral ese mismo
+ * día) y la corrida del día siguiente solo miraba la fecha nueva, sin
+ * revisar si el día anterior quedó un turno sin marcar. El fix procesa
+ * siempre la fecha pedida y el día anterior en cada corrida.
  */
 function makeCheckMissingCompany(): Company
 {
@@ -204,6 +211,77 @@ it('no crea ausencia para un empleado con rotación si todavía no pasó el umbr
     Artisan::call('attendance:check-missing', ['--date' => $today->toDateString()]);
 
     expect(AttendanceDay::where('employee_id', $employee->id)->where('date', $today->toDateString())->exists())->toBeFalse();
+});
+
+it('crea ausencia para un turno nocturno (cruza medianoche) recién en la corrida del día siguiente', function () {
+    $company = makeCheckMissingCompany();
+    $employee = makeCheckMissingEmployee($company);
+
+    $shift = ShiftTemplate::create([
+        'company_id' => $company->id,
+        'name' => 'Turno Noche',
+        'shift_type' => 'nocturno',
+        'is_day_off' => false,
+        'start_time' => '22:00',
+        'end_time' => '06:00',
+        'break_minutes' => 30,
+        'is_active' => true,
+    ]);
+    $pattern = RotationPattern::create([
+        'company_id' => $company->id,
+        'name' => 'Patrón Fijo Noche',
+        'sequence' => [$shift->id],
+        'is_active' => true,
+    ]);
+
+    $shiftStart = Carbon::parse('2026-08-24'); // lunes — el turno arranca esta noche a las 22:00
+    RotationService::assign($employee, $pattern, $shiftStart->copy()->subMonth());
+
+    // El cron ya no corre después de las 20:00, así que el umbral del turno
+    // (22:15) nunca se evalúa el lunes. La próxima corrida es el martes a las
+    // 06:00 — sin el fix, el comando solo miraba "hoy" (martes) y la ausencia
+    // del lunes nunca se generaba.
+    Carbon::setTestNow($shiftStart->copy()->addDay()->setTime(6, 0));
+
+    Artisan::call('attendance:check-missing');
+
+    $day = AttendanceDay::where('employee_id', $employee->id)->where('date', $shiftStart->toDateString())->first();
+    expect($day)->not->toBeNull()
+        ->and($day->status)->toBe('absent')
+        ->and($day->expected_check_in)->toBe('22:00:00')
+        ->and($day->expected_check_out)->toBe('06:00:00');
+});
+
+it('--date también revisa el día anterior para cubrir turnos nocturnos al re-procesar manualmente', function () {
+    $company = makeCheckMissingCompany();
+    $employee = makeCheckMissingEmployee($company);
+
+    $shift = ShiftTemplate::create([
+        'company_id' => $company->id,
+        'name' => 'Turno Noche',
+        'shift_type' => 'nocturno',
+        'is_day_off' => false,
+        'start_time' => '22:00',
+        'end_time' => '06:00',
+        'break_minutes' => 30,
+        'is_active' => true,
+    ]);
+    $pattern = RotationPattern::create([
+        'company_id' => $company->id,
+        'name' => 'Patrón Fijo Noche',
+        'sequence' => [$shift->id],
+        'is_active' => true,
+    ]);
+
+    $shiftStart = Carbon::parse('2026-08-24');
+    RotationService::assign($employee, $pattern, $shiftStart->copy()->subMonth());
+
+    Carbon::setTestNow($shiftStart->copy()->addDay()->setTime(10, 0));
+
+    Artisan::call('attendance:check-missing', ['--date' => $shiftStart->copy()->addDay()->toDateString()]);
+
+    $day = AttendanceDay::where('employee_id', $employee->id)->where('date', $shiftStart->toDateString())->first();
+    expect($day)->not->toBeNull()->and($day->status)->toBe('absent');
 });
 
 it('no duplica la ausencia si ya existe un AttendanceDay para la fecha', function () {
