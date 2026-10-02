@@ -2076,7 +2076,7 @@ Acompañar siempre con `formatAuditFieldsForPresentation()` en el modelo para mo
 
 ### Important Notes
 - Monetary values use `decimal:2` cast
-- `Employee::getAdvanceReferenceSalary()` does **not** yet include the weekly paid rest day for jornaleros — pending automatic calculation
+- `Employee::getAdvanceReferenceSalary()` para jornaleros = días presentes del período vigente × jornal **más** el descanso semanal devengado, calculado con `RestDayCalculator::calculateForRange()` (la misma regla que la nómina, vía `calculate()`): el adelanto nunca supera el bruto que luego paga el recibo. El descanso es proporcional por semana ISO (`min(días, 6) × jornal / 6`), sin esperar a que cierre la semana. Horas extra y otros conceptos no entran. El período vigente se busca por fecha (`Carbon::today()->toDateString()`), no por `now()`: comparar `end_date` (date) contra una hora dejaba la referencia en `null` el último día del período.
 - Loan installment amount cannot exceed 25% of salary (Art. 245 CLT) — validated in `Loan::activate()`
 - Advance salary cap validation (mensual only) is in `Advance::approve()` — compares sum of all active advances against gross monthly salary
 - Mobile mode is for remote employees using their own device, **not** a shared kiosk

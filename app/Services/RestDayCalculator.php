@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Employee;
 use App\Models\PayrollPeriod;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -32,6 +33,21 @@ class RestDayCalculator
      */
     public function calculate(Employee $employee, PayrollPeriod $period): array
     {
+        return $this->calculateForRange($employee, $period->start_date, $period->end_date);
+    }
+
+    /**
+     * Calcula el descanso semanal remunerado de un rango de fechas.
+     *
+     * Es la única fuente de la regla: la nómina la usa vía `calculate()` con el período, y la
+     * referencia salarial de adelantos (`Employee::getAdvanceReferenceSalary()`) con el mismo
+     * período, para que el adelanto nunca supere lo que luego paga el recibo. El descanso se
+     * devenga de forma proporcional a los días presentes de cada semana ISO.
+     *
+     * @return array{total: float, items: array}
+     */
+    public function calculateForRange(Employee $employee, CarbonInterface $from, CarbonInterface $to): array
+    {
         $emptyResult = ['total' => 0.0, 'items' => []];
 
         if ($employee->employment_type !== 'day_laborer') {
@@ -50,7 +66,7 @@ class RestDayCalculator
 
         // Obtener los días con presencia en el período, con su fecha para agrupar por semana ISO
         $presentDates = $employee->attendanceDays()
-            ->whereBetween('date', [$period->start_date, $period->end_date])
+            ->whereBetween('date', [$from, $to])
             ->where('status', 'present')
             ->pluck('date');
 
@@ -74,7 +90,8 @@ class RestDayCalculator
 
         Log::info("RestDayCalculator: descanso semanal calculado — CI {$employee->ci} {$employee->first_name}: {$byWeek->count()} sem. × Gs. ".round($total / max($byWeek->count(), 1), 2)." = Gs. {$total}", [
             'employee_id' => $employee->id,
-            'period_id' => $period->id,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
             'weeks' => $byWeek->count(),
             'total' => $total,
         ]);

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Notifications\MobileDeviceLinkedNotification;
 use App\Notifications\MobileDeviceRelinkedNotification;
 use App\Services\DeviceHintsParser;
+use App\Services\RestDayCalculator;
 use App\Settings\PayrollSettings;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
@@ -938,8 +939,9 @@ class Employee extends Model implements AuthenticatableContract
     /**
      * Calcula el salario devengado de referencia para adelantos.
      * - Mensual: salario base fijo del contrato activo.
-     * - Jornalero: días efectivamente trabajados en el período actual × jornal diario.
-     *   El adelanto solo puede solicitarse sobre trabajo ya realizado (Art. MTESS).
+     * - Jornalero: (días efectivamente trabajados en el período actual × jornal diario) más el
+     *   descanso semanal remunerado devengado, calculado con la misma regla que la nómina
+     *   (`RestDayCalculator`). El adelanto solo puede solicitarse sobre trabajo ya realizado (Art. MTESS).
      */
     public function getAdvanceReferenceSalary(): ?float
     {
@@ -948,11 +950,11 @@ class Employee extends Model implements AuthenticatableContract
         }
 
         if ($this->daily_rate && $this->daily_rate > 0) {
-            $now = Carbon::now();
+            $today = Carbon::today()->toDateString();
 
             $period = PayrollPeriod::where('frequency', $this->payroll_type)
-                ->where('start_date', '<=', $now)
-                ->where('end_date', '>=', $now)
+                ->where('start_date', '<=', $today)
+                ->where('end_date', '>=', $today)
                 ->first();
 
             if (! $period) {
@@ -964,7 +966,13 @@ class Employee extends Model implements AuthenticatableContract
                 ->where('status', 'present')
                 ->count();
 
-            return $workedDays > 0 ? (float) ($workedDays * $this->daily_rate) : null;
+            if ($workedDays === 0) {
+                return null;
+            }
+
+            $restDay = app(RestDayCalculator::class)->calculateForRange($this, $period->start_date, $period->end_date)['total'];
+
+            return (float) ($workedDays * $this->daily_rate) + $restDay;
         }
 
         return null;
