@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -9,6 +10,24 @@ class Deduction extends Model
 {
     /** Código de la deducción generada por suspensiones disciplinarias. */
     public const CODE_DISCIPLINARY_SUSPENSION = 'SUS-DIS';
+
+    /** Código de la deducción generada por ausencias injustificadas. */
+    public const CODE_UNJUSTIFIED_ABSENCE = 'AUS-INJ';
+
+    /**
+     * Códigos de deducciones de sistema: las crean y gestionan los módulos (ausencias, suspensión,
+     * préstamos, adelantos, mercadería) con un EmployeeDeduction puntual por evento. Nunca deben ser
+     * obligatorias: asignarlas a un empleado como deducción permanente genera líneas en cero en cada nómina.
+     *
+     * @var array<int, string>
+     */
+    public const SYSTEM_CODES = [
+        self::CODE_UNJUSTIFIED_ABSENCE,
+        self::CODE_DISCIPLINARY_SUSPENSION,
+        'PRE001',
+        'ADE001',
+        'MER001',
+    ];
 
     protected $fillable = [
         'name',
@@ -32,6 +51,33 @@ class Deduction extends Model
         'affects_irp' => 'boolean',
         'apply_judicial_limit' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Deduction $deduction) {
+            if ($deduction->isSystem()) {
+                $deduction->is_mandatory = false;
+            }
+        });
+    }
+
+    /** Indica si es una deducción de sistema (ver `SYSTEM_CODES`). */
+    public function isSystem(): bool
+    {
+        return in_array($this->code, self::SYSTEM_CODES, true);
+    }
+
+    /**
+     * Deducciones activas que se asignan automáticamente a empleados nuevos:
+     * obligatorias, activas y que no sean de sistema.
+     */
+    public function scopeMandatoryAssignable(Builder $query): Builder
+    {
+        return $query
+            ->where('is_mandatory', true)
+            ->where('is_active', true)
+            ->whereNotIn('code', self::SYSTEM_CODES);
+    }
 
     /**
      * Todos los empleados con esta deducción (historial completo).

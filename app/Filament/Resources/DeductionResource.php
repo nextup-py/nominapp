@@ -148,9 +148,13 @@ class DeductionResource extends Resource
 
                         Toggle::make('is_mandatory')
                             ->label('Deducción Obligatoria')
-                            ->helperText('Indica que esta deducción debe aplicarse a todos los empleados.')
+                            ->helperText(fn (?Deduction $record) => $record?->isSystem()
+                                ? 'Deducción de sistema: la genera el módulo correspondiente por evento y no puede ser obligatoria.'
+                                : 'Indica que esta deducción debe aplicarse a todos los empleados.')
                             ->default(false)
                             ->inline(false)
+                            ->disabled(fn (?Deduction $record) => $record?->isSystem() ?? false)
+                            ->dehydrated(fn (?Deduction $record) => ! ($record?->isSystem() ?? false))
                             ->columnSpan(1),
 
                         Toggle::make('is_active')
