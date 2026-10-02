@@ -611,6 +611,12 @@ class LiquidacionResource extends Resource
                             ->money('PYG', locale: 'es_PY')
                             ->color('danger')
                             ->visible(fn (Liquidacion $record) => $record->items()->where('category', 'ausencias')->exists()),
+                        TextEntry::make('suspension_deduction')
+                            ->label('Suspensión Disciplinaria')
+                            ->state(fn (Liquidacion $record) => (float) $record->items()->where('category', 'suspension')->sum('amount'))
+                            ->money('PYG', locale: 'es_PY')
+                            ->color('danger')
+                            ->visible(fn (Liquidacion $record) => $record->items()->where('category', 'suspension')->exists()),
                         TextEntry::make('total_deductions')
                             ->label('TOTAL DESCUENTOS')
                             ->money('PYG', locale: 'es_PY')
@@ -683,6 +689,10 @@ class LiquidacionResource extends Resource
                 ->title($successTitle)
                 ->body("Neto a pagar: {$record->fresh()->formatted_net_amount}")
                 ->send();
+
+            if ($warning = $service->getPendingAbsencesWarning($record)) {
+                Notification::make()->warning()->title('Ausencias sin revisar')->body($warning)->persistent()->send();
+            }
         } catch (\Throwable $e) {
             Notification::make()
                 ->danger()

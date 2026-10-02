@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\Absence;
 use App\Models\Aguinaldo;
+use App\Models\AttendanceDay;
 use App\Models\Employee;
 use App\Models\Liquidacion;
 use App\Models\Loan;
 use App\Models\Payroll;
 use App\Models\VacationBalance;
+use App\Models\WarningSuspensionDay;
 use App\Settings\PayrollSettings;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -135,23 +138,45 @@ class LiquidacionService
             }
 
             // ===== COMPONENTE 4: SALARIO PENDIENTE =====
-            // Se calcula antes que el aguinaldo porque este lo usa como base cuando no hay nóminas previas
+            // Se calcula antes que el aguinaldo porque este lo usa como base cuando no hay nóminas previas.
+            // La ventana arranca el día siguiente a la última nómina del mes (nunca vuelve a pagar días ya liquidados).
+            $pendingWindowStart = $this->pendingWindowStart($employee, $terminationDate, $hireDate);
+
             [$salarioPendienteDays, $salarioPendienteAmount] = $this->calculateSalarioPendiente(
-                $employee, $terminationDate, $dailySalary, $hireDate
+                $employee, $terminationDate, $dailySalary, $pendingWindowStart, $isJornal
             );
             if ($salarioPendienteAmount > 0) {
                 $totalHaberes += $salarioPendienteAmount;
                 $items[] = [
                     'type' => 'haber',
                     'category' => 'salario_pendiente',
-                    'description' => "Salario pendiente: {$salarioPendienteDays} {$unit} del mes",
+                    'description' => "Salario pendiente: {$salarioPendienteDays} {$unit}".($isJornal ? ' trabajados' : ' del mes'),
                     'amount' => $salarioPendienteAmount,
                     'metadata' => ['days' => $salarioPendienteDays, 'daily_salary' => $dailySalary, 'unit' => $unit],
                 ];
             }
 
+            // Jornaleros: descanso semanal remunerado del tramo pendiente, con la misma regla que la nómina
+            $descansoSemanalAmount = 0.0;
+            if ($isJornal && $pendingWindowStart !== null) {
+                $descansoSemanalAmount = round(
+                    app(RestDayCalculator::class)->calculateForRange($employee, $pendingWindowStart, $terminationDate)['total'],
+                    0
+                );
+                if ($descansoSemanalAmount > 0) {
+                    $totalHaberes += $descansoSemanalAmount;
+                    $items[] = [
+                        'type' => 'haber',
+                        'category' => 'descanso_semanal',
+                        'description' => 'Descanso semanal remunerado',
+                        'amount' => $descansoSemanalAmount,
+                        'metadata' => ['from' => $pendingWindowStart->toDateString(), 'to' => $terminationDate->toDateString()],
+                    ];
+                }
+            }
+
             // ===== COMPONENTE 5: AGUINALDO PROPORCIONAL =====
-            $aguinaldoAmount = $this->calculateAguinaldoProporcional($employee, $terminationDate, $salarioPendienteAmount);
+            $aguinaldoAmount = $this->calculateAguinaldoProporcional($employee, $terminationDate, $salarioPendienteAmount + $descansoSemanalAmount);
             if ($aguinaldoAmount > 0) {
                 $totalHaberes += $aguinaldoAmount;
                 $monthsInYear = $terminationDate->month;
@@ -166,9 +191,10 @@ class LiquidacionService
 
             // ===== DEDUCCIONES =====
 
-            // Ausencias injustificadas dentro del período liquidado (no cubiertas por nómina previa)
+            // Ausencias injustificadas (revisadas por RR.HH.) del tramo que esta liquidación paga.
+            // Las de períodos con nómina ya generada se descontaron allí (AUS-INJ).
             [$absenceDays, $absenceDeduction] = $this->calculateAbsenceDeductions(
-                $employee, $hireDate, $terminationDate, $dailySalary
+                $employee, $pendingWindowStart, $terminationDate, $dailySalary, $isJornal
             );
             if ($absenceDeduction > 0) {
                 $totalDeductions += $absenceDeduction;
@@ -181,11 +207,26 @@ class LiquidacionService
                 ];
             }
 
+            // Suspensión disciplinaria sin goce de sueldo dentro del tramo pagado (SUS-DIS no pasa por nómina aquí)
+            [$suspensionDays, $suspensionDeduction] = $this->calculateSuspensionDeduction(
+                $employee, $pendingWindowStart, $terminationDate, $dailySalary, $isJornal
+            );
+            if ($suspensionDeduction > 0) {
+                $totalDeductions += $suspensionDeduction;
+                $items[] = [
+                    'type' => 'deduction',
+                    'category' => 'suspension',
+                    'description' => "Suspensión disciplinaria: {$suspensionDays} día(s)",
+                    'amount' => $suspensionDeduction,
+                    'metadata' => ['days' => $suspensionDays, 'daily_salary' => $dailySalary],
+                ];
+            }
+
             // IPS 9% sobre salario pendiente + vacaciones (preaviso/indemnización/aguinaldo exentos)
             // Solo se aplica si el empleado tiene activa la deducción IPS en su perfil
             $ipsRate = $settings->ips_employee_rate;
             $ipsDeductionCode = $settings->ips_deduction_code;
-            $ipsBase = $salarioPendienteAmount + $vacacionesAmount;
+            $ipsBase = $salarioPendienteAmount + $descansoSemanalAmount + $vacacionesAmount;
             $hasIps = $employee->deductions()
                 ->where('code', $ipsDeductionCode)
                 ->wherePivotNull('end_date')
@@ -461,52 +502,136 @@ class LiquidacionService
         return round($totalEarned / 12, 0);
     }
 
-    protected function calculateSalarioPendiente(Employee $employee, Carbon $terminationDate, float $dailySalary, Carbon $hireDate): array
+    /**
+     * Primer día del tramo que esta liquidación paga como salario pendiente.
+     *
+     * Es el día siguiente a la última nómina generada del mes de terminación (o el inicio del mes /
+     * fecha de ingreso si no hay ninguna). Devuelve null si una nómina ya cubre hasta la terminación.
+     * Un quincenal con solo la primera mitad generada deja pendiente únicamente la segunda mitad:
+     * nunca se vuelven a pagar días ya liquidados.
+     */
+    protected function pendingWindowStart(Employee $employee, Carbon $terminationDate, Carbon $hireDate): ?Carbon
     {
-        // Verificar si ya existe una nómina que cubra hasta la fecha de terminación.
-        // No basta con "hay alguna nómina este mes": un quincenal con solo la primera
-        // mitad generada no cubre los días pendientes de la segunda mitad.
-        $hasPayroll = Payroll::where('employee_id', $employee->id)
-            ->whereHas('period', function ($q) use ($terminationDate) {
-                $q->where('end_date', '>=', $terminationDate);
-            })
-            ->exists();
+        $periods = Payroll::where('employee_id', $employee->id)
+            ->with('period')
+            ->get()
+            ->pluck('period')
+            ->filter();
 
-        if ($hasPayroll) {
-            return [0, 0];
+        if ($periods->contains(fn ($period) => $period->end_date->gte($terminationDate))) {
+            return null;
         }
 
-        // Si el empleado fue contratado en el mismo mes/año, contar solo desde su primer día
-        if ($hireDate->month === $terminationDate->month && $hireDate->year === $terminationDate->year) {
-            $daysWorked = $terminationDate->day - $hireDate->day + 1;
-        } else {
-            $daysWorked = $terminationDate->day;
+        $start = $terminationDate->copy()->startOfMonth();
+
+        if ($hireDate->gt($start)) {
+            $start = $hireDate->copy();
         }
 
-        $amount = round($daysWorked * $dailySalary, 0);
+        $lastEnd = $periods
+            ->filter(fn ($period) => $period->end_date->gte($terminationDate->copy()->startOfMonth()))
+            ->max(fn ($period) => $period->end_date);
 
-        return [$daysWorked, $amount];
+        if ($lastEnd !== null && $lastEnd->copy()->addDay()->gt($start)) {
+            $start = $lastEnd->copy()->addDay();
+        }
+
+        return $start->startOfDay();
     }
 
-    protected function calculateAbsenceDeductions(Employee $employee, Carbon $hireDate, Carbon $terminationDate, float $dailySalary): array
+    /**
+     * Salario pendiente del tramo [inicio de ventana, terminación].
+     *
+     * Mensuales: días calendario del tramo × salario diario (salario / 30). Jornaleros: solo los días
+     * efectivamente presentes × jornal (los días suspendidos o ausentes no se pagan).
+     *
+     * @return array{0: int, 1: float} [días, monto]
+     */
+    protected function calculateSalarioPendiente(Employee $employee, Carbon $terminationDate, float $dailySalary, ?Carbon $windowStart, bool $isJornal = false): array
     {
-        // Solo aplica a empleados de tiempo completo; para jornaleros la ausencia ya implica no cobrar ese día
-        if ($employee->employment_type === 'day_laborer') {
+        if ($windowStart === null || $windowStart->gt($terminationDate)) {
             return [0, 0];
         }
 
-        $absentDays = $employee->attendanceDays()
-            ->whereBetween('date', [$hireDate->toDateString(), $terminationDate->toDateString()])
-            ->where('status', 'absent')
-            ->where('is_holiday', false)
-            ->where('is_weekend', false)
+        $daysWorked = $isJornal
+            ? AttendanceDay::where('employee_id', $employee->id)
+                ->whereBetween('date', [$windowStart->toDateString(), $terminationDate->toDateString()])
+                ->where('status', 'present')
+                ->count()
+            : (int) $windowStart->diffInDays($terminationDate) + 1;
+
+        return [$daysWorked, round($daysWorked * $dailySalary, 0)];
+    }
+
+    /**
+     * Descuento por ausencias injustificadas del tramo que se paga en esta liquidación.
+     *
+     * Cuenta solo `Absence` con status `unjustified` (revisadas por RR.HH.): las justificadas y las
+     * pendientes no descuentan. Solo tiempo completo; para jornaleros la ausencia ya implica no cobrar el día.
+     *
+     * @return array{0: int, 1: float} [días, monto]
+     */
+    protected function calculateAbsenceDeductions(Employee $employee, ?Carbon $windowStart, Carbon $terminationDate, float $dailySalary, bool $isJornal = false): array
+    {
+        if ($isJornal || $employee->employment_type === 'day_laborer' || $windowStart === null) {
+            return [0, 0];
+        }
+
+        $absentDays = Absence::where('employee_id', $employee->id)
+            ->where('status', 'unjustified')
+            ->whereHas('attendanceDay', fn ($q) => $q
+                ->whereBetween('date', [$windowStart->toDateString(), $terminationDate->toDateString()])
+                ->where(fn ($d) => $d->whereNull('is_holiday')->orWhere('is_holiday', false))
+                ->where(fn ($d) => $d->whereNull('is_weekend')->orWhere('is_weekend', false)))
             ->count();
 
-        if ($absentDays === 0) {
+        return $absentDays === 0 ? [0, 0] : [$absentDays, round($absentDays * $dailySalary, 0)];
+    }
+
+    /**
+     * Descuento por días de suspensión disciplinaria dentro del tramo que se paga en esta liquidación.
+     *
+     * Solo mensuales: el salario pendiente paga días calendario, así que los días suspendidos se descuentan.
+     * Los jornaleros no cobran esos días porque no figuran como presentes.
+     *
+     * @return array{0: int, 1: float} [días, monto]
+     */
+    protected function calculateSuspensionDeduction(Employee $employee, ?Carbon $windowStart, Carbon $terminationDate, float $dailySalary, bool $isJornal = false): array
+    {
+        if ($isJornal || $windowStart === null) {
             return [0, 0];
         }
 
-        return [$absentDays, round($absentDays * $dailySalary, 0)];
+        $days = WarningSuspensionDay::where('employee_id', $employee->id)
+            ->whereBetween('date', [$windowStart->toDateString(), $terminationDate->toDateString()])
+            ->count();
+
+        return $days === 0 ? [0, 0] : [$days, round($days * $dailySalary, 0)];
+    }
+
+    /**
+     * Mensaje de advertencia (no bloqueante) si hay ausencias pendientes de revisión en el tramo liquidado.
+     *
+     * Esas ausencias no se descuentan; RR.HH. puede resolverlas y recalcular.
+     */
+    public function getPendingAbsencesWarning(Liquidacion $liquidacion): ?string
+    {
+        $employee = $liquidacion->employee;
+        $terminationDate = Carbon::parse($liquidacion->termination_date);
+        $windowStart = $this->pendingWindowStart($employee, $terminationDate, Carbon::parse($liquidacion->hire_date));
+
+        if ($windowStart === null || $liquidacion->salary_type === 'jornal') {
+            return null;
+        }
+
+        $pending = Absence::where('employee_id', $employee->id)
+            ->where('status', 'pending')
+            ->whereHas('attendanceDay', fn ($q) => $q->whereBetween('date', [$windowStart->toDateString(), $terminationDate->toDateString()]))
+            ->count();
+
+        return $pending > 0
+            ? "Hay {$pending} ausencia(s) pendientes de revisión que no se descontaron. Resuélvalas en Ausencias y recalcule si corresponde."
+            : null;
     }
 
     protected function calculatePendingLoans(Employee $employee): float

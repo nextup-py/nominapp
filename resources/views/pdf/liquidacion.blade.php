@@ -328,6 +328,8 @@
                                 ($meta['months_in_year'] ?? '-') . ' meses del año ' . ($meta['year'] ?? ''),
                             'indemnizacion_estabilidad' =>
                                 'Igual a indemnización base (Art. 95 CLT — más de 10 años)',
+                            'descanso_semanal' =>
+                                'Proporcional a los días trabajados por semana (Art. 218 CLT)',
                             default => '-',
                         };
                     @endphp
@@ -368,6 +370,11 @@
                                 ' × ' . ($meta['rate'] ?? 9) . '%',
                             'loan' => 'Saldo pendiente de préstamos',
                             'ausencias' =>
+                                ($meta['days'] ?? '-') . ' día(s) × ' .
+                                (isset($meta['daily_salary'])
+                                    ? \App\Models\Liquidacion::formatCurrency($meta['daily_salary']) . '/día'
+                                    : '-'),
+                            'suspension' =>
                                 ($meta['days'] ?? '-') . ' día(s) × ' .
                                 (isset($meta['daily_salary'])
                                     ? \App\Models\Liquidacion::formatCurrency($meta['daily_salary']) . '/día'

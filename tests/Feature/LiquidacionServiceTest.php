@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Absence;
+use App\Models\AttendanceDay;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Contract;
@@ -10,6 +12,9 @@ use App\Models\Loan;
 use App\Models\Payroll;
 use App\Models\PayrollPeriod;
 use App\Models\Position;
+use App\Models\User;
+use App\Models\Warning;
+use App\Models\WarningSuspensionDay;
 use App\Services\LiquidacionPDFGenerator;
 use App\Services\LiquidacionService;
 use Carbon\Carbon;
@@ -336,8 +341,9 @@ it('no calcula salario pendiente si ya existe nómina del mes de terminación', 
 
 it('calcula salario pendiente para empleado quincenal con solo la primera mitad del mes pagada', function () {
     seedLiqSettings();
-    // Termina el día 20 de marzo, con nómina de la primera quincena (1-15) ya generada.
-    // Antes del fix, "existe nómina este mes" bastaba para dar por cubierto todo el mes.
+    // Termina el día 20 de marzo, con nómina de la primera quincena (1-15) ya generada:
+    // solo quedan pendientes los días 16 al 20. Los días 1 al 15 ya se pagaron en esa nómina
+    // y no deben pagarse de nuevo (antes se pagaban 20 días, duplicando la primera quincena).
     $employee = makeLiqEmployee(startDate: Carbon::create(2023, 1, 1));
     $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-20']);
 
@@ -345,8 +351,8 @@ it('calcula salario pendiente para empleado quincenal con solo la primera mitad 
 
     $result = makeLiqService()->calculate($liquidacion);
 
-    expect($result->salario_pendiente_days)->toBe(20)
-        ->and((float) $result->salario_pendiente_amount)->toBeGreaterThan(0);
+    expect($result->salario_pendiente_days)->toBe(5)
+        ->and((float) $result->salario_pendiente_amount)->toBe(round(5 * (2_550_000 / 30), 0));
 });
 
 it('no calcula salario pendiente si la nómina existente ya cubre hasta la fecha de terminación', function () {
@@ -542,4 +548,163 @@ it('sin nóminas previas las vacaciones proporcionales hacen fallback al salario
 
 afterEach(function () {
     Mockery::close();
+});
+
+// ─── Ausencias, suspensión y jornaleros en el tramo pendiente ───────────────
+
+/** Crea una ausencia en la fecha dada con el estado indicado (pending/justified/unjustified). */
+function makeLiqAbsence(Employee $employee, string $date, string $status): Absence
+{
+    $day = AttendanceDay::create(['employee_id' => $employee->id, 'date' => $date, 'status' => 'absent', 'is_calculated' => false]);
+    $absence = Absence::where('attendance_day_id', $day->id)->firstOrFail();
+    $absence->update(['status' => $status]);
+
+    return $absence;
+}
+
+/** Registra un día de suspensión disciplinaria ya aplicado (SUS-DIS no pasa por nómina en la liquidación). */
+function makeLiqSuspensionDay(Employee $employee, string $date): WarningSuspensionDay
+{
+    static $warning = null;
+    $warning = Warning::where('employee_id', $employee->id)->first() ?? Warning::create([
+        'employee_id' => $employee->id,
+        'type' => 'severe',
+        'reason' => 'conducta',
+        'description' => 'Hecho de prueba',
+        'issued_at' => '2026-03-01',
+        'issued_by_id' => User::factory()->create()->id,
+    ]);
+
+    return WarningSuspensionDay::create(['warning_id' => $warning->id, 'employee_id' => $employee->id, 'date' => $date]);
+}
+
+it('descuenta solo las ausencias injustificadas: las justificadas y las pendientes no restan', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee(startDate: Carbon::create(2023, 1, 1));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-15']);
+
+    makeLiqAbsence($employee, '2026-03-03', 'unjustified');
+    makeLiqAbsence($employee, '2026-03-04', 'unjustified');
+    makeLiqAbsence($employee, '2026-03-05', 'justified');
+    makeLiqAbsence($employee, '2026-03-06', 'pending');
+
+    $result = makeLiqService()->calculate($liquidacion);
+
+    $item = $result->items()->where('category', 'ausencias')->first();
+    expect($item)->not->toBeNull()
+        ->and($item->metadata['days'])->toBe(2)
+        ->and((float) $item->amount)->toBe(round(2 * (2_550_000 / 30), 0));
+});
+
+it('no descuenta ausencias de días que una nómina ya liquidó (se descontaron allí como AUS-INJ)', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee(startDate: Carbon::create(2023, 1, 1));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-20']);
+    makeLiqPayroll($employee, makeLiqBiweeklyPayPeriod(2026, 3, 1, 15), 1_275_000);
+
+    makeLiqAbsence($employee, '2026-03-10', 'unjustified'); // cubierta por la nómina 1-15
+    makeLiqAbsence($employee, '2026-03-18', 'unjustified'); // tramo pendiente
+
+    $result = makeLiqService()->calculate($liquidacion);
+
+    expect($result->items()->where('category', 'ausencias')->first()->metadata['days'])->toBe(1);
+});
+
+it('sin ausencias injustificadas no genera el ítem de ausencias (aunque haya días en absent)', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee(startDate: Carbon::create(2023, 1, 1));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-15']);
+    makeLiqAbsence($employee, '2026-03-03', 'justified');
+
+    $result = makeLiqService()->calculate($liquidacion);
+
+    expect($result->items()->where('category', 'ausencias')->exists())->toBeFalse();
+});
+
+it('avisa de las ausencias pendientes de revisión sin descontarlas', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee(startDate: Carbon::create(2023, 1, 1));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-15']);
+
+    expect(makeLiqService()->getPendingAbsencesWarning($liquidacion))->toBeNull();
+
+    makeLiqAbsence($employee, '2026-03-03', 'pending');
+    makeLiqAbsence($employee, '2026-03-04', 'pending');
+
+    $service = makeLiqService();
+    expect($service->getPendingAbsencesWarning($liquidacion))->toContain('2 ausencia(s)');
+
+    $result = $service->calculate($liquidacion);
+    expect($result->items()->where('category', 'ausencias')->exists())->toBeFalse();
+});
+
+it('descuenta los días de suspensión disciplinaria del tramo pendiente en mensuales', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee(startDate: Carbon::create(2023, 1, 1));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-15']);
+
+    makeLiqSuspensionDay($employee, '2026-03-05');
+    makeLiqSuspensionDay($employee, '2026-03-06');
+
+    $result = makeLiqService()->calculate($liquidacion);
+
+    $item = $result->items()->where('category', 'suspension')->first();
+    expect($item->metadata['days'])->toBe(2)
+        ->and((float) $item->amount)->toBe(round(2 * (2_550_000 / 30), 0));
+});
+
+it('no descuenta suspensión de días que una nómina ya liquidó', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee(startDate: Carbon::create(2023, 1, 1));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-20']);
+    makeLiqPayroll($employee, makeLiqBiweeklyPayPeriod(2026, 3, 1, 15), 1_275_000);
+
+    makeLiqSuspensionDay($employee, '2026-03-10'); // ya en la nómina 1-15 (SUS-DIS)
+    makeLiqSuspensionDay($employee, '2026-03-17'); // tramo pendiente
+
+    $result = makeLiqService()->calculate($liquidacion);
+
+    expect($result->items()->where('category', 'suspension')->first()->metadata['days'])->toBe(1);
+});
+
+it('salario pendiente de un empleado ingresado a mitad de mes cuenta desde su ingreso', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee(startDate: Carbon::create(2026, 3, 10));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-20', 'hire_date' => '2026-03-10']);
+
+    $result = makeLiqService()->calculate($liquidacion);
+
+    expect($result->salario_pendiente_days)->toBe(11);
+});
+
+it('jornalero: paga los días presentes del tramo más el descanso semanal, no días calendario', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee('jornal', 100_000, Carbon::create(2023, 1, 1));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-15']);
+
+    foreach (['2026-03-02', '2026-03-03', '2026-03-04', '2026-03-05', '2026-03-06'] as $date) {
+        AttendanceDay::create(['employee_id' => $employee->id, 'date' => $date, 'status' => 'present']);
+    }
+    AttendanceDay::create(['employee_id' => $employee->id, 'date' => '2026-03-09', 'status' => 'on_leave']);
+
+    $result = makeLiqService()->calculate($liquidacion);
+
+    expect($result->salario_pendiente_days)->toBe(5)
+        ->and((float) $result->salario_pendiente_amount)->toBe(500_000.0);
+
+    $rest = $result->items()->where('category', 'descanso_semanal')->first();
+    expect((float) $rest->amount)->toBe(round(5 * 100_000 / 6, 0));
+});
+
+it('jornalero: no genera descuento por ausencias ni por suspensión', function () {
+    seedLiqSettings();
+    $employee = makeLiqEmployee('jornal', 100_000, Carbon::create(2023, 1, 1));
+    $liquidacion = makeLiquidacion($employee, ['termination_date' => '2026-03-15']);
+    AttendanceDay::create(['employee_id' => $employee->id, 'date' => '2026-03-02', 'status' => 'present']);
+    makeLiqAbsence($employee, '2026-03-03', 'unjustified');
+    makeLiqSuspensionDay($employee, '2026-03-04');
+
+    $result = makeLiqService()->calculate($liquidacion);
+
+    expect($result->items()->whereIn('category', ['ausencias', 'suspension'])->exists())->toBeFalse();
 });
