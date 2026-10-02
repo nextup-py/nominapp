@@ -20,6 +20,11 @@ class WarningObserver
      */
     private static array $pendingSync = [];
 
+    /**
+     * @var array<int, array{created: bool, original: array<string, mixed>}> Estado previo para restaurar si apply() falla.
+     */
+    private static array $snapshots = [];
+
     public function __construct(private SuspensionService $service) {}
 
     /**
@@ -35,6 +40,10 @@ class WarningObserver
         if ($this->needsSync($warning)) {
             $this->service->validate($warning);
             self::$pendingSync[spl_object_id($warning)] = true;
+            self::$snapshots[spl_object_id($warning)] = [
+                'created' => ! $warning->exists,
+                'original' => collect(self::SUSPENSION_FIELDS)->mapWithKeys(fn ($f) => [$f => $warning->getRawOriginal($f)])->all(),
+            ];
         }
     }
 
@@ -45,9 +54,41 @@ class WarningObserver
             return;
         }
 
-        unset(self::$pendingSync[spl_object_id($warning)]);
+        $id = spl_object_id($warning);
+        $snapshot = self::$snapshots[$id] ?? null;
+        unset(self::$pendingSync[$id], self::$snapshots[$id]);
 
-        $this->service->apply($warning);
+        try {
+            $this->service->apply($warning);
+        } catch (\Throwable $e) {
+            $this->restore($warning, $snapshot);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Deja la amonestación como estaba antes de guardar cuando la suspensión no pudo aplicarse,
+     * para que no quede con campos de suspensión sin sus deducciones.
+     *
+     * @param  array{created: bool, original: array<string, mixed>}|null  $snapshot
+     */
+    private function restore(Warning $warning, ?array $snapshot): void
+    {
+        if ($snapshot === null) {
+            return;
+        }
+
+        if ($snapshot['created']) {
+            $warning->deleteQuietly();
+
+            return;
+        }
+
+        // Durante `saved` el modelo aún no sincronizó su estado original (syncOriginal corre después),
+        // así que saveQuietly() no vería cambios: se restaura con un UPDATE directo.
+        Warning::whereKey($warning->getKey())->toBase()->update($snapshot['original']);
+        $warning->forceFill($snapshot['original']);
     }
 
     /** Revierte deducciones y días de suspensión al eliminar la amonestación. */

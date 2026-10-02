@@ -334,6 +334,12 @@ class EditAbsence extends EditRecord
                 ->action(function (array $data) {
                     $result = $this->record->markAsUnjustified(Auth::id(), $data['review_notes']);
 
+                    if (! $result['success']) {
+                        Notification::make()->warning()->title('No se pudo marcar como injustificada')->body($result['message'])->send();
+
+                        return;
+                    }
+
                     Notification::make()
                         ->success()
                         ->title('Ausencia Marcada como Injustificada')

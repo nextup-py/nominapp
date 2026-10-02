@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\HtmlString;
@@ -276,6 +277,19 @@ class Absence extends Model implements Auditable
      */
     public function markAsUnjustified(int $reviewedById, string $reviewNotes): array
     {
+        $isSuspendedDay = WarningSuspensionDay::where('employee_id', $this->employee_id)
+            ->whereDate('date', $this->attendanceDay->date)
+            ->exists();
+
+        if ($isSuspendedDay) {
+            return [
+                'success' => false,
+                'message' => 'Ese día corresponde a una suspensión disciplinaria que ya se descuenta con SUS-DIS; no puede marcarse como injustificada.',
+                'deduction_amount' => null,
+                'employment_type_label' => null,
+            ];
+        }
+
         $wasJustified = $this->isJustified();
 
         // Actualizar el registro de ausencia
@@ -386,7 +400,7 @@ class Absence extends Model implements Auditable
         return match ($key) {
             'status' => static::getStatusLabel($value),
             'reported_by_id', 'reviewed_by_id' => User::find($value)?->name ?? "ID {$value}",
-            'reviewed_at' => \Carbon\Carbon::parse($value)->format('d/m/Y H:i'),
+            'reviewed_at' => Carbon::parse($value)->format('d/m/Y H:i'),
             'employee_leave_id' => "Permiso #{$value}",
             'review_notes' => Str::limit((string) $value, 120),
             default => (string) $value,

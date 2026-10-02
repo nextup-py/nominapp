@@ -360,15 +360,17 @@ class AbsenceResource extends Resource
                         ])
                         ->action(function (Collection $records, array $data) {
                             $count = 0;
+                            $refused = 0;
                             foreach ($records as $record) {
                                 if (! $record->isUnjustified()) {
-                                    $record->markAsUnjustified(Auth::id(), $data['review_notes']);
-                                    $count++;
+                                    $result = $record->markAsUnjustified(Auth::id(), $data['review_notes']);
+                                    $result['success'] ? $count++ : $refused++;
                                 }
                             }
                             Notification::make()
                                 ->success()
                                 ->title("{$count} ausencia(s) marcada(s) como injustificadas")
+                                ->body($refused > 0 ? "{$refused} no se marcaron: corresponden a días de suspensión disciplinaria ya descontados." : null)
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),

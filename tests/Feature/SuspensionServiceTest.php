@@ -282,3 +282,56 @@ it('attendance:check-missing no genera ausencia en un día suspendido', function
     expect($day?->status)->toBe('on_leave');
     expect(Absence::where('employee_id', $employee->id)->count())->toBe(0);
 });
+
+// ─── Regresiones del code review ────────────────────────────────────────────
+
+it('suspender un día con ausencia pendiente la reemplaza: la ausencia se elimina y no genera AUS-INJ', function () {
+    $employee = makeSuspEmployee();
+    $day = AttendanceDay::create(['employee_id' => $employee->id, 'date' => '2026-10-05', 'status' => 'absent', 'is_calculated' => false]);
+    expect(Absence::where('attendance_day_id', $day->id)->count())->toBe(1);
+
+    makeSuspWarning($employee, 1);
+
+    expect(Absence::where('attendance_day_id', $day->id)->count())->toBe(0)
+        ->and($day->fresh()->status)->toBe('on_leave')
+        ->and(EmployeeDeduction::whereHas('deduction', fn ($q) => $q->where('code', 'AUS-INJ'))->count())->toBe(0)
+        ->and(EmployeeDeduction::whereHas('deduction', fn ($q) => $q->where('code', 'SUS-DIS'))->count())->toBe(1);
+});
+
+it('no permite marcar como injustificada una ausencia de un día ya suspendido (evita AUS-INJ + SUS-DIS)', function () {
+    $employee = makeSuspEmployee();
+    makeSuspWarning($employee, 1);
+
+    $day = AttendanceDay::where('employee_id', $employee->id)->where('date', '2026-10-05')->first()
+        ?? AttendanceDay::create(['employee_id' => $employee->id, 'date' => '2026-10-05', 'status' => 'on_leave', 'is_calculated' => false]);
+    $absence = Absence::create(['employee_id' => $employee->id, 'attendance_day_id' => $day->id, 'status' => 'pending']);
+
+    $result = $absence->markAsUnjustified(User::factory()->create()->id, 'Falta');
+
+    expect($result['success'])->toBeFalse()
+        ->and($absence->fresh()->status)->toBe('pending')
+        ->and(EmployeeDeduction::whereHas('deduction', fn ($q) => $q->where('code', 'AUS-INJ'))->count())->toBe(0);
+});
+
+it('si apply() falla al crear, no queda la amonestación guardada sin sus deducciones', function () {
+    $employee = makeSuspEmployee();
+
+    $this->partialMock(SuspensionService::class, fn ($mock) => $mock->shouldReceive('apply')->andThrow(new RuntimeException('fallo simulado')));
+
+    expect(fn () => makeSuspWarning($employee, 2))->toThrow(RuntimeException::class);
+    expect(Warning::count())->toBe(0)
+        ->and(EmployeeDeduction::count())->toBe(0);
+});
+
+it('si apply() falla al editar, la amonestación vuelve a su suspensión anterior', function () {
+    $employee = makeSuspEmployee();
+    $warning = makeSuspWarning($employee, 2);
+
+    $this->partialMock(SuspensionService::class, fn ($mock) => $mock->shouldReceive('apply')->andThrow(new RuntimeException('fallo simulado')));
+
+    expect(fn () => $warning->update(['suspension_days' => 3]))->toThrow(RuntimeException::class);
+
+    expect($warning->fresh()->suspension_days)->toBe(2)
+        ->and(WarningSuspensionDay::where('warning_id', $warning->id)->count())->toBe(2)
+        ->and(EmployeeDeduction::count())->toBe(2);
+});
