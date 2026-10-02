@@ -69,7 +69,7 @@ Two separate axes that converge in `Contract`:
 | Attendance | `AttendanceDay`, `AttendanceEvent`, observers auto-calculate daily totals |
 | Attendance offline (terminal/dispositivo) | `Terminal`, `Employee` (Sanctum), `EmployeeDevice` (historial), `AttendanceMarkFailure` — ver "Módulo de Asistencia — Marcación Offline" más abajo |
 | Face Recognition | TensorFlow.js (128-element descriptors), `FaceEnrollment`, `FaceCaptureApp.js` |
-| Warnings | `Warning` — registro documental de amonestaciones laborales (sin impacto en nómina por ahora) |
+| Warnings | `Warning`, `SuspensionService` — amonestaciones laborales; la suspensión disciplinaria opcional genera deducciones `SUS-DIS` por día |
 
 ### Pipeline de cálculo de nómina (`PayrollService`)
 
@@ -254,26 +254,33 @@ Registro documental de permisos y licencias de empleados. **Sin integración con
 
 ### Módulo de Amonestaciones
 
-Registro documental de amonestaciones laborales emitidas a empleados. **Sin integración con nómina por ahora** — es un módulo puramente documental.
+Registro de amonestaciones laborales emitidas a empleados. Salvo la suspensión disciplinaria opcional (ver abajo), es documental: **sin integración con nómina**.
 
-**Modelo:** `Warning` — campos: `employee_id`, `type` (verbal/written/severe), `reason` (categoría predefinida), `description`, `issued_at`, `issued_by_id`, `notes`, `document_path` (PDF firmado subido opcionalmente).
+**Modelo:** `Warning` — campos: `employee_id`, `type` (verbal/written/severe), `reason` (categoría predefinida), `description`, `issued_at`, `issued_by_id`, `notes`, `document_path` (PDF firmado subido opcionalmente), más `suspension_start_date`, `suspension_days` (0–8) y `suspension_summary_done`.
 
 **Sin ciclo de vida:** una amonestación creada existe como registro permanente. Se edita si hay error, se elimina si fue incorrecta.
 
-**Deuda técnica — integración futura con nómina:**
-La opción acordada es **suspensión disciplinaria**: agregar `suspension_days int default 0` a `warnings`. Al guardar una amonestación con suspensión > 0, crear registros de `Absence` para esos días y marcarlos como injustificados (`Absence::markAsUnjustified()`), que generan su deducción `AUS-INJ` de la forma estándar — sin cambios en el pipeline de nómina. (Nota: no es `AbsencePenaltyCalculator` quien las procesaría — ese calculator solo maneja tardanzas, ver "Tardiness penalty" en Módulos arriba.)
+**Suspensión disciplinaria (sin goce de sueldo):** `SuspensionService` traduce los campos de suspensión en **una deducción `SUS-DIS` por cada día laborable suspendido**. No usa `Absence` ni `AUS-INJ`: así la sanción no se mezcla con faltas arbitrarias ni con las ausencias de `LiquidacionService`. El pipeline de nómina no cambia: `DeductionCalculator` (paso 7) recoge los `EmployeeDeduction` puntuales (`start_date = end_date`) como cualquier otra deducción.
+- **Días laborables:** `resolveDates()` cuenta desde `suspension_start_date` saltando francos de rotación, días inactivos del horario fijo (vía `AttendanceCalculator::resolveShiftDataFor()`) y feriados.
+- **Reglas (`validate()`):** máximo 8 días (`Warning::MAX_SUSPENSION_DAYS`); con 4 a 8 días es obligatorio `suspension_summary_done` (sumario administrativo previo, `Warning::SUMMARY_REQUIRED_FROM_DAYS`); el empleado debe estar activo y con salario/jornal definido; se bloquea si el empleado ya tiene nómina cuyo período solapa las fechas, si hay marcaciones reales de asistencia en esas fechas, si alguna fecha ya tiene una `Absence` con descuento (doble descuento con `AUS-INJ`) o si ya está cubierta por otra suspensión.
+- **Monto por día:** `Employee::getAbsenceDeductionAmount()` (jornal, o salario base / 30), misma convención que `AUS-INJ`.
+- **Trazabilidad:** tabla `warning_suspension_days` (una fila por día, con FK a la `EmployeeDeduction`). `WarningObserver` valida en `saving` y aplica en `saved`; al eliminar la amonestación o llevar `suspension_days` a 0 revierte deducciones y días (siempre que no haya nómina de esas fechas; si la hay, bloquea con aviso). Editar campos no relacionados con la suspensión (notas, documento) no la recalcula.
+- **Asistencia:** `AttendanceCalculator::isSuspended()` deja el día en `on_leave` (como vacaciones o permiso), por lo que `attendance:check-missing` no genera ausencia y `LiquidacionService` no lo cuenta como `absent`. Antigüedad, vacaciones e IPS no se tocan.
+- **Dependencia:** el código `SUS-DIS` se crea on-demand con `firstOrCreate` (`type = other`, `is_mandatory = false`) y también lo siembran `ProductionSeeder` y `DeductionSeeder`.
+- **Pendiente fuera de alcance:** el reporte de la suspensión en el REOP (MTESS) es manual; el sistema solo deja el registro y el sumario.
 
-**Formulario de creación:** `issued_at` e `issued_by_id` se inyectan automáticamente en `CreateWarning::mutateFormDataBeforeCreate()` — no aparecen en el form de create, sí en edit. La sección "Documento Firmado" también es `->visibleOn('edit')`.
+**Formulario de creación:** `issued_at` e `issued_by_id` se inyectan automáticamente en `CreateWarning::mutateFormDataBeforeCreate()` — no aparecen en el form de create, sí en edit. La sección "Documento Firmado" también es `->visibleOn('edit')`. La sección "Suspensión disciplinaria" (colapsada salvo que ya tenga suspensión) está en create y edit; `CreateWarning`/`EditWarning` usan el trait `HaltsOnSuspensionErrors` para convertir los errores del servicio en una notificación y detener el guardado.
 
 **UI:**
 - Resource: `WarningResource` en grupo `Empleados` — listado con tabs por tipo (Verbal/Escrita/Grave), filtros por tipo, motivo, empleado y rango de fechas
 - RelationManager: `WarningsRelationManager` en `EmployeeResource`
-- PDF: `WarningController@show` → `pdf.warning` → ruta `warnings.pdf`
+- PDF: `WarningController@show` → `pdf.warning` → ruta `warnings.pdf` (incluye los días suspendidos si los hay)
 - Export Excel: `WarningsExport` — header action en `ListWarnings`
 
 **Helpers en el modelo:**
 - `Warning::getTypeOptions/Label/Color/Icon()` — tipo de amonestación
 - `Warning::getReasonOptions/Label()` — motivo predefinido
+- `Warning::hasSuspension()`, `suspensionDays()`, `suspension_end_date` (accessor)
 
 ### Módulo de Liquidación
 
@@ -2473,7 +2480,7 @@ it('has emails', function (string $email) {
 
 Antes de implementar cualquier feature o cambio significativo, usá el flujo de planificación:
 
-1. `/superpowers:brainstorm` — para explorar el enfoque antes de codear (útil en features nuevas como suspensión disciplinaria en Warnings, o nuevos calculadores)
+1. `/superpowers:brainstorm` — para explorar el enfoque antes de codear (útil en features nuevas como nuevos calculadores)
 2. `/superpowers:write-plan` — para generar un plan de implementación paso a paso
 3. `/superpowers:execute-plan` — para ejecutar el plan en batches controlados
 

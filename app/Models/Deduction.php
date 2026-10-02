@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Deduction extends Model
 {
+    /** Código de la deducción generada por suspensiones disciplinarias. */
+    public const CODE_DISCIPLINARY_SUSPENSION = 'SUS-DIS';
+
     protected $fillable = [
         'name',
         'code',

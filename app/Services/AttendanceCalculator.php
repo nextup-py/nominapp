@@ -10,6 +10,7 @@ use App\Models\RotationAssignment;
 use App\Models\Schedule;
 use App\Models\ShiftOverride;
 use App\Models\ShiftTemplate;
+use App\Models\WarningSuspensionDay;
 use App\Settings\PayrollSettings;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -58,8 +59,9 @@ class AttendanceCalculator
         self::checkVacationStatus($day);
         self::checkLeaveStatus($day);
 
-        // Si el empleado está de vacaciones o tiene permiso, marcar como "on_leave" y detener cálculos
-        if ($day->on_vacation || $day->justified_absence) {
+        // Si el empleado está de vacaciones, tiene permiso o cumple una suspensión disciplinaria,
+        // marcar como "on_leave" y detener cálculos
+        if ($day->on_vacation || $day->justified_absence || self::isSuspended($day)) {
             $day->status = self::STATUS_ON_LEAVE;
             self::clearAttendanceData($day);
             self::markAsCalculated($day); // ← Agregar
@@ -640,6 +642,17 @@ class AttendanceCalculator
         }
 
         return false;
+    }
+
+    /**
+     * Indica si el empleado cumple una suspensión disciplinaria ese día.
+     * No usa bandera propia: la fuente de verdad es `warning_suspension_days`.
+     */
+    public static function isSuspended(AttendanceDay $day): bool
+    {
+        return WarningSuspensionDay::where('employee_id', $day->employee_id)
+            ->whereDate('date', $day->date)
+            ->exists();
     }
 
     /**

@@ -1,6 +1,6 @@
 # Plan: Suspensión disciplinaria en Amonestaciones
 
-Fecha: 2026-10-02 · Módulo: Warnings · Estado: pendiente de aprobación
+Fecha: 2026-10-02 · Módulo: Warnings · Estado: implementado
 
 ## Objetivo
 

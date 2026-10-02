@@ -251,6 +251,17 @@
                 <div class="info-label">Emitida por</div>
                 <div class="info-value">{{ $warning->issuedBy->name }}</div>
             </div>
+            @if ($warning->hasSuspension())
+                <div class="info-row">
+                    <div class="info-label">Suspensión sin goce de sueldo</div>
+                    <div class="info-value">
+                        {{ $warning->suspension_days }} {{ $warning->suspension_days === 1 ? 'día laborable' : 'días laborables' }}
+                        @if ($warning->suspensionDays->isNotEmpty())
+                            ({{ $warning->suspensionDays->map(fn ($d) => $d->date->format('d/m/Y'))->implode(', ') }})
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 
