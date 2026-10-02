@@ -118,3 +118,14 @@ Schedule::command('face:expire-enrollments')
     ->onFailure(function () {
         Log::error('Falló la expiración automática de enrollments faciales');
     });
+
+/**
+ * Purgar el historial de auditoría más antiguo que la retención configurada
+ * Se ejecuta a las 03:00 (retención en Configuración General; 0 = conservar siempre)
+ */
+Schedule::command('audits:purge')
+    ->dailyAt('03:00')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        Log::error('Falló la purga automática del historial de auditoría');
+    });

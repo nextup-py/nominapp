@@ -26,6 +26,7 @@ php artisan db:seed --class=ProductionSeeder   # new client setup (sets admin us
 php artisan app:calculate-attendance          # calculate daily attendance totals (runs at 23:00)
 php artisan attendance:check-missing          # flag missing clock-ins (every 15min, 6am–8pm Mon–Sat)
 php artisan face:expire-enrollments           # expire stale face enrollments (hourly)
+php artisan audits:purge                      # purge audit history older than the configured retention (daily 03:00)
 ```
 
 ## Stack
@@ -1509,7 +1510,7 @@ rsync -avz --delete public/build/ sedvouco@bh7104:/ruta/nominapp/public/build/
 ```
 * * * * * cd /ruta/nominapp && /opt/cpanel/ea-php82/root/usr/bin/php artisan schedule:run >> storage/logs/cron.log 2>&1
 ```
-Tareas activas: `app:calculate-attendance` (23:00 diario), `attendance:check-missing` (cada 15min, 6am-8pm, lun-sáb), `face:expire-enrollments` (cada hora), `contracts:expire` (00:05 diario), `contracts:notify-expiring` (08:00 diario).
+Tareas activas: `app:calculate-attendance` (23:00 diario), `attendance:check-missing` (cada 15min, 6am-8pm, lun-sáb), `face:expire-enrollments` (cada hora), `contracts:expire` (00:05 diario), `contracts:notify-expiring` (08:00 diario), `audits:purge` (03:00 diario).
 
 ### Deployment a Bar777 y Arca (VPS TechForge — CloudPanel)
 
@@ -2081,7 +2082,7 @@ Acompañar siempre con `formatAuditFieldsForPresentation()` en el modelo para mo
 - Mobile mode is for remote employees using their own device, **not** a shared kiosk
 - Terminal/kiosk mode is a shared device per branch
 - `attendance:check-missing` — corre cada 15 min entre 06:00-20:00. En cada corrida evalúa tanto la fecha pedida (`--date` o "hoy") como el día anterior, no solo la actual: un empleado cuyo turno (horario fijo o rotación) arranca de noche (ej. 22:00) y falta esa noche nunca llega a pasar su propio umbral antes de las 20:00 (fin de la ventana del cron) — sin mirar un día atrás, la corrida del día siguiente nunca revisaba el turno de la noche anterior que quedó sin marcar. Mirar siempre un día atrás no agrega costo real para turnos diurnos normales: el registro de ayer ya existe (se creó el mismo día dentro de la ventana del cron), así que ese chequeo extra se salta por "ya tiene registro".
-- Auditoría (`audits` table): sin política de retención/purga por ahora — la tabla crece sin límite. Deuda técnica conocida, pendiente de definir si el volumen lo justifica.
+- Auditoría (`audits` table): retención configurable en `GeneralSettings::$audit_retention_months` (default 24 meses, editable en Configuración General; 0 = conservar siempre). `audits:purge` (diario 03:00) elimina por lotes de 5000 los registros más antiguos que ese corte; admite `--months=N` (reemplaza la configuración) y `--dry-run`. La misma retención aplica a todos los modelos, financieros incluidos. Índice `audits_created_at_index` para que la purga no escanee la tabla.
 
 ===
 
