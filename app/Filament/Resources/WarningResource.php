@@ -5,17 +5,25 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\WarningResource\Pages;
 use App\Filament\Resources\WarningResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Traits\HasModuleAccess;
+use App\Models\Employee;
 use App\Models\Warning;
+use App\Services\SuspensionService;
+use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Infolists\Components\Group;
 use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkActionGroup;
@@ -27,8 +35,10 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
@@ -119,6 +129,57 @@ class WarningResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
+                Section::make('Suspensión disciplinaria')
+                    ->description('Opcional. Suspensión sin goce de sueldo: se descuenta en nómina por cada día laborable suspendido. La antigüedad, las vacaciones y la cobertura IPS siguen corriendo.')
+                    ->icon('heroicon-o-no-symbol')
+                    ->collapsible()
+                    ->collapsed(fn (?Warning $record) => ! $record?->hasSuspension())
+                    ->columns(3)
+                    ->schema([
+                        TextInput::make('suspension_days')
+                            ->label('Días laborables de suspensión')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(Warning::MAX_SUSPENSION_DAYS)
+                            ->default(0)
+                            ->live()
+                            ->helperText('Máximo '.Warning::MAX_SUSPENSION_DAYS.' días (0 = sin suspensión).'),
+
+                        DatePicker::make('suspension_start_date')
+                            ->label('Inicio de la suspensión')
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->closeOnDateSelection()
+                            ->live()
+                            ->required(fn (Get $get) => (int) $get('suspension_days') > 0)
+                            ->visible(fn (Get $get) => (int) $get('suspension_days') > 0),
+
+                        Toggle::make('suspension_summary_done')
+                            ->label('Sumario administrativo instruido')
+                            ->helperText('Obligatorio de '.Warning::SUMMARY_REQUIRED_FROM_DAYS.' a '.Warning::MAX_SUSPENSION_DAYS.' días: el empleado debe haber podido presentar su descargo.')
+                            ->accepted(fn (Get $get) => (int) $get('suspension_days') >= Warning::SUMMARY_REQUIRED_FROM_DAYS)
+                            ->validationMessages(['accepted' => 'Debe confirmar que se instruyó el sumario administrativo.'])
+                            ->visible(fn (Get $get) => (int) $get('suspension_days') >= Warning::SUMMARY_REQUIRED_FROM_DAYS),
+
+                        Placeholder::make('suspension_preview')
+                            ->label('Días que se descontarán')
+                            ->content(function (Get $get): string {
+                                $employee = filled($get('employee_id')) ? Employee::find($get('employee_id')) : null;
+                                $days = (int) $get('suspension_days');
+
+                                if (! $employee || ! filled($get('suspension_start_date')) || $days < 1 || $days > Warning::MAX_SUSPENSION_DAYS) {
+                                    return 'Seleccione empleado, inicio y cantidad de días.';
+                                }
+
+                                $dates = app(SuspensionService::class)->resolveDates($employee, Carbon::parse($get('suspension_start_date')), $days);
+
+                                return $dates->map->format('d/m/Y')->implode(', ').' (según horario/rotación, sin feriados).';
+                            })
+                            ->visible(fn (Get $get) => (int) $get('suspension_days') > 0)
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make('Documento Firmado')
                     ->icon('heroicon-o-paper-clip')
                     ->collapsed()
@@ -202,6 +263,41 @@ class WarningResource extends Resource
                             ->label('Descripción del hecho')
                             ->columnSpanFull(),
                     ]),
+
+                InfolistSection::make('Suspensión disciplinaria')
+                    ->icon('heroicon-o-no-symbol')
+                    ->visible(fn (Warning $record) => $record->hasSuspension())
+                    ->schema([
+                        Group::make([
+                            TextEntry::make('suspension_days')
+                                ->label('Días de suspensión')
+                                ->badge()
+                                ->color('danger'),
+
+                            TextEntry::make('suspension_start_date')
+                                ->label('Inicio')
+                                ->date('d/m/Y')
+                                ->icon('heroicon-o-calendar'),
+
+                            TextEntry::make('suspension_end_date')
+                                ->label('Último día suspendido')
+                                ->date('d/m/Y')
+                                ->icon('heroicon-o-calendar')
+                                ->placeholder('Sin días aplicados'),
+
+                            TextEntry::make('suspension_summary_done')
+                                ->label('Sumario instruido')
+                                ->formatStateUsing(fn ($state) => $state ? 'Sí' : 'No')
+                                ->badge()
+                                ->color(fn ($state) => $state ? 'success' : 'gray'),
+                        ])->columns(4),
+
+                        TextEntry::make('suspension_dates')
+                            ->label('Días descontados')
+                            ->getStateUsing(fn (Warning $record) => $record->suspensionDays->map(fn ($d) => $d->date->format('d/m/Y'))->implode(', '))
+                            ->placeholder('Sin días aplicados')
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
@@ -256,6 +352,14 @@ class WarningResource extends Resource
                 TextColumn::make('reason')
                     ->label('Motivo')
                     ->formatStateUsing(fn ($state) => Warning::getReasonLabel($state))
+                    ->sortable()
+                    ->toggleable(),
+
+                TextColumn::make('suspension_days')
+                    ->label('Suspensión')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state > 0 ? $state.' '.($state === 1 ? 'día' : 'días') : 'Sin suspensión')
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
                     ->sortable()
                     ->toggleable(),
 
@@ -349,7 +453,22 @@ class WarningResource extends Resource
                         ->color('info')
                         ->icon('heroicon-o-arrow-down-tray'),
 
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(function (DeleteBulkAction $action, Collection $records) {
+                            foreach ($records as $record) {
+                                try {
+                                    app(SuspensionService::class)->assertCanRevert($record);
+                                } catch (ValidationException $e) {
+                                    Notification::make()
+                                        ->danger()
+                                        ->title('No se puede eliminar')
+                                        ->body("Amonestación #{$record->id}: ".collect($e->errors())->flatten()->implode(' '))
+                                        ->persistent()
+                                        ->send();
+                                    $action->cancel();
+                                }
+                            }
+                        }),
                 ]),
             ])
             ->emptyStateHeading('No hay amonestaciones registradas')

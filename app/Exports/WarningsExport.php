@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Warning;
+use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -16,7 +17,7 @@ class WarningsExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMap
     /**
      * Consulta base con eager-load de relaciones necesarias.
      *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public function query()
     {
@@ -39,6 +40,8 @@ class WarningsExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMap
             'Descripción',
             'Fecha de emisión',
             'Emitida por',
+            'Días de suspensión',
+            'Inicio de suspensión',
             'Observaciones',
             'Creado',
             'Editado',
@@ -61,6 +64,8 @@ class WarningsExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMap
             $warning->description,
             $warning->issued_at->format('d/m/Y'),
             $warning->issuedBy->name,
+            $warning->suspension_days > 0 ? $warning->suspension_days : '',
+            $warning->suspension_start_date?->format('d/m/Y') ?? '',
             $warning->notes ?? '',
             $warning->created_at->format('d/m/Y H:i'),
             $warning->updated_at->format('d/m/Y H:i'),

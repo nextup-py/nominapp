@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -11,11 +13,19 @@ use OwenIt\Auditing\Contracts\Auditable;
 /**
  * Amonestación laboral emitida a un empleado.
  *
- * Registro documental puro: no tiene ciclo de vida ni integración con nómina.
+ * Sin ciclo de vida. Puede llevar una suspensión disciplinaria sin goce de sueldo
+ * (máx. {@see self::MAX_SUSPENSION_DAYS} días laborables) que SuspensionService traduce en
+ * deducciones SUS-DIS por día; fuera de eso es un registro documental.
  */
 class Warning extends Model implements Auditable
 {
     use \OwenIt\Auditing\Auditable;
+
+    /** Máximo legal de días de suspensión disciplinaria. */
+    public const MAX_SUSPENSION_DAYS = 8;
+
+    /** Desde esta cantidad de días la ley exige sumario administrativo previo. */
+    public const SUMMARY_REQUIRED_FROM_DAYS = 4;
 
     /** @var array<int, string> Campos auditados en el historial de cambios. */
     protected array $auditInclude = [
@@ -23,6 +33,9 @@ class Warning extends Model implements Auditable
         'reason',
         'description',
         'issued_at',
+        'suspension_start_date',
+        'suspension_days',
+        'suspension_summary_done',
         'notes',
         'document_path',
     ];
@@ -34,12 +47,18 @@ class Warning extends Model implements Auditable
         'description',
         'issued_at',
         'issued_by_id',
+        'suspension_start_date',
+        'suspension_days',
+        'suspension_summary_done',
         'notes',
         'document_path',
     ];
 
     protected $casts = [
         'issued_at' => 'date',
+        'suspension_start_date' => 'date',
+        'suspension_days' => 'integer',
+        'suspension_summary_done' => 'boolean',
     ];
 
     // =========================================================================
@@ -56,6 +75,24 @@ class Warning extends Model implements Auditable
     public function issuedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'issued_by_id');
+    }
+
+    /** Días laborables efectivamente suspendidos (uno por deducción SUS-DIS). */
+    public function suspensionDays(): HasMany
+    {
+        return $this->hasMany(WarningSuspensionDay::class)->orderBy('date');
+    }
+
+    /** Indica si la amonestación lleva una suspensión disciplinaria. */
+    public function hasSuspension(): bool
+    {
+        return $this->suspension_days > 0 && $this->suspension_start_date !== null;
+    }
+
+    /** Último día laborable suspendido (null si no hay suspensión aplicada). */
+    public function getSuspensionEndDateAttribute(): ?Carbon
+    {
+        return $this->suspensionDays->last()?->date;
     }
 
     // =========================================================================
@@ -161,6 +198,9 @@ class Warning extends Model implements Auditable
             'reason' => 'Motivo',
             'description' => 'Descripción',
             'issued_at' => 'Fecha de emisión',
+            'suspension_start_date' => 'Inicio de suspensión',
+            'suspension_days' => 'Días de suspensión',
+            'suspension_summary_done' => 'Sumario instruido',
             'notes' => 'Notas',
             'document_path' => 'Documento firmado',
         ];
@@ -186,7 +226,9 @@ class Warning extends Model implements Auditable
         return match ($key) {
             'type' => static::getTypeLabel($value),
             'reason' => static::getReasonLabel($value),
-            'issued_at' => \Carbon\Carbon::parse($value)->format('d/m/Y'),
+            'issued_at',
+            'suspension_start_date' => Carbon::parse($value)->format('d/m/Y'),
+            'suspension_summary_done' => $value ? 'Sí' : 'No',
             'document_path' => basename((string) $value),
             'description',
             'notes' => Str::limit((string) $value, 120),

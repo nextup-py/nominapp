@@ -22,6 +22,9 @@ class GeneralSettings extends Settings
 
     public bool $setup_completed;
 
+    /** Meses de retención del historial de auditoría; 0 = conservar siempre. */
+    public int $audit_retention_months;
+
     public static function group(): string
     {
         return 'general';

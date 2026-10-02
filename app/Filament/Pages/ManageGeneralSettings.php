@@ -143,6 +143,22 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('horas')
                             ->helperText('Horas sin heartbeat exitoso antes de marcar un terminal como desconectado en el panel'),
                     ]),
+
+                Section::make('Auditoría')
+                    ->description('Retención del historial de cambios (tabla de auditoría)')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->schema([
+                        TextInput::make('audit_retention_months')
+                            ->label('Retención del historial')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(120)
+                            ->default(24)
+                            ->suffix('meses')
+                            ->helperText('Los registros de auditoría con más antigüedad se eliminan automáticamente cada noche. 0 = conservar siempre.'),
+                    ]),
             ]);
     }
 }
