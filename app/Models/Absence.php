@@ -312,12 +312,13 @@ class Absence extends Model implements Auditable
         if (! $this->employee_deduction_id) {
             // Buscar o crear la deducción por ausencias
             $deduction = Deduction::firstOrCreate(
-                ['code' => 'AUS-INJ'],
+                ['code' => Deduction::CODE_UNJUSTIFIED_ABSENCE],
                 [
                     'name' => 'Ausencia Injustificada',
+                    'type' => 'other',
                     'description' => 'Deducción automática por ausencia injustificada',
                     'calculation' => 'fixed',
-                    'is_mandatory' => true,
+                    'is_mandatory' => false,
                     'is_active' => true,
                     'affects_irp' => false,
                 ]

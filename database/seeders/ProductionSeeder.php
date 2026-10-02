@@ -140,6 +140,19 @@ class ProductionSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'name' => 'Ausencia Injustificada',
+                'code' => 'AUS-INJ',
+                'type' => 'other',
+                'description' => 'Descuento por ausencia injustificada revisada por RR.HH. El monto se fija por día en cada deducción individual.',
+                'calculation' => 'fixed',
+                'amount' => null,
+                'percent' => null,
+                'is_mandatory' => false,
+                'affects_irp' => false,
+                'apply_judicial_limit' => false,
+                'is_active' => true,
+            ],
+            [
                 'name' => 'Suspensión Disciplinaria',
                 'code' => 'SUS-DIS',
                 'type' => 'other',
@@ -177,7 +190,7 @@ class ProductionSeeder extends Seeder
             );
         }
 
-        $this->command->info('Deducciones sembradas: IPS (9%), PRE001, ADE001, MER001, SUS-DIS, LIC001.');
+        $this->command->info('Deducciones sembradas: IPS (9%), PRE001, ADE001, MER001, AUS-INJ, SUS-DIS, LIC001.');
     }
 
     private function printChecklist(): void

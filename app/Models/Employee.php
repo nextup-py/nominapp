@@ -1128,7 +1128,7 @@ class Employee extends Model implements AuthenticatableContract
      */
     public function assignMandatoryDeductions(?array $restrictToIds = null): int
     {
-        $query = Deduction::where('is_mandatory', true)->where('is_active', true);
+        $query = Deduction::mandatoryAssignable();
 
         if ($restrictToIds !== null) {
             $query->whereIn('id', $restrictToIds);
