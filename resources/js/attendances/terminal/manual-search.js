@@ -23,6 +23,8 @@
 import { getCachedEmployees } from '../terminal-offline/db.js';
 
 const MAX_MANUAL_SEARCH_RESULTS = 8;
+const NO_MATCH_MESSAGE = "No se encontraron empleados con ese CI.";
+const EMPTY_CACHE_MESSAGE = "Este terminal todavía no tiene empleados sincronizados.";
 
 /** @type {((employee: object) => void)|null} */
 let onSelectCallback = null;
@@ -61,6 +63,11 @@ export function closeManualSearch() {
 
 /**
  * Filtra los empleados cacheados por CI y renderiza los resultados.
+ *
+ * Distingue "caché vacía" de "sin coincidencias": con la caché vacía (terminal
+ * sin sincronizar) ninguna CI puede encontrarse aunque exista en la base, y
+ * decir "no se encontraron empleados con ese CI" le haría creer al usuario que
+ * no está cargado — se avisa de inmediato, sin esperar a que escriba.
  * @param {string} query
  * @returns {Promise<void>}
  */
@@ -71,13 +78,22 @@ export async function renderManualSearchResults(query) {
     if (!manualSearchResults) return;
     manualSearchResults.innerHTML = "";
 
+    const candidates = await getCachedEmployees();
+    if (candidates.length === 0) {
+        if (manualSearchEmpty) {
+            manualSearchEmpty.textContent = EMPTY_CACHE_MESSAGE;
+            manualSearchEmpty.classList.remove("hidden");
+        }
+        return;
+    }
+
     const digits = (query || "").trim();
     if (digits.length < 2) {
         if (manualSearchEmpty) manualSearchEmpty.classList.add("hidden");
         return;
     }
 
-    const candidates = await getCachedEmployees();
+    if (manualSearchEmpty) manualSearchEmpty.textContent = NO_MATCH_MESSAGE;
     const matches = candidates
         .filter((employee) => employee.ci && String(employee.ci).includes(digits))
         .slice(0, MAX_MANUAL_SEARCH_RESULTS);

@@ -344,6 +344,17 @@ class TerminalResource extends Resource
     /**
      * Tabla de terminales con columnas, filtros y acciones de ciclo de vida.
      */
+    /**
+     * Precarga el flag de token vigente para que `connectivity_status` (tabla y
+     * vista) no dispare una consulta de tokens por terminal.
+     *
+     * @return Builder<Terminal>
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->withSyncTokenFlag();
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -393,7 +404,7 @@ class TerminalResource extends Resource
                 TextColumn::make('connectivity_status')
                     ->label('Conectividad')
                     ->badge()
-                    ->tooltip('Basado en el último heartbeat exitoso de sincronización offline')
+                    ->tooltip('Sin vincular: sin token de sincronización vigente. Desconectado: sin heartbeat dentro del umbral de Configuración General')
                     ->formatStateUsing(fn (string $state) => Terminal::getConnectivityStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state) => Terminal::getConnectivityStatusColors()[$state] ?? 'gray'),
 
@@ -460,10 +471,13 @@ class TerminalResource extends Resource
 
                         $threshold = now()->subHours(app(GeneralSettings::class)->terminal_stale_threshold_hours);
 
+                        // Misma prioridad que Terminal::connectivity_status: la vinculación manda
+                        // sobre el heartbeat, así que los demás estados exigen token vigente.
                         return match ($data['value']) {
-                            'never_connected' => $query->whereNull('last_heartbeat_at'),
-                            'online' => $query->where('last_heartbeat_at', '>=', $threshold),
-                            'stale' => $query->whereNotNull('last_heartbeat_at')->where('last_heartbeat_at', '<', $threshold),
+                            'unlinked' => $query->syncUnlinked(),
+                            'never_connected' => $query->syncLinked()->whereNull('last_heartbeat_at'),
+                            'online' => $query->syncLinked()->where('last_heartbeat_at', '>=', $threshold),
+                            'stale' => $query->syncLinked()->whereNotNull('last_heartbeat_at')->where('last_heartbeat_at', '<', $threshold),
                             default => $query,
                         };
                     }),
@@ -570,7 +584,7 @@ class TerminalResource extends Resource
                         ->tooltip('Invalida el acceso del terminal a la sincronización offline — requerirá re-provisión')
                         ->icon('heroicon-o-shield-exclamation')
                         ->color('danger')
-                        ->visible(fn (Terminal $record) => $record->tokens()->exists())
+                        ->visible(fn (Terminal $record) => $record->hasActiveSyncToken())
                         ->requiresConfirmation()
                         ->modalHeading('Revocar token de sincronización')
                         ->modalDescription(fn (Terminal $record) => "El terminal \"{$record->name}\" perderá acceso a la API de sincronización offline de inmediato. Deberá re-provisionarse con un nuevo enlace de configuración antes de volver a sincronizar.")

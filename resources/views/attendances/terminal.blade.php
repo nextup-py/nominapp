@@ -69,6 +69,7 @@
             <x-attendance.terminal-type-selector />
             <x-attendance.terminal-video-section />
             <x-attendance.terminal-success />
+            <x-attendance.terminal-unlinked />
             {{--
                 Solo puede mostrarse en /terminal (legacy, sin código) — si $terminal ya
                 está presente (arquitectura actual, /terminal/{code}), no hay nada que migrar.

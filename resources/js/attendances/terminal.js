@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dayComplete:     document.getElementById('dayCompleteScreen'),
         error:           document.getElementById('errorScreen'),
         legacyMigration: document.getElementById('legacyMigrationScreen'),
+        unlinked:        document.getElementById('unlinkedScreen'),
     };
 
     const loadingDom = {
@@ -127,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         screens, video, overlay, ctx, identificationStatus,
         successDom, errorMessageEl, dayCompleteDom, typeSelectionDom,
         onIdleTimeout: enterIdle,
+        onUnlinked: (reason, storedCode) => showUnlinked(reason, storedCode),
     };
 
     // ============================================================================
@@ -164,6 +166,36 @@ document.addEventListener('DOMContentLoaded', () => {
         idleDetection.stopPresenceCheck();
         if (terminalHeader) terminalHeader.classList.remove('terminal-header--idle');
         identificationFlow.startIdentificationFlow(identificationRefs, { onIdleTimeout: enterIdle });
+    }
+
+    /**
+     * Bloquea la marcación: detiene cámara, presencia, timers y countdowns, y
+     * deja la pantalla "sin vincular". El latch vive en identification-flow
+     * (`blockIdentification`), así ningún countdown ni reset vuelve a arrancar
+     * la identificación. Se llama al arrancar sin token, ante una revocación en
+     * caliente (sync en segundo plano / botones de sync) o al identificar sin token.
+     * @param {'no_token'|'other_terminal'|'revoked'|string} reason
+     * @param {string|null} [storedCode] - code del terminal que tenía este navegador (reason 'other_terminal')
+     */
+    function showUnlinked(reason, storedCode = null) {
+        idleDetection.clearIdleTimer();
+        idleDetection.stopPresenceCheck();
+        screenState.stopCountdown();
+        markRegistration.clearPendingEmployee();
+        identificationFlow.blockIdentification(video);
+        isIdle = false;
+        if (terminalHeader) terminalHeader.classList.remove('terminal-header--idle');
+
+        const detail = document.getElementById('unlinkedDetail');
+        if (detail) {
+            detail.textContent = reason === 'other_terminal'
+                ? `Este navegador está configurado como otro terminal${storedCode ? ` ("${storedCode}")` : ''}. Abrí /terminal/${storedCode ?? '{código}'} o pedí un enlace para este.`
+                : reason === 'revoked'
+                    ? 'El acceso de este terminal fue revocado.'
+                    : 'Este terminal no está vinculado.';
+        }
+
+        screenState.showScreen(screens, 'unlinked');
     }
 
     function resetTerminal() {
@@ -229,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnMarkAnother) btnMarkAnother.addEventListener('click', () => resetTerminal());
     if (btnRetry) btnRetry.addEventListener('click', () => resetTerminal());
     if (btnReload) btnReload.addEventListener('click', () => window.location.reload());
+    document.getElementById('btnUnlinkedReload')?.addEventListener('click', () => window.location.reload());
 
     // ============================================================================
     // CONECTIVIDAD
@@ -250,7 +283,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 await flushQueue();
                 await refreshIdleSyncStatus();
             } catch (error) {
-                updateIdleSyncStatus(error instanceof TerminalAuthError ? 'Terminal sin configurar' : 'Error al sincronizar');
+                if (error instanceof TerminalAuthError) {
+                    updateIdleSyncStatus('Terminal sin configurar');
+                    showUnlinked('revoked');
+                } else {
+                    updateIdleSyncStatus('Error al sincronizar');
+                }
             } finally {
                 btnForceSync.disabled = false;
             }
@@ -291,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await flushQueue();
                 await refreshIdleSyncStatus();
             } catch (error) {
+                if (error instanceof TerminalAuthError) showUnlinked('revoked');
                 await refreshLastSyncLabel();
             } finally {
                 btnMenuSync.disabled = false;
@@ -326,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bootstrap.initializeSystem(loadingDom, {
                 onReady: enterIdle,
                 onError: (message) => screenState.showError(screens, errorMessageEl, message),
+                onUnlinked: showUnlinked,
             });
         };
         if (btnStartGate) {

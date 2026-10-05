@@ -12,8 +12,9 @@
  * descomposición en módulos más chicos — mismo comportamiento que el código
  * original (salvo la deduplicación de carga de modelos, ver arriba).
  *
- * No decide qué pantalla mostrar al terminar — recibe `onReady`/`onError`
- * como callbacks, ese destino (enterIdle/showError) vive en terminal.js.
+ * No decide qué pantalla mostrar al terminar — recibe `onReady`/`onError`/
+ * `onUnlinked` como callbacks, ese destino (enterIdle/showError/pantalla
+ * "sin vincular") vive en terminal.js.
  */
 
 import * as camera from './camera.js';
@@ -74,9 +75,11 @@ export async function checkLegacyTerminalMigration() {
 
 /**
  * @param {{loadingProgress?, loadingPercentage?, loadingMessage?, loadingStep1?, loadingStep2?, loadingStep3?}} loadingDom
- * @param {{onReady: () => void, onError: (message: string) => void}} callbacks
+ * @param {{onReady: () => void, onError: (message: string) => void, onUnlinked?: (reason: string, storedCode?: string|null) => void}} callbacks
+ *        `onUnlinked` reemplaza a `onReady` cuando el terminal no puede marcar (sin token,
+ *        o el navegador pertenece a otro terminal): no se llega a la pantalla idle.
  */
-export async function initializeSystem(loadingDom, { onReady, onError }) {
+export async function initializeSystem(loadingDom, { onReady, onError, onUnlinked }) {
     try {
         updateLoadingProgress(loadingDom, 10, 'Verificando compatibilidad del navegador...', 1);
         await sleep(300);
@@ -107,7 +110,13 @@ export async function initializeSystem(loadingDom, { onReady, onError }) {
         await sleep(500);
 
         await acquireWakeLock();
-        await initializeOfflineSync();
+        const sync = await initializeOfflineSync({ onUnlinked });
+
+        if (!sync.linked) {
+            console.warn(`Terminal sin vincular (${sync.reason}) — marcación bloqueada.`);
+            onUnlinked?.(sync.reason, sync.storedCode);
+            return;
+        }
 
         console.log('Sistema inicializado correctamente');
         onReady();
@@ -151,8 +160,16 @@ export async function requestPersistentStorage() {
  * que venía funcionando bien. Si cancela, el arranque se detiene acá sin
  * tocar nada — el dispositivo sigue funcionando como el terminal que ya
  * tenía configurado.
+ *
+ * Retorna si el terminal quedó en condiciones de marcar: sin token (nunca
+ * reclamó el enlace de setup, otro navegador/perfil, datos borrados) o con
+ * confirmación cancelada, `linked: false` — el caller bloquea la marcación en
+ * vez de dejar arrancar la cámara hacia un terminal que no puede identificar
+ * ni sincronizar a nadie.
+ * @param {{onUnlinked?: (reason: string, storedCode?: string|null) => void}} [callbacks] - se propaga al sync en segundo plano para avisar de una revocación en caliente
+ * @returns {Promise<{linked: boolean, reason?: 'no_token'|'other_terminal', storedCode?: string|null}>}
  */
-export async function initializeOfflineSync() {
+export async function initializeOfflineSync({ onUnlinked } = {}) {
     await migrateTokenFromLocalStorage();
 
     const storedId = await getMeta('terminal_id');
@@ -173,7 +190,7 @@ export async function initializeOfflineSync() {
 
         if (!confirmed) {
             updateIdleSyncStatus(`Este es otro terminal — volvé a /terminal/${storedCode ?? ''}`);
-            return;
+            return { linked: false, reason: 'other_terminal', storedCode: storedCode ?? null };
         }
 
         console.warn(`Datos locales pertenecen a otro terminal (id ${storedId ?? 'desconocido'}, code "${storedCode}") — limpiando antes de continuar.`);
@@ -185,7 +202,7 @@ export async function initializeOfflineSync() {
     if (!token) {
         console.warn('Terminal sin token de sincronización — falta provisión.');
         updateIdleSyncStatus('Terminal sin configurar');
-        return;
+        return { linked: false, reason: 'no_token' };
     }
 
     await requestPersistentStorage();
@@ -202,24 +219,29 @@ export async function initializeOfflineSync() {
         await refreshLastSyncLabel();
     }
 
-    startBackgroundSync();
+    startBackgroundSync({ onUnlinked });
+    return { linked: true };
 }
 
 /**
  * Heartbeat + sync de empleados + vaciado de la cola, periódicos mientras
  * haya conexión, más un intento al recuperarla.
+ * @param {{onUnlinked?: (reason: string) => void}} [callbacks] - se invoca si el servidor rechaza el token (revocado en caliente)
  */
-export function startBackgroundSync() {
+export function startBackgroundSync({ onUnlinked } = {}) {
     if (backgroundSyncStarted) return;
     backgroundSyncStarted = true;
 
     // Sin esto, un terminal revocado (re-provisión, baja) seguía intentando
     // sincronizar en loop cada 30-90s sin avisar a nadie más que la consola —
     // el mismo texto visible que ya usa initializeOfflineSync() cuando falta
-    // el token por primera vez, ahora también cuando se pierde en caliente.
+    // el token por primera vez, ahora también cuando se pierde en caliente —
+    // y además bloquea la marcación (onUnlinked), porque un terminal revocado no
+    // puede sincronizar y seguiría aceptando marcaciones que nunca llegan al servidor.
     const reportAuthError = (error) => {
         if (error instanceof TerminalAuthError) {
             updateIdleSyncStatus('Terminal sin configurar — necesita re-provisión');
+            onUnlinked?.('revoked');
             return true;
         }
         return false;
