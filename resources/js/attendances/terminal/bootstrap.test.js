@@ -42,8 +42,9 @@ async function loadFreshBootstrap() {
     const queueMod = await import('../terminal-offline/queue.js');
     const statusMod = await import('./sync-status-ui.js');
     const dbMod = await import('../terminal-offline/db.js');
-    const { startBackgroundSync, initializeOfflineSync, checkLegacyTerminalMigration } = await import('./bootstrap.js');
-    return { startBackgroundSync, initializeOfflineSync, checkLegacyTerminalMigration, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
+    const { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration } = await import('./bootstrap.js');
+    const cameraMod = await import('./camera.js');
+    return { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, ...cameraMod, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
 }
 
 describe('startBackgroundSync — reporte de TerminalAuthError', () => {
@@ -101,6 +102,32 @@ describe('startBackgroundSync — reporte de TerminalAuthError', () => {
         expect(updateIdleSyncStatus).toHaveBeenCalledWith('Terminal sin configurar — necesita re-provisión');
     });
 
+    it('heartbeat revocado: además bloquea la marcación vía onUnlinked', async () => {
+        const { startBackgroundSync, heartbeat, syncEmployees, flushQueue, TerminalAuthError } = await loadFreshBootstrap();
+        heartbeat.mockRejectedValue(new TerminalAuthError('revocado'));
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+        const onUnlinked = vi.fn();
+
+        startBackgroundSync({ onUnlinked });
+        await vi.advanceTimersByTimeAsync(90 * 1000);
+
+        expect(onUnlinked).toHaveBeenCalledWith('revoked');
+    });
+
+    it('un fallo de red normal (no auth) NO dispara onUnlinked', async () => {
+        const { startBackgroundSync, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        heartbeat.mockRejectedValue(new Error('network down'));
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+        const onUnlinked = vi.fn();
+
+        startBackgroundSync({ onUnlinked });
+        await vi.advanceTimersByTimeAsync(90 * 1000);
+
+        expect(onUnlinked).not.toHaveBeenCalled();
+    });
+
     it('un fallo de red normal (no auth) NO dispara el mensaje de re-provisión', async () => {
         const { startBackgroundSync, heartbeat, syncEmployees, flushQueue, updateIdleSyncStatus } = await loadFreshBootstrap();
         heartbeat.mockRejectedValue(new Error('network down'));
@@ -140,10 +167,25 @@ describe('initializeOfflineSync — confirmación antes de limpiar el estado de 
         syncEmployees.mockResolvedValue(undefined);
         flushQueue.mockResolvedValue({ results: [] });
 
-        await initializeOfflineSync();
+        const result = await initializeOfflineSync();
 
         expect(window.confirm).not.toHaveBeenCalled();
         expect(clearTerminalState).not.toHaveBeenCalled();
+        expect(result).toEqual({ linked: true });
+    });
+
+    it('sin token: retorna linked:false (no_token), no sincroniza ni arranca el sync en segundo plano', async () => {
+        const { initializeOfflineSync, getMeta, heartbeat, syncEmployees, flushQueue, updateIdleSyncStatus } = await loadFreshBootstrap();
+        stubWindow({ confirmReturns: true });
+        getMeta.mockResolvedValue(null);
+
+        const result = await initializeOfflineSync();
+
+        expect(result).toEqual({ linked: false, reason: 'no_token' });
+        expect(updateIdleSyncStatus).toHaveBeenCalledWith('Terminal sin configurar');
+        expect(heartbeat).not.toHaveBeenCalled();
+        expect(syncEmployees).not.toHaveBeenCalled();
+        expect(flushQueue).not.toHaveBeenCalled();
     });
 
     it('terminal distinto + confirma: limpia el estado anterior y sincroniza como el nuevo', async () => {
@@ -158,11 +200,12 @@ describe('initializeOfflineSync — confirmación antes de limpiar el estado de 
         syncEmployees.mockResolvedValue(undefined);
         flushQueue.mockResolvedValue({ results: [] });
 
-        await initializeOfflineSync();
+        const result = await initializeOfflineSync();
 
         expect(window.confirm).toHaveBeenCalledTimes(1);
         expect(clearTerminalState).toHaveBeenCalledTimes(1);
         expect(heartbeat).toHaveBeenCalled();
+        expect(result).toEqual({ linked: true });
     });
 
     it('terminal distinto + cancela: NO limpia nada y no intenta sincronizar', async () => {
@@ -174,14 +217,67 @@ describe('initializeOfflineSync — confirmación antes de limpiar el estado de 
             api_token: 'token-viejo',
         }[key] ?? null));
 
-        await initializeOfflineSync();
+        const result = await initializeOfflineSync();
 
+        expect(result).toEqual({ linked: false, reason: 'other_terminal', storedCode: 'viejo-code' });
         expect(window.confirm).toHaveBeenCalledTimes(1);
         expect(clearTerminalState).not.toHaveBeenCalled();
         expect(heartbeat).not.toHaveBeenCalled();
         expect(syncEmployees).not.toHaveBeenCalled();
         expect(flushQueue).not.toHaveBeenCalled();
         expect(updateIdleSyncStatus).toHaveBeenCalledWith('Este es otro terminal — volvé a /terminal/viejo-code');
+    });
+});
+
+describe('initializeSystem — terminal sin vincular', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+    });
+
+    function stubBrowser() {
+        vi.stubGlobal('window', { addEventListener: vi.fn(), terminalData: { id: 1, code: 'abc' } });
+        vi.stubGlobal('navigator', { onLine: true, storage: undefined, mediaDevices: { getUserMedia: vi.fn() } });
+    }
+
+    it('sin token: llama a onUnlinked("no_token") y NO a onReady', async () => {
+        const { initializeSystem, loadModels, getMeta } = await loadFreshBootstrap();
+        stubBrowser();
+        loadModels.mockResolvedValue({ ok: true });
+        getMeta.mockResolvedValue(null);
+        const callbacks = { onReady: vi.fn(), onError: vi.fn(), onUnlinked: vi.fn() };
+
+        const done = initializeSystem({}, callbacks);
+        await vi.advanceTimersByTimeAsync(5000);
+        await done;
+
+        expect(callbacks.onUnlinked).toHaveBeenCalledWith('no_token', undefined);
+        expect(callbacks.onReady).not.toHaveBeenCalled();
+        expect(callbacks.onError).not.toHaveBeenCalled();
+    });
+
+    it('con token: llama a onReady y no a onUnlinked', async () => {
+        const { initializeSystem, loadModels, getMeta, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        stubBrowser();
+        loadModels.mockResolvedValue({ ok: true });
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'api_token' ? 'un-token' : null));
+        heartbeat.mockResolvedValue(undefined);
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+        const callbacks = { onReady: vi.fn(), onError: vi.fn(), onUnlinked: vi.fn() };
+
+        const done = initializeSystem({}, callbacks);
+        await vi.advanceTimersByTimeAsync(5000);
+        await done;
+
+        expect(callbacks.onReady).toHaveBeenCalledTimes(1);
+        expect(callbacks.onUnlinked).not.toHaveBeenCalled();
     });
 });
 

@@ -20,7 +20,7 @@ use Illuminate\Notifications\Notification;
  * notificación se dispara igual aunque el terminal físico se haya quedado
  * sin token — por eso el wording pide verificar Conectividad en vez de dar
  * la instalación por confirmada. Ver columna "Conectividad" en
- * `TerminalResource` (`never_connected` hasta el primer heartbeat exitoso).
+ * `TerminalResource` (`never_connected` hasta el primer heartbeat exitoso; `unlinked` si no tiene token vigente).
  */
 class TerminalProvisionedNotification extends Notification
 {

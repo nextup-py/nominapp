@@ -7,9 +7,11 @@ use App\Services\DeviceHintsParser;
 use App\Settings\GeneralSettings;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -161,6 +163,7 @@ class Terminal extends Model implements AuthenticatableContract
     public static function getConnectivityStatusOptions(): array
     {
         return [
+            'unlinked' => 'Sin vincular',
             'online' => 'En línea',
             'stale' => 'Desconectado',
             'never_connected' => 'Nunca conectado',
@@ -175,6 +178,7 @@ class Terminal extends Model implements AuthenticatableContract
     public static function getConnectivityStatusLabels(): array
     {
         return [
+            'unlinked' => 'Sin vincular',
             'online' => 'En línea',
             'stale' => 'Desconectado',
             'never_connected' => 'Nunca conectado',
@@ -189,6 +193,7 @@ class Terminal extends Model implements AuthenticatableContract
     public static function getConnectivityStatusColors(): array
     {
         return [
+            'unlinked' => 'danger',
             'online' => 'success',
             'stale' => 'danger',
             'never_connected' => 'gray',
@@ -254,18 +259,27 @@ class Terminal extends Model implements AuthenticatableContract
     }
 
     /**
-     * Estado de conectividad calculado a partir de `last_heartbeat_at` (a
-     * diferencia de `last_seen_at`, que también se actualiza con cada carga
-     * de página vía sesión y por eso no distingue un terminal que quedó abierto
-     * offline días de uno que realmente sigue sincronizando):
-     * - 'never_connected': nunca completó un heartbeat exitoso (sin
-     *   provisionar, o provisionado pero sin conexión desde entonces).
+     * Estado de conectividad del terminal. La vinculación tiene prioridad
+     * sobre el heartbeat: sin un token de sincronización vigente el terminal
+     * no puede sincronizar ni (en el cliente) marcar, aunque haya tenido
+     * heartbeats antes de que se le revocara el token. A partir de
+     * `last_heartbeat_at` (a diferencia de `last_seen_at`, que también se
+     * actualiza con cada carga de página vía sesión y por eso no distingue un
+     * terminal que quedó abierto offline días de uno que realmente sigue
+     * sincronizando):
+     * - 'unlinked': sin token Sanctum vigente con ability `terminal:sync`
+     *   (nunca se provisionó, se revocó, o el enlace de setup no se reclamó).
+     * - 'never_connected': vinculado pero sin ningún heartbeat exitoso todavía.
      * - 'online': el último heartbeat exitoso está dentro del umbral
      *   configurado (`GeneralSettings->terminal_stale_threshold_hours`).
      * - 'stale': el último heartbeat exitoso superó el umbral.
      */
     public function getConnectivityStatusAttribute(): string
     {
+        if (! $this->hasActiveSyncToken()) {
+            return 'unlinked';
+        }
+
         if (! $this->last_heartbeat_at instanceof Carbon) {
             return 'never_connected';
         }
@@ -273,6 +287,70 @@ class Terminal extends Model implements AuthenticatableContract
         $thresholdHours = app(GeneralSettings::class)->terminal_stale_threshold_hours;
 
         return $this->last_heartbeat_at->lt(now()->subHours($thresholdHours)) ? 'stale' : 'online';
+    }
+
+    /**
+     * Indica si el terminal tiene un token Sanctum vigente con ability
+     * `terminal:sync`. Usa el flag precargado por `scopeWithSyncTokenFlag()`
+     * cuando está disponible (listados: evita una query por fila) y cae a una
+     * consulta puntual en caso contrario.
+     */
+    public function hasActiveSyncToken(): bool
+    {
+        if (array_key_exists('has_sync_token', $this->attributes)) {
+            return (bool) $this->attributes['has_sync_token'];
+        }
+
+        return $this->tokens()->where(static::activeSyncTokenConstraint())->exists();
+    }
+
+    /**
+     * Restricción sobre `personal_access_tokens` que define "token de
+     * sincronización vigente": ability `terminal:sync` y no expirado. Única
+     * fuente de verdad para el accessor, el flag precargado y los filtros.
+     *
+     * @return \Closure(Builder|Relation): void
+     */
+    public static function activeSyncTokenConstraint(): \Closure
+    {
+        return function ($query): void {
+            $query->where('abilities', 'like', '%"'.self::SYNC_ABILITY.'"%')
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+        };
+    }
+
+    /**
+     * Precarga `has_sync_token` en una sola subconsulta EXISTS — usar en toda
+     * query que liste terminales y muestre `connectivity_status`.
+     *
+     * @param  Builder<Terminal>  $query
+     * @return Builder<Terminal>
+     */
+    public function scopeWithSyncTokenFlag(Builder $query): Builder
+    {
+        return $query->withExists(['tokens as has_sync_token' => static::activeSyncTokenConstraint()]);
+    }
+
+    /**
+     * Terminales con token de sincronización vigente.
+     *
+     * @param  Builder<Terminal>  $query
+     * @return Builder<Terminal>
+     */
+    public function scopeSyncLinked(Builder $query): Builder
+    {
+        return $query->whereHas('tokens', static::activeSyncTokenConstraint());
+    }
+
+    /**
+     * Terminales sin token de sincronización vigente.
+     *
+     * @param  Builder<Terminal>  $query
+     * @return Builder<Terminal>
+     */
+    public function scopeSyncUnlinked(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('tokens', static::activeSyncTokenConstraint());
     }
 
     /**

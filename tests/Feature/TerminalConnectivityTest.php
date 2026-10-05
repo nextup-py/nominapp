@@ -5,6 +5,7 @@ use App\Models\Company;
 use App\Models\Terminal;
 use App\Settings\GeneralSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
@@ -23,10 +24,78 @@ function makeConnectivityTerminal(): Terminal
     return Terminal::create(['name' => 'Terminal Test', 'branch_id' => $branch->id]);
 }
 
+/** Emite un token de sincronización vigente (equivale a haber reclamado el enlace de setup). */
+function linkConnectivityTerminal(Terminal $terminal, array $abilities = [Terminal::SYNC_ABILITY]): Terminal
+{
+    $terminal->createToken('kiosk:'.$terminal->code, $abilities);
+
+    return $terminal;
+}
+
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-it('nunca conectado cuando last_heartbeat_at es null', function () {
+it('sin vincular cuando no tiene ningún token de sincronización', function () {
     $terminal = makeConnectivityTerminal();
+
+    expect($terminal->connectivity_status)->toBe('unlinked')
+        ->and($terminal->hasActiveSyncToken())->toBeFalse();
+});
+
+it('sin vincular tiene prioridad sobre un heartbeat reciente si se revocó el token', function () {
+    $terminal = linkConnectivityTerminal(makeConnectivityTerminal());
+    $terminal->update(['last_heartbeat_at' => now()]);
+    expect($terminal->connectivity_status)->toBe('online');
+
+    $terminal->revokeSyncTokens();
+
+    expect($terminal->fresh()->connectivity_status)->toBe('unlinked');
+});
+
+it('un token sin la ability terminal:sync no cuenta como vinculado', function () {
+    $terminal = linkConnectivityTerminal(makeConnectivityTerminal(), ['otra:ability']);
+
+    expect($terminal->connectivity_status)->toBe('unlinked');
+});
+
+it('un token expirado no cuenta como vinculado', function () {
+    $terminal = makeConnectivityTerminal();
+    $terminal->createToken('kiosk:'.$terminal->code, [Terminal::SYNC_ABILITY], now()->subMinute());
+
+    expect($terminal->connectivity_status)->toBe('unlinked');
+});
+
+it('los scopes syncLinked / syncUnlinked separan los terminales según su token', function () {
+    $linked = linkConnectivityTerminal(makeConnectivityTerminal());
+    $unlinked = makeConnectivityTerminal();
+
+    expect(Terminal::syncLinked()->pluck('id')->all())->toBe([$linked->id])
+        ->and(Terminal::syncUnlinked()->pluck('id')->all())->toBe([$unlinked->id]);
+});
+
+it('withSyncTokenFlag resuelve connectivity_status de varios terminales sin consultar tokens por fila', function () {
+    foreach (range(1, 3) as $i) {
+        linkConnectivityTerminal(makeConnectivityTerminal())->update(['last_heartbeat_at' => now()]);
+    }
+    makeConnectivityTerminal();
+    // Resuelve y cachea los settings antes de contar, para medir solo las consultas de tokens.
+    app(GeneralSettings::class)->terminal_stale_threshold_hours;
+
+    $tokenQueries = 0;
+    DB::listen(function ($query) use (&$tokenQueries) {
+        if (str_contains($query->sql, 'personal_access_tokens')) {
+            $tokenQueries++;
+        }
+    });
+
+    $statuses = Terminal::withSyncTokenFlag()->get()->map->connectivity_status->all();
+
+    expect($statuses)->toHaveCount(4)
+        ->and(collect($statuses)->countBy()->all())->toBe(['online' => 3, 'unlinked' => 1])
+        ->and($tokenQueries)->toBe(1);
+});
+
+it('nunca conectado cuando está vinculado pero last_heartbeat_at es null', function () {
+    $terminal = linkConnectivityTerminal(makeConnectivityTerminal());
 
     expect($terminal->connectivity_status)->toBe('never_connected');
 });
@@ -36,7 +105,7 @@ it('en línea cuando el último heartbeat está dentro del umbral configurado', 
     $settings->terminal_stale_threshold_hours = 2;
     $settings->save();
 
-    $terminal = makeConnectivityTerminal();
+    $terminal = linkConnectivityTerminal(makeConnectivityTerminal());
     $terminal->update(['last_heartbeat_at' => now()->subHour()]);
 
     expect($terminal->connectivity_status)->toBe('online');
@@ -47,7 +116,7 @@ it('desconectado cuando el último heartbeat superó el umbral configurado', fun
     $settings->terminal_stale_threshold_hours = 2;
     $settings->save();
 
-    $terminal = makeConnectivityTerminal();
+    $terminal = linkConnectivityTerminal(makeConnectivityTerminal());
     $terminal->update(['last_heartbeat_at' => now()->subHours(3)]);
 
     expect($terminal->connectivity_status)->toBe('stale');

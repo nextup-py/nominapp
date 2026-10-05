@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../terminal-offline/db.js', () => ({ getCachedEmployees: vi.fn() }));
+vi.mock('../terminal-offline/db.js', () => ({ getCachedEmployees: vi.fn(), getMeta: vi.fn() }));
 vi.mock('../offline-shared/matcher.js', () => ({ identifyEmployee: vi.fn() }));
 vi.mock('../terminal-offline/sync.js', () => {
     // Nombre de clase local distinto de `TerminalAuthError` a propósito: si
@@ -55,7 +55,7 @@ vi.mock('./manual-search.js', () => ({
     closeManualSearch: vi.fn(),
 }));
 
-import { getCachedEmployees } from '../terminal-offline/db.js';
+import { getCachedEmployees, getMeta } from '../terminal-offline/db.js';
 import { identifyEmployee as matchDescriptor } from '../offline-shared/matcher.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
 import { getEmployeeStatus } from '../terminal-offline/queue.js';
@@ -74,13 +74,39 @@ describe('identifyEmployeeFromDescriptor', () => {
         setManualCandidate(null);
     });
 
-    it('retorna mensaje de sincronización si threshold/minGap no están listos', async () => {
+    it('sin umbrales y CON token: está sincronizando por primera vez', async () => {
         getFaceConfig.mockResolvedValue({ threshold: null, minGap: null });
+        getMeta.mockResolvedValue('un-token');
 
         const result = await identifyEmployeeFromDescriptor(new Float32Array(128), null);
 
+        expect(getMeta).toHaveBeenCalledWith('api_token');
         expect(result).toEqual({ ok: false, message: 'Terminal sincronizando por primera vez, espere un momento.' });
         expect(getCachedEmployees).not.toHaveBeenCalled();
+    });
+
+    it('sin umbrales y SIN token: el terminal no está vinculado (needsProvisioning)', async () => {
+        getFaceConfig.mockResolvedValue({ threshold: null, minGap: null });
+        getMeta.mockResolvedValue(null);
+
+        const result = await identifyEmployeeFromDescriptor(new Float32Array(128), null);
+
+        expect(result).toEqual({
+            ok: false,
+            needsProvisioning: true,
+            message: 'Este terminal no está vinculado. Pedí un nuevo enlace de configuración al administrador.',
+        });
+        expect(getCachedEmployees).not.toHaveBeenCalled();
+    });
+
+    it('con umbrales cargados no consulta el token', async () => {
+        getFaceConfig.mockResolvedValue({ threshold: 0.5, minGap: 0.1 });
+        getCachedEmployees.mockResolvedValue([]);
+        matchDescriptor.mockReturnValue({ employee: null, distance: null, reason: 'no_candidates' });
+
+        await identifyEmployeeFromDescriptor(new Float32Array(128), null);
+
+        expect(getMeta).not.toHaveBeenCalled();
     });
 
     it('con manualCandidate seteado, acota el matching a ese único candidato', async () => {
@@ -193,7 +219,7 @@ describe('startIdentificationFlow — reset tras un ciclo que queda "trabado"', 
         vi.unstubAllGlobals();
     });
 
-    it('libera isProcessing en un segundo ciclo aunque el anterior haya terminado en needsProvisioning sin pasar por el finally normal', async () => {
+    it('libera isProcessing en un segundo ciclo aunque el anterior haya terminado en éxito sin pasar por el finally normal', async () => {
         let capturedInterval = null;
         vi.stubGlobal(
             'setInterval',
@@ -207,7 +233,10 @@ describe('startIdentificationFlow — reset tras un ciclo que queda "trabado"', 
         camera.isFaceDetected.mockReturnValue(true);
         camera.isInCooldown.mockReturnValue(false);
         camera.captureDescriptor.mockResolvedValue(new Float32Array(128));
-        getFaceConfig.mockRejectedValue(new TerminalAuthError('sin token'));
+        getFaceConfig.mockResolvedValue({ threshold: 0.5, minGap: 0.1 });
+        getCachedEmployees.mockResolvedValue([{ id: 3, first_name: 'Juan', last_name: 'Pérez', ci: '1' }]);
+        matchDescriptor.mockReturnValue({ employee: { id: 3, first_name: 'Juan', last_name: 'Pérez', ci: '1' }, distance: 0.2 });
+        getEmployeeStatus.mockResolvedValue({ last_event: null, last_event_time: null, allowed_events: [] });
 
         const capturedIsProcessingFns = [];
         camera.startDrawLoop.mockImplementation((video, overlay, ctx, { isProcessing }) => {
@@ -218,11 +247,9 @@ describe('startIdentificationFlow — reset tras un ciclo que queda "trabado"', 
         await vi.waitFor(() => expect(capturedInterval).not.toBeNull());
 
         // Ejecutar manualmente el callback del interval (simula que pasaron
-        // 1500ms) — identifyEmployeeFromDescriptor rechaza con
-        // TerminalAuthError, lo que dispara la rama needsProvisioning: llama
-        // stopAutoIdentification() (limpia identifyInterval a null) ANTES de
-        // que el finally intente resetear isProcessing — reproduce el
-        // estado "trabado" del bug original.
+        // 1500ms) — la identificación tiene éxito: llama stopAutoIdentification()
+        // (limpia identifyInterval a null) ANTES de que el finally intente
+        // resetear isProcessing — reproduce el estado "trabado" del bug original.
         await capturedInterval();
 
         expect(capturedIsProcessingFns[0]()).toBe(true);
@@ -233,5 +260,81 @@ describe('startIdentificationFlow — reset tras un ciclo que queda "trabado"', 
 
         expect(capturedIsProcessingFns[1]()).toBe(false);
         expect(getConsecutiveFailures()).toBe(0);
+    });
+});
+
+describe('terminal sin vincular — bloqueo de la identificación', () => {
+    /**
+     * Instancia limpia del módulo en cada test: `blocked` es un latch
+     * module-level que, una vez activado, no se desactiva (se resuelve
+     * recargando la página).
+     */
+    async function loadFresh() {
+        vi.resetModules();
+        const flow = await import('./identification-flow.js');
+        const db = await import('../terminal-offline/db.js');
+        const sync = await import('../terminal-offline/sync.js');
+        const screens = await import('./screen-state.js');
+        const cam = await import('./camera.js');
+        return { flow, db, sync, screens, cam };
+    }
+
+    const makeRefs = (extra = {}) => ({
+        screens: { unlinked: {} },
+        video: {},
+        overlay: {},
+        ctx: {},
+        identificationStatus: null,
+        successDom: {},
+        errorMessageEl: {},
+        dayCompleteDom: {},
+        typeSelectionDom: {},
+        ...extra,
+    });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('tras blockIdentification, startIdentificationFlow muestra la pantalla unlinked y no arranca la cámara', async () => {
+        const { flow, screens, cam } = await loadFresh();
+        const refs = makeRefs();
+
+        flow.blockIdentification(refs.video);
+        flow.startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+
+        expect(flow.isIdentificationBlocked()).toBe(true);
+        expect(screens.showScreen).toHaveBeenCalledWith(refs.screens, 'unlinked');
+        expect(screens.showScreen).not.toHaveBeenCalledWith(refs.screens, 'identification');
+        expect(cam.loadModels).not.toHaveBeenCalled();
+        expect(cam.startCamera).not.toHaveBeenCalled();
+    });
+
+    it('needsProvisioning durante la identificación: bloquea y avisa vía onUnlinked (sin showError)', async () => {
+        const { flow, sync, screens, cam } = await loadFresh();
+        let capturedInterval = null;
+        vi.stubGlobal('setInterval', vi.fn((cb) => { capturedInterval = cb; return 999; }));
+        vi.stubGlobal('clearInterval', vi.fn());
+
+        cam.isFaceDetected.mockReturnValue(true);
+        cam.isInCooldown.mockReturnValue(false);
+        cam.captureDescriptor.mockResolvedValue(new Float32Array(128));
+        sync.getFaceConfig.mockRejectedValue(new sync.TerminalAuthError('sin token'));
+
+        const onUnlinked = vi.fn();
+        const refs = makeRefs({ onUnlinked });
+        flow.startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+        await vi.waitFor(() => expect(capturedInterval).not.toBeNull());
+
+        await capturedInterval();
+
+        expect(onUnlinked).toHaveBeenCalledWith('no_token');
+        expect(screens.showError).not.toHaveBeenCalled();
+        expect(flow.isIdentificationBlocked()).toBe(true);
+        expect(cam.stopCamera).toHaveBeenCalled();
     });
 });

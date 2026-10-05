@@ -27,6 +27,7 @@ class TerminalsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->withSyncTokenFlag())
             ->recordUrl(fn (Terminal $record) => TerminalResource::getUrl('view', ['record' => $record]))
             ->columns([
                 TextColumn::make('name')
@@ -51,7 +52,7 @@ class TerminalsRelationManager extends RelationManager
                 TextColumn::make('connectivity_status')
                     ->label('Conectividad')
                     ->badge()
-                    ->tooltip('Basado en el último heartbeat exitoso de sincronización offline')
+                    ->tooltip('Sin vincular: sin token de sincronización vigente. Desconectado: sin heartbeat dentro del umbral de Configuración General')
                     ->formatStateUsing(fn (string $state) => Terminal::getConnectivityStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state) => Terminal::getConnectivityStatusColors()[$state] ?? 'gray'),
 

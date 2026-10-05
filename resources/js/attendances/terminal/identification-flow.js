@@ -24,7 +24,7 @@ import { resetIdleTimer } from './idle-detection.js';
 import { showScreen, showSuccessScreen, showError, showDayComplete } from './screen-state.js';
 import { showTypeSelectionForEmployee, registerMark, clearPendingEmployee } from './mark-registration.js';
 import { identifyEmployee as matchDescriptor } from '../offline-shared/matcher.js';
-import { getCachedEmployees } from '../terminal-offline/db.js';
+import { getCachedEmployees, getMeta } from '../terminal-offline/db.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
 import { getEmployeeStatus } from '../terminal-offline/queue.js';
 import { setTerminalVideoState, setIdStatusDot, showCaptureProgress, updateCaptureProgress, finishCaptureProgress } from './ui-feedback.js';
@@ -37,6 +37,28 @@ let identifyInterval = null;
 let isProcessing = false;
 let consecutiveFailures = 0;
 let manualCandidate = null;
+/** Terminal sin vincular: ninguna ruta de re-entrada puede volver a arrancar cámara ni identificación. */
+let blocked = false;
+
+/**
+ * Marca el terminal como sin vincular y detiene la identificación en curso.
+ * Desde acá, `startIdentificationFlow()` (único punto de re-entrada, incluidos
+ * los countdowns de éxito/jornada completa) muestra la pantalla `unlinked` en
+ * vez de reactivar la cámara.
+ * @param {HTMLVideoElement} videoEl
+ */
+export function blockIdentification(videoEl) {
+    blocked = true;
+    stopAutoIdentification(videoEl);
+    isProcessing = false;
+    hideManualSearchLink();
+    closeManualSearch();
+}
+
+/** @returns {boolean} */
+export function isIdentificationBlocked() {
+    return blocked;
+}
 
 /** @param {object|null} employee */
 export function setManualCandidate(employee) {
@@ -64,6 +86,15 @@ export async function identifyEmployeeFromDescriptor(descriptor, manualCandidate
     try {
         const { threshold, minGap } = await getFaceConfig();
         if (threshold == null || minGap == null) {
+            // Sin umbrales hay dos causas distintas: nunca se vinculó (sin token no hay
+            // heartbeat que los guarde) o está vinculado y todavía no completó su primer sync.
+            if (!(await getMeta('api_token'))) {
+                return {
+                    ok: false,
+                    needsProvisioning: true,
+                    message: 'Este terminal no está vinculado. Pedí un nuevo enlace de configuración al administrador.',
+                };
+            }
             return { ok: false, message: 'Terminal sincronizando por primera vez, espere un momento.' };
         }
 
@@ -134,6 +165,11 @@ function updateStatus(identificationStatusEl, text) {
  * @param {{onIdleTimeout: () => void}} callbacks
  */
 export function startIdentificationFlow(refs, { onIdleTimeout }) {
+    if (blocked) {
+        showScreen(refs.screens, 'unlinked');
+        return;
+    }
+
     resetIdleTimer(onIdleTimeout);
     isProcessing = false;
     consecutiveFailures = 0;
@@ -147,7 +183,7 @@ export function startIdentificationFlow(refs, { onIdleTimeout }) {
 }
 
 /**
- * @param {{screens, video: HTMLVideoElement, overlay: HTMLCanvasElement, ctx: CanvasRenderingContext2D, identificationStatus, successDom, errorMessageEl, dayCompleteDom, typeSelectionDom}} refs
+ * @param {{screens, video: HTMLVideoElement, overlay: HTMLCanvasElement, ctx: CanvasRenderingContext2D, identificationStatus, successDom, errorMessageEl, dayCompleteDom, typeSelectionDom, onUnlinked?: (reason: string) => void}} refs
  */
 export async function startAutoIdentification(refs) {
     const modelsResult = await camera.loadModels();
@@ -197,9 +233,10 @@ export async function startAutoIdentification(refs) {
             const result = await identifyEmployeeFromDescriptor(descriptor, manualCandidate);
 
             if (result.needsProvisioning) {
-                stopAutoIdentification(refs.video);
+                blockIdentification(refs.video);
                 await finishCaptureProgress('error');
-                showError(refs.screens, refs.errorMessageEl, result.message);
+                if (refs.onUnlinked) refs.onUnlinked('no_token');
+                else showError(refs.screens, refs.errorMessageEl, result.message);
                 return;
             }
 
