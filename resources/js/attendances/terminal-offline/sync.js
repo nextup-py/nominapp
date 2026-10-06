@@ -10,7 +10,7 @@
  *               ver TerminalSetupController / terminal-setup.blade.php).
  */
 
-import { getMeta, setMeta, applyEmployeesDelta, applyBreakFlags, logSync, countPendingEvents, countConflictEvents, countCachedEmployees } from './db.js';
+import { getMeta, setMeta, clearRebuildableCaches, applyEmployeesDelta, applyBreakFlags, logSync, countPendingEvents, countConflictEvents, countCachedEmployees } from './db.js';
 import { collectDeviceReport } from './device-report.js';
 
 const API_BASE = '/api/v1/terminal';
@@ -75,6 +75,48 @@ export async function syncEmployees() {
 }
 
 /**
+ * Reconstruye la caché de empleados desde cero: primero baja el set completo (si falla,
+ * la caché actual queda intacta) y recién entonces borra y vuelve a aplicar. No toca la cola
+ * de marcaciones ni el token (ver `clearRebuildableCaches()`).
+ * @returns {Promise<{employees: number}>}
+ */
+export async function rebuildEmployeeCache() {
+    const data = await apiFetch('/employees/sync');
+    if (!data.ok) throw new Error(data.message || 'No se pudo reconstruir la caché de empleados.');
+
+    await clearRebuildableCaches();
+    await applyEmployeesDelta(data.employees, []);
+    await applyBreakFlags(data.break_flags);
+    await setMeta('last_employee_sync_version', data.sync_version);
+    await setMeta('employees_synced_at', Date.now());
+
+    await logSync('employees_sync', true, `caché reconstruida: ${data.employees.length} empleados`);
+    return { employees: data.employees.length };
+}
+
+/** Confirmaciones de comandos remotos pendientes de viajar en el próximo heartbeat. */
+let pendingCommandAcks = [];
+
+/** @type {((commands: Array<{id: number, command: string}>) => unknown)|null} */
+let commandHandler = null;
+
+/**
+ * Registra el manejador que ejecuta los comandos remotos recibidos en el heartbeat.
+ * @param {((commands: Array<{id: number, command: string}>) => unknown)|null} handler
+ */
+export function setCommandHandler(handler) {
+    commandHandler = handler;
+}
+
+/**
+ * Encola la confirmación de un comando para el próximo heartbeat.
+ * @param {{id: number, status: 'done'|'failed', message?: string}} ack
+ */
+export function queueCommandAck(ack) {
+    pendingCommandAcks.push(ack);
+}
+
+/**
  * Reporte de estado del dispositivo para el heartbeat. Un fallo al recolectarlo
  * nunca debe impedir el heartbeat: en ese caso viaja vacío.
  * @returns {Promise<Record<string, string|number|boolean>>}
@@ -104,11 +146,20 @@ export async function heartbeat() {
     try {
         const [pendingEvents, conflictEvents] = await Promise.all([countPendingEvents(), countConflictEvents()]);
         const device = await buildDeviceReport();
-        const data = await apiFetch('/heartbeat', {
-            method: 'POST',
-            body: JSON.stringify({ pending_events: pendingEvents, conflict_events: conflictEvents, device }),
-        });
-        if (!data.ok) throw new Error(data.message || 'Error en heartbeat');
+        const acks = pendingCommandAcks;
+        pendingCommandAcks = [];
+        let data;
+        try {
+            data = await apiFetch('/heartbeat', {
+                method: 'POST',
+                body: JSON.stringify({ pending_events: pendingEvents, conflict_events: conflictEvents, device, command_acks: acks }),
+            });
+            if (!data.ok) throw new Error(data.message || 'Error en heartbeat');
+        } catch (error) {
+            // Las confirmaciones no enviadas se reintentan en el próximo heartbeat.
+            pendingCommandAcks = [...acks, ...pendingCommandAcks];
+            throw error;
+        }
 
         await setMeta('face_threshold', data.config.face_threshold);
         await setMeta('face_min_confidence_gap', data.config.face_min_confidence_gap);
@@ -116,6 +167,10 @@ export async function heartbeat() {
         await setMeta('last_heartbeat_at', Date.now());
 
         await logSync('heartbeat', true);
+
+        if (Array.isArray(data.commands) && data.commands.length > 0 && commandHandler) {
+            Promise.resolve(commandHandler(data.commands)).catch((error) => console.warn('Comandos remotos fallaron:', error.message));
+        }
     } catch (error) {
         await logSync('heartbeat', false, error.message);
         throw error;

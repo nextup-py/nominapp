@@ -32,6 +32,9 @@ use Illuminate\Http\Request;
  * batería, cámara, empleados en caché, desfase de reloj, almacenamiento) que se
  * muestra en el detalle del terminal y alimenta las alertas (ver
  * `terminals:evaluate-health`).
+ *
+ * Canal de comandos remotos (Fase 3): el cliente envía `command_acks` (confirmaciones de
+ * comandos ejecutados) y recibe `commands` (los pendientes, ver `TerminalCommand`).
  */
 class TerminalHeartbeatController extends Controller
 {
@@ -51,6 +54,10 @@ class TerminalHeartbeatController extends Controller
         $data = $request->validate([
             'pending_events' => ['nullable', 'integer', 'min:0'],
             'conflict_events' => ['nullable', 'integer', 'min:0'],
+            'command_acks' => ['nullable', 'array', 'max:20'],
+            'command_acks.*.id' => ['required', 'integer'],
+            'command_acks.*.status' => ['required', 'string', 'in:done,failed'],
+            'command_acks.*.message' => ['nullable', 'string', 'max:255'],
             'device' => ['nullable', 'array'],
             'device.app_version' => ['nullable', 'string', 'max:40'],
             'device.standalone' => ['nullable', 'boolean'],
@@ -73,8 +80,16 @@ class TerminalHeartbeatController extends Controller
             isset($data['device']) ? array_intersect_key($data['device'], array_flip(self::DEVICE_REPORT_KEYS)) : null,
         );
 
+        // `command_acks` (aunque vacío) indica que el cliente entiende comandos remotos: los
+        // clientes viejos no lo envían y por eso nunca reciben uno que no podrían ejecutar.
+        $supportsCommands = array_key_exists('command_acks', $data);
+        if (! empty($data['command_acks'])) {
+            $terminal->acknowledgeCommands($data['command_acks']);
+        }
+
         return response()->json([
             'ok' => true,
+            'commands' => $supportsCommands ? $terminal->deliverPendingCommands() : [],
             'server_time' => now()->toIso8601String(),
             'config' => [
                 'face_threshold' => (float) $settings->face_threshold,

@@ -27,6 +27,9 @@ class TerminalAuthErrorImpl extends Error {}
 vi.mock('../terminal-offline/sync.js', () => ({
     heartbeat: vi.fn(),
     syncEmployees: vi.fn(),
+    rebuildEmployeeCache: vi.fn(),
+    setCommandHandler: vi.fn(),
+    queueCommandAck: vi.fn(),
     TerminalAuthError: TerminalAuthErrorImpl,
 }));
 vi.mock('../terminal-offline/queue.js', () => ({ flushQueue: vi.fn() }));

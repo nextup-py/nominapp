@@ -120,6 +120,24 @@ export async function clearTerminalState() {
     ]);
 }
 
+/**
+ * Borra SOLO lo reconstruible desde el servidor: la caché de empleados y el estado por
+ * empleado, y reinicia el cursor de sync. Es lo que usa el comando remoto "Limpiar caché".
+ *
+ * Garantía de seguridad: NUNCA toca `outbound_events` (marcaciones pendientes de
+ * sincronizar) ni el resto de `terminal_meta` (token, identidad del terminal) — a diferencia
+ * de `clearTerminalState()`, que se reserva para el cambio de identidad de un dispositivo.
+ * @returns {Promise<void>}
+ */
+export async function clearRebuildableCaches() {
+    const db = await getDb();
+    await Promise.all([
+        db.clear('employees_cache'),
+        db.clear('employee_status_cache'),
+    ]);
+    await genericDb.setMeta(db, META_STORE, 'last_employee_sync_version', null);
+}
+
 /** @param {string} type @param {boolean} ok @param {string|null} [detail] */
 export async function logSync(type, ok, detail = null) {
     return genericDb.logSync(await getDb(), type, ok, detail);

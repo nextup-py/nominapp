@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TerminalResource\Pages;
 
+use App\Filament\Actions\TerminalCommandActions;
 use App\Filament\Actions\TerminalLinkActions;
 use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
@@ -85,6 +86,12 @@ class ViewTerminal extends ViewRecord
             TerminalLinkActions::generateSetupLink(Action::class),
             TerminalLinkActions::showSetupLink(Action::class),
             EditAction::make()->label('Editar')->icon('heroicon-o-pencil-square')->color('primary'),
+
+            ActionGroup::make(TerminalCommandActions::actions(Action::class))
+                ->label('Comandos remotos')
+                ->icon('heroicon-o-command-line')
+                ->color('gray')
+                ->button(),
 
             ActionGroup::make([
                 Action::make('regenerate_code')

@@ -112,6 +112,29 @@ describe('clearTerminalState', () => {
     });
 });
 
+describe('clearRebuildableCaches', () => {
+    it('vacía empleados y estado por empleado, pero NUNCA la cola de marcaciones ni el token', async () => {
+        await db.setMeta('api_token', 'tok');
+        await db.setMeta('terminal_id', 7);
+        await db.setMeta('last_employee_sync_version', 'v9');
+        await db.applyEmployeesDelta([{ id: 1, first_name: 'Juan', face_descriptor: Array(128).fill(0) }], []);
+        await db.queueEvent({ client_event_id: 'e1', employee_id: 1, event_type: 'check_in', recorded_at: '2026-01-01T10:00:00Z', date: '2026-01-01' });
+        await db.queueEvent({ client_event_id: 'e2', employee_id: 1, event_type: 'check_out', recorded_at: '2026-01-01T18:00:00Z', date: '2026-01-01' });
+        await db.markQueuedEventConflict('e2', 'conflicto');
+        await db.setEmployeeStatusCache(1, { last_event: 'check_in', last_event_time: '10:00', allowed_events: [] });
+
+        await db.clearRebuildableCaches();
+
+        expect(await db.getCachedEmployees()).toEqual([]);
+        expect(await db.getEmployeeStatusCache(1)).toBeUndefined();
+        expect(await db.getMeta('last_employee_sync_version')).toBeNull();
+        expect(await db.getMeta('api_token')).toBe('tok');
+        expect(await db.getMeta('terminal_id')).toBe(7);
+        expect(await db.countPendingEvents()).toBe(1);
+        expect(await db.countConflictEvents()).toBe(1);
+    });
+});
+
 describe('logSync', () => {
     it('agrega una entrada con type/ok/detail/at', async () => {
         await db.logSync('heartbeat', true, null);

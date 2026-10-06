@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\TerminalCommandActions;
 use App\Filament\Actions\TerminalLinkActions;
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
+use App\Filament\Resources\TerminalResource\RelationManagers\CommandsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\PairingRequestsRelationManager;
 use App\Filament\Traits\HasModuleAccess;
@@ -709,6 +711,7 @@ class TerminalResource extends Resource
                     TerminalLinkActions::openLinkWindow(Action::class),
                     TerminalLinkActions::closeLinkWindow(Action::class),
                     TerminalLinkActions::printSheet(Action::class),
+                    ...TerminalCommandActions::actions(Action::class),
 
                     Action::make('revoke_token')
                         ->label('Desvincular dispositivo')
@@ -733,6 +736,7 @@ class TerminalResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     TerminalLinkActions::openLinkWindowBulk(),
+                    TerminalCommandActions::bulk(),
                     DeleteBulkAction::make()
                         ->modalDescription('Esta acción no se puede deshacer. Las marcaciones ya registradas con los terminales seleccionados no se eliminan, pero perderán la referencia a qué dispositivo físico las generó.')
                         ->modalSubmitActionLabel('Sí, eliminar'),
@@ -852,6 +856,7 @@ class TerminalResource extends Resource
         return [
             PairingRequestsRelationManager::class,
             EventsRelationManager::class,
+            CommandsRelationManager::class,
             AttendanceEventsRelationManager::class,
         ];
     }

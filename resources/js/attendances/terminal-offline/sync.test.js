@@ -13,14 +13,15 @@ vi.mock('./db.js', () => ({
     setMeta: vi.fn(),
     applyEmployeesDelta: vi.fn(),
     applyBreakFlags: vi.fn(),
+    clearRebuildableCaches: vi.fn(),
     logSync: vi.fn(),
     countPendingEvents: vi.fn().mockResolvedValue(0),
     countConflictEvents: vi.fn().mockResolvedValue(0),
     countCachedEmployees: vi.fn().mockResolvedValue(7),
 }));
 
-import { getMeta, setMeta, applyEmployeesDelta, applyBreakFlags, logSync } from './db.js';
-import { apiFetch, syncEmployees, heartbeat, getFaceConfig, fetchEmployeeStatus, submitEvents, TerminalAuthError } from './sync.js';
+import { getMeta, setMeta, applyEmployeesDelta, applyBreakFlags, clearRebuildableCaches, logSync } from './db.js';
+import { apiFetch, syncEmployees, heartbeat, getFaceConfig, fetchEmployeeStatus, submitEvents, rebuildEmployeeCache, setCommandHandler, queueCommandAck, TerminalAuthError } from './sync.js';
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -107,6 +108,85 @@ describe('heartbeat', () => {
         const body = JSON.parse(fetch.mock.calls[0][1].body);
         expect(body.device.cached_employees).toBe(7);
         expect(body).toHaveProperty('pending_events', 0);
+    });
+});
+
+describe('heartbeat — comandos remotos', () => {
+    const okBody = (extra = {}) => ({
+        ok: true, config: { face_threshold: 0.5, face_min_confidence_gap: 0.1 }, server_time: '2026-01-01T00:00:00Z', ...extra,
+    });
+
+    beforeEach(() => {
+        getMeta.mockResolvedValue('tok');
+        setCommandHandler(null);
+    });
+
+    it('siempre envía command_acks (señal de que el cliente entiende comandos) y entrega los comandos al manejador', async () => {
+        const handler = vi.fn();
+        setCommandHandler(handler);
+        fetch.mockResolvedValue({ status: 200, json: () => Promise.resolve(okBody({ commands: [{ id: 5, command: 'force_sync' }] })) });
+
+        await heartbeat();
+
+        expect(JSON.parse(fetch.mock.calls[0][1].body).command_acks).toEqual([]);
+        expect(handler).toHaveBeenCalledWith([{ id: 5, command: 'force_sync' }]);
+    });
+
+    it('envía las confirmaciones encoladas una sola vez', async () => {
+        fetch.mockResolvedValue({ status: 200, json: () => Promise.resolve(okBody()) });
+        queueCommandAck({ id: 9, status: 'done' });
+
+        await heartbeat();
+        await heartbeat();
+
+        expect(JSON.parse(fetch.mock.calls[0][1].body).command_acks).toEqual([{ id: 9, status: 'done' }]);
+        expect(JSON.parse(fetch.mock.calls[1][1].body).command_acks).toEqual([]);
+    });
+
+    it('si el heartbeat falla, las confirmaciones se reintentan en el siguiente', async () => {
+        queueCommandAck({ id: 3, status: 'failed', message: 'x' });
+        fetch.mockRejectedValueOnce(new Error('red caída'));
+        await expect(heartbeat()).rejects.toThrow('red caída');
+
+        fetch.mockResolvedValue({ status: 200, json: () => Promise.resolve(okBody()) });
+        await heartbeat();
+
+        expect(JSON.parse(fetch.mock.calls[1][1].body).command_acks).toEqual([{ id: 3, status: 'failed', message: 'x' }]);
+    });
+
+    it('un servidor viejo sin `commands` no rompe nada', async () => {
+        const handler = vi.fn();
+        setCommandHandler(handler);
+        fetch.mockResolvedValue({ status: 200, json: () => Promise.resolve(okBody()) });
+
+        await heartbeat();
+
+        expect(handler).not.toHaveBeenCalled();
+    });
+});
+
+describe('rebuildEmployeeCache', () => {
+    it('baja el set completo y recién después borra y reaplica', async () => {
+        getMeta.mockResolvedValue('tok');
+        fetch.mockResolvedValue({ status: 200, json: () => Promise.resolve({ ok: true, employees: [{ id: 1 }], tombstones: [], break_flags: {}, sync_version: 'v2' }) });
+
+        const result = await rebuildEmployeeCache();
+
+        expect(fetch.mock.calls[0][0]).toBe('/api/v1/terminal/employees/sync');
+        expect(clearRebuildableCaches).toHaveBeenCalledTimes(1);
+        expect(applyEmployeesDelta).toHaveBeenCalledWith([{ id: 1 }], []);
+        expect(setMeta).toHaveBeenCalledWith('last_employee_sync_version', 'v2');
+        expect(result).toEqual({ employees: 1 });
+    });
+
+    it('si el servidor no responde, NO borra la caché actual', async () => {
+        getMeta.mockResolvedValue('tok');
+        fetch.mockRejectedValue(new Error('sin red'));
+
+        await expect(rebuildEmployeeCache()).rejects.toThrow('sin red');
+
+        expect(clearRebuildableCaches).not.toHaveBeenCalled();
+        expect(applyEmployeesDelta).not.toHaveBeenCalled();
     });
 });
 

@@ -20,7 +20,8 @@
 import * as camera from './camera.js';
 import { acquireWakeLock } from './idle-detection.js';
 import { migrateTokenFromLocalStorage, getMeta, clearTerminalState } from '../terminal-offline/db.js';
-import { heartbeat, syncEmployees, TerminalAuthError } from '../terminal-offline/sync.js';
+import { heartbeat, syncEmployees, rebuildEmployeeCache, setCommandHandler, queueCommandAck, TerminalAuthError } from '../terminal-offline/sync.js';
+import { runRemoteCommands } from '../terminal-offline/remote-commands.js';
 import { flushQueue } from '../terminal-offline/queue.js';
 import { updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './sync-status-ui.js';
 import { markUserInteracted } from '../../shared/audio-feedback.js';
@@ -207,6 +208,9 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
 
     await requestPersistentStorage();
 
+    // Antes del primer heartbeat: si ya trae comandos pendientes, que no se pierdan.
+    setCommandHandler(handleRemoteCommands);
+
     try {
         updateIdleSyncStatus('Sincronizando...');
         await heartbeat();
@@ -223,6 +227,72 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
     return { linked: true };
 }
 
+/** Máximo que un comando de recarga/limpieza espera a que el terminal quede en reposo (un poco más que el timer de inactividad de 5 min). */
+const IDLE_WAIT_MS = 6 * 60 * 1000;
+
+/** Evita ejecutar dos tandas de comandos a la vez (el heartbeat de confirmación podría traer más): las que llegan mientras se ejecuta quedan en cola. */
+let executingCommands = false;
+
+/** @type {Array<{id: number, command: string}>} */
+let queuedCommands = [];
+
+/** El terminal está en reposo si la pantalla idle es la visible (nadie identificándose ni marcando). */
+function isTerminalIdle() {
+    return !document.getElementById('idleScreen')?.classList.contains('hidden');
+}
+
+/**
+ * Espera a que el terminal esté en reposo, hasta `IDLE_WAIT_MS`.
+ * @returns {Promise<boolean>} false si venció el tiempo sin llegar al reposo
+ */
+async function waitForIdle() {
+    const deadline = Date.now() + IDLE_WAIT_MS;
+    while (!isTerminalIdle()) {
+        if (Date.now() >= deadline) return false;
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+    return true;
+}
+
+/**
+ * Ejecuta los comandos remotos recibidos en el heartbeat (ver remote-commands.js).
+ * @param {Array<{id: number, command: string}>} commands
+ */
+async function handleRemoteCommands(commands) {
+    if (executingCommands) {
+        queuedCommands.push(...commands);
+        return;
+    }
+    executingCommands = true;
+    try {
+        await runRemoteCommands(commands, {
+            forceSync: async () => {
+                await syncEmployees();
+                await flushQueue();
+                await refreshIdleSyncStatus();
+            },
+            clearCache: async () => {
+                if (globalThis.caches) {
+                    await Promise.all((await caches.keys()).map((key) => caches.delete(key)));
+                }
+                await rebuildEmployeeCache();
+            },
+            waitForIdle,
+            ack: queueCommandAck,
+            flushAcks: heartbeat,
+            reload: () => window.location.reload(),
+        });
+    } finally {
+        executingCommands = false;
+    }
+
+    if (queuedCommands.length > 0) {
+        const next = queuedCommands;
+        queuedCommands = [];
+        await handleRemoteCommands(next);
+    }
+}
+
 /**
  * Heartbeat + sync de empleados + vaciado de la cola, periódicos mientras
  * haya conexión, más un intento al recuperarla.
@@ -231,6 +301,7 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
 export function startBackgroundSync({ onUnlinked } = {}) {
     if (backgroundSyncStarted) return;
     backgroundSyncStarted = true;
+    setCommandHandler(handleRemoteCommands);
 
     // Sin esto, un terminal revocado (re-provisión, baja) seguía intentando
     // sincronizar en loop cada 30-90s sin avisar a nadie más que la consola —

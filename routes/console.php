@@ -153,6 +153,17 @@ Schedule::command('terminals:expire-link-windows')
     });
 
 /**
+ * Vencer comandos remotos de terminales sin entregar o sin confirmar
+ * Se ejecuta cada minuto: los comandos duran 15 minutos
+ */
+Schedule::command('terminals:expire-commands')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        Log::error('Falló el vencimiento de comandos remotos de terminales');
+    });
+
+/**
  * Evaluar la salud de los terminales y avisar solo en las transiciones
  * Se ejecuta cada minuto: el heartbeat del terminal va cada ~90 segundos
  */
