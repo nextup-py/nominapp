@@ -29,7 +29,7 @@ Acceder desde **Configuración → Configuración General**.
 
 ### Terminales de Marcación
 
-- **Umbral de desconexión:** horas sin un heartbeat exitoso antes de que el panel marque un terminal como desconectado (por defecto 2 horas).
+- **Umbral de desconexión:** horas sin un heartbeat (latido) exitoso antes de que el panel marque un terminal como **Desconectado** (por defecto 2 horas; entre 1 y 72). No afecta a los estados *Sin vincular* ni *Nunca conectado*. Ver el capítulo **Terminales de Marcación**.
 
 ---
 

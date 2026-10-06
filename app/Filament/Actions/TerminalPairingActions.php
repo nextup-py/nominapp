@@ -8,6 +8,7 @@ use App\Services\TerminalPairingService;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Actions\Action;
+use Illuminate\Support\HtmlString;
 
 /**
  * Acciones de fila para resolver solicitudes de vinculación de terminales —
@@ -92,21 +93,25 @@ class TerminalPairingActions
             });
     }
 
-    /** Texto del modal de aprobación: terminal, datos del dispositivo y aviso de reemplazo. */
-    public static function describe(TerminalPairingRequest $record): string
+    /**
+     * Texto del modal de aprobación: terminal, datos del dispositivo y aviso de
+     * reemplazo, uno por línea. Escapa los valores (el user agent y el modelo los
+     * reporta el dispositivo) antes de armar el HTML.
+     */
+    public static function describe(TerminalPairingRequest $record): HtmlString
     {
         $terminal = $record->terminal;
-        $parts = [
-            "Terminal: {$terminal->name} ({$terminal->branch?->name}).",
-            'Dispositivo: '.($record->device_model_hint ?: 'modelo no detectado').' — IP '.($record->ip_address ?: 'desconocida').'.',
-            'Navegador: '.($record->user_agent ?: 'no informado').'.',
+        $lines = [
+            '<strong>Terminal:</strong> '.e($terminal->name).' ('.e($terminal->branch?->name).')',
+            '<strong>Dispositivo:</strong> '.e($record->device_model_hint ?: 'modelo no detectado').' — IP '.e($record->ip_address ?: 'desconocida'),
+            '<strong>Navegador:</strong> '.e($record->user_agent ?: 'no informado'),
         ];
 
         if ($record->replaces_active_device) {
-            $lastHeartbeat = $terminal->last_heartbeat_at?->diffForHumans() ?? 'sin heartbeat';
-            $parts[] = "⚠️ Reemplazará al dispositivo vinculado actualmente (último heartbeat: {$lastHeartbeat}); su acceso se revocará.";
+            $lastHeartbeat = $terminal->last_heartbeat_at?->diffForHumans() ?? 'nunca';
+            $lines[] = '⚠️ <strong>Reemplazará al dispositivo vinculado actualmente</strong> (último heartbeat: '.e($lastHeartbeat).'); su acceso se revocará.';
         }
 
-        return implode(' ', $parts);
+        return new HtmlString(implode('<br>', $lines));
     }
 }

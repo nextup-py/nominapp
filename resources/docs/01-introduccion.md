@@ -42,7 +42,7 @@ El empleado pertenece a una **Sucursal**. Su salario, cargo y fecha de ingreso e
 6. Registrar los **empleados** y crear sus **contratos** iniciales
 7. Asignar un **horario** o **patrón de rotación** a cada empleado
 8. Cargar los **feriados** del año
-9. Habilitar las **marcaciones** (terminal o dispositivo personal con reconocimiento facial)
+9. Habilitar las **marcaciones** (terminal o dispositivo personal con reconocimiento facial). Cada terminal debe **vincularse** una vez al sistema — ver el capítulo **Terminales de Marcación**
 10. Cada período: generar **nómina**, revisar y aprobar
 11. Gestionar **vacaciones**, **ausencias**, **licencias** y **préstamos** según necesidad
 12. Al cierre de año: calcular y emitir el **aguinaldo**

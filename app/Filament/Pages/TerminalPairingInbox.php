@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Actions\TerminalPairingActions;
+use App\Filament\Resources\TerminalResource;
 use App\Models\TerminalPairingRequest;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
@@ -34,10 +35,13 @@ class TerminalPairingInbox extends Page implements HasTable
 
     protected static string $view = 'filament.pages.terminal-pairing-inbox';
 
-    /** Solo quienes ya pueden gestionar terminales. */
+    /**
+     * Solo quienes ya pueden gestionar terminales, y solo si el módulo de marcación
+     * biométrica está activo (el mismo flag que gatea `TerminalResource`).
+     */
     public static function canAccess(): bool
     {
-        return TerminalPairingActions::canManage();
+        return TerminalResource::isModuleEnabled() && TerminalPairingActions::canManage();
     }
 
     /** Cantidad de solicitudes pendientes y vigentes. */
