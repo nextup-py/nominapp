@@ -98,6 +98,7 @@
             company_logo: @json($terminal->branch?->company?->logo_thumbnail),
             device_brand: @json($terminal->device_brand),
             device_model: @json($terminal->device_model),
+            app_version: @json(\App\Models\Terminal::currentAppVersion()),
         };
     </script>
     @endisset

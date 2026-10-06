@@ -11,11 +11,13 @@ use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
 use App\Models\Terminal;
 use App\Settings\GeneralSettings;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Form;
 use Filament\Infolists\Components\Grid as InfoGrid;
 use Filament\Infolists\Components\ImageEntry;
@@ -139,6 +141,46 @@ class TerminalResource extends Resource
                             ->placeholder('Ej: Pantalla con rayón en esquina superior derecha')
                             ->rows(2)
                             ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+
+                Section::make('Monitoreo')
+                    ->description('Cuándo se considera desconectado este terminal y en qué horario se vigila. Todo es opcional.')
+                    ->icon('heroicon-o-wifi')
+                    ->compact()
+                    ->schema([
+                        TextInput::make('stale_after_minutes')
+                            ->label('Considerar desconectado tras')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(Terminal::MIN_STALE_MINUTES)
+                            ->maxValue(10080)
+                            ->suffix('minutos')
+                            ->placeholder(fn () => 'Usa el umbral general ('.app(GeneralSettings::class)->terminal_stale_threshold_hours.' h)')
+                            ->helperText('Mínimo '.Terminal::MIN_STALE_MINUTES.' minutos (el terminal reporta cada ~90 s). Vacío = umbral general de Configuración General.')
+                            ->columnSpanFull(),
+
+                        CheckboxList::make('watch_days')
+                            ->label('Días que se vigila')
+                            ->options(Terminal::WATCH_DAY_OPTIONS)
+                            ->columns(7)
+                            ->bulkToggleable()
+                            ->helperText('Ninguno marcado = todos los días. Fuera de estos días no se avisa que está desconectado.')
+                            ->columnSpanFull(),
+
+                        TimePicker::make('watch_from')
+                            ->label('Vigilar desde')
+                            ->seconds(false)
+                            ->native(false)
+                            ->requiredWith('watch_to')
+                            ->helperText('Hora de Asunción. Vacío = todo el día.'),
+
+                        TimePicker::make('watch_to')
+                            ->label('Vigilar hasta')
+                            ->seconds(false)
+                            ->native(false)
+                            ->requiredWith('watch_from')
+                            ->helperText('Un rango que cruza la medianoche (ej. 22:00 a 06:00) pertenece al día en que empieza.'),
                     ])
                     ->columns(2),
 
@@ -319,12 +361,74 @@ class TerminalResource extends Resource
                                 ->placeholder('Sin datos'),
                         ]),
 
-                        TextEntry::make('last_seen_at')
-                            ->label('Última carga de página')
-                            ->dateTime('d/m/Y H:i')
-                            ->placeholder('Sin actividad registrada')
-                            ->since(),
+                        InfoGrid::make(3)->schema([
+                            TextEntry::make('last_seen_at')
+                                ->label('Última carga de página')
+                                ->dateTime('d/m/Y H:i')
+                                ->placeholder('Sin actividad registrada')
+                                ->since(),
+
+                            TextEntry::make('_stale_threshold')
+                                ->label('Umbral de desconexión')
+                                ->getStateUsing(fn (Terminal $record) => $record->effectiveStaleMinutes().' minutos'.($record->stale_after_minutes ? '' : ' (general)')),
+
+                            TextEntry::make('_watch_schedule')
+                                ->label('Horario de vigilancia')
+                                ->getStateUsing(fn (Terminal $record) => $record->watchScheduleLabel()),
+                        ]),
                     ]),
+
+                InfoSection::make('Estado del dispositivo')
+                    ->description('Lo que el terminal informó en su último heartbeat. Cada dato depende de lo que el navegador permita leer.')
+                    ->icon('heroicon-o-cpu-chip')
+                    ->collapsible()
+                    ->schema([
+                        InfoGrid::make(4)->schema([
+                            TextEntry::make('_app_version')
+                                ->label('Versión de la app')
+                                ->getStateUsing(fn (Terminal $record) => static::describeAppVersion($record))
+                                ->placeholder('Sin dato'),
+
+                            TextEntry::make('_install_mode')
+                                ->label('Modo')
+                                ->getStateUsing(fn (Terminal $record) => static::describeInstallMode($record))
+                                ->placeholder('Sin dato'),
+
+                            TextEntry::make('_battery')
+                                ->label('Batería')
+                                ->getStateUsing(fn (Terminal $record) => static::describeBattery($record))
+                                ->placeholder('El navegador no la informa'),
+
+                            TextEntry::make('_camera')
+                                ->label('Cámara')
+                                ->getStateUsing(fn (Terminal $record) => static::describeCamera($record))
+                                ->placeholder('Sin dato'),
+                        ]),
+
+                        InfoGrid::make(4)->schema([
+                            TextEntry::make('_cached_employees')
+                                ->label('Empleados en caché')
+                                ->getStateUsing(fn (Terminal $record) => $record->device_report['cached_employees'] ?? null)
+                                ->placeholder('Sin dato'),
+
+                            TextEntry::make('_clock_skew')
+                                ->label('Desfase de reloj')
+                                ->getStateUsing(fn (Terminal $record) => static::describeClockSkew($record))
+                                ->placeholder('Sin dato'),
+
+                            TextEntry::make('_storage')
+                                ->label('Almacenamiento')
+                                ->getStateUsing(fn (Terminal $record) => static::describeStorage($record))
+                                ->placeholder('Sin dato'),
+
+                            TextEntry::make('device_report_at')
+                                ->label('Último reporte')
+                                ->dateTime('d/m/Y H:i')
+                                ->since()
+                                ->placeholder('Sin reporte'),
+                        ]),
+                    ])
+                    ->visible(fn (Terminal $record) => $record->device_report !== null),
 
                 InfoSection::make('Dispositivo vinculado')
                     ->description('Dispositivo que hoy tiene acceso a la sincronización offline de este terminal')
@@ -458,7 +562,7 @@ class TerminalResource extends Resource
                 TextColumn::make('connectivity_status')
                     ->label('Conectividad')
                     ->badge()
-                    ->tooltip('Sin vincular: sin token de sincronización vigente. Desconectado: sin heartbeat dentro del umbral de Configuración General')
+                    ->tooltip('Sin vincular: sin token de sincronización vigente. Desconectado: sin heartbeat dentro del umbral (propio o general). Fuera de horario: desconectado pero fuera de su horario de vigilancia')
                     ->formatStateUsing(fn (string $state) => Terminal::getConnectivityStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state) => Terminal::getConnectivityStatusColors()[$state] ?? 'gray'),
 
@@ -531,15 +635,17 @@ class TerminalResource extends Resource
                             return $query;
                         }
 
-                        $threshold = now()->subHours(app(GeneralSettings::class)->terminal_stale_threshold_hours);
+                        $outsideWindow = Terminal::idsOutsideWatchWindow();
 
                         // Misma prioridad que Terminal::connectivity_status: la vinculación manda
-                        // sobre el heartbeat, así que los demás estados exigen token vigente.
+                        // sobre el heartbeat, así que los demás estados exigen token vigente; y un
+                        // heartbeat vencido es 'stale' o 'off_hours' según el horario de vigilancia.
                         return match ($data['value']) {
                             'unlinked' => $query->syncUnlinked(),
                             'never_connected' => $query->syncLinked()->whereNull('last_heartbeat_at'),
-                            'online' => $query->syncLinked()->where('last_heartbeat_at', '>=', $threshold),
-                            'stale' => $query->syncLinked()->whereNotNull('last_heartbeat_at')->where('last_heartbeat_at', '<', $threshold),
+                            'online' => $query->syncLinked()->heartbeatFresh(),
+                            'stale' => $query->syncLinked()->heartbeatStale()->whereNotIn('terminals.id', $outsideWindow),
+                            'off_hours' => $query->syncLinked()->heartbeatStale()->whereIn('terminals.id', $outsideWindow),
                             default => $query,
                         };
                     }),
@@ -636,6 +742,79 @@ class TerminalResource extends Resource
             ->emptyStateHeading('No hay terminales registradas')
             ->emptyStateDescription('Crea una terminal y configurá el dispositivo físico con su URL de acceso.')
             ->emptyStateIcon('heroicon-o-computer-desktop');
+    }
+
+    /** Versión de la app que corre en el dispositivo, avisando si quedó desactualizada respecto del servidor. */
+    public static function describeAppVersion(Terminal $record): ?string
+    {
+        $version = $record->device_report['app_version'] ?? null;
+
+        return $version === null ? null : $version.($record->isAppOutdated() ? ' — desactualizada, recargar el terminal' : ' — al día');
+    }
+
+    /** Si el terminal corre instalado como app o en una pestaña del navegador, y si el service worker está activo. */
+    public static function describeInstallMode(Terminal $record): ?string
+    {
+        $report = $record->device_report ?? [];
+
+        if (! array_key_exists('standalone', $report)) {
+            return null;
+        }
+
+        $mode = $report['standalone'] ? 'Instalada como app' : 'En el navegador (sin instalar)';
+
+        return ($report['sw_active'] ?? true) ? $mode : $mode.' · sin service worker (no funciona offline)';
+    }
+
+    /** Batería informada: nivel y si está cargando. */
+    public static function describeBattery(Terminal $record): ?string
+    {
+        $level = $record->reportedBatteryLevel();
+
+        if ($level === null) {
+            return null;
+        }
+
+        return $level.'%'.($record->reportedCharging() === null ? '' : ($record->reportedCharging() ? ' · cargando' : ' · sin cargador'));
+    }
+
+    /** Permiso de cámara en lenguaje del panel. */
+    public static function describeCamera(Terminal $record): ?string
+    {
+        return match ($record->device_report['camera'] ?? null) {
+            'granted' => 'Permitida',
+            'denied' => 'Bloqueada: el terminal no puede identificar',
+            'prompt' => 'Sin decidir: falta aceptar el permiso',
+            'unavailable' => 'No disponible en este navegador',
+            default => null,
+        };
+    }
+
+    /** Diferencia entre el reloj del servidor y el del dispositivo; avisa si pasa de un minuto. */
+    public static function describeClockSkew(Terminal $record): ?string
+    {
+        $seconds = $record->device_report['clock_skew_seconds'] ?? null;
+
+        if ($seconds === null) {
+            return null;
+        }
+
+        $text = ($seconds > 0 ? '+' : '').$seconds.' s';
+
+        return abs($seconds) > 60 ? $text.' — el reloj del dispositivo está desajustado' : $text;
+    }
+
+    /** Almacenamiento usado del dispositivo. */
+    public static function describeStorage(Terminal $record): ?string
+    {
+        $used = $record->device_report['storage_used_mb'] ?? null;
+        $quota = $record->device_report['storage_quota_mb'] ?? null;
+
+        if ($used === null) {
+            return null;
+        }
+
+        return $quota ? "{$used} MB de {$quota} MB" : "{$used} MB";
     }
 
     /**

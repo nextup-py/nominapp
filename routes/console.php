@@ -151,3 +151,25 @@ Schedule::command('terminals:expire-link-windows')
     ->onFailure(function () {
         Log::error('Falló el cierre de ventanas de vinculación de terminales vencidas');
     });
+
+/**
+ * Evaluar la salud de los terminales y avisar solo en las transiciones
+ * Se ejecuta cada minuto: el heartbeat del terminal va cada ~90 segundos
+ */
+Schedule::command('terminals:evaluate-health')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        Log::error('Falló la evaluación de salud de los terminales');
+    });
+
+/**
+ * Purgar la bitácora de terminales más antigua que la retención configurada
+ * Se ejecuta a las 03:30 (retención en Configuración General; 0 = conservar siempre)
+ */
+Schedule::command('terminals:purge-events')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        Log::error('Falló la purga automática de la bitácora de terminales');
+    });

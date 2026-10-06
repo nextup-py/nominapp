@@ -10,7 +10,8 @@
  *               ver TerminalSetupController / terminal-setup.blade.php).
  */
 
-import { getMeta, setMeta, applyEmployeesDelta, applyBreakFlags, logSync, countPendingEvents, countConflictEvents } from './db.js';
+import { getMeta, setMeta, applyEmployeesDelta, applyBreakFlags, logSync, countPendingEvents, countConflictEvents, countCachedEmployees } from './db.js';
+import { collectDeviceReport } from './device-report.js';
 
 const API_BASE = '/api/v1/terminal';
 
@@ -74,6 +75,23 @@ export async function syncEmployees() {
 }
 
 /**
+ * Reporte de estado del dispositivo para el heartbeat. Un fallo al recolectarlo
+ * nunca debe impedir el heartbeat: en ese caso viaja vacío.
+ * @returns {Promise<Record<string, string|number|boolean>>}
+ */
+async function buildDeviceReport() {
+    try {
+        return await collectDeviceReport({
+            appVersion: globalThis.window?.terminalData?.app_version ?? null,
+            cachedEmployees: await countCachedEmployees(),
+            clockOffsetMs: (await getMeta('server_clock_offset_ms')) ?? null,
+        });
+    } catch {
+        return {};
+    }
+}
+
+/**
  * Heartbeat: mantiene `last_seen_at` vivo en el servidor y refresca la
  * configuración de reconocimiento facial (umbral/gap) usada por el matcher
  * local. También reporta el tamaño actual de la cola offline (pendientes/en
@@ -85,9 +103,10 @@ export async function syncEmployees() {
 export async function heartbeat() {
     try {
         const [pendingEvents, conflictEvents] = await Promise.all([countPendingEvents(), countConflictEvents()]);
+        const device = await buildDeviceReport();
         const data = await apiFetch('/heartbeat', {
             method: 'POST',
-            body: JSON.stringify({ pending_events: pendingEvents, conflict_events: conflictEvents }),
+            body: JSON.stringify({ pending_events: pendingEvents, conflict_events: conflictEvents, device }),
         });
         if (!data.ok) throw new Error(data.message || 'Error en heartbeat');
 
