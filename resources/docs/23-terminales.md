@@ -272,9 +272,9 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 
 Los umbrales de la cola atascada y de la batería baja se editan en **Configuración General → Terminales de Marcación**. Los terminales **inactivos** no se evalúan, y al aplicar esta función por primera vez el sistema solo toma una foto del estado actual, sin avisar de lo que ya estaba así. Que la cola se normalice o que la batería se recupere queda en la **Bitácora**, sin notificación.
 
-### Panel de inicio
+### Escritorio
 
-El **Panel de inicio** muestra la tarjeta **Salud de los terminales** para quien puede ver terminales: cuántos están **en línea**, **desconectados** y **sin vincular** (con los nombres de los que tienen problemas y un enlace al listado ya filtrado) y cuántos tienen alertas de cola o batería. Solo cuenta terminales activos.
+El **Escritorio** muestra la tarjeta **Salud de los terminales** para quien puede ver terminales: cuántos están **en línea**, **desconectados** y **sin vincular** (con los nombres de los que tienen problemas y un enlace al listado ya filtrado) y cuántos tienen alertas de cola o batería. Solo cuenta terminales activos.
 
 ![Salud de los terminales en el panel de inicio](/docs-images/23-terminales-widget-dashboard.png)
 
@@ -365,6 +365,10 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 | Recibo avisos de desconexión de noche o los fines de semana | El local está cerrado y el terminal se apaga | Definir su **horario de vigilancia** en la sección **Monitoreo** del terminal |
 | El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |
 | El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Recargar la página del terminal dos veces |
+| Un comando remoto figura **Vencido** | El terminal no se conectó en 15 minutos (apagado, sin internet) o corre una versión vieja de la aplicación que no entiende comandos | Verificar que esté encendido y con internet, recargar su página dos veces y volver a enviar el comando |
+| Un comando remoto figura **Falló** con el detalle *El terminal estuvo ocupado* | Había una marcación en curso y no llegó al reposo a tiempo | Volver a enviar el comando cuando el terminal esté en reposo |
+| **Limpiar caché** falló con un error de red | El terminal no pudo descargar los empleados | Verificar su conexión y reenviar el comando. La caché que tenía se conserva y no se pierde ninguna marcación |
+| Un comando figura **Entregado** y no cambia | El terminal lo recibió pero no confirmó (por ejemplo, se apagó) | Pasados los 15 minutos pasa solo a **Falló**; reenviarlo cuando el terminal vuelva |
 
 ---
 

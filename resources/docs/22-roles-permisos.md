@@ -35,7 +35,7 @@ Además, los módulos con flujo de aprobación (Préstamos, Adelantos, Retiros d
 
 > Las acciones puramente administrativas (cambiar el método de pago, editar un borrador, descargar un archivo ya generado) no tienen permiso de negocio propio — quedan cubiertas por los permisos CRUD estándar (Editar / Ver).
 
-> **Terminales:** vincular terminales no tiene un permiso propio. Aprobar o rechazar solicitudes de vinculación, revocar el acceso de un terminal y activarlo o desactivarlo requieren el permiso **Editar Terminal** — el mismo que ya protege la gestión de terminales. Con ese permiso (y el módulo de Marcación biométrica activo) aparece **Asistencias → Solicitudes de vinculación** y llegan las notificaciones de nuevas solicitudes. Ver el capítulo **Terminales de Marcación**.
+> **Terminales:** vincular terminales no tiene un permiso propio. Aprobar o rechazar solicitudes de vinculación, abrir o cerrar la ventana de vinculación, generar enlaces de configuración, enviar **comandos remotos** (forzar sincronización, recargar, limpiar caché, reenviar reporte), revocar el acceso de un terminal, activarlo o desactivarlo y editar su **Monitoreo** requieren el permiso **Editar Terminal** — el mismo que ya protege la gestión de terminales. Ver el detalle, la **Bitácora**, los **Comandos** enviados y imprimir la **hoja de instalación** requiere **Ver Terminal**. Los avisos de la campanita (solicitudes de vinculación, ventanas vencidas y alertas de salud) llegan solo a quienes tienen **Editar Terminal**. Con ese permiso (y el módulo de Marcación biométrica activo) aparece **Asistencias → Solicitudes de vinculación** y llegan las notificaciones de nuevas solicitudes. Ver el capítulo **Terminales de Marcación**.
 
 ---
 
