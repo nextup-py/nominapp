@@ -16,17 +16,6 @@ class PayrollStatusWidget extends BaseWidget
     protected static ?string $pollingInterval = '60s';
 
     /**
-     * Mapeo de estados a etiquetas en español.
-     *
-     * @var array<string, string>
-     */
-    private const STATUS_LABELS = [
-        'draft' => 'Borrador',
-        'processing' => 'En procesamiento',
-        'closed' => 'Cerrado',
-    ];
-
-    /**
      * Retorna las tarjetas del estado de nómina del período activo.
      *
      * @return array<int, Stat>
@@ -70,7 +59,7 @@ class PayrollStatusWidget extends BaseWidget
             default => 'gray',
         };
 
-        $statusLabel = self::STATUS_LABELS[$period->status] ?? $period->status;
+        $statusLabel = PayrollPeriod::statusOptions()[$period->status] ?? $period->status;
         $periodUrl = PayrollPeriodResource::getUrl('view', ['record' => $period->id]);
 
         return [

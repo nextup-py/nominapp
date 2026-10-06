@@ -14,17 +14,6 @@ class AguinaldoStatusWidget extends BaseWidget
 
     protected static ?string $pollingInterval = '60s';
 
-    /**
-     * Mapeo de estados a etiquetas en español.
-     *
-     * @var array<string, string>
-     */
-    private const STATUS_LABELS = [
-        'draft' => 'Borrador',
-        'processing' => 'En procesamiento',
-        'closed' => 'Cerrado',
-    ];
-
     /** Solo visible cuando hay un período de aguinaldo activo (no cerrado). */
     public static function canView(): bool
     {
@@ -59,7 +48,7 @@ class AguinaldoStatusWidget extends BaseWidget
         $pending = (int) ($stats->pending ?? 0);
         $pendingAmount = (float) ($stats->pending_amount ?? 0);
 
-        $statusLabel = self::STATUS_LABELS[$period->status] ?? $period->status;
+        $statusLabel = AguinaldoPeriod::getStatusLabel($period->status);
         $periodColor = $period->status === 'processing' ? 'primary' : 'gray';
         $periodUrl = AguinaldoPeriodResource::getUrl('view', ['record' => $period->id]);
 

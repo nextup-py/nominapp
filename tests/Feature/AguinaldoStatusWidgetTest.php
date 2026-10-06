@@ -106,3 +106,9 @@ it('solo es visible con un período en borrador o procesamiento', function () {
     $period->update(['status' => 'processing']);
     expect(AguinaldoStatusWidget::canView())->toBeTrue();
 });
+
+it('muestra el estado del período con la misma etiqueta que el resto del sistema ("En Proceso")', function () {
+    makeWidgetAguPeriod('processing');
+
+    Livewire::test(AguinaldoStatusWidget::class)->assertSee('Estado: En Proceso')->assertDontSee('En procesamiento');
+});
