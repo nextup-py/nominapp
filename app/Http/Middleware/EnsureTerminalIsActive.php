@@ -26,7 +26,11 @@ class EnsureTerminalIsActive
         $terminal = $request->user();
 
         if ($terminal instanceof Terminal && $terminal->isInactive()) {
-            abort(403, 'Este terminal fue desactivado.');
+            return response()->json([
+                'ok' => false,
+                'code' => 'terminal_inactive',
+                'message' => 'Este terminal fue desactivado.',
+            ], 403);
         }
 
         return $next($request);

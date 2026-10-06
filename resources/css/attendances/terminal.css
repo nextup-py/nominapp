@@ -1001,6 +1001,25 @@ body {
     padding: 0 var(--sp-4);
 }
 
+/* Código de emparejamiento de la pantalla "Terminal sin vincular" */
+.pairing-block { width: 100%; margin: 0 0 var(--sp-5); }
+.pairing-label {
+    font-size: .8125rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--c-muted); margin: 0 0 var(--sp-2);
+}
+.pairing-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: clamp(2.25rem, 9vw, 4rem); font-weight: 700;
+    letter-spacing: .25em; padding-left: .25em;
+    color: var(--c-text); background: var(--c-bg);
+    border: 2px dashed var(--c-border-s); border-radius: var(--r-xl);
+    padding-top: var(--sp-3); padding-bottom: var(--sp-3);
+    user-select: all;
+}
+.pairing-status { font-size: 1rem; color: var(--c-text); margin: var(--sp-3) 0 var(--sp-1); }
+.pairing-countdown { font-size: .875rem; color: var(--c-muted); margin: 0 0 var(--sp-2); min-height: 1.2em; }
+.pairing-hint { font-size: .8125rem; color: var(--c-muted); margin: 0; }
+
 /* Botones de resultado */
 .terminal-actions { display: flex; flex-direction: column; gap: var(--sp-3); width: 100%; }
 .terminal-btn {

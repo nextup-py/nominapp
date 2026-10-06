@@ -40,6 +40,17 @@ En la tabla de Terminales, la columna **Conectividad** del terminal revocado eve
 3. Con el dispositivo físico **conectado a internet**, abrir el enlace (o escanear el QR) una única vez. Esto reclama un token Sanctum nuevo y lo guarda en el propio dispositivo (IndexedDB) — el token nunca aparece en la URL ni se muestra en pantalla más que la primera vez.
 4. Una vez completada la configuración, navegar a `/terminal/{code}` normalmente y dejar el dispositivo funcionando con conexión al menos hasta que complete el primer heartbeat y el primer sync de empleados.
 
+## Alternativa recomendada — Vincular por código (sin enlace ni WhatsApp)
+
+Si el terminal muestra la pantalla **"Terminal sin vincular"** con un código de 6 caracteres:
+
+1. En el panel, **Asistencias → Solicitudes de vinculación** (llega también una notificación a la campanita; la pantalla se actualiza sola cada 15 s).
+2. Buscá la solicitud del terminal (verificá sucursal, IP y dispositivo) y tocá **Aprobar**.
+3. Tipeá el código **tal como lo ves en la pantalla del dispositivo** (el sistema no lo muestra en el panel a propósito) y confirmá.
+4. El dispositivo se vincula solo en unos segundos y recarga; tocá **Comenzar** en la pantalla del terminal. Las marcaciones que tuviera pendientes en la cola no se pierden.
+
+Si la solicitud marca **"Reemplaza dispositivo"**, aprobarla revoca el acceso del dispositivo actualmente vinculado. Si el código venció (10 min) o fue rechazado, el dispositivo ofrece **Pedir código nuevo**. Si el terminal aparece como desactivado, activalo primero desde su ficha.
+
 ## Paso 4 — Verificar que la reprovisión funcionó
 
 En **Filament → Asistencias → Terminales → (ver el terminal)**, sección **Conectividad**:

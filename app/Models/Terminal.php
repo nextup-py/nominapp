@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
@@ -53,6 +55,8 @@ class Terminal extends Model implements AuthenticatableContract
         'installed_by_id',
         'last_seen_at',
         'last_heartbeat_at',
+        'linked_at',
+        'linked_ip',
         'last_employee_sync_at',
         'last_event_sync_at',
         'last_pending_events_count',
@@ -69,6 +73,7 @@ class Terminal extends Model implements AuthenticatableContract
         'installed_at' => 'date',
         'last_seen_at' => 'datetime',
         'last_heartbeat_at' => 'datetime',
+        'linked_at' => 'datetime',
         'last_employee_sync_at' => 'datetime',
         'last_event_sync_at' => 'datetime',
         'last_pending_events_count' => 'integer',
@@ -93,6 +98,18 @@ class Terminal extends Model implements AuthenticatableContract
     // =========================================================================
     // RELACIONES
     // =========================================================================
+
+    /** Solicitudes de vinculación por código de emparejamiento. */
+    public function pairingRequests(): HasMany
+    {
+        return $this->hasMany(TerminalPairingRequest::class);
+    }
+
+    /** Bitácora de cambios de estado del terminal. */
+    public function events(): HasMany
+    {
+        return $this->hasMany(TerminalEvent::class);
+    }
 
     /** Sucursal a la que pertenece esta terminal. */
     public function branch(): BelongsTo
@@ -459,9 +476,11 @@ class Terminal extends Model implements AuthenticatableContract
      * @param  string|null  $clientHintModel  Modelo reportado por Client Hints del navegador
      *                                        (`navigator.userAgentData.getHighEntropyValues(['model'])`), cuando está disponible —
      *                                        ver DeviceHintsParser para el detalle de qué navegadores lo soportan.
+     * @param  string|null  $ip  IP desde la que se vinculó el dispositivo (se guarda en `linked_ip`).
+     * @param  string  $via  Cómo se vinculó (`setup` = enlace de un solo uso, `pairing` = código aprobado por un admin) — queda en la bitácora.
      * @return string Token Sanctum en texto plano — solo se retorna una vez, nunca se persiste en claro.
      */
-    public function claimSanctumToken(?string $userAgent = null, ?string $clientHintModel = null): string
+    public function claimSanctumToken(?string $userAgent = null, ?string $clientHintModel = null, ?string $ip = null, string $via = 'setup'): string
     {
         $this->tokens()->where('name', 'like', 'kiosk:%')->delete();
 
@@ -469,6 +488,8 @@ class Terminal extends Model implements AuthenticatableContract
             'setup_token' => null,
             'setup_token_expires_at' => null,
             'user_agent' => $userAgent,
+            'linked_at' => now(),
+            'linked_ip' => $ip,
         ];
 
         // Solo sugiere marca/modelo si el admin no los cargó ya a mano — nunca pisa una
@@ -494,12 +515,33 @@ class Terminal extends Model implements AuthenticatableContract
             ]);
         }
 
+        TerminalEvent::record($this, 'linked', ['via' => $via, 'ip' => $ip]);
+
         return $this->createToken('kiosk:'.$this->code, [self::SYNC_ABILITY])->plainTextToken;
     }
 
-    /** Revoca todos los tokens Sanctum activos del terminal (fuerza re-provisión). */
+    /**
+     * Revoca todos los tokens Sanctum activos del terminal (fuerza re-provisión).
+     * Deja registro en la bitácora con el usuario del panel que lo hizo.
+     */
     public function revokeSyncTokens(): void
     {
-        $this->tokens()->delete();
+        $revoked = $this->tokens()->delete();
+
+        if ($revoked > 0) {
+            TerminalEvent::record($this, 'revoked', ['tokens' => $revoked], Auth::id());
+        }
+    }
+
+    /**
+     * Usuarios del panel con permiso para gestionar terminales (`update_terminal`,
+     * el mismo que protege el resto de la gestión; Super Admin lo tiene vía
+     * `Gate::before`). Son los destinatarios de las solicitudes de vinculación.
+     *
+     * @return Collection<int, User>
+     */
+    public static function managers(): Collection
+    {
+        return User::all()->filter(fn (User $user) => $user->can('update_terminal'))->values();
     }
 }
