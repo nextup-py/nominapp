@@ -5,6 +5,11 @@
         física del terminal. No puede reutilizarse.
     </p>
 
+    <p class="text-sm text-amber-700 dark:text-amber-400">
+        Este enlace se muestra <strong>solo ahora</strong>: si cierra esta ventana no se puede volver a ver (por
+        seguridad, el sistema no lo guarda). Genere uno nuevo si lo necesita de nuevo.
+    </p>
+
     <p class="text-sm text-gray-600 dark:text-gray-300">
         Vence: <strong>{{ $expiresAt->translatedFormat('l d/m/Y H:i') }}</strong> ({{ $expiresAt->diffForHumans() }})
     </p>
@@ -28,7 +33,7 @@
     </div>
 
     <p class="text-xs text-gray-500 dark:text-gray-400">
-        Si el terminal ya tiene un token activo, este enlace lo reemplaza al vincularse — el token anterior queda
-        inválido de inmediato.
+        Si el terminal ya tiene un dispositivo vinculado, este enlace lo reemplaza al vincularse — el acceso del
+        dispositivo anterior queda inválido de inmediato.
     </p>
 </div>

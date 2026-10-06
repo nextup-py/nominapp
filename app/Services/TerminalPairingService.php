@@ -62,12 +62,40 @@ class TerminalPairingService
                 'replaces_active_device' => $request->replaces_active_device,
             ]);
 
+            if ($locked->hasOpenLinkWindow()) {
+                $this->autoApprove($request, $locked);
+            }
+
             return $request;
         });
 
-        $this->notifyManagers($request);
+        if (! $request->auto_approved) {
+            $this->notifyManagers($request);
+        }
 
         return ['request' => $request, 'poll_secret' => $secret];
+    }
+
+    /**
+     * Aprueba sola una solicitud creada con la ventana de vinculación abierta,
+     * a nombre de quien abrió la ventana. La ventana se cierra acá mismo (no
+     * recién al claim): un único dispositivo puede aprovecharla, así dos
+     * solicitudes casi simultáneas no quedan ambas aprobadas.
+     */
+    private function autoApprove(TerminalPairingRequest $request, Terminal $terminal): void
+    {
+        $openedById = $terminal->link_window_opened_by_id;
+
+        $request->update([
+            'status' => TerminalPairingRequest::STATUS_APPROVED,
+            'auto_approved' => true,
+            'approved_by_id' => $openedById,
+            'approved_at' => now(),
+        ]);
+
+        TerminalEvent::record($terminal, 'pairing_auto_approved', ['request_id' => $request->id, 'window_opened_by_id' => $openedById]);
+
+        $terminal->closeLinkWindow(null, 'auto_approved');
     }
 
     /**

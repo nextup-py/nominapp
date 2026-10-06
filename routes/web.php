@@ -23,6 +23,7 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\SalaryReportController;
 use App\Http\Controllers\ScheduleEmployeeController;
 use App\Http\Controllers\ShiftPlannerController;
+use App\Http\Controllers\TerminalInstallSheetController;
 use App\Http\Controllers\TerminalSetupController;
 use App\Http\Controllers\VacationDocumentController;
 use App\Http\Controllers\VacationReportController;
@@ -55,9 +56,13 @@ Route::get('/terminal/{code}/manifest.json', [AttendanceFaceMarkController::clas
 // IP, sin distinguir ruta — ver ThrottleRequests::resolveRequestSignature())
 // con cualquier otra ruta pública que use 'throttle:X,Y' sin prefijo, como
 // 'registro-facial' más abajo.
-Route::prefix('terminal/{code}/setup/{setupToken}')->name('terminal.setup.')->middleware('throttle:10,1,terminal-setup')->group(function () {
+// El token viaja en el fragmento (`#`) de `/terminal/{code}/setup` y se manda por POST al
+// reclamar, nunca en la ruta (quedaría en los access logs). La ruta con token en el path
+// es el formato anterior y solo explica que el enlace ya no sirve.
+Route::prefix('terminal/{code}/setup')->name('terminal.setup.')->middleware('throttle:10,1,terminal-setup')->group(function () {
     Route::get('/', [TerminalSetupController::class, 'show'])->name('show');
     Route::post('/claim', [TerminalSetupController::class, 'claim'])->name('claim');
+    Route::get('/{setupToken}', [TerminalSetupController::class, 'legacy'])->name('legacy');
 });
 
 // Vinculación del dispositivo personal para marcación offline — el propio empleado se
@@ -134,6 +139,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/download', [LiquidacionController::class, 'download'])->name('download');
         Route::get('/view', [LiquidacionController::class, 'view'])->name('view');
     });
+
+    // Hoja de instalación de terminales (PDF, sin secretos)
+    Route::get('/terminales/{terminal}/hoja-instalacion', [TerminalInstallSheetController::class, 'show'])->name('terminals.install-sheet');
 
     // Amonestaciones
     Route::get('/amonestaciones/{warning}/pdf', [WarningController::class, 'show'])->name('warnings.pdf');

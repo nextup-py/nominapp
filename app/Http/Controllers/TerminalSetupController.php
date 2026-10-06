@@ -19,16 +19,31 @@ use Illuminate\View\View;
  */
 class TerminalSetupController extends Controller
 {
-    /** Muestra la pantalla de vinculación del terminal. */
-    public function show(string $code, string $setupToken): View
+    /**
+     * Muestra la pantalla de vinculación del terminal. El token del enlace viaja
+     * en el fragmento (`#`) de la URL — el navegador nunca lo envía al servidor
+     * en este GET, así que no queda en access logs ni en el header Referer — y
+     * el JS lo manda por POST al reclamar. Por eso esta pantalla no valida nada:
+     * un enlace inválido o vencido se descubre al reclamar (ver `claim()`).
+     */
+    public function show(string $code): View
     {
         $terminal = Terminal::where('code', $code)->first();
 
-        if (! $terminal || ! $terminal->isSetupTokenValid($setupToken)) {
-            return view('attendances.terminal-setup-invalid');
+        if (! $terminal) {
+            return view('attendances.terminal-setup-invalid', ['reason' => 'invalid']);
         }
 
-        return view('attendances.terminal-setup', compact('terminal', 'setupToken'));
+        return view('attendances.terminal-setup', compact('terminal'));
+    }
+
+    /**
+     * Enlaces del formato anterior (token en la ruta): ya no se aceptan — el
+     * token quedaría en los access logs. Se explica en vez de dar un 404 mudo.
+     */
+    public function legacy(string $code, string $setupToken): View
+    {
+        return view('attendances.terminal-setup-invalid', ['reason' => 'legacy']);
     }
 
     /**
@@ -37,49 +52,56 @@ class TerminalSetupController extends Controller
      * El check-y-consumo del setup_token corre bajo un `lockForUpdate()` en
      * una transacción propia — sin esto, dos reclamos casi simultáneos del
      * mismo enlace (ej. el QR escaneado dos veces por error, o un doble tap)
-     * podían pasar `isSetupTokenValid()` ambos antes de que ninguno hubiera
-     * guardado el null-out todavía, dejando dos tokens Sanctum válidos por un
-     * instante para el mismo terminal sin que ningún cliente supiera cuál
-     * quedó realmente vivo (el segundo `claimSanctumToken()` revoca al
-     * primero al crear el suyo). El lock serializa: el segundo reclamo espera
-     * a que el primero confirme el null-out y entonces `isSetupTokenValid()`
-     * ya lo rechaza correctamente con el 422 de siempre.
+     * podían pasar la validación ambos antes de que ninguno hubiera marcado
+     * el consumo, emitiendo dos tokens Sanctum válidos por un instante. El
+     * lock serializa: el segundo reclamo espera a que el primero confirme y
+     * entonces ve el enlace como `consumed`.
+     *
+     * La respuesta de error incluye `reason` (`expired`, `consumed`, `invalid`)
+     * para que la pantalla diga qué pasó; el estado se informa solo si el token
+     * coincide con el enlace del terminal (no revela nada a quien no lo tiene).
      */
-    public function claim(Request $request, string $code, string $setupToken): JsonResponse
+    public function claim(Request $request, string $code): JsonResponse
     {
-        $terminal = DB::transaction(function () use ($code, $setupToken) {
+        $input = $request->validate([
+            'token' => ['required', 'string', 'max:100'],
+            'device_model_hint' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $state = 'invalid';
+
+        $terminal = DB::transaction(function () use ($code, $input, &$state) {
             $terminal = Terminal::where('code', $code)->lockForUpdate()->first();
 
-            if (! $terminal || ! $terminal->isSetupTokenValid($setupToken)) {
+            if (! $terminal) {
                 return null;
             }
 
-            // Consume el setup_token ya dentro del lock — claimSanctumToken() más
-            // abajo (fuera del lock) vuelve a guardar setup_token=null (ya lo está,
-            // no-op) junto con el resto de su trabajo. No hace falta duplicar esa
-            // lógica acá, solo cerrar la ventana de la carrera.
-            $terminal->forceFill(['setup_token' => null, 'setup_token_expires_at' => null])->save();
+            $state = $terminal->setupTokenState($input['token']);
+
+            if ($state !== 'valid') {
+                return null;
+            }
+
+            $terminal->forceFill(['setup_token_consumed_at' => now()])->save();
 
             return $terminal;
         });
 
         if (! $terminal) {
-            Log::warning("Intento de reclamo de setup token inválido o expirado para terminal '{$code}'", [
+            Log::warning("Intento de reclamo de setup token no válido ({$state}) para terminal '{$code}'", [
                 'code' => $code,
                 'ip' => $request->ip(),
             ]);
 
             return response()->json([
                 'ok' => false,
-                'message' => 'Enlace de configuración inválido o expirado. Solicite uno nuevo desde el panel de administración.',
+                'reason' => $state,
+                'message' => static::failureMessage($state),
             ], 422);
         }
 
-        $clientHintModel = $request->validate([
-            'device_model_hint' => ['nullable', 'string', 'max:100'],
-        ])['device_model_hint'] ?? null;
-
-        $plainTextToken = $terminal->claimSanctumToken($request->userAgent(), $clientHintModel, $request->ip());
+        $plainTextToken = $terminal->claimSanctumToken($request->userAgent(), $input['device_model_hint'] ?? null, $request->ip());
 
         Log::info("Terminal '{$terminal->code}' ({$terminal->name}) provisionado para sincronización offline", [
             'terminal_id' => $terminal->id,
@@ -96,5 +118,15 @@ class TerminalSetupController extends Controller
                 'branch_id' => $terminal->branch_id,
             ],
         ]);
+    }
+
+    /** Mensaje para el usuario según el motivo por el que no se pudo reclamar el enlace. */
+    public static function failureMessage(string $reason): string
+    {
+        return match ($reason) {
+            'expired' => 'Este enlace de configuración venció. Pedí uno nuevo al administrador.',
+            'consumed' => 'Este enlace de configuración ya se usó. Si necesitás vincular otro dispositivo, pedí un enlace nuevo al administrador.',
+            default => 'Enlace de configuración inválido. Pedí uno nuevo al administrador.',
+        };
     }
 }

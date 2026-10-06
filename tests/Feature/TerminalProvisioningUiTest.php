@@ -145,7 +145,7 @@ it('el redirect tras crear un terminal apunta a su vista con ?provision=1', func
  * buscar directo en getCachedHeaderActions() (que solo devuelve el nivel
  * superior: la acción individual quedaría anidada dentro del grupo).
  */
-it('la acción "Revocar token" solo es visible en el detalle si el terminal tiene un token activo', function () {
+it('la acción "Desvincular dispositivo" solo es visible en el detalle si el terminal tiene un token activo', function () {
     $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
@@ -232,7 +232,7 @@ it('POST .../claim responde ok=true aunque falle el envío de la notificación p
     User::factory()->create();
     $setupToken = $terminal->generateSetupToken();
 
-    $this->postJson("/terminal/{$terminal->code}/setup/{$setupToken}/claim")
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", ['token' => $setupToken])
         ->assertOk()
         ->assertJson(['ok' => true]);
 });
@@ -241,7 +241,8 @@ it('POST .../claim pasa el device_model_hint del cliente hasta el terminal provi
     $terminal = makeProvisioningTerminal();
     $setupToken = $terminal->generateSetupToken();
 
-    $this->postJson("/terminal/{$terminal->code}/setup/{$setupToken}/claim", [
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", [
+        'token' => $setupToken,
         'device_model_hint' => 'Pixel 8 Pro',
     ])->assertOk()->assertJson(['ok' => true]);
 
@@ -298,62 +299,119 @@ it('el RelationManager de marcaciones es de solo lectura, sin acciones de fila',
  * simultáneos — este test confirma que el comportamiento de un solo uso
  * sigue intacto para el caso simple (secuencial) tras ese cambio.
  */
-it('reclamar un enlace de configuración ya usado falla con 422 — un solo uso', function () {
+it('reclamar un enlace de configuración ya usado falla con 422 y motivo "consumed" — un solo uso', function () {
     $terminal = makeProvisioningTerminal();
     $setupToken = $terminal->generateSetupToken();
 
-    $this->postJson("/terminal/{$terminal->code}/setup/{$setupToken}/claim")
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", ['token' => $setupToken])
         ->assertOk()
         ->assertJson(['ok' => true]);
 
-    $this->postJson("/terminal/{$terminal->code}/setup/{$setupToken}/claim")
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", ['token' => $setupToken])
         ->assertStatus(422)
-        ->assertJson(['ok' => false]);
+        ->assertJson(['ok' => false, 'reason' => 'consumed']);
 });
 
-it('"Generar enlace" está visible sin enlace vigente; "Ver enlace" y "Generar nuevo" aparecen tras generar uno', function () {
+it('un enlace vencido falla con motivo "expired" y uno desconocido o reemplazado con "invalid"', function () {
+    $terminal = makeProvisioningTerminal();
+    $expired = $terminal->generateSetupToken(30);
+    $terminal->forceFill(['setup_token_expires_at' => now()->subMinute()])->save();
+
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", ['token' => $expired])
+        ->assertStatus(422)->assertJson(['reason' => 'expired']);
+
+    $replaced = $terminal->generateSetupToken(30);
+    $newer = $terminal->generateSetupToken(30);
+
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", ['token' => $replaced])
+        ->assertStatus(422)->assertJson(['reason' => 'invalid']);
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", ['token' => 'cualquiera'])
+        ->assertStatus(422)->assertJson(['reason' => 'invalid']);
+
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", ['token' => $newer])
+        ->assertOk();
+});
+
+it('el token se guarda hasheado (nunca en claro) y se conserva consumido tras usarlo', function () {
+    $terminal = makeProvisioningTerminal();
+    $token = $terminal->generateSetupToken();
+
+    expect($terminal->fresh()->setup_token)->toBe(hash('sha256', $token))->not->toBe($token);
+
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", ['token' => $token])->assertOk();
+
+    $fresh = $terminal->fresh();
+    expect($fresh->setup_token)->toBe(hash('sha256', $token))
+        ->and($fresh->setup_token_consumed_at)->not->toBeNull()
+        ->and($fresh->hasPendingSetupLink())->toBeFalse();
+});
+
+it('la pantalla de setup no recibe ni valida el token: se sirve sin él y el formato viejo (token en la ruta) se rechaza', function () {
+    $terminal = makeProvisioningTerminal();
+
+    $this->get("/terminal/{$terminal->code}/setup")->assertOk()->assertSee('Vincular este dispositivo');
+    $this->get("/terminal/{$terminal->code}/setup/abc123")->assertOk()->assertSee('formato anterior');
+    $this->get('/terminal/NOEXISTE/setup')->assertOk()->assertSee('Enlace de configuración inválido');
+});
+
+it('reclamar sin token es un error de validación', function () {
+    $terminal = makeProvisioningTerminal();
+
+    $this->postJson("/terminal/{$terminal->code}/setup/claim", [])->assertStatus(422);
+});
+
+it('"Generar enlace" con vigencia elegida guarda el vencimiento, registra quién y muestra el enlace con el token en el fragmento', function () {
     $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     $terminal = makeProvisioningTerminal();
 
-    $withoutLink = collect(
-        Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()])->instance()->getCachedHeaderActions()
-    );
-    expect($withoutLink->first(fn ($a) => $a->getName() === 'generate_setup_link')?->isVisible())->toBeTrue();
-    expect($withoutLink->first(fn ($a) => $a->getName() === 'view_setup_link')?->isVisible())->toBeFalse();
-    expect($withoutLink->first(fn ($a) => $a->getName() === 'regenerate_setup_link')?->isVisible())->toBeFalse();
-
-    $terminal->generateSetupToken();
-
-    $withLink = collect(
-        Livewire::test(ViewTerminal::class, ['record' => $terminal->fresh()->getKey()])->instance()->getCachedHeaderActions()
-    );
-    expect($withLink->first(fn ($a) => $a->getName() === 'generate_setup_link')?->isVisible())->toBeFalse();
-    expect($withLink->first(fn ($a) => $a->getName() === 'view_setup_link')?->isVisible())->toBeTrue();
-    expect($withLink->first(fn ($a) => $a->getName() === 'regenerate_setup_link')?->isVisible())->toBeTrue();
-});
-
-it('TerminalResource::renderCurrentSetupLinkModal() no genera un token nuevo, a diferencia de renderSetupLinkModal()', function () {
-    $terminal = makeProvisioningTerminal();
-    $setupToken = $terminal->generateSetupToken();
-
-    TerminalResource::renderCurrentSetupLinkModal($terminal);
-    expect($terminal->fresh()->setup_token)->toBe($setupToken);
-
-    TerminalResource::renderSetupLinkModal($terminal);
-    expect($terminal->fresh()->setup_token)->not->toBe($setupToken);
-});
-
-it('"Generar nuevo enlace" invalida el enlace vigente y notifica en vez de mostrar el QR en el mismo paso', function () {
-    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
-    $terminal = makeProvisioningTerminal();
-    $oldToken = $terminal->generateSetupToken();
-
-    Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()])
-        ->callAction('regenerate_setup_link')
+    $test = Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()])
+        ->callAction('generate_setup_link', ['expires_in' => 240])
         ->assertHasNoActionErrors();
 
-    expect($terminal->fresh()->setup_token)->not->toBeNull()
-        ->and($terminal->fresh()->setup_token)->not->toBe($oldToken);
+    expect($test->get('mountedActions'))->toBe(['show_setup_link']);
+
+    $args = $test->get('mountedActionsArguments')[0];
+    expect($args['url'])->toStartWith(route('terminal.setup.show', ['code' => $terminal->code]).'#');
+
+    $token = substr($args['url'], strpos($args['url'], '#') + 1);
+    $fresh = $terminal->fresh();
+    expect($fresh->setupTokenState($token))->toBe('valid')
+        ->and($fresh->setup_token_expires_at->between(now()->addMinutes(239), now()->addMinutes(241)))->toBeTrue();
+
+    $event = $terminal->events()->where('type', 'setup_link_generated')->first();
+    expect($event->payload['expires_in_minutes'])->toBe(240)->and($event->actor_id)->not->toBeNull();
+});
+
+it('"Generar enlace" rechaza una vigencia que no está entre las opciones', function () {
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+    $terminal = makeProvisioningTerminal();
+
+    Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()])
+        ->callAction('generate_setup_link', ['expires_in' => 99999])
+        ->assertHasActionErrors(['expires_in']);
+
+    expect($terminal->fresh()->setup_token)->toBeNull();
+});
+
+it('"Generar enlace" desde la tabla también abre el modal con el enlace', function () {
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+    $terminal = makeProvisioningTerminal();
+
+    $test = Livewire::test(ListTerminals::class)
+        ->callTableAction('generate_setup_link', $terminal, ['expires_in' => 30]);
+
+    expect($test->get('mountedTableActions'))->toBe(['show_setup_link']);
+    expect($test->get('mountedTableActionsArguments')[0]['url'])->toContain('#');
+});
+
+it('el modal "show_setup_link" no es una opción del menú: solo es visible con los argumentos del enlace', function () {
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+    $terminal = makeProvisioningTerminal();
+
+    $test = Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()]);
+    $action = collect($test->instance()->getCachedHeaderActions())->first(fn ($a) => $a->getName() === 'show_setup_link');
+
+    expect($action->isVisible())->toBeFalse();
 });
 
 // ─── Form: sucursal filtrada por empresa activa ────────────────────────────

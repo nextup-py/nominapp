@@ -28,6 +28,21 @@ function setLoading(isLoading) {
 let terminalCode = null;
 
 /**
+ * Token del enlace de configuración: viaja en el fragmento (`#`) de la URL, que el
+ * navegador nunca envía al servidor en el GET (no queda en access logs ni en
+ * Referer). Se manda por POST al reclamar.
+ * @returns {string}
+ */
+function readSetupToken() {
+    return decodeURIComponent(window.location.hash.replace(/^#/, '')).trim();
+}
+
+/** Quita el fragmento de la barra de direcciones para que el token no quede en el historial visible. */
+function scrubSetupTokenFromUrl() {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+}
+
+/**
  * Modelo real del dispositivo, solo disponible vía Client Hints en navegadores
  * Chromium sobre Android (Chrome, Edge...) — null en iOS/Safari/Firefox/desktop,
  * donde el servidor cae al parseo del User-Agent (ver DeviceHintsParser). Sirve
@@ -51,13 +66,21 @@ captureInstallPrompt(() => {
 
 btn.addEventListener('click', async () => {
     statusEl.classList.add('hidden');
+
+    const token = readSetupToken();
+    if (!token) {
+        statusEl.textContent = 'Este enlace está incompleto (falta el código de configuración). Pedí un enlace nuevo al administrador.';
+        statusEl.className = 'status alert-box alert-box-error';
+        return;
+    }
+
     setLoading(true);
 
     try {
         const response = await fetch(window.location.pathname.replace(/\/$/, '') + '/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-            body: JSON.stringify({ device_model_hint: await getClientHintModel() }),
+            body: JSON.stringify({ token, device_model_hint: await getClientHintModel() }),
         });
         const data = await response.json();
 
@@ -74,6 +97,7 @@ btn.addEventListener('click', async () => {
         // con "Cambiar URL del terminal") además del code (cambia con esa acción) —
         // terminal.js usa el id para detectar si el estado local pertenece a OTRO
         // terminal distinto, sin confundir un simple cambio de URL con eso.
+        scrubSetupTokenFromUrl();
         localStorage.setItem('nominapp_terminal_token', data.token);
         localStorage.setItem('nominapp_terminal_id', data.terminal.id);
         localStorage.setItem('nominapp_terminal_code', data.terminal.code);
