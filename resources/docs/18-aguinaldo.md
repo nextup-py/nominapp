@@ -88,6 +88,23 @@ Cada aguinaldo individual tiene método de pago (**Acreditación bancaria** o **
 
 ---
 
+## Tarjetas en el Escritorio
+
+Mientras haya un período de aguinaldo **Borrador** o **En Proceso**, el **Escritorio** muestra cuatro tarjetas con su resumen:
+
+| Tarjeta | Qué muestra |
+|---------|-------------|
+| **Período de Aguinaldo** | El año del período y su estado |
+| **Aguinaldos Generados** | Cantidad de empleados incluidos |
+| **Pendientes de Pago** | Cuántos aguinaldos aún no se marcaron como pagados (o *Todos los aguinaldos pagados*) |
+| **Total a Pagar** | Suma en Gs. de los aguinaldos que siguen **Pendientes**; baja a medida que se marcan como pagados |
+
+Al cerrar el período las tarjetas dejan de mostrarse.
+
+![Tarjetas de aguinaldo en el Escritorio](/docs-images/18-aguinaldo-tarjetas-panel.png)
+
+---
+
 ## Desglose mensual
 
 Cada aguinaldo individual contiene un desglose mes a mes con:
