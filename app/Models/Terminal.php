@@ -6,6 +6,7 @@ use App\Notifications\TerminalLinkWindowExpiredNotification;
 use App\Notifications\TerminalProvisionedNotification;
 use App\Services\DeviceHintsParser;
 use App\Settings\GeneralSettings;
+use Carbon\CarbonInterface;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
@@ -38,6 +39,16 @@ class Terminal extends Model implements AuthenticatableContract
 {
     use Authenticatable, HasApiTokens;
 
+    /** Mínimo de minutos configurable como umbral de desconexión por terminal (el heartbeat va cada ~90 s). */
+    public const MIN_STALE_MINUTES = 5;
+
+    /**
+     * Días de la semana (ISO: 1 = lunes … 7 = domingo) para el horario de vigilancia.
+     *
+     * @var array<int, string>
+     */
+    public const WATCH_DAY_OPTIONS = [1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo'];
+
     /** Ability Sanctum requerida para consumir la API de sincronización de terminales. */
     public const SYNC_ABILITY = 'terminal:sync';
 
@@ -67,6 +78,14 @@ class Terminal extends Model implements AuthenticatableContract
         'setup_token_consumed_at',
         'link_window_until',
         'link_window_opened_by_id',
+        'stale_after_minutes',
+        'watch_days',
+        'watch_from',
+        'watch_to',
+        'device_report',
+        'device_report_at',
+        'queue_backlog_since',
+        'health_snapshot',
     ];
 
     protected $hidden = [
@@ -85,6 +104,12 @@ class Terminal extends Model implements AuthenticatableContract
         'setup_token_expires_at' => 'datetime',
         'setup_token_consumed_at' => 'datetime',
         'link_window_until' => 'datetime',
+        'stale_after_minutes' => 'integer',
+        'watch_days' => 'array',
+        'device_report' => 'array',
+        'device_report_at' => 'datetime',
+        'queue_backlog_since' => 'datetime',
+        'health_snapshot' => 'array',
     ];
 
     // =========================================================================
@@ -189,6 +214,7 @@ class Terminal extends Model implements AuthenticatableContract
             'unlinked' => 'Sin vincular',
             'online' => 'En línea',
             'stale' => 'Desconectado',
+            'off_hours' => 'Fuera de horario',
             'never_connected' => 'Nunca conectado',
         ];
     }
@@ -204,6 +230,7 @@ class Terminal extends Model implements AuthenticatableContract
             'unlinked' => 'Sin vincular',
             'online' => 'En línea',
             'stale' => 'Desconectado',
+            'off_hours' => 'Fuera de horario',
             'never_connected' => 'Nunca conectado',
         ];
     }
@@ -219,6 +246,7 @@ class Terminal extends Model implements AuthenticatableContract
             'unlinked' => 'danger',
             'online' => 'success',
             'stale' => 'danger',
+            'off_hours' => 'gray',
             'never_connected' => 'gray',
         ];
     }
@@ -307,9 +335,196 @@ class Terminal extends Model implements AuthenticatableContract
             return 'never_connected';
         }
 
-        $thresholdHours = app(GeneralSettings::class)->terminal_stale_threshold_hours;
+        if ($this->last_heartbeat_at->gte(now()->subMinutes($this->effectiveStaleMinutes()))) {
+            return 'online';
+        }
 
-        return $this->last_heartbeat_at->lt(now()->subHours($thresholdHours)) ? 'stale' : 'online';
+        return $this->isWithinWatchWindow() ? 'stale' : 'off_hours';
+    }
+
+    // =========================================================================
+    // MONITOREO — UMBRAL, HORARIO DE VIGILANCIA Y REPORTE DEL DISPOSITIVO
+    // =========================================================================
+
+    /** Minutos sin heartbeat para considerarlo desconectado: el propio del terminal o, si no tiene, el global. */
+    public function effectiveStaleMinutes(): int
+    {
+        return $this->stale_after_minutes ?? app(GeneralSettings::class)->terminal_stale_threshold_hours * 60;
+    }
+
+    /**
+     * Indica si `$at` cae dentro del horario de vigilancia del terminal. Sin días ni
+     * horas configurados se vigila siempre (24/7). Un rango que cruza medianoche
+     * (ej. 22:00–06:00) pertenece al día en que empieza: a las 02:00 del martes
+     * cuenta como el turno del lunes.
+     */
+    public function isWithinWatchWindow(?CarbonInterface $at = null): bool
+    {
+        $days = array_map('intval', $this->watch_days ?? []);
+        $from = $this->watch_from ? Carbon::createFromTimeString($this->watch_from) : null;
+        $to = $this->watch_to ? Carbon::createFromTimeString($this->watch_to) : null;
+
+        if ($days === [] && ! $from && ! $to) {
+            return true;
+        }
+
+        $at = Carbon::instance($at ?? now())->setTimezone(config('app.timezone'));
+        $minutes = $at->hour * 60 + $at->minute;
+        $dayOfWindow = $at->isoWeekday();
+        $withinHours = true;
+
+        if ($from && $to) {
+            $fromMinutes = $from->hour * 60 + $from->minute;
+            $toMinutes = $to->hour * 60 + $to->minute;
+
+            if ($fromMinutes < $toMinutes) {
+                $withinHours = $minutes >= $fromMinutes && $minutes < $toMinutes;
+            } elseif ($fromMinutes > $toMinutes) {
+                $withinHours = $minutes >= $fromMinutes || $minutes < $toMinutes;
+                if ($minutes < $toMinutes) {
+                    $dayOfWindow = $at->copy()->subDay()->isoWeekday();
+                }
+            }
+        }
+
+        return $withinHours && ($days === [] || in_array($dayOfWindow, $days, true));
+    }
+
+    /** Texto legible del horario de vigilancia (ej. "Lun a Vie · 08:00–20:00" o "Siempre (24/7)"). */
+    public function watchScheduleLabel(): string
+    {
+        $days = collect($this->watch_days ?? [])->map(fn ($d) => (int) $d)->sort()->values();
+        $hours = $this->watch_from && $this->watch_to
+            ? Carbon::createFromTimeString($this->watch_from)->format('H:i').'–'.Carbon::createFromTimeString($this->watch_to)->format('H:i')
+            : null;
+
+        if ($days->isEmpty() && ! $hours) {
+            return 'Siempre (24/7)';
+        }
+
+        $short = [1 => 'Lun', 2 => 'Mar', 3 => 'Mié', 4 => 'Jue', 5 => 'Vie', 6 => 'Sáb', 7 => 'Dom'];
+        $daysLabel = $days->isEmpty() || $days->count() === 7
+            ? 'Todos los días'
+            : $days->map(fn (int $d) => $short[$d])->implode(', ');
+
+        return $hours ? "{$daysLabel} · {$hours}" : $daysLabel;
+    }
+
+    /**
+     * Terminales cuyo último heartbeat superó su umbral (el propio o el global).
+     *
+     * @param  Builder<Terminal>  $query
+     * @return Builder<Terminal>
+     */
+    public function scopeHeartbeatStale(Builder $query): Builder
+    {
+        return $query->whereNotNull('last_heartbeat_at')
+            ->whereRaw('TIMESTAMPDIFF(SECOND, last_heartbeat_at, ?) > COALESCE(stale_after_minutes, ?) * 60', [now()->toDateTimeString(), app(GeneralSettings::class)->terminal_stale_threshold_hours * 60]);
+    }
+
+    /**
+     * Terminales con heartbeat dentro de su umbral.
+     *
+     * @param  Builder<Terminal>  $query
+     * @return Builder<Terminal>
+     */
+    public function scopeHeartbeatFresh(Builder $query): Builder
+    {
+        return $query->whereNotNull('last_heartbeat_at')
+            ->whereRaw('TIMESTAMPDIFF(SECOND, last_heartbeat_at, ?) <= COALESCE(stale_after_minutes, ?) * 60', [now()->toDateTimeString(), app(GeneralSettings::class)->terminal_stale_threshold_hours * 60]);
+    }
+
+    /**
+     * IDs de los terminales que ahora mismo están fuera de su horario de vigilancia.
+     * Se evalúa en PHP (días + rangos que cruzan medianoche): son pocos terminales.
+     *
+     * @return array<int, int>
+     */
+    public static function idsOutsideWatchWindow(): array
+    {
+        return static::query()
+            ->where(fn (Builder $q) => $q->whereNotNull('watch_days')->orWhereNotNull('watch_from')->orWhereNotNull('watch_to'))
+            ->get(['id', 'watch_days', 'watch_from', 'watch_to'])
+            ->reject(fn (Terminal $terminal) => $terminal->isWithinWatchWindow())
+            ->pluck('id')
+            ->all();
+    }
+
+    /**
+     * Registra un heartbeat: contadores de la cola offline, desde cuándo la cola no
+     * está vacía y el último reporte de estado del dispositivo (si el cliente lo envía;
+     * los clientes viejos no lo hacen).
+     *
+     * @param  array<string, mixed>|null  $deviceReport
+     */
+    public function recordHeartbeat(?int $pendingEvents, ?int $conflictEvents, ?array $deviceReport = null): void
+    {
+        $attributes = [
+            'last_seen_at' => now(),
+            'last_heartbeat_at' => now(),
+            'last_pending_events_count' => $pendingEvents,
+            'last_conflict_events_count' => $conflictEvents,
+        ];
+
+        if ($pendingEvents !== null || $conflictEvents !== null) {
+            $backlog = ($pendingEvents ?? 0) + ($conflictEvents ?? 0);
+            $attributes['queue_backlog_since'] = $backlog > 0 ? ($this->queue_backlog_since ?? now()) : null;
+        }
+
+        if ($deviceReport !== null) {
+            $attributes['device_report'] = $deviceReport;
+            $attributes['device_report_at'] = now();
+        }
+
+        $this->update($attributes);
+    }
+
+    /**
+     * Identificador de la versión de la app que sirve el servidor (huella del manifest de
+     * Vite, que cambia con cada build). El terminal lo reporta en el heartbeat y el panel
+     * lo compara para detectar dispositivos que siguen corriendo código viejo.
+     */
+    public static function currentAppVersion(): string
+    {
+        static $version = null;
+
+        return $version ??= is_file($manifest = public_path('build/manifest.json'))
+            ? substr(md5_file($manifest), 0, 10)
+            : 'dev';
+    }
+
+    /** El dispositivo reportó una versión distinta de la que sirve hoy el servidor (null = sin dato). */
+    public function isAppOutdated(): ?bool
+    {
+        $reported = $this->device_report['app_version'] ?? null;
+
+        return $reported === null ? null : $reported !== static::currentAppVersion();
+    }
+
+    /** Cola atascada: el terminal sincroniza (en línea) pero la cola no se vacía hace más del umbral configurado. */
+    public function isQueueStuck(): bool
+    {
+        if ($this->connectivity_status !== 'online' || ! $this->queue_backlog_since) {
+            return false;
+        }
+
+        return $this->queue_backlog_since->lte(now()->subMinutes(app(GeneralSettings::class)->terminal_queue_stuck_minutes));
+    }
+
+    /** Nivel de batería informado en el último reporte (null si el navegador no lo informa). */
+    public function reportedBatteryLevel(): ?int
+    {
+        $level = $this->device_report['battery_level'] ?? null;
+
+        return $level === null ? null : (int) $level;
+    }
+
+    /** Indica si el último reporte dice que el dispositivo está enchufado (null si no se sabe). */
+    public function reportedCharging(): ?bool
+    {
+        $charging = $this->device_report['battery_charging'] ?? null;
+
+        return $charging === null ? null : (bool) $charging;
     }
 
     /**

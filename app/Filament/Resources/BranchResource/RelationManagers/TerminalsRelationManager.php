@@ -52,7 +52,7 @@ class TerminalsRelationManager extends RelationManager
                 TextColumn::make('connectivity_status')
                     ->label('Conectividad')
                     ->badge()
-                    ->tooltip('Sin vincular: sin token de sincronización vigente. Desconectado: sin heartbeat dentro del umbral de Configuración General')
+                    ->tooltip('Sin vincular: sin token de sincronización vigente. Desconectado: sin heartbeat dentro del umbral (propio o general). Fuera de horario: desconectado pero fuera de su horario de vigilancia')
                     ->formatStateUsing(fn (string $state) => Terminal::getConnectivityStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state) => Terminal::getConnectivityStatusColors()[$state] ?? 'gray'),
 

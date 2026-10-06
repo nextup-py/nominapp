@@ -176,12 +176,27 @@ Se calcula con el último latido exitoso del terminal. Los estados se evalúan e
 
 | Estado | Significado | Qué hacer |
 |--------|-------------|-----------|
-| **Sin vincular** | No tiene un acceso vigente: nunca se vinculó, se revocó o el acceso venció | Vincularlo (con código o enlace) |
+| **Sin vincular** | No tiene un acceso vigente: nunca se vinculó, se desvinculó o el acceso venció | Vincularlo (con código o enlace) |
 | **Nunca conectado** | Está vinculado, pero todavía no envió ningún latido | Esperar un par de minutos tras vincular; si persiste, abrir la URL en el dispositivo y tocar **Comenzar** |
-| **En línea** | Envió un latido dentro del umbral configurado | — |
-| **Desconectado** | Pasó más tiempo que el umbral sin recibir un latido | Revisar que el dispositivo esté encendido, con internet y con la página del terminal abierta |
+| **En línea** | Envió un latido dentro del umbral | — |
+| **Desconectado** | Pasó más tiempo que el umbral sin recibir un latido, dentro de su horario de vigilancia | Revisar que el dispositivo esté encendido, con internet y con la página del terminal abierta |
+| **Fuera de horario** | Pasó más tiempo que el umbral sin latido, pero **fuera** del horario de vigilancia del terminal (por ejemplo, de noche en un local que cierra) | Nada: no se avisa. Al abrir el horario, si sigue sin reportar, pasa a **Desconectado** |
 
-> El umbral de **Desconectado** se configura en **Configuración → Configuración General → Terminales de Marcación → Umbral de desconexión** (por defecto 2 horas). Los estados *Sin vincular* y *Nunca conectado* no dependen de ese valor.
+> El umbral de **Desconectado** es el del propio terminal si lo definió (ver **Monitoreo del terminal**) o, si no, el general de **Configuración → Configuración General → Terminales de Marcación → Umbral de desconexión** (por defecto 2 horas). Los estados *Sin vincular* y *Nunca conectado* no dependen de ese valor.
+
+### Monitoreo del terminal
+
+Al crear o editar un terminal, la sección **Monitoreo** permite ajustar cuándo se lo considera desconectado y cuándo vale la pena vigilarlo. Todo es opcional:
+
+| Campo | Qué hace |
+|-------|----------|
+| **Considerar desconectado tras** | Minutos sin latido para pasar a **Desconectado** (mínimo 5; el terminal reporta cada ~90 segundos). Vacío = usa el umbral general |
+| **Días que se vigila** | Días de la semana en los que se avisa de una desconexión. Ninguno marcado = todos |
+| **Vigilar desde / hasta** | Franja horaria (hora de Asunción). Vacío = todo el día. Se completan **las dos** o ninguna. Un rango que cruza la medianoche (por ejemplo, 22:00 a 06:00) pertenece al día en que empieza |
+
+![Sección Monitoreo del formulario de un terminal](/docs-images/23-terminal-monitoreo.png)
+
+Sin nada configurado, el terminal se vigila las 24 horas, todos los días. El detalle muestra el **Umbral de desconexión** y el **Horario de vigilancia** vigentes.
 
 ### Cola de sincronización
 
@@ -192,6 +207,22 @@ Complementa a la conectividad: un terminal puede verse **En línea** y tener mar
 | **Sin pendientes** | Todas las marcaciones se enviaron |
 | **Con pendientes** | Hay marcaciones guardadas en el dispositivo esperando conexión |
 | **Con conflictos** | Alguna marcación hecha sin conexión fue rechazada al sincronizar. Revisar en **Asistencias → Fallos de Marcación** |
+
+### Estado del dispositivo
+
+El detalle incluye la sección **Estado del dispositivo** con lo que el terminal informó en su último latido. Cada dato depende de lo que permita el navegador: lo que no informa aparece como *Sin dato*.
+
+![Estado del dispositivo](/docs-images/23-terminal-estado-dispositivo.png)
+
+| Dato | Qué indica |
+|------|------------|
+| **Versión de la app** | Si el terminal corre la versión actual (*al día*) o una vieja (*desactualizada, recargar el terminal*) |
+| **Modo** | Si está **instalado como app** o abierto en una pestaña del navegador, y si el service worker está activo (sin él no funciona sin conexión) |
+| **Batería** | Nivel y si está cargando. Solo la informan algunos navegadores (Chrome en Android, por ejemplo); iPhone y iPad no |
+| **Cámara** | **Permitida**, **Bloqueada** (el terminal no puede identificar) o **Sin decidir** (falta aceptar el permiso) |
+| **Empleados en caché** | Cuántos rostros tiene descargados para identificar sin conexión |
+| **Desfase de reloj** | Diferencia entre el reloj del dispositivo y el del servidor; se advierte si pasa de un minuto |
+| **Almacenamiento** | Espacio usado del navegador en el dispositivo |
 
 ### Detalle del terminal
 
@@ -219,12 +250,36 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Enlace de configuración generado** | Quién lo generó y con qué vigencia |
 | **Dispositivo vinculado** | Vía enlace o código, e IP |
 | **Dispositivo desvinculado** | Quién lo desvinculó |
+| **Sin conexión** / **Reconectado** | El sistema detectó que pasó a Desconectado o que volvió a reportar |
+| **Quedó sin vincular** | Un terminal vinculado perdió su acceso |
+| **Cola de marcaciones atascada** / **normalizada** | La cola dejó de vaciarse o volvió a la normalidad |
+| **Batería baja** / **recuperada** | El nivel cruzó el porcentaje configurado |
 
-No se registra un evento por cada latido: solo los cambios.
+No se registra un evento por cada latido: solo los cambios. Los eventos se eliminan automáticamente pasada la **retención** configurada (por defecto 90 días; ver **Configuración General → Terminales de Marcación**).
+
+### Avisos automáticos
+
+Cada minuto el sistema revisa los terminales activos y avisa por la **campanita** a los usuarios con el permiso **Editar Terminal**. **Solo avisa cuando algo cambia**: nunca repite un aviso mientras la situación siga igual.
+
+| Aviso | Cuándo |
+|-------|--------|
+| **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia) |
+| **Terminal reconectado** | Volvió a reportar después de haber avisado la desconexión |
+| **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
+| **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones pendientes o en conflicto no se vacían hace más del tiempo configurado |
+| **Batería baja en terminal** | El nivel bajó del porcentaje configurado y no está cargando (solo si el navegador informa la batería) |
+
+Los umbrales de la cola atascada y de la batería baja se editan en **Configuración General → Terminales de Marcación**. Los terminales **inactivos** no se evalúan, y al aplicar esta función por primera vez el sistema solo toma una foto del estado actual, sin avisar de lo que ya estaba así. Que la cola se normalice o que la batería se recupere queda en la **Bitácora**, sin notificación.
+
+### Panel de inicio
+
+El **Panel de inicio** muestra la tarjeta **Salud de los terminales** para quien puede ver terminales: cuántos están **en línea**, **desconectados** y **sin vincular** (con los nombres de los que tienen problemas y un enlace al listado ya filtrado) y cuántos tienen alertas de cola o batería. Solo cuenta terminales activos.
+
+![Salud de los terminales en el panel de inicio](/docs-images/23-terminales-widget-dashboard.png)
 
 ### Filtros del listado
 
-**Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad**, **Ventana de vinculación abierta** y **Cola de sync**. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
+**Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad** (incluye **Fuera de horario**), **Ventana de vinculación abierta** y **Cola de sync**. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
 
 ---
 
@@ -281,6 +336,9 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 | Aparece un aviso de que el navegador pertenece a **otro terminal** | Ese navegador ya estaba vinculado a un terminal distinto | Cancelar el aviso y abrir la URL correcta. Aceptar borra los datos locales del terminal anterior, **incluidas sus marcaciones pendientes de enviar**. Usar un navegador o perfil exclusivo para cada terminal |
 | Dice **Sin empleados sincronizados** | El terminal todavía no descargó rostros | Verificar conexión y tocar **Sincronizar ahora**. Solo se descargan los empleados **activos** de la **sucursal del terminal** que tengan su **registro facial** completo |
 | El terminal figura **Desconectado** | Dispositivo apagado, sin internet o con la página cerrada | Encenderlo, verificar internet y abrir la URL del terminal |
+| Recibo avisos de desconexión de noche o los fines de semana | El local está cerrado y el terminal se apaga | Definir su **horario de vigilancia** en la sección **Monitoreo** del terminal |
+| El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |
+| El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Recargar la página del terminal dos veces |
 
 ---
 

@@ -68,6 +68,13 @@ class TerminalEvent extends Model
             'setup_link_generated' => 'Enlace de configuración generado',
             'linked' => 'Dispositivo vinculado',
             'revoked' => 'Dispositivo desvinculado',
+            'health_offline' => 'Sin conexión',
+            'health_recovered' => 'Reconectado',
+            'health_unlinked' => 'Quedó sin vincular',
+            'health_queue_stuck' => 'Cola de marcaciones atascada',
+            'health_queue_recovered' => 'Cola de marcaciones normalizada',
+            'health_battery_low' => 'Batería baja',
+            'health_battery_ok' => 'Batería recuperada',
         ];
     }
 
@@ -89,6 +96,13 @@ class TerminalEvent extends Model
             'setup_link_generated' => 'info',
             'linked' => 'success',
             'revoked' => 'danger',
+            'health_offline' => 'danger',
+            'health_recovered' => 'success',
+            'health_unlinked' => 'danger',
+            'health_queue_stuck' => 'warning',
+            'health_queue_recovered' => 'success',
+            'health_battery_low' => 'warning',
+            'health_battery_ok' => 'success',
         ];
     }
 
@@ -112,6 +126,15 @@ class TerminalEvent extends Model
         }
         if (! empty($payload['tokens'])) {
             $parts[] = 'Accesos revocados: '.$payload['tokens'];
+        }
+        if (isset($payload['stale_after_minutes'])) {
+            $parts[] = 'Umbral: '.$payload['stale_after_minutes'].' min';
+        }
+        if (isset($payload['pending']) || isset($payload['conflicts'])) {
+            $parts[] = ($payload['pending'] ?? 0).' pendientes, '.($payload['conflicts'] ?? 0).' en conflicto';
+        }
+        if (isset($payload['level'])) {
+            $parts[] = 'Nivel: '.$payload['level'].'%';
         }
         if (! empty($payload['ip'])) {
             $parts[] = 'IP '.$payload['ip'];

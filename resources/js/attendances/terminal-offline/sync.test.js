@@ -16,6 +16,7 @@ vi.mock('./db.js', () => ({
     logSync: vi.fn(),
     countPendingEvents: vi.fn().mockResolvedValue(0),
     countConflictEvents: vi.fn().mockResolvedValue(0),
+    countCachedEmployees: vi.fn().mockResolvedValue(7),
 }));
 
 import { getMeta, setMeta, applyEmployeesDelta, applyBreakFlags, logSync } from './db.js';
@@ -92,6 +93,20 @@ describe('heartbeat', () => {
         expect(setMeta).toHaveBeenCalledWith('face_min_confidence_gap', 0.1);
         expect(setMeta).toHaveBeenCalledWith('last_heartbeat_at', expect.any(Number));
         expect(logSync).toHaveBeenCalledWith('heartbeat', true);
+    });
+
+    it('incluye el reporte del dispositivo (empleados en caché) en el cuerpo', async () => {
+        getMeta.mockResolvedValue('tok');
+        fetch.mockResolvedValue({
+            status: 200,
+            json: () => Promise.resolve({ ok: true, config: { face_threshold: 0.5, face_min_confidence_gap: 0.1 }, server_time: '2026-01-01T00:00:00Z' }),
+        });
+
+        await heartbeat();
+
+        const body = JSON.parse(fetch.mock.calls[0][1].body);
+        expect(body.device.cached_employees).toBe(7);
+        expect(body).toHaveProperty('pending_events', 0);
     });
 });
 

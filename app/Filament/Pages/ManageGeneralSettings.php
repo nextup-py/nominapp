@@ -141,7 +141,40 @@ class ManageGeneralSettings extends SettingsPage
                             ->maxValue(72)
                             ->default(2)
                             ->suffix('horas')
-                            ->helperText('Horas sin heartbeat exitoso antes de marcar un terminal como desconectado en el panel'),
+                            ->helperText('Horas sin heartbeat exitoso antes de marcar un terminal como desconectado en el panel. Cada terminal puede definir su propio umbral en minutos.'),
+
+                        TextInput::make('terminal_queue_stuck_minutes')
+                            ->label('Cola de marcaciones atascada')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(5)
+                            ->maxValue(1440)
+                            ->default(15)
+                            ->suffix('minutos')
+                            ->helperText('Minutos con marcaciones pendientes o en conflicto sin vaciarse antes de avisar por la campanita'),
+
+                        TextInput::make('terminal_low_battery_percent')
+                            ->label('Batería baja')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(5)
+                            ->maxValue(50)
+                            ->default(20)
+                            ->suffix('%')
+                            ->helperText('Se avisa cuando un terminal sin cargador baja de este nivel (solo si el navegador informa la batería)'),
+
+                        TextInput::make('terminal_events_retention_days')
+                            ->label('Retención de la bitácora de terminales')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(3650)
+                            ->default(90)
+                            ->suffix('días')
+                            ->helperText('Los eventos más antiguos se eliminan automáticamente. 0 = conservar siempre'),
                     ]),
 
                 Section::make('Auditoría')
