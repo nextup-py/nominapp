@@ -46,18 +46,18 @@ class AguinaldoStatusWidget extends BaseWidget
             return [];
         }
 
-        // Agrega counts y monto en una sola query
+        // Agrega counts y monto pendiente de pago en una sola query
         $stats = $period->aguinaldos()
             ->selectRaw("
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-                SUM(amount) as total_amount
+                SUM(CASE WHEN status = 'pending' THEN aguinaldo_amount ELSE 0 END) as pending_amount
             ")
             ->first();
 
         $total = (int) ($stats->total ?? 0);
         $pending = (int) ($stats->pending ?? 0);
-        $totalAmount = (float) ($stats->total_amount ?? 0);
+        $pendingAmount = (float) ($stats->pending_amount ?? 0);
 
         $statusLabel = self::STATUS_LABELS[$period->status] ?? $period->status;
         $periodColor = $period->status === 'processing' ? 'primary' : 'gray';
@@ -85,7 +85,7 @@ class AguinaldoStatusWidget extends BaseWidget
                 ->icon('heroicon-o-clipboard-document-check')
                 ->url($periodUrl),
 
-            Stat::make('Total a Pagar', 'Gs. '.number_format($totalAmount, 0, ',', '.'))
+            Stat::make('Total a Pagar', 'Gs. '.number_format($pendingAmount, 0, ',', '.'))
                 ->description('Monto total de aguinaldos pendientes')
                 ->descriptionIcon('heroicon-o-banknotes')
                 ->color('info')
