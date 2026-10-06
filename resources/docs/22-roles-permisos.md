@@ -35,6 +35,8 @@ Además, los módulos con flujo de aprobación (Préstamos, Adelantos, Retiros d
 
 > Las acciones puramente administrativas (cambiar el método de pago, editar un borrador, descargar un archivo ya generado) no tienen permiso de negocio propio — quedan cubiertas por los permisos CRUD estándar (Editar / Ver).
 
+> **Terminales:** vincular terminales no tiene un permiso propio. Aprobar o rechazar solicitudes de vinculación, revocar el acceso de un terminal y activarlo o desactivarlo requieren el permiso **Editar Terminal** — el mismo que ya protege la gestión de terminales. Con ese permiso (y el módulo de Marcación biométrica activo) aparece **Asistencias → Solicitudes de vinculación** y llegan las notificaciones de nuevas solicitudes. Ver el capítulo **Terminales de Marcación**.
+
 ---
 
 ![Edición de permisos de un rol](/docs-images/22-rol-editar.png)

@@ -387,7 +387,7 @@ Dos dispositivos marcan asistencia por reconocimiento facial (face-api.js, 100% 
 
 **Reconocimiento facial:** `face_threshold` (0.50) y `face_min_confidence_gap` (0.05) en `GeneralSettings`, ajustados con datos reales de `AttendanceMarkFailure`. Lógica de captura común en `resources/js/shared/face-capture-core.js`.
 
-**Runbooks:** `docs/runbook-terminal-revocacion-reprovision.md`, `docs/runbook-dispositivo-vinculacion-revocacion.md`.
+**Runbooks:** `docs/runbook-terminal-revocacion-reprovision.md`, `docs/runbook-dispositivo-vinculacion-revocacion.md`. **Guía de usuario del panel:** capítulo `resources/docs/23-terminales.md` (vinculación, estados, solicitudes, solución de problemas) — ver la regla de mantenimiento en "Guía de usuario del panel" más abajo.
 
 **Historial de dispositivos (`EmployeeDevice`):** cada vinculación/re-vinculación del celular personal crea un registro nuevo (no se sobrescribe el anterior) — `Employee::claimMobileToken()` cierra el `activeDevice` previo (`unlinked_at`) y crea uno nuevo vía `$this->devices()->create(...)`. Recurso Filament standalone (`EmployeeDeviceResource`, solo `index`/`view`/`edit`, sin `create` — es append-only) más un `DevicesRelationManager` de solo lectura en `EmployeeResource`. Acción **Revocar** disponible en ambos lados. Gotcha real ya corregido: `$employee->activeDevice` (relación `hasOne`) queda cacheado (stale) si se lee después de mutar vía `devices()->create()`/`update()` en la misma instancia — `claimMobileToken()`/`revokeMobileToken()` llaman `$this->setRelation('activeDevice', ...)` explícitamente para evitarlo.
 
@@ -653,6 +653,18 @@ function initCapture(container) { ... }
 ```
 
 No agregar comentarios redundantes que repitan lo que el nombre ya dice. El objetivo es explicar el **propósito** o comportamiento no obvio.
+
+### Guía de usuario del panel (`resources/docs/`) — se mantiene al día en cada PR
+
+La guía que ven los usuarios en **Ayuda → Guía de Usuario** (`UserGuide`, `EightyNine\FilamentDocs`) son los `.md` de `resources/docs/`. **Regla (parte de la Definition of Done):** todo cambio visible para el usuario del panel actualiza el capítulo correspondiente **en el mismo PR** — y las capturas si cambia una pantalla. Un PR que cambia la UI sin tocar la guía no está terminado.
+
+**Cuenta como "visible para el usuario":** pantallas, botones, acciones, etiquetas y nombres de menú, estados y badges, filtros, columnas, permisos y quién puede hacer qué, configuración, notificaciones y los flujos de las pantallas públicas (terminal, `/marcar`, `/vincular-dispositivo`). También las **correcciones** que cambian lo que el usuario ve o puede hacer (un renombre de etiqueta incluido: la guía llegó a decir "Regenerar código" cuando el botón se llamaba "Cambiar URL del terminal"). **No cuenta:** refactors internos, tests, cambios sin efecto visible.
+
+**Cómo:**
+- Un capítulo por archivo `NN-nombre.md`; el título que se muestra es el primer `# Título` del archivo y el orden del menú es el del prefijo numérico. Para un capítulo nuevo se agrega al final (siguiente número libre) en vez de renumerar los existentes. Si el módulo ya tiene capítulo, se edita ese y se revisan los capítulos que lo mencionan (introducción, configuración, roles y permisos).
+- Estilo del resto de la guía: instrucciones impersonales ("Ir a **Asistencias → Terminales**", "Clic en **Aprobar**"), tablas para estados y columnas, citas `>` para advertencias, y nombres de botones/menús **exactamente como están en la UI** — verificarlos contra el código, no de memoria. Para el terminal se usa el género de la UI ("el terminal", "Terminal sin vincular").
+- Capturas en `resources/docs/images/NN-nombre.png`, referenciadas como `![Descripción](/docs-images/NN-nombre.png)`. Se toman con viewport **1440×900** (como las existentes), en **español** (`APP_LOCALE=es`, `APP_TIMEZONE=America/Asuncion`; sin eso Filament muestra "Search", "Per page", "2 hours ago") y con datos de demo coherentes (la captura de un modal debe mostrar el mismo registro/código que la fila sobre la que se abrió).
+- Si el cambio es una funcionalidad planificada pero todavía no publicada, **no** se documenta como disponible: se documenta en el PR que la entrega.
 
 ### Coordenadas GPS (sucursales)
 

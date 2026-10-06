@@ -11,7 +11,7 @@ Ir a **Asistencias → Modos de Marcación** para ver los enlaces y códigos QR 
 ### Terminal compartida (kiosco)
 Un dispositivo fijo en la sucursal (tablet o PC). Todos los empleados marcan desde ese mismo equipo. No requiere que el empleado tenga cuenta en el sistema. El reconocimiento facial identifica automáticamente quién está marcando.
 
-Cada terminal tiene su propia URL con un código único (ej: `/terminal/a3x9bc7q`). Ver sección **Gestión de Terminales** más abajo.
+Cada terminal tiene su propia URL con un código único (ej: `/terminal/a3x9bc7q`) y debe vincularse una vez al sistema. Ver el capítulo **Terminales de Marcación**.
 
 ### Modo móvil
 El empleado usa su propio dispositivo (celular o tablet). Puede marcar desde cualquier lugar. Útil para empleados remotos o en campo. A diferencia de la terminal compartida, cada dispositivo se vincula a un único empleado — ver la sección **Dispositivo personal (vinculación)** más abajo.
@@ -20,42 +20,13 @@ El empleado usa su propio dispositivo (celular o tablet). Puede marcar desde cua
 
 ## Gestión de Terminales
 
-Ir a **Asistencias → Terminales** para administrar los dispositivos físicos de marcación.
+Ir a **Asistencias → Terminales** para administrar los dispositivos físicos de marcación: crearlos, **vincularlos** al sistema (con un código que aprueba un administrador, o con un enlace de configuración), ver si están en línea, activarlos, desactivarlos o revocar su acceso.
 
-### Crear una terminal
-
-1. Clic en **Nueva Terminal**
-2. Completar:
-   - **Nombre** — identificador descriptivo (ej: "Terminal Recepción")
-   - **Sucursal** — sucursal a la que pertenece el dispositivo
-   - **Datos del dispositivo** — marca, modelo, número de serie, MAC (opcional, para inventario)
-   - **Fecha de instalación** e **instalado por** (opcional)
-3. Guardar
-
-El sistema genera automáticamente un **código único de 8 caracteres** que forma la URL de la terminal.
-
-### URL y código QR
-
-Desde la vista de detalle de la terminal se puede ver:
-- La **URL** de acceso (ej: `https://sistema.com/terminal/a3x9bc7q`)
-- Un **código QR** para escanear directamente con el dispositivo
-
-Configurar el dispositivo físico para que abra esa URL al iniciar.
-
-### Activar y desactivar
-
-- **Desactivar** — la terminal deja de aceptar marcaciones y muestra una pantalla de fuera de servicio. Útil para mantenimiento o dispositivos retirados temporalmente.
-- **Activar** — vuelve a habilitar la terminal.
-
-### Regenerar código
-
-Si la URL de una terminal fue comprometida o el dispositivo fue reemplazado, usar **Regenerar código** para generar una nueva URL.
-
-> ⚠️ Al regenerar el código, la URL anterior deja de funcionar. El dispositivo físico debe reconfigurarse con la nueva URL.
+> El detalle completo —paso a paso de la vinculación, estados de conectividad, solicitudes de vinculación y solución de problemas— está en el capítulo **Terminales de Marcación**.
 
 ### Marcación en sucursal diferente
 
-Si un empleado marca desde una terminal de una sucursal distinta a la suya, el sistema registra el evento igualmente pero lo marca internamente como **marcación en sucursal diferente** (`branch_mismatch`). Esto permite detectar situaciones atípicas sin bloquear al empleado.
+Si un empleado marca desde un terminal de una sucursal distinta a la suya, el sistema registra el evento igualmente pero lo marca internamente como **marcación en sucursal diferente** (`branch_mismatch`). Esto permite detectar situaciones atípicas sin bloquear al empleado.
 
 ---
 
@@ -227,7 +198,7 @@ Cuando un intento de marcación (terminal o dispositivo personal) no puede compl
 |------|---------------|
 | **Rostro no reconocido** | El rostro capturado no coincide con ningún empleado enrolado dentro del umbral configurado |
 | **Rostro ambiguo** | El rostro coincide con dos o más empleados sin diferencia suficiente entre ellos |
-| **Sin empleados enrolados** | La terminal no tiene ningún descriptor facial sincronizado todavía |
+| **Sin empleados enrolados** | La terminal no tiene ningún descriptor facial sincronizado todavía (ver **Problemas frecuentes** en el capítulo **Terminales de Marcación**) |
 | **Empleado no encontrado / inactivo** | El empleado fue desactivado o eliminado después de la vinculación del dispositivo |
 | **Sin sucursal asignada / sucursal sin coordenadas** | Falta configuración de ubicación necesaria para registrar la marcación |
 | **Secuencia de evento inválida** | Se intentó, por ejemplo, marcar una salida sin una entrada previa ese día |

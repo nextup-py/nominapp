@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\TerminalPairingException;
+use App\Filament\Actions\TerminalPairingActions;
 use App\Filament\Pages\TerminalPairingInbox;
 use App\Filament\Resources\TerminalResource\Pages\ViewTerminal;
 use App\Filament\Resources\TerminalResource\RelationManagers\PairingRequestsRelationManager;
@@ -12,6 +13,7 @@ use App\Models\TerminalPairingRequest;
 use App\Models\User;
 use App\Notifications\TerminalPairingRequestedNotification;
 use App\Services\TerminalPairingService;
+use App\Settings\ModuleSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
@@ -384,4 +386,27 @@ it('el RelationManager de solicitudes es visible para quien gestiona terminales 
     $this->actingAs(makePairingManager());
 
     expect(PairingRequestsRelationManager::canViewForRecord($terminal, ViewTerminal::class))->toBeTrue();
+});
+
+it('la bandeja respeta el flag del módulo de marcación biométrica igual que TerminalResource', function () {
+    $this->actingAs(makePairingSuperAdmin());
+    expect(TerminalPairingInbox::canAccess())->toBeTrue();
+
+    $modules = app(ModuleSettings::class);
+    $modules->biometric_attendance_enabled = false;
+    $modules->save();
+
+    expect(TerminalPairingInbox::canAccess())->toBeFalse();
+});
+
+it('el texto del modal de aprobación escapa lo que reporta el dispositivo', function () {
+    $terminal = makePairingTerminal();
+    $result = app(TerminalPairingService::class)->request($terminal, '10.0.0.5', '<script>alert(1)</script> Mozilla/5.0', '<b>Pixel</b>');
+
+    $html = TerminalPairingActions::describe($result['request']->load('terminal.branch'))->toHtml();
+
+    expect($html)->toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+        ->and($html)->toContain('&lt;b&gt;Pixel&lt;/b&gt;')
+        ->and($html)->not->toContain('<script>')
+        ->and($html)->toContain('<br>');
 });
