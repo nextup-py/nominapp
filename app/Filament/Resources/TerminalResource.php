@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
+use App\Filament\Resources\TerminalResource\RelationManagers\PairingRequestsRelationManager;
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
 use App\Models\Terminal;
@@ -663,6 +664,7 @@ class TerminalResource extends Resource
     public static function getRelations(): array
     {
         return [
+            PairingRequestsRelationManager::class,
             AttendanceEventsRelationManager::class,
         ];
     }

@@ -129,3 +129,14 @@ Schedule::command('audits:purge')
     ->onFailure(function () {
         Log::error('Falló la purga automática del historial de auditoría');
     });
+
+/**
+ * Vencer solicitudes de vinculación de terminales sin resolver
+ * Se ejecuta cada minuto: las solicitudes pendientes duran 10 minutos
+ */
+Schedule::command('terminals:expire-pairing')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        Log::error('Falló el vencimiento de solicitudes de vinculación de terminales');
+    });

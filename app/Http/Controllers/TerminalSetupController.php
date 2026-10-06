@@ -79,7 +79,7 @@ class TerminalSetupController extends Controller
             'device_model_hint' => ['nullable', 'string', 'max:100'],
         ])['device_model_hint'] ?? null;
 
-        $plainTextToken = $terminal->claimSanctumToken($request->userAgent(), $clientHintModel);
+        $plainTextToken = $terminal->claimSanctumToken($request->userAgent(), $clientHintModel, $request->ip());
 
         Log::info("Terminal '{$terminal->code}' ({$terminal->name}) provisionado para sincronización offline", [
             'terminal_id' => $terminal->id,

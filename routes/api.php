@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\MobileUnlinkController;
 use App\Http\Controllers\Api\TerminalEmployeeSyncController;
 use App\Http\Controllers\Api\TerminalEventSyncController;
 use App\Http\Controllers\Api\TerminalHeartbeatController;
+use App\Http\Controllers\Api\TerminalPairingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +22,19 @@ use Illuminate\Support\Facades\Route;
 | config/auth.php. Cada grupo abajo exige su propia ability.
 |
 */
+
+// Vinculación del terminal por código de emparejamiento + aprobación de un admin.
+// Públicas (el dispositivo todavía no tiene token): crear la solicitud y consultar su
+// estado con el secreto de polling en el header Authorization. Ver TerminalPairingService.
+Route::prefix('v1/terminal-pairing')->name('api.terminal-pairing.')->group(function () {
+    Route::post('/', [TerminalPairingController::class, 'store'])
+        ->middleware('throttle:terminal-pairing-create')
+        ->name('store');
+
+    Route::post('/status', [TerminalPairingController::class, 'status'])
+        ->middleware('throttle:terminal-pairing-poll')
+        ->name('status');
+});
 
 // Terminal compartido por sucursal — bearer token emitido al provisionarlo
 // (ver TerminalSetupController). Ability requerida: 'terminal:sync'.

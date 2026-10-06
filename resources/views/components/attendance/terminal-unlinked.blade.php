@@ -3,7 +3,9 @@
     (nunca reclamó el enlace de setup, otro navegador/perfil, datos borrados,
     token revocado, o este navegador pertenece a otro terminal). Sin token no
     puede identificar ni sincronizar a nadie, así que no se arranca cámara ni
-    identificación. El JS completa #unlinkedDetail según el motivo.
+    identificación. El JS completa #unlinkedDetail según el motivo y, cuando
+    corresponde, muestra #pairingBlock: código de emparejamiento que un admin
+    aprueba desde el panel (ver terminal/pairing-flow.js).
 --}}
 <section id="unlinkedScreen" class="terminal-screen hidden" role="region" aria-label="Terminal sin vincular">
     <div class="screen-body">
@@ -19,11 +21,21 @@
 
             <div class="error-message" role="alert" aria-live="assertive">
                 <span id="unlinkedDetail">Este terminal no está vinculado.</span>
-                Pedí un nuevo enlace de configuración al administrador.
+                <span id="unlinkedLinkHint">Pedí un nuevo enlace de configuración al administrador.</span>
+            </div>
+
+            {{-- Código de emparejamiento: el admin lo tipea al aprobar la vinculación. --}}
+            <div id="pairingBlock" class="pairing-block hidden">
+                <p class="pairing-label">Código de vinculación</p>
+                <div id="pairingCode" class="pairing-code" aria-live="polite">······</div>
+                <p id="pairingStatus" class="pairing-status" role="status" aria-live="polite">Solicitando código…</p>
+                <p id="pairingCountdown" class="pairing-countdown"></p>
+                <p class="pairing-hint">Un administrador debe aprobar este código desde el panel (Asistencias → Solicitudes de vinculación).</p>
             </div>
 
             <div class="terminal-actions">
-                <button type="button" id="btnUnlinkedReload" class="terminal-btn terminal-btn-primary">Recargar</button>
+                <button type="button" id="btnPairingNew" class="terminal-btn terminal-btn-primary hidden">Pedir código nuevo</button>
+                <button type="button" id="btnUnlinkedReload" class="terminal-btn terminal-btn-ghost">Recargar</button>
             </div>
         </div>
     </div>

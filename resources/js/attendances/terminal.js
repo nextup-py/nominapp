@@ -4,6 +4,7 @@ import * as screenState from './terminal/screen-state.js';
 import * as markRegistration from './terminal/mark-registration.js';
 import * as identificationFlow from './terminal/identification-flow.js';
 import * as bootstrap from './terminal/bootstrap.js';
+import * as pairingFlow from './terminal/pairing-flow.js';
 import { updateClock, updateIdleDate } from './terminal/ui-feedback.js';
 import { setOffline, updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './terminal/sync-status-ui.js';
 import { initManualSearch } from './terminal/manual-search.js';
@@ -168,12 +169,51 @@ document.addEventListener('DOMContentLoaded', () => {
         identificationFlow.startIdentificationFlow(identificationRefs, { onIdleTimeout: enterIdle });
     }
 
+    /** El código se pide solo una vez por carga de página: tras vencer, renovarlo es manual ("Pedir código nuevo"),
+     *  porque el sync de fondo sigue disparando showUnlinked() y cada código nuevo notifica a los admins. */
+    let pairingAutoStarted = false;
+
+    /** Callbacks de UI de la vinculación por código (ver terminal/pairing-flow.js). */
+    const pairingBlock = document.getElementById('pairingBlock');
+    const pairingUi = {
+        showCode: (code) => {
+            const el = document.getElementById('pairingCode');
+            if (el) el.textContent = code;
+        },
+        setStatus: (text) => {
+            const el = document.getElementById('pairingStatus');
+            if (el) el.textContent = text;
+        },
+        setCountdown: (seconds) => {
+            const el = document.getElementById('pairingCountdown');
+            if (!el) return;
+            const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const ss = String(seconds % 60).padStart(2, '0');
+            el.textContent = seconds > 0 ? `El código vence en ${mm}:${ss}` : '';
+        },
+        showRetry: (visible) => {
+            document.getElementById('btnPairingNew')?.classList.toggle('hidden', !visible);
+        },
+        showInactive: (message) => {
+            pairingBlock?.classList.add('hidden');
+            document.getElementById('unlinkedLinkHint')?.classList.add('hidden');
+            const detail = document.getElementById('unlinkedDetail');
+            if (detail) detail.textContent = message;
+        },
+        onLinked: () => window.location.reload(),
+    };
+
     /**
      * Bloquea la marcación: detiene cámara, presencia, timers y countdowns, y
      * deja la pantalla "sin vincular". El latch vive en identification-flow
      * (`blockIdentification`), así ningún countdown ni reset vuelve a arrancar
      * la identificación. Se llama al arrancar sin token, ante una revocación en
      * caliente (sync en segundo plano / botones de sync) o al identificar sin token.
+     *
+     * Sin token (`no_token`/`revoked`) y con código de terminal en la URL, además
+     * pide un código de emparejamiento para que un admin lo apruebe — el terminal
+     * no queda mudo esperando un enlace. Con `other_terminal` (el navegador
+     * pertenece a otro terminal) no se vincula nada: el usuario debe volver a esa URL.
      * @param {'no_token'|'other_terminal'|'revoked'|string} reason
      * @param {string|null} [storedCode] - code del terminal que tenía este navegador (reason 'other_terminal')
      */
@@ -186,6 +226,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isIdle = false;
         if (terminalHeader) terminalHeader.classList.remove('terminal-header--idle');
 
+        const canPair = (reason === 'no_token' || reason === 'revoked') && Boolean(terminalData?.code);
+
         const detail = document.getElementById('unlinkedDetail');
         if (detail) {
             detail.textContent = reason === 'other_terminal'
@@ -195,7 +237,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     : 'Este terminal no está vinculado.';
         }
 
+        pairingBlock?.classList.toggle('hidden', !canPair);
+        // Con código de emparejamiento a la vista, "pedí un enlace" sobra: el admin aprueba el código.
+        document.getElementById('unlinkedLinkHint')?.classList.toggle('hidden', canPair);
         screenState.showScreen(screens, 'unlinked');
+
+        if (canPair && !pairingAutoStarted) {
+            pairingAutoStarted = true;
+            pairingFlow.getClientHintModel().then((deviceModelHint) => {
+                pairingFlow.startPairing(pairingUi, { terminalCode: terminalData.code, deviceModelHint });
+            });
+        }
     }
 
     function resetTerminal() {
@@ -262,6 +314,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnRetry) btnRetry.addEventListener('click', () => resetTerminal());
     if (btnReload) btnReload.addEventListener('click', () => window.location.reload());
     document.getElementById('btnUnlinkedReload')?.addEventListener('click', () => window.location.reload());
+    document.getElementById('btnPairingNew')?.addEventListener('click', async () => {
+        if (!terminalData?.code) return;
+        await pairingFlow.restartPairing(pairingUi, {
+            terminalCode: terminalData.code,
+            deviceModelHint: await pairingFlow.getClientHintModel(),
+        });
+    });
 
     // ============================================================================
     // CONECTIVIDAD
