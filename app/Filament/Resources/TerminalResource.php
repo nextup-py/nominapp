@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Actions\TerminalLinkActions;
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
+use App\Filament\Resources\TerminalResource\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\PairingRequestsRelationManager;
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
@@ -28,6 +29,7 @@ use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -460,6 +462,14 @@ class TerminalResource extends Resource
                     ->formatStateUsing(fn (string $state) => Terminal::getConnectivityStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state) => Terminal::getConnectivityStatusColors()[$state] ?? 'gray'),
 
+                TextColumn::make('link_window')
+                    ->label('Ventana de vinculación')
+                    ->badge()
+                    ->color('warning')
+                    ->icon('heroicon-o-clock')
+                    ->getStateUsing(fn (Terminal $record) => $record->hasOpenLinkWindow() ? 'Abierta hasta '.$record->link_window_until->format('H:i') : null)
+                    ->tooltip('Mientras esté abierta, el primer dispositivo que pida vincularse queda vinculado sin aprobación'),
+
                 TextColumn::make('sync_queue_status')
                     ->label('Cola de sync')
                     ->badge()
@@ -533,6 +543,11 @@ class TerminalResource extends Resource
                             default => $query,
                         };
                     }),
+
+                Filter::make('link_window_open')
+                    ->label('Ventana de vinculación abierta')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->withOpenLinkWindow()),
 
                 SelectFilter::make('sync_queue_status')
                     ->label('Cola de sync')
@@ -657,6 +672,7 @@ class TerminalResource extends Resource
     {
         return [
             PairingRequestsRelationManager::class,
+            EventsRelationManager::class,
             AttendanceEventsRelationManager::class,
         ];
     }

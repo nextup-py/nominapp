@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\TerminalLinkWindowExpiredNotification;
 use App\Notifications\TerminalProvisionedNotification;
 use App\Services\DeviceHintsParser;
 use App\Settings\GeneralSettings;
@@ -539,6 +540,53 @@ class Terminal extends Model implements AuthenticatableContract
         ])->save();
 
         TerminalEvent::record($this, 'link_window_opened', ['until' => $this->link_window_until->toIso8601String()], $user->id);
+    }
+
+    /**
+     * Terminales con la ventana de vinculación abierta y vigente.
+     *
+     * @param  Builder<Terminal>  $query
+     * @return Builder<Terminal>
+     */
+    public function scopeWithOpenLinkWindow(Builder $query): Builder
+    {
+        return $query->where('link_window_until', '>', now());
+    }
+
+    /**
+     * Cierra las ventanas de vinculación vencidas sin usarse y avisa a quien las
+     * abrió. Una ventana aprovechada o cerrada a mano ya quedó en null, así que
+     * toda ventana con fecha pasada venció sin que nadie la usara.
+     *
+     * @return int Cantidad de ventanas cerradas.
+     */
+    public static function expireLinkWindows(): int
+    {
+        $expired = static::query()
+            ->whereNotNull('link_window_until')
+            ->where('link_window_until', '<=', now())
+            ->with('linkWindowOpenedBy')
+            ->get();
+
+        foreach ($expired as $terminal) {
+            $opener = $terminal->linkWindowOpenedBy;
+
+            $terminal->closeLinkWindow(null, 'expired');
+
+            if (! $opener) {
+                continue;
+            }
+
+            try {
+                $opener->notify(new TerminalLinkWindowExpiredNotification($terminal));
+            } catch (\Throwable $e) {
+                Log::warning("No se pudo avisar el vencimiento de la ventana de vinculación del terminal '{$terminal->code}': {$e->getMessage()}", [
+                    'terminal_id' => $terminal->id,
+                ]);
+            }
+        }
+
+        return $expired->count();
     }
 
     /** Cierra la ventana de vinculación (a mano, o al primer claim). */

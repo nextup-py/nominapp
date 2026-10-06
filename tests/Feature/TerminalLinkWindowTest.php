@@ -3,14 +3,18 @@
 use App\Filament\Resources\TerminalResource;
 use App\Filament\Resources\TerminalResource\Pages\ListTerminals;
 use App\Filament\Resources\TerminalResource\Pages\ViewTerminal;
+use App\Filament\Resources\TerminalResource\RelationManagers\EventsRelationManager;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Terminal;
+use App\Models\TerminalEvent;
 use App\Models\TerminalPairingRequest;
 use App\Models\User;
+use App\Notifications\TerminalLinkWindowExpiredNotification;
 use App\Notifications\TerminalPairingRequestedNotification;
 use App\Services\TerminalPairingService;
 use Filament\Actions\ActionGroup;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
@@ -307,4 +311,126 @@ it('la hoja de instalación no incluye el token del enlace en el HTML renderizad
     ])->render();
 
     expect($html)->not->toContain($token)->and($html)->toContain($terminal->url);
+});
+
+// ─── Vencimiento de ventanas sin usarse ─────────────────────────────────────
+
+it('el comando cierra las ventanas vencidas, deja evento y avisa solo a quien las abrió', function () {
+    $opener = windowSuperAdmin();
+    $other = windowSuperAdmin();
+    $terminal = makeWindowTerminal();
+    $terminal->openLinkWindow($opener);
+    $terminal->forceFill(['link_window_until' => now()->subMinute()])->save();
+
+    $this->artisan('terminals:expire-link-windows')->assertSuccessful();
+
+    $fresh = $terminal->fresh();
+    expect($fresh->link_window_until)->toBeNull()
+        ->and($terminal->events()->where('type', 'link_window_closed')->first()->payload['reason'])->toBe('expired');
+
+    Notification::assertSentTo($opener, TerminalLinkWindowExpiredNotification::class);
+    Notification::assertNotSentTo($other, TerminalLinkWindowExpiredNotification::class);
+});
+
+it('el comando no toca ventanas vigentes ni las ya cerradas, y es idempotente', function () {
+    $opener = windowSuperAdmin();
+    $open = makeWindowTerminal();
+    $open->openLinkWindow($opener);
+    $used = makeWindowTerminal();
+    $used->openLinkWindow($opener);
+    app(TerminalPairingService::class)->request($used->fresh(), null, null, null);
+
+    expect(Terminal::expireLinkWindows())->toBe(0);
+    expect($open->fresh()->hasOpenLinkWindow())->toBeTrue();
+
+    $open->forceFill(['link_window_until' => now()->subSecond()])->save();
+    expect(Terminal::expireLinkWindows())->toBe(1)->and(Terminal::expireLinkWindows())->toBe(0);
+
+    Notification::assertSentToTimes($opener, TerminalLinkWindowExpiredNotification::class, 1);
+});
+
+it('si quien abrió la ventana ya no existe, igual se cierra sin fallar', function () {
+    $opener = windowSuperAdmin();
+    $terminal = makeWindowTerminal();
+    $terminal->openLinkWindow($opener);
+    $opener->delete();
+    $terminal->forceFill(['link_window_until' => now()->subMinute()])->save();
+
+    expect(Terminal::expireLinkWindows())->toBe(1)
+        ->and($terminal->fresh()->link_window_until)->toBeNull();
+});
+
+it('la notificación de ventana vencida usa el formato de la campanita de Filament', function () {
+    $terminal = makeWindowTerminal();
+    $data = (new TerminalLinkWindowExpiredNotification($terminal))->toDatabase(windowSuperAdmin());
+
+    expect($data['format'])->toBe('filament')
+        ->and($data['title'])->toContain('venció sin usarse')
+        ->and($data['terminal_id'])->toBe($terminal->id);
+});
+
+it('el comando está programado cada minuto', function () {
+    $events = collect(app(Schedule::class)->events())
+        ->filter(fn ($e) => str_contains($e->command, 'terminals:expire-link-windows'));
+
+    expect($events)->toHaveCount(1)->and($events->first()->expression)->toBe('* * * * *');
+});
+
+// ─── Listado: badge y filtro ────────────────────────────────────────────────
+
+it('el listado muestra el badge de ventana abierta solo mientras está vigente y la filtra', function () {
+    $this->actingAs(windowSuperAdmin());
+    $open = makeWindowTerminal();
+    $open->openLinkWindow(windowSuperAdmin());
+    $closed = makeWindowTerminal();
+    $expired = makeWindowTerminal(['link_window_until' => now()->subMinute()]);
+
+    Livewire::test(ListTerminals::class)
+        ->assertCanSeeTableRecords([$open, $closed, $expired])
+        ->assertSee('Abierta hasta '.$open->fresh()->link_window_until->format('H:i'))
+        ->filterTable('link_window_open')
+        ->assertCanSeeTableRecords([$open])
+        ->assertCanNotSeeTableRecords([$closed, $expired]);
+});
+
+// ─── Bitácora ───────────────────────────────────────────────────────────────
+
+it('la bitácora muestra los eventos del terminal con etiqueta, usuario y detalle, y no los de otros', function () {
+    $admin = windowSuperAdmin();
+    $this->actingAs($admin);
+    $terminal = makeWindowTerminal();
+    $other = makeWindowTerminal();
+    $terminal->openLinkWindow($admin);
+    TerminalEvent::record($terminal, 'setup_link_generated', ['expires_in_minutes' => 240], $admin->id);
+    TerminalEvent::record($other, 'revoked', ['tokens' => 1]);
+
+    $test = Livewire::test(EventsRelationManager::class, ['ownerRecord' => $terminal, 'pageClass' => ViewTerminal::class]);
+
+    $test->assertCountTableRecords(2)
+        ->assertSee('Ventana de vinculación abierta')
+        ->assertSee('Enlace de configuración generado')
+        ->assertSee('Vigencia: 4 horas')
+        ->assertSee($admin->name);
+
+    $test->filterTable('type', 'setup_link_generated')->assertCountTableRecords(1);
+});
+
+it('la bitácora es de solo lectura', function () {
+    expect((new EventsRelationManager)->isReadOnly())->toBeTrue();
+});
+
+it('el detalle de cada evento se arma legible y todo tipo de evento emitido tiene etiqueta', function () {
+    $terminal = makeWindowTerminal();
+
+    $linked = TerminalEvent::record($terminal, 'linked', ['via' => 'pairing', 'ip' => '10.0.0.1']);
+    $closed = TerminalEvent::record($terminal, 'link_window_closed', ['reason' => 'expired']);
+    $bare = TerminalEvent::record($terminal, 'pairing_denied');
+
+    expect($linked->detail)->toBe('Vía código de emparejamiento · IP 10.0.0.1')
+        ->and($closed->detail)->toBe('Motivo: venció sin usarse')
+        ->and($bare->detail)->toBeNull();
+
+    $emitted = ['pairing_requested', 'pairing_approved', 'pairing_auto_approved', 'pairing_denied', 'pairing_claimed', 'link_window_opened', 'link_window_closed', 'setup_link_generated', 'linked', 'revoked'];
+    expect(array_keys(TerminalEvent::getTypeLabels()))->toEqualCanonicalizing($emitted)
+        ->and(array_keys(TerminalEvent::getTypeColors()))->toEqualCanonicalizing($emitted);
 });

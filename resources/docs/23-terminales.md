@@ -139,7 +139,8 @@ Sirve cuando el **personal del local** va a configurar el dispositivo y no hay n
 3. La ventana se **cierra sola** en cuanto un dispositivo la aprovecha (o a los 15 minutos). También se puede cerrar antes con **Cerrar ventana de vinculación**.
 
 - Para abrir la ventana en **varios terminales a la vez**, seleccionarlos en el listado y usar **Abrir ventana de vinculación** del menú de acciones masivas. Se omiten los terminales inactivos y los que ya tienen la ventana abierta.
-- Mientras la ventana está abierta, el detalle muestra la sección **Ventana de vinculación** con la hora de cierre y **quién la abrió**.
+- Mientras la ventana está abierta, el listado muestra la etiqueta **Abierta hasta HH:MM** en la columna **Ventana de vinculación** (y se puede filtrar con **Ventana de vinculación abierta**), y el detalle muestra la sección **Ventana de vinculación** con la hora de cierre y **quién la abrió**.
+- Si la ventana **vence sin que ningún dispositivo la use**, se cierra sola y a quien la abrió le llega una notificación en la campanita (*La ventana de vinculación venció sin usarse*).
 - Requiere el mismo permiso que el resto de la gestión de terminales (**Editar Terminal**).
 
 ![Confirmación para abrir la ventana de vinculación](/docs-images/23-terminal-ventana-vinculacion.png)
@@ -196,15 +197,34 @@ Complementa a la conectividad: un terminal puede verse **En línea** y tener mar
 
 ![Conectividad de un terminal](/docs-images/23-terminal-conectividad.png)
 
-La sección **Conectividad** del detalle muestra el estado, el **último latido**, el último sync de empleados y de marcaciones, la cola de sincronización (pendientes y en conflicto) y la última carga de página. Debajo hay dos pestañas: **Solicitudes de vinculación** y **Marcaciones** (las registradas desde este terminal).
+La sección **Conectividad** del detalle muestra el estado, el **último latido**, el último sync de empleados y de marcaciones, la cola de sincronización (pendientes y en conflicto) y la última carga de página. Debajo hay tres pestañas: **Solicitudes de vinculación**, **Bitácora** (ver más abajo) y **Marcaciones** (las registradas desde este terminal).
 
 La sección **Dispositivo vinculado** (solo si hay un acceso vigente) muestra desde cuándo está vinculado, **cómo se vinculó** (enlace de configuración, código aprobado por un usuario o ventana de vinculación), la IP desde la que se vinculó, el dispositivo y su último contacto.
 
 ![Dispositivo vinculado](/docs-images/23-terminal-dispositivo-vinculado.png)
 
+### Bitácora
+
+La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nuevo a lo más viejo, cada cambio de vinculación del terminal: **fecha**, **evento**, **usuario** que lo provocó (si lo hizo el dispositivo o el sistema figura *Dispositivo o sistema*) y **detalle** (IP, vigencia del enlace, motivo del cierre de una ventana...). Se puede filtrar por tipo de evento.
+
+![Bitácora de un terminal](/docs-images/23-terminal-bitacora.png)
+
+| Evento | Cuándo se registra |
+|--------|--------------------|
+| **Solicitud de vinculación** | Un dispositivo pidió un código |
+| **Vinculación aprobada** / **rechazada** | Un usuario aprobó o rechazó la solicitud |
+| **Vinculación aprobada por ventana** | La solicitud se aprobó sola porque había una ventana abierta |
+| **Código canjeado por el dispositivo** | El dispositivo recibió su acceso tras la aprobación |
+| **Ventana de vinculación abierta** / **cerrada** | Quién la abrió y por qué se cerró: a mano, la aprovechó un dispositivo o venció sin usarse |
+| **Enlace de configuración generado** | Quién lo generó y con qué vigencia |
+| **Dispositivo vinculado** | Vía enlace o código, e IP |
+| **Dispositivo desvinculado** | Quién lo desvinculó |
+
+No se registra un evento por cada latido: solo los cambios.
+
 ### Filtros del listado
 
-**Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad** y **Cola de sync**. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
+**Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad**, **Ventana de vinculación abierta** y **Cola de sync**. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
 
 ---
 
@@ -223,7 +243,7 @@ Si el dispositivo se perdió, se reemplazó o se sospecha que está comprometido
 
 - El dispositivo pierde el acceso **de inmediato**: no puede sincronizar ni marcar.
 - Si la página sigue abierta, pasa a **Terminal sin vincular** y muestra un código para volver a vincularse.
-- La desvinculación queda registrada en la bitácora interna del terminal, con el usuario que la hizo (por ahora no hay una pantalla para consultarla).
+- La desvinculación queda registrada en la **Bitácora** del terminal, con el usuario que la hizo.
 
 ---
 
@@ -270,6 +290,6 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 - El código de vinculación es de **un solo uso y vida corta** (10 minutos) y hay límites de intentos por IP y por terminal.
 - El código no se muestra en el panel ni en la notificación: se verifica contra la pantalla del dispositivo.
 - Cada terminal tiene **un solo dispositivo vinculado**; vincular otro revoca el anterior.
-- Quién aprobó cada vinculación se ve en la columna **Aprobada por** de la bandeja (en las vinculadas por ventana figura quien la abrió); aprobaciones, rechazos, ventanas abiertas y cerradas, enlaces generados y desvinculaciones quedan además en la bitácora interna del terminal.
+- Quién aprobó cada vinculación se ve en la columna **Aprobada por** de la bandeja (en las vinculadas por ventana figura quien la abrió); aprobaciones, rechazos, ventanas abiertas y cerradas, enlaces generados y desvinculaciones quedan además en la pestaña **Bitácora** del terminal.
 - El enlace de configuración viaja en el **fragmento** de la URL (lo que va después del `#`), que el navegador no envía al servidor al abrirla, así que no queda en los registros de acceso. En la base solo se guarda su huella (hash), nunca el enlace.
 - Los enlaces de configuración con el formato anterior (token en la ruta) ya no se aceptan: hay que generar uno nuevo.
