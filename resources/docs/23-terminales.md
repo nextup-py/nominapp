@@ -254,6 +254,7 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Quedó sin vincular** | Un terminal vinculado perdió su acceso |
 | **Cola de marcaciones atascada** / **normalizada** | La cola dejó de vaciarse o volvió a la normalidad |
 | **Batería baja** / **recuperada** | El nivel cruzó el porcentaje configurado |
+| **Comando enviado** / **ejecutado** / **falló** / **vencido** | Ciclo de un comando remoto (ver [Comandos remotos](#comandos-remotos)) |
 
 No se registra un evento por cada latido: solo los cambios. Los eventos se eliminan automáticamente pasada la **retención** configurada (por defecto 90 días; ver **Configuración General → Terminales de Marcación**).
 
@@ -280,6 +281,31 @@ El **Panel de inicio** muestra la tarjeta **Salud de los terminales** para quien
 ### Filtros del listado
 
 **Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad** (incluye **Fuera de horario**), **Ventana de vinculación abierta** y **Cola de sync**. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
+
+---
+
+## Comandos remotos
+
+Permiten pedirle al dispositivo, sin ir hasta el local, que haga algo. Requieren el permiso **Editar Terminal** y solo se ofrecen si el terminal está **activo** y **vinculado**. Están en el menú **Comandos remotos** del detalle, en el menú de acciones de cada fila del listado y como acción masiva (**Enviar comando remoto**, que omite los terminales inactivos o sin vincular).
+
+| Comando | Qué hace el terminal |
+|---------|----------------------|
+| **Forzar sincronización** | Sincroniza los empleados y vacía su cola de marcaciones |
+| **Recargar app** | Recarga la aplicación (útil después de una actualización; ver la versión en **Estado del dispositivo**) |
+| **Limpiar caché** | Borra la caché de la app y de empleados, la reconstruye desde el servidor y recarga |
+| **Reenviar reporte** | Envía de inmediato un reporte completo de su estado |
+
+![Menú de comandos remotos del detalle del terminal](/docs-images/23-terminal-comandos-menu.png)
+
+- **Cuándo llegan:** el terminal los recibe en su próximo contacto con el servidor (hasta unos **90 segundos**). Si no se conecta en **15 minutos**, el comando pasa a **Vencido** y no se ejecuta después.
+- **Recargar** y **Limpiar caché** esperan a que el terminal esté en reposo (nadie marcando); si no llega al reposo, el comando queda como **Falló**.
+- **Limpiar caché nunca borra las marcaciones pendientes de sincronizar ni el acceso del dispositivo:** no se pierde ninguna marcación ni hace falta volver a vincular. Si el terminal no logra bajar los empleados (sin red), la caché actual se conserva.
+- No se acumulan duplicados: si ya hay un comando igual sin resolver, no se vuelve a enviar.
+- Los terminales con una versión vieja de la aplicación no entienden comandos: el comando vence y se ve en la bitácora. Una vez que el terminal se recargue con la versión nueva, funcionan.
+
+La pestaña **Comandos** del detalle (solo lectura) lista cada comando con su **estado** (*Pendiente*, *Entregado*, *Ejecutado*, *Falló*, *Vencido*), quién lo envió, cuándo se resolvió y el detalle del error si falló. Cada paso queda además en la **Bitácora**.
+
+![Comandos remotos de un terminal](/docs-images/23-terminal-comandos.png)
 
 ---
 

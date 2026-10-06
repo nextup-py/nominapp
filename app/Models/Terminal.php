@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
@@ -140,6 +141,12 @@ class Terminal extends Model implements AuthenticatableContract
     public function events(): HasMany
     {
         return $this->hasMany(TerminalEvent::class);
+    }
+
+    /** Comandos remotos enviados a este terminal. */
+    public function commands(): HasMany
+    {
+        return $this->hasMany(TerminalCommand::class);
     }
 
     /** Sucursal a la que pertenece esta terminal. */
@@ -477,6 +484,81 @@ class Terminal extends Model implements AuthenticatableContract
         }
 
         $this->update($attributes);
+    }
+
+    /**
+     * Encola un comando remoto que el terminal recibirá en su próximo heartbeat (≈90 s).
+     * Si ya hay uno igual sin resolver devuelve ese (no se acumulan duplicados).
+     * Solo terminales activos y vinculados pueden recibir comandos.
+     *
+     * @throws \DomainException si el terminal no puede recibir comandos o el comando no existe
+     */
+    public function sendCommand(string $command, ?User $by = null): TerminalCommand
+    {
+        if (! array_key_exists($command, TerminalCommand::getCommandLabels())) {
+            throw new \DomainException('Comando desconocido.');
+        }
+        if (! $this->isActive() || ! $this->hasActiveSyncToken()) {
+            throw new \DomainException('El terminal debe estar activo y vinculado para recibir comandos.');
+        }
+
+        return DB::transaction(function () use ($command, $by) {
+            $existing = $this->commands()->open()->where('command', $command)->lockForUpdate()->first();
+            if ($existing) {
+                return $existing;
+            }
+
+            $created = $this->commands()->create([
+                'command' => $command,
+                'status' => 'pending',
+                'requested_by_id' => $by?->id,
+                'expires_at' => now()->addMinutes(TerminalCommand::TTL_MINUTES),
+            ]);
+            TerminalEvent::record($this, 'command_sent', ['command' => $command], $by?->id);
+
+            return $created;
+        });
+    }
+
+    /**
+     * Entrega los comandos pendientes (los marca `delivered`) en la respuesta del heartbeat.
+     *
+     * @return array<int, array{id: int, command: string}>
+     */
+    public function deliverPendingCommands(): array
+    {
+        TerminalCommand::expireStale($this);
+
+        return DB::transaction(function () {
+            $pending = $this->commands()->where('status', 'pending')->orderBy('id')->lockForUpdate()->get();
+
+            foreach ($pending as $command) {
+                $command->update(['status' => 'delivered', 'delivered_at' => now()]);
+            }
+
+            return $pending->map(fn (TerminalCommand $c) => ['id' => $c->id, 'command' => $c->command])->all();
+        });
+    }
+
+    /**
+     * Procesa las confirmaciones que el terminal envía en el heartbeat. Ignora ids que no
+     * pertenezcan a este terminal o que ya no estén `delivered`.
+     *
+     * @param  array<int, array{id: int, status: string, message?: string|null}>  $acks
+     */
+    public function acknowledgeCommands(array $acks): void
+    {
+        foreach ($acks as $ack) {
+            $command = $this->commands()->where('status', 'delivered')->find($ack['id']);
+            if (! $command) {
+                continue;
+            }
+
+            $ok = $ack['status'] === 'done';
+            $message = isset($ack['message']) ? mb_substr((string) $ack['message'], 0, 255) : null;
+            $command->update(['status' => $ok ? 'done' : 'failed', 'completed_at' => now(), 'result_message' => $message]);
+            TerminalEvent::record($this, $ok ? 'command_done' : 'command_failed', ['command' => $command->command, 'message' => $message]);
+        }
     }
 
     /**

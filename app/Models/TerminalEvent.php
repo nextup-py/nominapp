@@ -75,6 +75,10 @@ class TerminalEvent extends Model
             'health_queue_recovered' => 'Cola de marcaciones normalizada',
             'health_battery_low' => 'Batería baja',
             'health_battery_ok' => 'Batería recuperada',
+            'command_sent' => 'Comando enviado',
+            'command_done' => 'Comando ejecutado',
+            'command_failed' => 'Comando falló',
+            'command_expired' => 'Comando vencido',
         ];
     }
 
@@ -103,6 +107,10 @@ class TerminalEvent extends Model
             'health_queue_recovered' => 'success',
             'health_battery_low' => 'warning',
             'health_battery_ok' => 'success',
+            'command_sent' => 'info',
+            'command_done' => 'success',
+            'command_failed' => 'danger',
+            'command_expired' => 'gray',
         ];
     }
 
@@ -112,6 +120,12 @@ class TerminalEvent extends Model
         $payload = $this->payload ?? [];
         $parts = [];
 
+        if (isset($payload['command'])) {
+            $parts[] = 'Comando: '.(TerminalCommand::getCommandLabels()[$payload['command']] ?? $payload['command']);
+        }
+        if (! empty($payload['message'])) {
+            $parts[] = $payload['message'];
+        }
         if (isset($payload['via'])) {
             $parts[] = 'Vía '.($payload['via'] === 'setup' ? 'enlace de configuración' : 'código de emparejamiento');
         }

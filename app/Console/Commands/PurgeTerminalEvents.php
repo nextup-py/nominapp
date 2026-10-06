@@ -2,13 +2,14 @@
 
 namespace App\Console\Commands;
 
+use App\Models\TerminalCommand;
 use App\Models\TerminalEvent;
 use App\Settings\GeneralSettings;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Elimina los eventos de la bitácora de terminales más antiguos que la retención configurada
+ * Elimina los eventos de la bitácora y los comandos remotos de terminales más antiguos que la retención configurada
  * (`GeneralSettings::$terminal_events_retention_days`). Borra por lotes para no bloquear la tabla.
  */
 class PurgeTerminalEvents extends Command
@@ -20,7 +21,7 @@ class PurgeTerminalEvents extends Command
         {--days= : Días de retención (por defecto, el valor de Configuración General)}
         {--dry-run : Solo cuenta los eventos que se eliminarían}';
 
-    protected $description = 'Elimina los eventos de la bitácora de terminales más antiguos que la retención configurada';
+    protected $description = 'Elimina los eventos de la bitácora y los comandos remotos de terminales más antiguos que la retención configurada';
 
     /**
      * Ejecuta la purga. Con retención 0 no elimina nada.
@@ -60,11 +61,13 @@ class PurgeTerminalEvents extends Command
             $deleted += $batch;
         } while ($batch > 0);
 
+        $deletedCommands = TerminalCommand::where('created_at', '<', $cutoff)->delete();
+
         if ($deleted > 0) {
             Log::info("terminals:purge-events: {$deleted} eventos anteriores al {$cutoff->toDateString()} eliminados (retención {$days} días).");
         }
 
-        $this->info("Bitácora de terminales purgada: {$deleted} eventos eliminados (retención {$days} días).");
+        $this->info("Bitácora de terminales purgada: {$deleted} eventos eliminados (retención {$days} días) y {$deletedCommands} comandos remotos.");
 
         return self::SUCCESS;
     }
