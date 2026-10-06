@@ -24,7 +24,7 @@ En todos estos casos, el token Sanctum del terminal (`ability: terminal:sync`) s
 
 1. Ir a **Filament → Asistencias → Terminales**.
 2. Ubicar el terminal afectado (por nombre o sucursal).
-3. Abrir el menú de acciones de la fila (`⋮`) y seleccionar **"Revocar token"**.
+3. Abrir el menú de acciones de la fila (`⋮`) y seleccionar **"Desvincular dispositivo"**.
 4. Confirmar en el modal. Esto invalida inmediatamente el token Sanctum — el próximo intento de sincronización desde ese dispositivo recibirá `401`/`403` y el terminal mostrará "Terminal sin configurar" (o el mensaje equivalente de re-provisión).
 
 **No hace falta desactivar el terminal** (`status: inactive`) al revocar el token — son conceptos independientes: `status` controla si el terminal puede usarse para marcar (vía `/terminal/{code}`), mientras que el token controla el acceso a la API de sincronización offline. Si el dispositivo físico se perdió y no se va a recuperar, desactivar el terminal además de revocar el token evita que alguien reactive el acceso reutilizando la URL pública.
@@ -36,9 +36,13 @@ En la tabla de Terminales, la columna **Conectividad** del terminal revocado eve
 ## Paso 3 — Reprovisionar (dispositivo nuevo o el mismo ya recuperado)
 
 1. En la misma fila del terminal, abrir **"Generar enlace de configuración"**.
-2. Se genera un enlace/QR de un solo uso, válido por 30 minutos. Este paso también invalida cualquier enlace de configuración anterior sin usar.
-3. Con el dispositivo físico **conectado a internet**, abrir el enlace (o escanear el QR) una única vez. Esto reclama un token Sanctum nuevo y lo guarda en el propio dispositivo (IndexedDB) — el token nunca aparece en la URL ni se muestra en pantalla más que la primera vez.
+2. Elegir la vigencia (30 min / 4 h / 24 h) y generar. El enlace/QR es de un solo uso y se muestra **una sola vez** (en la base solo queda su hash). Este paso también invalida cualquier enlace de configuración anterior sin usar.
+3. Con el dispositivo físico **conectado a internet**, abrir el enlace (o escanear el QR) una única vez. Esto reclama un token Sanctum nuevo y lo guarda en el propio dispositivo (IndexedDB) — el token Sanctum nunca aparece en la URL. El token del enlace viaja en el fragmento (`#`) de la URL, que el navegador no envía al servidor en el GET; se manda por POST al reclamar. Si el enlace falla, la pantalla distingue *venció* / *ya se usó* / *inválido*.
 4. Una vez completada la configuración, navegar a `/terminal/{code}` normalmente y dejar el dispositivo funcionando con conexión al menos hasta que complete el primer heartbeat y el primer sync de empleados.
+
+## Alternativa — Ventana de vinculación (15 min)
+
+Si el personal del local va a configurar el dispositivo sin que nadie apruebe códigos: **Abrir ventana de vinculación** (fila del terminal o acción masiva). Durante 15 minutos el primer dispositivo que pida vincularse queda vinculado sin aprobación y la ventana se cierra sola; queda registrado quién la abrió (`terminal_events`: `link_window_opened`, `pairing_auto_approved`, `link_window_closed`). Abrirla justo antes: cualquiera con la URL del terminal podría vincularse mientras esté abierta. También hay una **Hoja de instalación (PDF)** para el local, sin secretos.
 
 ## Alternativa recomendada — Vincular por código (sin enlace ni WhatsApp)
 
@@ -88,7 +92,7 @@ No hay urgencia de apurar esta migración dispositivo por dispositivo: `/termina
 
 ## Checklist rápido
 
-- [ ] Revocar el token del terminal afectado (Filament → Terminales → Revocar token)
+- [ ] Revocar el token del terminal afectado (Filament → Terminales → Desvincular dispositivo)
 - [ ] Si el dispositivo no se va a recuperar: marcar el terminal como `Inactiva`
 - [ ] Generar un nuevo enlace de configuración
 - [ ] Provisionar el dispositivo nuevo (o el mismo, ya recuperado) con el enlace, online

@@ -140,3 +140,14 @@ Schedule::command('terminals:expire-pairing')
     ->onFailure(function () {
         Log::error('Falló el vencimiento de solicitudes de vinculación de terminales');
     });
+
+/**
+ * Cerrar ventanas de vinculación vencidas sin usarse y avisar a quien las abrió
+ * Se ejecuta cada minuto: las ventanas duran 15 minutos
+ */
+Schedule::command('terminals:expire-link-windows')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        Log::error('Falló el cierre de ventanas de vinculación de terminales vencidas');
+    });

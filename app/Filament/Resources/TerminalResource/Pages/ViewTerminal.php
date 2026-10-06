@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TerminalResource\Pages;
 
+use App\Filament\Actions\TerminalLinkActions;
 use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
 use Filament\Actions\Action;
@@ -81,65 +82,8 @@ class ViewTerminal extends ViewRecord
                     $this->refreshFormData(['status']);
                 }),
 
-            // "Ver enlace" (hay uno vigente sin usar): solo lectura, sin efecto colateral.
-            Action::make('view_setup_link')
-                ->label('Ver enlace de configuración')
-                ->tooltip('Ver el enlace/QR de un solo uso todavía vigente, sin invalidarlo')
-                ->icon('heroicon-o-qr-code')
-                ->color('gray')
-                ->visible(fn () => TerminalResource::hasValidSetupLink($this->record))
-                ->modalHeading('Enlace de configuración del terminal')
-                ->modalContent(fn () => TerminalResource::renderCurrentSetupLinkModal($this->record))
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Cerrar'),
-
-            // "Generar enlace" (sin enlace vigente): un solo paso, sin confirmación —
-            // abre el modal y genera+muestra el QR de inmediato, como ya funcionaba.
-            Action::make('generate_setup_link')
-                ->label('Generar enlace de configuración')
-                ->tooltip('Enlace/QR de un solo uso para vincular el dispositivo a la sincronización offline')
-                ->icon('heroicon-o-qr-code')
-                ->color('gray')
-                ->visible(fn () => ! TerminalResource::hasValidSetupLink($this->record))
-                ->modalHeading('Enlace de configuración del terminal')
-                ->modalDescription(fn () => $this->record->tokens()->exists()
-                    ? '⚠️ Este terminal ya está vinculado y sincronizando. Si otro dispositivo reclama este enlace, el acceso del terminal actual se revocará automáticamente.'
-                    : null)
-                ->modalContent(fn () => TerminalResource::renderSetupLinkModal($this->record))
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Cerrar'),
-
-            // "Generar nuevo enlace" (ya hay uno vigente): pide confirmación explícita
-            // ANTES de generar — modalContent() se evalúa (con su efecto colateral) al
-            // abrir el modal, no al confirmar, así que no se puede mostrar el QR nuevo
-            // en el mismo paso sin invalidar el vigente antes de que el admin decida.
-            // Genera y avisa por notificación; el QR nuevo se ve con "Ver enlace".
-            Action::make('regenerate_setup_link')
-                ->label('Generar nuevo enlace de configuración')
-                ->tooltip('Invalida el enlace vigente y genera uno nuevo')
-                ->icon('heroicon-o-arrow-path')
-                ->color('gray')
-                ->visible(fn () => TerminalResource::hasValidSetupLink($this->record))
-                ->requiresConfirmation()
-                ->modalHeading('¿Generar un enlace nuevo?')
-                ->modalDescription(function () {
-                    $base = 'Ya existe un enlace de configuración vigente para este terminal. Generar uno nuevo invalida el anterior de inmediato, aunque todavía no haya sido usado.';
-                    if ($this->record->tokens()->exists()) {
-                        $base .= ' ⚠️ Además, este terminal ya está vinculado y sincronizando — si otro dispositivo reclama el enlace nuevo, el acceso del terminal actual se revocará automáticamente.';
-                    }
-
-                    return $base;
-                })
-                ->modalSubmitActionLabel('Sí, generar uno nuevo')
-                ->action(function () {
-                    $this->record->generateSetupToken(30);
-                    Notification::make()
-                        ->success()
-                        ->title('Enlace nuevo generado')
-                        ->body('El enlace anterior quedó invalidado. Usá "Ver enlace de configuración" para verlo.')
-                        ->send();
-                }),
-
+            TerminalLinkActions::generateSetupLink(Action::class),
+            TerminalLinkActions::showSetupLink(Action::class),
             EditAction::make()->label('Editar')->icon('heroicon-o-pencil-square')->color('primary'),
 
             ActionGroup::make([
@@ -165,22 +109,26 @@ class ViewTerminal extends ViewRecord
                         $this->refreshFormData(['code']);
                     }),
 
+                TerminalLinkActions::openLinkWindow(Action::class),
+                TerminalLinkActions::closeLinkWindow(Action::class),
+                TerminalLinkActions::printSheet(Action::class),
+
                 Action::make('revoke_token')
-                    ->label('Revocar token')
-                    ->tooltip('Invalida el acceso del terminal a la sincronización offline — requerirá re-provisión')
+                    ->label('Desvincular dispositivo')
+                    ->tooltip('Invalida el acceso del dispositivo a la sincronización offline — requerirá volver a vincular')
                     ->icon('heroicon-o-shield-exclamation')
                     ->color('danger')
-                    ->visible(fn () => $this->record->tokens()->exists())
+                    ->visible(fn () => $this->record->hasActiveSyncToken())
                     ->requiresConfirmation()
-                    ->modalHeading('Revocar token de sincronización')
-                    ->modalDescription('El terminal perderá acceso a la API de sincronización offline de inmediato. Deberá re-provisionarse con un nuevo enlace de configuración antes de volver a sincronizar. El código y la URL del terminal no cambian.')
-                    ->modalSubmitActionLabel('Sí, revocar')
+                    ->modalHeading('Desvincular dispositivo')
+                    ->modalDescription('El dispositivo vinculado perderá acceso a la sincronización offline de inmediato. Para volver a usarlo habrá que vincularlo de nuevo (por código o con un enlace de configuración). El código y la URL del terminal no cambian.')
+                    ->modalSubmitActionLabel('Sí, desvincular')
                     ->action(function () {
                         $this->record->revokeSyncTokens();
                         Notification::make()
                             ->success()
-                            ->title('Token revocado')
-                            ->body('El terminal deberá re-provisionarse para volver a sincronizar.')
+                            ->title('Dispositivo desvinculado')
+                            ->body('El terminal deberá vincularse de nuevo para volver a sincronizar.')
                             ->send();
                     }),
 

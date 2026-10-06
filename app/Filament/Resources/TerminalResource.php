@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\TerminalLinkActions;
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
+use App\Filament\Resources\TerminalResource\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\PairingRequestsRelationManager;
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
@@ -27,9 +29,9 @@ use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -324,6 +326,57 @@ class TerminalResource extends Resource
                             ->since(),
                     ]),
 
+                InfoSection::make('Dispositivo vinculado')
+                    ->description('Dispositivo que hoy tiene acceso a la sincronización offline de este terminal')
+                    ->icon('heroicon-o-device-phone-mobile')
+                    ->collapsible()
+                    ->schema([
+                        InfoGrid::make(3)->schema([
+                            TextEntry::make('linked_at')
+                                ->label('Vinculado el')
+                                ->dateTime('d/m/Y H:i')
+                                ->placeholder('Sin registro'),
+
+                            TextEntry::make('_linked_via')
+                                ->label('Vinculado mediante')
+                                ->getStateUsing(fn (Terminal $record) => static::describeLinkOrigin($record)),
+
+                            TextEntry::make('linked_ip')
+                                ->label('IP al vincular')
+                                ->placeholder('Sin registro'),
+                        ]),
+
+                        InfoGrid::make(3)->schema([
+                            TextEntry::make('device_label')
+                                ->label('Dispositivo')
+                                ->getStateUsing(fn (Terminal $record) => trim("{$record->device_brand} {$record->device_model}") ?: null)
+                                ->placeholder('Sin datos'),
+
+                            TextEntry::make('last_heartbeat_at')
+                                ->label('Último contacto')
+                                ->since()
+                                ->placeholder('Sin contacto todavía'),
+                        ]),
+                    ])
+                    ->visible(fn (Terminal $record) => $record->hasActiveSyncToken()),
+
+                InfoSection::make('Ventana de vinculación')
+                    ->description('Mientras esté abierta, el primer dispositivo que pida vincularse queda vinculado sin aprobación')
+                    ->icon('heroicon-o-clock')
+                    ->schema([
+                        InfoGrid::make(2)->schema([
+                            TextEntry::make('link_window_until')
+                                ->label('Se cierra')
+                                ->dateTime('d/m/Y H:i')
+                                ->since(),
+
+                            TextEntry::make('linkWindowOpenedBy.name')
+                                ->label('Abierta por')
+                                ->placeholder('Sin registro'),
+                        ]),
+                    ])
+                    ->visible(fn (Terminal $record) => $record->hasOpenLinkWindow()),
+
                 InfoSection::make('Instalación')
                     ->collapsible()
                     ->schema([
@@ -409,6 +462,14 @@ class TerminalResource extends Resource
                     ->formatStateUsing(fn (string $state) => Terminal::getConnectivityStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state) => Terminal::getConnectivityStatusColors()[$state] ?? 'gray'),
 
+                TextColumn::make('link_window')
+                    ->label('Ventana de vinculación')
+                    ->badge()
+                    ->color('warning')
+                    ->icon('heroicon-o-clock')
+                    ->getStateUsing(fn (Terminal $record) => $record->hasOpenLinkWindow() ? 'Abierta hasta '.$record->link_window_until->format('H:i') : null)
+                    ->tooltip('Mientras esté abierta, el primer dispositivo que pida vincularse queda vinculado sin aprobación'),
+
                 TextColumn::make('sync_queue_status')
                     ->label('Cola de sync')
                     ->badge()
@@ -483,6 +544,11 @@ class TerminalResource extends Resource
                         };
                     }),
 
+                Filter::make('link_window_open')
+                    ->label('Ventana de vinculación abierta')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->withOpenLinkWindow()),
+
                 SelectFilter::make('sync_queue_status')
                     ->label('Cola de sync')
                     ->options(Terminal::getSyncQueueStatusOptions())
@@ -532,76 +598,35 @@ class TerminalResource extends Resource
                             Notification::make()->warning()->title('Terminal desactivada')->send();
                         }),
 
-                    Action::make('view_setup_link')
-                        ->label('Ver enlace de configuración')
-                        ->tooltip('Ver el enlace/QR de un solo uso todavía vigente, sin invalidarlo')
-                        ->icon('heroicon-o-qr-code')
-                        ->color('gray')
-                        ->visible(fn (Terminal $record) => static::hasValidSetupLink($record))
-                        ->modalHeading('Enlace de configuración del terminal')
-                        ->modalContent(fn (Terminal $record) => static::renderCurrentSetupLinkModal($record))
-                        ->modalSubmitAction(false)
-                        ->modalCancelActionLabel('Cerrar'),
-
-                    // "Generar enlace" (sin enlace vigente): un solo paso, sin confirmación —
-                    // abre el modal y genera+muestra el QR de inmediato, como ya funcionaba.
-                    Action::make('generate_setup_link')
-                        ->label('Generar enlace de configuración')
-                        ->tooltip('Enlace/QR de un solo uso para vincular el dispositivo a la sincronización offline')
-                        ->icon('heroicon-o-qr-code')
-                        ->color('gray')
-                        ->visible(fn (Terminal $record) => ! static::hasValidSetupLink($record))
-                        ->modalHeading('Enlace de configuración del terminal')
-                        ->modalContent(fn (Terminal $record) => static::renderSetupLinkModal($record))
-                        ->modalSubmitAction(false)
-                        ->modalCancelActionLabel('Cerrar'),
-
-                    // "Generar nuevo enlace" (ya hay uno vigente): pide confirmación explícita
-                    // ANTES de generar — modalContent() se evalúa (con su efecto colateral) al
-                    // abrir el modal, no al confirmar, así que no se puede mostrar el QR nuevo
-                    // en el mismo paso sin invalidar el vigente antes de que el admin decida.
-                    // Genera y avisa por notificación; el QR nuevo se ve con "Ver enlace".
-                    Action::make('regenerate_setup_link')
-                        ->label('Generar nuevo enlace de configuración')
-                        ->tooltip('Invalida el enlace vigente y genera uno nuevo')
-                        ->icon('heroicon-o-arrow-path')
-                        ->color('gray')
-                        ->visible(fn (Terminal $record) => static::hasValidSetupLink($record))
-                        ->requiresConfirmation()
-                        ->modalHeading('¿Generar un enlace nuevo?')
-                        ->modalDescription('Ya existe un enlace de configuración vigente para este terminal. Generar uno nuevo invalida el anterior de inmediato, aunque todavía no haya sido usado.')
-                        ->modalSubmitActionLabel('Sí, generar uno nuevo')
-                        ->action(function (Terminal $record) {
-                            $record->generateSetupToken(30);
-                            Notification::make()
-                                ->success()
-                                ->title('Enlace nuevo generado')
-                                ->body('El enlace anterior quedó invalidado. Usá "Ver enlace de configuración" para verlo.')
-                                ->send();
-                        }),
+                    TerminalLinkActions::generateSetupLink(Action::class),
+                    TerminalLinkActions::showSetupLink(Action::class),
+                    TerminalLinkActions::openLinkWindow(Action::class),
+                    TerminalLinkActions::closeLinkWindow(Action::class),
+                    TerminalLinkActions::printSheet(Action::class),
 
                     Action::make('revoke_token')
-                        ->label('Revocar token')
-                        ->tooltip('Invalida el acceso del terminal a la sincronización offline — requerirá re-provisión')
+                        ->label('Desvincular dispositivo')
+                        ->tooltip('Invalida el acceso del dispositivo a la sincronización offline — requerirá volver a vincular')
                         ->icon('heroicon-o-shield-exclamation')
                         ->color('danger')
                         ->visible(fn (Terminal $record) => $record->hasActiveSyncToken())
                         ->requiresConfirmation()
-                        ->modalHeading('Revocar token de sincronización')
-                        ->modalDescription(fn (Terminal $record) => "El terminal \"{$record->name}\" perderá acceso a la API de sincronización offline de inmediato. Deberá re-provisionarse con un nuevo enlace de configuración antes de volver a sincronizar.")
-                        ->modalSubmitActionLabel('Sí, revocar')
+                        ->modalHeading('Desvincular dispositivo')
+                        ->modalDescription(fn (Terminal $record) => "El dispositivo vinculado al terminal \"{$record->name}\" perderá acceso a la sincronización offline de inmediato. Para volver a usarlo habrá que vincularlo de nuevo (por código o con un enlace de configuración).")
+                        ->modalSubmitActionLabel('Sí, desvincular')
                         ->action(function (Terminal $record) {
                             $record->revokeSyncTokens();
                             Notification::make()
                                 ->success()
-                                ->title('Token revocado')
-                                ->body('El terminal deberá re-provisionarse para volver a sincronizar.')
+                                ->title('Dispositivo desvinculado')
+                                ->body('El terminal deberá vincularse de nuevo para volver a sincronizar.')
                                 ->send();
                         }),
                 ]),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    TerminalLinkActions::openLinkWindowBulk(),
                     DeleteBulkAction::make()
                         ->modalDescription('Esta acción no se puede deshacer. Las marcaciones ya registradas con los terminales seleccionados no se eliminan, pero perderán la referencia a qué dispositivo físico las generó.')
                         ->modalSubmitActionLabel('Sí, eliminar'),
@@ -614,48 +639,30 @@ class TerminalResource extends Resource
     }
 
     /**
-     * Indica si el terminal tiene un enlace de configuración vigente sin
-     * reclamar — determina si la acción de tabla/header muestra "Ver enlace"
-     * (no destructivo) o "Generar enlace" (invalida el vigente, si lo hay).
+     * Texto de cómo se vinculó el dispositivo actual, según la última vinculación
+     * registrada en la bitácora: enlace de configuración, código aprobado por un
+     * usuario, o ventana de vinculación (a nombre de quien la abrió).
      */
-    public static function hasValidSetupLink(Terminal $record): bool
+    public static function describeLinkOrigin(Terminal $record): string
     {
-        return $record->setup_token !== null
-            && $record->setup_token_expires_at?->isFuture();
-    }
+        $via = $record->events()->where('type', 'linked')->latest('id')->first()?->payload['via'] ?? null;
 
-    /**
-     * Genera un nuevo token de configuración de un solo uso para el terminal y
-     * renderiza el modal con su URL/QR. Público porque lo usan tanto la acción
-     * de tabla (`ListTerminals`) como el header action equivalente en
-     * `ViewTerminal`. Efecto colateral intencional dentro de un closure de
-     * contenido: si Livewire re-evalúa el modal más de una vez mientras está
-     * abierto, cada llamada genera Y muestra el token vigente en ese momento
-     * de forma consistente (nunca queda desincronizado con lo que se ve en
-     * pantalla) — a costa de invalidar tokens de configuración
-     * previos no usados, lo cual es aceptable para un enlace de un solo uso.
-     */
-    public static function renderSetupLinkModal(Terminal $record): View
-    {
-        $setupToken = $record->generateSetupToken(30);
-        $url = route('terminal.setup.show', ['code' => $record->code, 'setupToken' => $setupToken]);
-        $expiresAt = $record->setup_token_expires_at;
+        if ($via === 'setup') {
+            return 'Enlace de configuración';
+        }
 
-        return view('filament.modals.terminal-setup-link', compact('url', 'expiresAt'));
-    }
+        if ($via === 'pairing') {
+            $request = $record->pairingRequests()->where('status', 'claimed')->with('approvedBy')->latest('claimed_at')->first();
+            $by = $request?->approvedBy?->name;
 
-    /**
-     * Muestra el enlace de configuración YA vigente sin generar uno nuevo —
-     * a diferencia de `renderSetupLinkModal()`, no tiene efecto colateral.
-     * Solo debe usarse cuando `hasValidSetupLink()` es true (la acción que la
-     * invoca controla esa visibilidad).
-     */
-    public static function renderCurrentSetupLinkModal(Terminal $record): View
-    {
-        $url = route('terminal.setup.show', ['code' => $record->code, 'setupToken' => $record->setup_token]);
-        $expiresAt = $record->setup_token_expires_at;
+            if ($request?->auto_approved) {
+                return 'Ventana de vinculación'.($by ? " (abierta por {$by})" : '');
+            }
 
-        return view('filament.modals.terminal-setup-link', compact('url', 'expiresAt'));
+            return 'Código de emparejamiento'.($by ? " (aprobó {$by})" : '');
+        }
+
+        return 'Sin registro';
     }
 
     /**
@@ -665,6 +672,7 @@ class TerminalResource extends Resource
     {
         return [
             PairingRequestsRelationManager::class,
+            EventsRelationManager::class,
             AttendanceEventsRelationManager::class,
         ];
     }

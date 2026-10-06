@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\TerminalLinkWindowExpiredNotification;
 use App\Notifications\TerminalProvisionedNotification;
 use App\Services\DeviceHintsParser;
 use App\Settings\GeneralSettings;
@@ -63,6 +64,9 @@ class Terminal extends Model implements AuthenticatableContract
         'last_conflict_events_count',
         'setup_token',
         'setup_token_expires_at',
+        'setup_token_consumed_at',
+        'link_window_until',
+        'link_window_opened_by_id',
     ];
 
     protected $hidden = [
@@ -79,6 +83,8 @@ class Terminal extends Model implements AuthenticatableContract
         'last_pending_events_count' => 'integer',
         'last_conflict_events_count' => 'integer',
         'setup_token_expires_at' => 'datetime',
+        'setup_token_consumed_at' => 'datetime',
+        'link_window_until' => 'datetime',
     ];
 
     // =========================================================================
@@ -437,33 +443,162 @@ class Terminal extends Model implements AuthenticatableContract
     // PROVISIÓN — TOKEN DE CONFIGURACIÓN Y TOKEN SANCTUM
     // =========================================================================
 
+    /** Vigencias (en minutos) que el admin puede elegir para el enlace de configuración. */
+    public const SETUP_LINK_EXPIRY_OPTIONS = [30 => '30 minutos', 240 => '4 horas', 1440 => '24 horas'];
+
+    /** Minutos que dura la ventana de vinculación. */
+    public const LINK_WINDOW_MINUTES = 15;
+
+    /** Hash con el que se guarda el token de configuración (nunca se persiste en claro). */
+    public static function hashSetupToken(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+
     /**
      * Genera un token de configuración de un solo uso (para el enlace/QR de
-     * provisión) y lo persiste con expiración corta. Invalida cualquier
-     * enlace de configuración previo sin consumir.
+     * provisión) y persiste solo su hash. Invalida cualquier enlace previo,
+     * usado o no.
      *
      * @param  int  $expiresInMinutes  Vigencia del enlace, en minutos.
-     * @return string El token plano a incluir en la URL de configuración.
+     * @return string El token plano a incluir en el fragmento (`#`) de la URL; no se puede recuperar después.
      */
     public function generateSetupToken(int $expiresInMinutes = 30): string
     {
         $token = Str::random(40);
 
         $this->forceFill([
-            'setup_token' => $token,
+            'setup_token' => static::hashSetupToken($token),
             'setup_token_expires_at' => now()->addMinutes($expiresInMinutes),
+            'setup_token_consumed_at' => null,
         ])->save();
 
         return $token;
     }
 
-    /** Indica si el token de configuración recibido es válido (existe, coincide y no expiró). */
+    /**
+     * Estado del token recibido contra el enlace vigente: `valid`, `expired`
+     * (coincide pero venció), `consumed` (coincide pero ya se usó) o `invalid`
+     * (no coincide: nunca existió o fue reemplazado por uno nuevo).
+     */
+    public function setupTokenState(string $token): string
+    {
+        if ($this->setup_token === null || ! hash_equals($this->setup_token, static::hashSetupToken($token))) {
+            return 'invalid';
+        }
+
+        if ($this->setup_token_consumed_at !== null) {
+            return 'consumed';
+        }
+
+        if (! ($this->setup_token_expires_at instanceof Carbon) || ! $this->setup_token_expires_at->isFuture()) {
+            return 'expired';
+        }
+
+        return 'valid';
+    }
+
+    /** Indica si el token de configuración recibido es válido (existe, coincide, no se usó y no expiró). */
     public function isSetupTokenValid(string $token): bool
     {
+        return $this->setupTokenState($token) === 'valid';
+    }
+
+    /** Hay un enlace de configuración generado, sin usar y sin vencer. */
+    public function hasPendingSetupLink(): bool
+    {
         return $this->setup_token !== null
-            && hash_equals($this->setup_token, $token)
-            && $this->setup_token_expires_at instanceof Carbon
-            && $this->setup_token_expires_at->isFuture();
+            && $this->setup_token_consumed_at === null
+            && $this->setup_token_expires_at?->isFuture() === true;
+    }
+
+    // =========================================================================
+    // VENTANA DE VINCULACIÓN
+    // =========================================================================
+
+    /** Usuario que abrió la ventana de vinculación. */
+    public function linkWindowOpenedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'link_window_opened_by_id');
+    }
+
+    /** La ventana de vinculación está abierta (no venció ni se cerró). */
+    public function hasOpenLinkWindow(): bool
+    {
+        return $this->link_window_until?->isFuture() === true;
+    }
+
+    /**
+     * Abre la ventana de vinculación: durante `LINK_WINDOW_MINUTES` la primera
+     * solicitud de código se aprueba sola; se cierra con el primer claim.
+     */
+    public function openLinkWindow(User $user): void
+    {
+        $this->forceFill([
+            'link_window_until' => now()->addMinutes(self::LINK_WINDOW_MINUTES),
+            'link_window_opened_by_id' => $user->id,
+        ])->save();
+
+        TerminalEvent::record($this, 'link_window_opened', ['until' => $this->link_window_until->toIso8601String()], $user->id);
+    }
+
+    /**
+     * Terminales con la ventana de vinculación abierta y vigente.
+     *
+     * @param  Builder<Terminal>  $query
+     * @return Builder<Terminal>
+     */
+    public function scopeWithOpenLinkWindow(Builder $query): Builder
+    {
+        return $query->where('link_window_until', '>', now());
+    }
+
+    /**
+     * Cierra las ventanas de vinculación vencidas sin usarse y avisa a quien las
+     * abrió. Una ventana aprovechada o cerrada a mano ya quedó en null, así que
+     * toda ventana con fecha pasada venció sin que nadie la usara.
+     *
+     * @return int Cantidad de ventanas cerradas.
+     */
+    public static function expireLinkWindows(): int
+    {
+        $expired = static::query()
+            ->whereNotNull('link_window_until')
+            ->where('link_window_until', '<=', now())
+            ->with('linkWindowOpenedBy')
+            ->get();
+
+        foreach ($expired as $terminal) {
+            $opener = $terminal->linkWindowOpenedBy;
+
+            $terminal->closeLinkWindow(null, 'expired');
+
+            if (! $opener) {
+                continue;
+            }
+
+            try {
+                $opener->notify(new TerminalLinkWindowExpiredNotification($terminal));
+            } catch (\Throwable $e) {
+                Log::warning("No se pudo avisar el vencimiento de la ventana de vinculación del terminal '{$terminal->code}': {$e->getMessage()}", [
+                    'terminal_id' => $terminal->id,
+                ]);
+            }
+        }
+
+        return $expired->count();
+    }
+
+    /** Cierra la ventana de vinculación (a mano, o al primer claim). */
+    public function closeLinkWindow(?int $actorId = null, string $reason = 'manual'): void
+    {
+        if ($this->link_window_until === null) {
+            return;
+        }
+
+        $this->forceFill(['link_window_until' => null])->save();
+
+        TerminalEvent::record($this, 'link_window_closed', ['reason' => $reason], $actorId);
     }
 
     /**
@@ -485,8 +620,6 @@ class Terminal extends Model implements AuthenticatableContract
         $this->tokens()->where('name', 'like', 'kiosk:%')->delete();
 
         $attributes = [
-            'setup_token' => null,
-            'setup_token_expires_at' => null,
             'user_agent' => $userAgent,
             'linked_at' => now(),
             'linked_ip' => $ip,
@@ -500,7 +633,20 @@ class Terminal extends Model implements AuthenticatableContract
             $attributes['device_model'] = $guess['model'];
         }
 
+        // Un enlace de configuración usado conserva su hash con `consumed_at` (para decir
+        // "ya se usó" en vez de "venció"); vincular por otra vía invalida el enlace pendiente.
+        if ($via === 'setup') {
+            $attributes['setup_token_consumed_at'] = $this->setup_token_consumed_at ?? now();
+        } else {
+            $attributes['setup_token'] = null;
+            $attributes['setup_token_expires_at'] = null;
+            $attributes['setup_token_consumed_at'] = null;
+        }
+
         $this->forceFill($attributes)->save();
+
+        // El primer claim cierra la ventana de vinculación, si había una abierta.
+        $this->closeLinkWindow(null, 'claimed');
 
         // La provisión del terminal ya quedó persistida arriba — un fallo al notificar
         // (ej. mailer mal configurado) no debe convertirse en un 500 que deje al enlace

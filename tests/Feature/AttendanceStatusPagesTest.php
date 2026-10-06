@@ -32,7 +32,7 @@ it('terminal-inactive muestra el nombre del terminal y su sucursal', function ()
 });
 
 it('terminal-setup-invalid muestra el mensaje de enlace inválido', function () {
-    $html = (string) view('attendances.terminal-setup-invalid')->render();
+    $html = (string) view('attendances.terminal-setup-invalid', ['reason' => 'invalid'])->render();
 
     expect($html)->toContain('Enlace de configuración inválido')
         ->toContain('Solicite un nuevo enlace');
