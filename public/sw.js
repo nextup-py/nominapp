@@ -29,8 +29,17 @@ const CACHE_FIRST_PATTERNS = [
     /^\/models\//, // modelos de face-api.js (tinyFaceDetector, faceLandmark68, faceRecognition)
     /^\/js\/face-api\.min\.js$/,
     /^\/build\/assets\//, // todos los bundles JS/CSS de Vite (nombres con hash de contenido — seguros de cachear indefinidamente)
-    /^\/icons\//, // favicon + set de íconos PWA (Task 6) — deben estar disponibles offline en el launcher
     /^\/images\//, // ej. default-avatar.png, usado como fallback de foto en terminal.js
+];
+
+/**
+ * Íconos de marca — network-first con la caché como respaldo offline. No pueden ser cache-first:
+ * sus URLs no llevan hash, así que un rebrand (mismo path, otro contenido) quedaría pegado para siempre
+ * en los dispositivos que ya los habían cacheado (pestaña, launcher). Online siempre se baja la versión
+ * vigente y se refresca la caché; offline se usa la última copia guardada.
+ */
+const NETWORK_FIRST_PATTERNS = [
+    /^\/icons\//, // favicon + set de íconos PWA — deben seguir disponibles offline en el launcher
 ];
 
 /** Shell HTML del terminal y del dispositivo — stale-while-revalidate para que un reload offline funcione. */
@@ -70,6 +79,18 @@ async function cacheFirst(request) {
     return response;
 }
 
+async function networkFirst(request) {
+    const cache = await caches.open(CACHE_VERSION);
+    try {
+        const response = await fetch(request);
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+    } catch (error) {
+        const cached = await cache.match(request);
+        return cached || Response.error();
+    }
+}
+
 async function staleWhileRevalidate(request) {
     const cache = await caches.open(CACHE_VERSION);
     const cached = await cache.match(request);
@@ -104,6 +125,11 @@ self.addEventListener('fetch', (event) => {
 
     if (matchesAny(pathname, CACHE_FIRST_PATTERNS)) {
         event.respondWith(cacheFirst(request));
+        return;
+    }
+
+    if (matchesAny(pathname, NETWORK_FIRST_PATTERNS)) {
+        event.respondWith(networkFirst(request));
         return;
     }
 

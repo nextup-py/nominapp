@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Organigrama - {{ $company->name }}</title>
+    <x-favicon-links />
     <style>
         * {
             margin: 0;
