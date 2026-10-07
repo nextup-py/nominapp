@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CompanyResource\Pages;
 use App\Filament\Resources\CompanyResource\RelationManagers;
 use App\Models\Company;
+use App\Models\PyDepartment;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
@@ -12,6 +13,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\Section as InfoSection;
 use Filament\Infolists\Components\TextEntry;
@@ -96,6 +99,7 @@ class CompanyResource extends Resource
                     ->schema([
                         Select::make('legal_type')
                             ->label('Tipo Societario')
+                            ->required()
                             ->options(Company::$legalTypes)
                             ->searchable()
                             ->native(false)
@@ -112,12 +116,14 @@ class CompanyResource extends Resource
 
                         TextInput::make('legal_rep_name')
                             ->label('Representante Legal')
+                            ->required()
                             ->placeholder('Ej: Juan Pérez')
                             ->maxLength(255)
                             ->helperText('Nombre completo del representante legal de la empresa.'),
 
                         TextInput::make('legal_rep_ci')
                             ->label('CI del Representante')
+                            ->required()
                             ->placeholder('Ej: 1234567')
                             ->integer()
                             ->minValue(1)
@@ -131,21 +137,41 @@ class CompanyResource extends Resource
                     ->description('Información de contacto de la empresa para comunicaciones oficiales y comerciales.')
                     ->schema([
                         TextInput::make('address')
-                            ->label('Direccion')
+                            ->label('Dirección')
+                            ->required()
                             ->placeholder('Ej: Av. Siempre Viva 123')
                             ->maxLength(255)
                             ->columnSpanFull()
                             ->helperText('Dirección física, incluyendo calle, número y referencia si es necesario.'),
 
+                        Select::make('department')
+                            ->label('Departamento')
+                            ->options(fn () => PyDepartment::getOptions())
+                            ->searchable()
+                            ->native(false)
+                            ->live()
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function (Select $component, ?Company $record): void {
+                                $component->state(Company::departmentIdForCity($record?->city));
+                            })
+                            ->afterStateUpdated(fn (Set $set) => $set('city', null))
+                            ->visible(fn () => PyDepartment::query()->exists())
+                            ->helperText('Filtra las ciudades; no se guarda.'),
+
                         Select::make('city')
                             ->label('Ciudad')
-                            ->options(Company::citiesOptions())
+                            ->required()
+                            ->options(fn (Get $get, ?Company $record) => Company::citiesOptions(
+                                filled($get('department')) ? (int) $get('department') : null,
+                                $record?->city,
+                            ))
                             ->searchable()
                             ->native(false)
                             ->helperText('Ciudad donde se encuentra ubicada la empresa.'),
 
                         TextInput::make('phone')
                             ->label('Teléfono')
+                            ->required()
                             ->tel()
                             ->placeholder('Ej: 0981123456 o 0211234567')
                             ->maxLength(10)
@@ -157,12 +183,13 @@ class CompanyResource extends Resource
 
                         TextInput::make('email')
                             ->label('Correo Electrónico')
+                            ->required()
                             ->placeholder('Ej: contacto@empresa.com')
                             ->email()
                             ->maxLength(255)
                             ->helperText('Correo electrónico de contacto para la empresa.'),
                     ])
-                    ->columns(3)
+                    ->columns(2)
                     ->collapsible(),
 
                 Section::make('Configuración')
@@ -193,8 +220,22 @@ class CompanyResource extends Resource
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
+            InfoSection::make('Datos pendientes')
+                ->icon('heroicon-o-exclamation-triangle')
+                ->iconColor('warning')
+                ->visible(fn (Company $record) => $record->missingDataWarnings() !== [])
+                ->schema([
+                    TextEntry::make('_missing_data')
+                        ->hiddenLabel()
+                        ->getStateUsing(fn (Company $record) => $record->missingDataWarnings())
+                        ->listWithLineBreaks()
+                        ->bulleted()
+                        ->color('warning'),
+                ])
+                ->collapsible(),
+
             InfoSection::make('Estadísticas')
-                ->columns(5)
+                ->columns(4)
                 ->schema([
                     TextEntry::make('branches_count')
                         ->label('Sucursales')
@@ -230,6 +271,27 @@ class CompanyResource extends Resource
                         ->badge()
                         ->color(fn (string $state) => (int) $state > 0 ? 'warning' : 'gray')
                         ->icon('heroicon-o-clock'),
+
+                    TextEntry::make('employees_without_contract')
+                        ->label('Activos sin contrato')
+                        ->getStateUsing(fn (Company $record) => $record->activeEmployeesWithoutContractCount())
+                        ->badge()
+                        ->color(fn (string $state) => (int) $state > 0 ? 'danger' : 'gray')
+                        ->icon('heroicon-o-exclamation-circle'),
+
+                    TextEntry::make('active_terminals')
+                        ->label('Terminales Activos')
+                        ->getStateUsing(fn (Company $record) => $record->activeTerminalsCount())
+                        ->badge()
+                        ->color('info')
+                        ->icon('heroicon-o-computer-desktop'),
+
+                    TextEntry::make('payroll_periods_year')
+                        ->label('Períodos de Nómina del Año')
+                        ->getStateUsing(fn (Company $record) => $record->payrollPeriodsCount())
+                        ->badge()
+                        ->color('primary')
+                        ->icon('heroicon-o-banknotes'),
                 ])
                 ->collapsible(),
 
@@ -328,8 +390,9 @@ class CompanyResource extends Resource
                 ->schema([
                     ImageEntry::make('logo')
                         ->label('Logo')
-                        ->circular()
-                        ->size(80)
+                        ->height(64)
+                        ->width('auto')
+                        ->extraImgAttributes(['class' => 'object-contain'])
                         ->placeholder('Sin logo'),
 
                     TextEntry::make('is_active')
@@ -337,6 +400,29 @@ class CompanyResource extends Resource
                         ->formatStateUsing(fn (string $state) => $state ? 'Activa' : 'Inactiva')
                         ->badge()
                         ->color(fn (string $state) => $state ? 'success' : 'danger'),
+                ])
+                ->collapsible(),
+
+            InfoSection::make('Cuenta Bancaria Principal')
+                ->description('Cuenta desde la que se generan los lotes de pago bancario.')
+                ->columns(2)
+                ->schema([
+                    TextEntry::make('_primary_account')
+                        ->label('Cuenta')
+                        ->icon('heroicon-o-credit-card')
+                        ->getStateUsing(function (Company $record): ?string {
+                            $account = $record->primaryBankAccount();
+
+                            return $account
+                                ? "{$account->bank_label} · {$account->account_type_label} · {$account->account_number}"
+                                : null;
+                        })
+                        ->placeholder('Sin cuenta bancaria principal'),
+
+                    TextEntry::make('_primary_account_holder')
+                        ->label('Titular')
+                        ->getStateUsing(fn (Company $record) => $record->primaryBankAccount()?->holder_name)
+                        ->placeholder('Sin titular'),
                 ])
                 ->collapsible(),
         ]);
@@ -351,8 +437,9 @@ class CompanyResource extends Resource
             ->columns([
                 ImageColumn::make('logo')
                     ->label('Logo')
-                    ->circular()
-                    ->size(40),
+                    ->height(40)
+                    ->width(80)
+                    ->extraImgAttributes(['class' => 'object-contain']),
 
                 TextColumn::make('name')
                     ->label('Razón Social')
@@ -459,6 +546,7 @@ class CompanyResource extends Resource
             RelationManagers\BranchesRelationManager::class,
             RelationManagers\EmployeesRelationManager::class,
             RelationManagers\BankAccountsRelationManager::class,
+            RelationManagers\AuditsRelationManager::class,
         ];
     }
 

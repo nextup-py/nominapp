@@ -8,26 +8,38 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 ![Listado de empresas](/docs-images/02-empresas.png)
 
-**Campos principales:**
-- **Razón social** y **nombre comercial** (nombre de fantasía)
+**Campos principales** (todos obligatorios salvo el nombre comercial, la fecha de constitución y el logo):
+- **Razón social** y **nombre comercial** (nombre de fantasía, opcional)
 - **Tipo societario:** SA, SRL, EU, Cooperativa, Fundación, etc.
 - **RUC:** formato `XXXXXXXX-D` (ej: `80012345-6`)
 - **Número patronal IPS**
 - **Representante legal:** nombre y cédula
-- **Logo:** se usa en encabezados de todos los PDFs generados
-- **Dirección, teléfono, email, ciudad**
+- **Logo:** se usa en encabezados de todos los PDFs generados (opcional, pero conviene cargarlo)
+- **Dirección, ciudad, teléfono y correo electrónico**
 - **Activa:** las empresas inactivas no aparecen en los selectores del sistema
 
 **Cómo crear una empresa:**
 
 1. Ir a **Organización → Empresas**
 2. Clic en **Nueva empresa**
-3. Completar los datos legales: razón social, RUC, número patronal, representante legal
-4. Subir el logo (JPG, PNG, WEBP o SVG, máx. 5 MB)
-5. Completar dirección y contacto
+3. Completar los datos legales: razón social, RUC, número patronal, tipo societario, representante legal
+4. Completar dirección y contacto. Para la **ciudad**, elegir primero el **Departamento** (opcional, solo filtra la lista) y luego la **Ciudad**; el catálogo incluye los 17 departamentos y las ciudades de Paraguay
+5. Subir el logo (JPG, PNG, WEBP o SVG, máx. 5 MB)
 6. Guardar
 
+![Departamento y ciudad en el formulario de la empresa](/docs-images/02-empresa-ciudad.png)
+
 > El RUC debe tener el formato `número-dígito` (ej: `80012345-6`). El teléfono debe ingresarse con el 0 inicial, sin espacios (ej: `0981123456`).
+
+**Vista de la empresa:** al abrir una empresa se ve un resumen con sucursales, departamentos, empleados, contratos (activos y por vencer), empleados activos **sin contrato**, terminales activos y períodos de nómina del año, además de sus datos legales, de contacto y la **cuenta bancaria principal**. Las pestañas inferiores listan sus sucursales, empleados, cuentas bancarias y el **historial de cambios** (quién modificó qué y cuándo).
+
+![Detalle de una empresa](/docs-images/02-empresa-detalle.png)
+
+**Datos pendientes:** si a la empresa le falta algo que usan los PDFs o los pagos (logo, dirección o ciudad, representante legal, o una cuenta bancaria principal activa), la parte superior de la vista muestra un aviso con lo que falta. Desaparece solo al completarlo.
+
+**Desactivar o eliminar:** para dejar de usar una empresa, desmarcar **Activa** en su edición. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.
+
+> Eliminar una empresa vacía no se puede deshacer. Si ya se usó alguna vez, desactivarla es la opción correcta.
 
 **Organigrama:** Desde la vista de una empresa puede generar y descargar el organigrama completo en PDF con el botón correspondiente.
 
