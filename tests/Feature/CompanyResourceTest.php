@@ -98,13 +98,16 @@ it('rechaza RUC, número patronal y teléfono inválidos o duplicados', function
 // ─── Ciudades ───────────────────────────────────────────────────────────────
 
 it('usa la lista fija de ciudades si el catálogo oficial no fue sembrado', function () {
+    PyCity::query()->delete(); // la migración de datos ya lo siembra en la base de tests
+    PyDepartment::query()->delete();
+
     expect(PyCity::count())->toBe(0)
         ->and(Company::citiesOptions())->toHaveKey('Asunción')
         ->and(Company::citiesOptions())->toHaveCount(count(Company::$cities));
 });
 
 it('ofrece las ciudades del catálogo oficial, acotadas por departamento', function () {
-    $this->seed(ParaguayRegionsSeeder::class);
+    $this->seed(ParaguayRegionsSeeder::class); // idempotente: ya viene cargado por la migración
 
     $all = Company::citiesOptions();
     $central = PyDepartment::where('name', 'Central')->value('id');
