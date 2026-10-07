@@ -28,8 +28,30 @@ class EditCompany extends EditRecord
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->modalHeading('¿Eliminar empresa?')
-                ->modalDescription('Esta acción no se puede deshacer. Se eliminará la empresa "'.$this->record->trade_name.'" y todos sus registros relacionados.')
+                ->modalDescription(function (): string {
+                    $summary = $this->record->deletionBlockersSummary();
+
+                    return $summary !== ''
+                        ? 'La empresa "'.$this->record->display_name.'" tiene '.$summary.' y no se puede eliminar. Desactívela en su lugar.'
+                        : 'Esta acción no se puede deshacer. Se eliminará la empresa "'.$this->record->display_name.'".';
+                })
                 ->modalSubmitActionLabel('Sí, eliminar')
+                ->before(function (DeleteAction $action): void {
+                    $summary = $this->record->deletionBlockersSummary();
+
+                    if ($summary === '') {
+                        return;
+                    }
+
+                    Notification::make()
+                        ->danger()
+                        ->title('No se puede eliminar la empresa')
+                        ->body("Tiene {$summary}. Para dejar de usarla, desmarque «Activa» en su configuración: las empresas inactivas no aparecen en los selectores.")
+                        ->persistent()
+                        ->send();
+
+                    $action->halt();
+                })
                 ->successNotificationTitle('Empresa eliminada')
                 ->successRedirectUrl($this->getResource()::getUrl('index')),
         ];
@@ -72,6 +94,6 @@ class EditCompany extends EditRecord
         return Notification::make()
             ->success()
             ->title('Empresa actualizada')
-            ->body('La empresa "'.$this->record->trade_name.'" ha sido actualizada correctamente.');
+            ->body('La empresa "'.$this->record->display_name.'" ha sido actualizada correctamente.');
     }
 }
