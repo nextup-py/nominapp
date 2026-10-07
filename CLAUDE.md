@@ -587,6 +587,12 @@ Kiosk/terminal marking and face enrollment run on public routes, served by their
 - `resources/js/attendances/terminal.js` — shared kiosk terminal
 - `resources/js/enrollments/capture-face.js` — employee self-enrollment
 
+### Favicon e íconos de marca
+
+- **`public/favicon.ico` (raíz) debe ser idéntico a `public/icons/favicon.ico`.** El navegador pide `/favicon.ico` cuando una página no declara su favicon; la raíz quedó con la "N" anterior al rebrand y la pestaña del Organigrama la mostraba. Al cambiar la marca, reemplazar **ambos** (un test lo exige).
+- **Toda vista Blade que sea un documento HTML completo incluye `<x-favicon-links />`** en el `<head>` (el panel Filament lo hace con `->favicon()` en `AdminPanelProvider`). Excepción: los PDF de DomPDF (`views/pdf/`, `org-chart/pdf`), que no se ven en una pestaña. `FaviconConsistencyTest` recorre las vistas y falla si falta.
+- **`public/sw.js` sirve `/icons/` network-first** (con la caché como respaldo offline), no cache-first: los íconos no llevan hash en la URL, así que un rebrand quedaba pegado en los dispositivos que ya los habían cacheado (el rebrand del 17/09 no subió `CACHE_VERSION`). **No subir `CACHE_VERSION` solo para refrescar íconos**: borraría también los modelos faciales (`/models/`) que el terminal necesita offline. Los íconos de una PWA ya instalada los toma el navegador del manifest y los refresca por su cuenta; si no, hay que reinstalarla.
+
 ### Status Enums
 - Employee: `active`, `inactive`, `draft`, `suspended`
 - Contract: `draft` → `active` → `suspended` / `expired` / `terminated` / `renewed` (distinto del de Employee — no confundir; "por vencer" no es un estado, ver Módulo de Contratos)
