@@ -8,6 +8,8 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 ![Listado de empresas](/docs-images/02-empresas.png)
 
+**Listado:** las pestañas **Todas / Activas / Inactivas / Con datos pendientes** muestran cuántas empresas hay de cada tipo. La columna **Datos** indica si la empresa está completa o cuántas cosas le faltan (al pasar el cursor se ve el detalle): sin logo, sin sucursales, sin cuenta bancaria principal activa o con empleados activos sin contrato vigente. El menú de cada fila (⋮) permite abrir el **Organigrama**, descargarlo en **PDF** y **Activar** o **Desactivar** la empresa. El **Nro. Patronal** y las fechas de creación y actualización están ocultos por defecto (se activan desde el selector de columnas de la tabla). La búsqueda global del panel encuentra empresas por razón social, nombre comercial, RUC o número patronal.
+
 **Campos principales** (todos obligatorios salvo el nombre comercial, la fecha de constitución y el logo):
 - **Razón social** y **nombre comercial** (nombre de fantasía, opcional)
 - **Tipo societario:** SA, SRL, EU, Cooperativa, Fundación, etc.
@@ -37,11 +39,13 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 **Datos pendientes:** si a la empresa le falta algo que usan los PDFs o los pagos (logo, dirección o ciudad, representante legal, o una cuenta bancaria principal activa), la parte superior de la vista muestra un aviso con lo que falta. Desaparece solo al completarlo.
 
-**Desactivar o eliminar:** para dejar de usar una empresa, desmarcar **Activa** en su edición. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.
+**Desactivar o eliminar:** para dejar de usar una empresa, usar la acción **Desactivar** (en el menú de la fila del listado o en el encabezado de la vista) o desmarcar **Activa** en su edición. **No se puede desactivar una empresa que tenga empleados activos**: hay que desvincularlos o transferirlos a otra empresa primero, y el sistema avisa cuántos son. Los terminales de sus sucursales no se modifican al desactivarla. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.
 
 > Eliminar una empresa vacía no se puede deshacer. Si ya se usó alguna vez, desactivarla es la opción correcta.
 
-**Organigrama:** Desde la vista de una empresa puede generar y descargar el organigrama completo en PDF con el botón correspondiente.
+**Exportar:** el botón **Exportar** del listado descarga un Excel con las empresas que se están viendo (respeta la pestaña, los filtros y la búsqueda) y permite elegir qué columnas incluir, entre ellas los datos pendientes.
+
+**Organigrama:** Desde la vista de una empresa puede abrir el organigrama o descargarlo en PDF con los botones **Organigrama** y **Organigrama en PDF**.
 
 ---
 

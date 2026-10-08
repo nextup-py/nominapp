@@ -58,6 +58,29 @@ class EditCompany extends EditRecord
     }
 
     /**
+     * Impide guardar la empresa como inactiva mientras tenga empleados activos.
+     */
+    protected function beforeSave(): void
+    {
+        $deactivating = $this->record->is_active && ! ($this->data['is_active'] ?? true);
+
+        if (! $deactivating || ($blockers = $this->record->deactivationBlockers()) === []) {
+            return;
+        }
+
+        $detail = collect($blockers)->map(fn (int $n, string $label) => "{$n} {$label}")->implode(', ');
+
+        Notification::make()
+            ->danger()
+            ->title('No se puede desactivar la empresa')
+            ->body("Tiene {$detail}. Desvincúlelos o transfiéralos a otra empresa antes de desactivarla.")
+            ->persistent()
+            ->send();
+
+        $this->halt();
+    }
+
+    /**
      * Mutar los datos del formulario antes de guardarlos para asegurar que los campos "name" y "trade_name" estén en mayúscula.
      *
      * @param  array  $data  Los datos del formulario a mutar.
