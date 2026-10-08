@@ -29,6 +29,7 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class CompanyResource extends Resource
 {
@@ -102,7 +103,7 @@ class CompanyResource extends Resource
                             ->helperText('Número de Registro Único de Contribuyentes (RUC).'),
 
                         TextInput::make('employer_number')
-                            ->label('Numero Patronal IPS')
+                            ->label('Número Patronal IPS')
                             ->placeholder('Ej: 12345678')
                             ->required()
                             ->unique(ignoreRecord: true)
@@ -222,12 +223,16 @@ class CompanyResource extends Resource
                             ->directory('companies/logos')
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
                             ->maxSize(5120)
-                            ->helperText('Formatos: JPG, PNG, WEBP o SVG. Máximo 5 MB.'),
+                            ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => 'logo_empresa_'.now()->format('Y-m-d_H-i-s').'.'.$file->getClientOriginalExtension())
+                            ->helperText('Formatos: JPG, PNG, WEBP o SVG. Máximo 5 MB. El SVG se ve en los PDFs y el panel, pero no en el terminal ni en el celular (use PNG para que aparezca allí).'),
 
                         Toggle::make('is_active')
                             ->label('Activa')
                             ->default(true)
-                            ->helperText('Las empresas inactivas no aparecen en los selectores. No se puede desactivar una empresa con empleados activos.')
+                            ->disabled(fn (?Company $record) => $record?->is_active && $record->activeEmployeesCount() > 0)
+                            ->helperText(fn (?Company $record) => $record?->is_active && ($active = $record->activeEmployeesCount()) > 0
+                                ? "No se puede desactivar: la empresa tiene {$active} empleados activos. Desvincúlelos o transfiéralos primero."
+                                : 'Las empresas inactivas no aparecen en los selectores.')
                             ->hiddenOn('create'),
                     ])
                     ->collapsible(),

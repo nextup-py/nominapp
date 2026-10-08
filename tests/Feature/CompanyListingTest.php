@@ -14,7 +14,9 @@ use App\Models\Employee;
 use App\Models\Position;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Role;
@@ -234,4 +236,31 @@ it('el export mapea las columnas calculadas', function () {
 it('el export ignora columnas desconocidas y usa las predeterminadas si no se indican', function () {
     expect((new CompaniesExport(['name', 'inexistente']))->headings())->toBe(['Razón Social'])
         ->and((new CompaniesExport)->headings())->toHaveCount(count(CompaniesExport::defaultColumns()));
+});
+
+// ─── Formulario ─────────────────────────────────────────────────────────────
+
+it('el interruptor Activa se deshabilita mientras haya empleados activos', function () {
+    $company = completeCompany();
+    companyEmployee($company, withContract: true);
+
+    Livewire::test(EditCompany::class, ['record' => $company->getKey()])
+        ->assertFormFieldIsDisabled('is_active');
+
+    Employee::query()->update(['status' => 'inactive']);
+
+    Livewire::test(EditCompany::class, ['record' => $company->getKey()])
+        ->assertFormFieldIsEnabled('is_active');
+});
+
+it('guarda el logo con un nombre legible', function () {
+    Storage::fake('public');
+    $company = completeCompany(['logo' => null]);
+
+    Livewire::test(EditCompany::class, ['record' => $company->getKey()])
+        ->fillForm(['logo' => UploadedFile::fake()->image('cualquiera.png', 200, 80)])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($company->fresh()->logo)->toStartWith('companies/logos/logo_empresa_')->toEndWith('.png');
 });
