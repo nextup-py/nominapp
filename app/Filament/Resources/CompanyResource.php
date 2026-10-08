@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\CompanyStatusAction;
 use App\Filament\Resources\CompanyResource\Pages;
 use App\Filament\Resources\CompanyResource\RelationManagers;
 use App\Models\Company;
@@ -21,10 +22,14 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class CompanyResource extends Resource
 {
@@ -44,7 +49,23 @@ class CompanyResource extends Resource
 
     protected static ?string $slug = 'empresas';
 
-    protected static ?string $recordTitleAttribute = 'trade_name';
+    protected static ?string $recordTitleAttribute = 'name';
+
+    /** Título del registro en breadcrumbs, página y búsqueda global: nombre comercial o, si no tiene, la razón social. */
+    public static function getRecordTitle(?Model $record): ?string
+    {
+        return $record?->display_name;
+    }
+
+    /**
+     * Campos de la búsqueda global del panel.
+     *
+     * @return array<int, string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'trade_name', 'ruc', 'employer_number'];
+    }
 
     /**
      * Define el formulario para crear y editar empresas, organizado en secciones para mejorar la usabilidad.
@@ -82,7 +103,7 @@ class CompanyResource extends Resource
                             ->helperText('Número de Registro Único de Contribuyentes (RUC).'),
 
                         TextInput::make('employer_number')
-                            ->label('Numero Patronal IPS')
+                            ->label('Número Patronal IPS')
                             ->placeholder('Ej: 12345678')
                             ->required()
                             ->unique(ignoreRecord: true)
@@ -202,12 +223,16 @@ class CompanyResource extends Resource
                             ->directory('companies/logos')
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
                             ->maxSize(5120)
-                            ->helperText('Formatos: JPG, PNG, WEBP o SVG. Máximo 5 MB.'),
+                            ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => 'logo_empresa_'.now()->format('Y-m-d_H-i-s').'.'.$file->getClientOriginalExtension())
+                            ->helperText('Formatos: JPG, PNG, WEBP o SVG. Máximo 5 MB. El SVG se ve en los PDFs y el panel, pero no en el terminal ni en el celular (use PNG para que aparezca allí).'),
 
                         Toggle::make('is_active')
                             ->label('Activa')
                             ->default(true)
-                            ->helperText('Las empresas inactivas no aparecerán en los selectores')
+                            ->disabled(fn (?Company $record) => $record?->is_active && $record->activeEmployeesCount() > 0)
+                            ->helperText(fn (?Company $record) => $record?->is_active && ($active = $record->activeEmployeesCount()) > 0
+                                ? "No se puede desactivar: la empresa tiene {$active} empleados activos. Desvincúlelos o transfiéralos primero."
+                                : 'Las empresas inactivas no aparecen en los selectores.')
                             ->hiddenOn('create'),
                     ])
                     ->collapsible(),
@@ -470,7 +495,8 @@ class CompanyResource extends Resource
                     ->copyMessage('Número patronal copiado')
                     ->alignCenter()
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('city')
                     ->label('Ciudad')
@@ -492,6 +518,17 @@ class CompanyResource extends Resource
                     ->counts('activeEmployees')
                     ->badge()
                     ->color('success')
+                    ->alignCenter()
+                    ->sortable(),
+
+                TextColumn::make('pending_data_count')
+                    ->label('Datos')
+                    ->getStateUsing(fn (Company $record) => (int) $record->pending_data_count)
+                    ->formatStateUsing(fn (int $state) => $state === 0 ? 'Completos' : "{$state} pendiente".($state > 1 ? 's' : ''))
+                    ->badge()
+                    ->color(fn (int $state) => $state === 0 ? 'success' : 'warning')
+                    ->icon(fn (int $state) => $state === 0 ? 'heroicon-o-check-circle' : 'heroicon-o-exclamation-triangle')
+                    ->tooltip(fn (Company $record) => $record->pendingDataList() === [] ? null : implode(' · ', $record->pendingDataList()))
                     ->alignCenter()
                     ->sortable(),
 
@@ -523,13 +560,27 @@ class CompanyResource extends Resource
                     ->native(false),
             ])
             ->actions([
-                Action::make('orgChart')
-                    ->label('Organigrama')
-                    ->icon('heroicon-o-rectangle-group')
-                    ->color('info')
-                    ->url(fn (Company $record) => route('org-chart.show', $record))
-                    ->openUrlInNewTab(),
+                ActionGroup::make([
+                    Action::make('orgChart')
+                        ->label('Organigrama')
+                        ->tooltip('Abre el organigrama de la empresa en una pestaña nueva')
+                        ->icon('heroicon-o-rectangle-group')
+                        ->color('info')
+                        ->url(fn (Company $record) => route('org-chart.show', $record))
+                        ->openUrlInNewTab(),
+
+                    Action::make('orgChartPdf')
+                        ->label('Organigrama en PDF')
+                        ->tooltip('Descarga el organigrama como PDF en una pestaña nueva')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('gray')
+                        ->url(fn (Company $record) => route('org-chart.pdf', $record))
+                        ->openUrlInNewTab(),
+
+                    CompanyStatusAction::make(Action::class),
+                ]),
             ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->withPendingData())
             ->paginationPageOptions([10, 25, 50, 100])
             ->defaultSort('name')
             ->emptyStateHeading('No hay empresas registradas')

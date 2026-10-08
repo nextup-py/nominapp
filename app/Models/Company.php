@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -65,6 +66,12 @@ class Company extends Model implements Auditable
         static::deleting(function (Company $company): void {
             if ($company->deletionBlockers() !== []) {
                 throw new \DomainException("No se puede eliminar la empresa: tiene {$company->deletionBlockersSummary()}. Desactívela en su lugar.");
+            }
+        });
+
+        static::updating(function (Company $company): void {
+            if ($company->isDirty('is_active') && ! $company->is_active && $company->activeEmployeesCount() > 0) {
+                throw new \DomainException("No se puede desactivar la empresa: tiene {$company->activeEmployeesCount()} empleados activos. Desvincúlelos o transfiéralos primero.");
             }
         });
     }
@@ -265,6 +272,87 @@ class Company extends Model implements Auditable
         }
 
         return $warnings;
+    }
+
+    /** Cantidad de empleados activos de la empresa: mientras haya alguno, la empresa no se puede desactivar. */
+    public function activeEmployeesCount(): int
+    {
+        return Employee::query()
+            ->whereIn('branch_id', $this->branches()->select('id'))
+            ->where('status', 'active')
+            ->count();
+    }
+
+    /**
+     * Motivos que impiden desactivar la empresa, por tipo. Vacío si se puede desactivar.
+     *
+     * @return array<string, int>
+     */
+    public function deactivationBlockers(): array
+    {
+        return array_filter(['empleados activos' => $this->activeEmployeesCount()]);
+    }
+
+    /**
+     * Expresiones SQL (0/1) de cada dato pendiente, por alias, sobre la tabla `companies`.
+     *
+     * Son las cuatro condiciones que el listado marca como "datos pendientes": sin logo, sin
+     * sucursales, sin cuenta bancaria principal activa y con empleados activos sin contrato vigente.
+     *
+     * @return array<string, string>
+     */
+    public static function pendingDataExpressions(): array
+    {
+        return [
+            'missing_logo' => "(CASE WHEN companies.logo IS NULL OR companies.logo = '' THEN 1 ELSE 0 END)",
+            'missing_branches' => '(CASE WHEN EXISTS (SELECT 1 FROM branches b WHERE b.company_id = companies.id) THEN 0 ELSE 1 END)',
+            'missing_bank' => "(CASE WHEN EXISTS (SELECT 1 FROM company_bank_accounts a WHERE a.company_id = companies.id AND a.is_primary = 1 AND a.status = 'active') THEN 0 ELSE 1 END)",
+            'missing_contracts' => "(CASE WHEN EXISTS (SELECT 1 FROM employees e JOIN branches eb ON eb.id = e.branch_id WHERE eb.company_id = companies.id AND e.status = 'active' AND NOT EXISTS (SELECT 1 FROM contracts c WHERE c.employee_id = e.id AND c.status IN ('active', 'suspended'))) THEN 1 ELSE 0 END)",
+        ];
+    }
+
+    /** Etiquetas de cada dato pendiente (mismas claves que {@see self::pendingDataExpressions()}). */
+    public static function pendingDataLabels(): array
+    {
+        return [
+            'missing_logo' => 'Sin logo',
+            'missing_branches' => 'Sin sucursales',
+            'missing_bank' => 'Sin cuenta bancaria principal',
+            'missing_contracts' => 'Empleados activos sin contrato',
+        ];
+    }
+
+    /** Agrega a la consulta una columna 0/1 por cada dato pendiente (`missing_*`) y el total `pending_data_count`. */
+    public function scopeWithPendingData(Builder $query): Builder
+    {
+        $total = implode(' + ', self::pendingDataExpressions());
+
+        $query->addSelect('companies.*');
+
+        foreach (self::pendingDataExpressions() as $alias => $sql) {
+            $query->selectRaw("{$sql} AS {$alias}");
+        }
+
+        return $query->selectRaw("({$total}) AS pending_data_count");
+    }
+
+    /** Limita a las empresas con al menos un dato pendiente. */
+    public function scopeHavingPendingData(Builder $query): Builder
+    {
+        return $query->whereRaw('('.implode(' + ', self::pendingDataExpressions()).') > 0');
+    }
+
+    /**
+     * Etiquetas de los datos pendientes de una empresa cargada con {@see self::scopeWithPendingData()}.
+     *
+     * @return array<int, string>
+     */
+    public function pendingDataList(): array
+    {
+        return collect(self::pendingDataLabels())
+            ->filter(fn (string $label, string $key) => (int) $this->getAttribute($key) === 1)
+            ->values()
+            ->all();
     }
 
     /** Empleados activos de la empresa sin contrato vigente (activo o suspendido). */
