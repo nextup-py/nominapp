@@ -5,7 +5,9 @@ namespace App\Filament\Resources\CompanyResource\RelationManagers;
 use App\Exports\CompanyEmployeesExport;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Branch;
+use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Position;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Actions\Action;
@@ -58,14 +60,13 @@ class EmployeesRelationManager extends RelationManager
                 TextColumn::make('branch.name')
                     ->label('Sucursal')
                     ->icon('heroicon-o-building-storefront')
-                    ->placeholder('—')
+                    ->placeholder('Sin sucursal')
                     ->sortable(),
 
                 TextColumn::make('activeContract.position.name')
                     ->label('Cargo')
-                    ->icon('heroicon-o-briefcase')
                     ->description(fn (Employee $record) => $record->activeContract?->position?->department?->name)
-                    ->placeholder('—')
+                    ->placeholder('Sin cargo')
                     ->badge()
                     ->color('info'),
 
@@ -90,6 +91,33 @@ class EmployeesRelationManager extends RelationManager
                         ->pluck('name', 'id')
                         ->toArray()
                     )
+                    ->native(false),
+
+                SelectFilter::make('department_id')
+                    ->label('Departamento')
+                    ->options(fn () => Department::where('company_id', $this->ownerRecord->id)
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->toArray()
+                    )
+                    ->query(fn (Builder $query, array $data) => filled($data['value'])
+                        ? $query->whereHas('activeContract', fn (Builder $contract) => $contract->where('contracts.department_id', (int) $data['value']))
+                        : $query
+                    )
+                    ->native(false),
+
+                SelectFilter::make('position_id')
+                    ->label('Cargo')
+                    ->options(fn () => Position::whereIn('department_id', Department::where('company_id', $this->ownerRecord->id)->select('id'))
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->toArray()
+                    )
+                    ->query(fn (Builder $query, array $data) => filled($data['value'])
+                        ? $query->whereHas('activeContract', fn (Builder $contract) => $contract->where('contracts.position_id', (int) $data['value']))
+                        : $query
+                    )
+                    ->searchable()
                     ->native(false),
             ])
             ->headerActions([

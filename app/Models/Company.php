@@ -156,6 +156,24 @@ class Company extends Model implements Auditable
             ->where('employees.status', 'active');
     }
 
+    /** Terminales de marcación de la empresa (a través de sus sucursales). */
+    public function terminals(): HasManyThrough
+    {
+        return $this->hasManyThrough(Terminal::class, Branch::class);
+    }
+
+    /** Períodos de nómina de la empresa. */
+    public function payrollPeriods(): HasMany
+    {
+        return $this->hasMany(PayrollPeriod::class);
+    }
+
+    /** Períodos de aguinaldo de la empresa. */
+    public function aguinaldoPeriods(): HasMany
+    {
+        return $this->hasMany(AguinaldoPeriod::class);
+    }
+
     /** Departamentos de la empresa. */
     public function departments(): HasMany
     {

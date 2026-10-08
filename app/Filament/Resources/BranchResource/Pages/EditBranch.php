@@ -17,7 +17,7 @@ class EditBranch extends EditRecord
     /**
      * Retorna las acciones del encabezado: ver registro y eliminar.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
@@ -32,17 +32,17 @@ class EditBranch extends EditRecord
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->modalHeading('¿Eliminar sucursal?')
-                ->modalDescription(fn () => $this->record->employees()->count() > 0
-                    ? "Esta sucursal tiene {$this->record->employees()->count()} empleado(s) asignado(s). No es posible eliminarla mientras tenga empleados."
+                ->modalDescription(fn () => $this->record->deletionBlockers() !== []
+                    ? "Esta sucursal tiene {$this->record->deletionBlockersSummary()}. No es posible eliminarla mientras tenga datos asociados."
                     : "¿Estás seguro de que deseas eliminar la sucursal \"{$this->record->name}\"? Esta acción no se puede deshacer."
                 )
                 ->modalSubmitActionLabel('Sí, eliminar')
                 ->before(function (Action $action) {
-                    if ($this->record->employees()->exists()) {
+                    if ($this->record->deletionBlockers() !== []) {
                         Notification::make()
                             ->danger()
                             ->title('No se puede eliminar')
-                            ->body('Reasigna o elimina los empleados de esta sucursal primero.')
+                            ->body("La sucursal tiene {$this->record->deletionBlockersSummary()}. Reasígnelos antes de eliminarla.")
                             ->send();
 
                         $action->halt();

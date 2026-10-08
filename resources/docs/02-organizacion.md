@@ -33,7 +33,20 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 > El RUC debe tener el formato `número-dígito` (ej: `80012345-6`). El teléfono debe ingresarse con el 0 inicial, sin espacios (ej: `0981123456`).
 
-**Vista de la empresa:** al abrir una empresa se ve un resumen con sucursales, departamentos, empleados, contratos (activos y por vencer), empleados activos **sin contrato**, terminales activos y períodos de nómina del año, además de sus datos legales, de contacto y la **cuenta bancaria principal**. Las pestañas inferiores listan sus sucursales, empleados, cuentas bancarias y el **historial de cambios** (quién modificó qué y cuándo).
+**Vista de la empresa:** al abrir una empresa se ve un resumen con sucursales, departamentos, empleados, contratos (activos y por vencer), empleados activos **sin contrato**, terminales activos y períodos de nómina del año, además de sus datos legales, de contacto y la **cuenta bancaria principal**. Las pestañas inferiores, en este orden, son de solo lectura salvo Sucursales y Cuentas bancarias:
+
+| Pestaña | Qué muestra |
+|---------|-------------|
+| **Sucursales** | Sucursales de la empresa (se pueden crear, editar y eliminar desde acá) |
+| **Departamentos** | Cada departamento con su cantidad de cargos y de empleados activos; clic para abrirlo |
+| **Empleados** | Empleados de la empresa, con filtros por estado, sucursal, **departamento** y **cargo** |
+| **Terminales** | Terminales de marcación de todas sus sucursales, con su estado y conectividad; filtros por sucursal y estado |
+| **Períodos de nómina** | Períodos de nómina de la empresa con su frecuencia, vigencia, cantidad de recibos y estado |
+| **Aguinaldos** | Períodos de aguinaldo por año, con generados, pagados y estado |
+| **Cuentas Bancarias** | Cuentas de la empresa; marcar principal, activar/desactivar, editar y eliminar |
+| **Historial de cambios** | Quién modificó qué y cuándo |
+
+![Pestañas de la empresa](/docs-images/02-empresa-pestanas.png)
 
 ![Detalle de una empresa](/docs-images/02-empresa-detalle.png)
 
@@ -42,6 +55,8 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 **Desactivar o eliminar:** para dejar de usar una empresa, usar la acción **Desactivar** (en el menú de la fila del listado o en el encabezado de la vista) o desmarcar **Activa** en su edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una empresa que tenga empleados activos**: hay que desvincularlos o transferirlos a otra empresa primero, y el sistema avisa cuántos son. Los terminales de sus sucursales no se modifican al desactivarla. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.
 
 > Eliminar una empresa vacía no se puede deshacer. Si ya se usó alguna vez, desactivarla es la opción correcta.
+
+**Cuentas bancarias:** la cuenta **principal** es la que usan los lotes de pago. No se puede eliminar la principal mientras haya otras cuentas activas: primero hay que marcar otra como principal. Si es la única cuenta se puede eliminar, y la empresa queda con el aviso de "Sin cuenta bancaria principal".
 
 **Exportar:** el botón **Exportar** del listado descarga un Excel con las empresas que se están viendo (respeta la pestaña, los filtros y la búsqueda) y permite elegir qué columnas incluir, entre ellas los datos pendientes.
 
@@ -64,6 +79,8 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 5. Guardar
 
 > Las coordenadas GPS se usan para vincular marcaciones de asistencia a la ubicación de la sucursal.
+
+**Eliminar una sucursal:** solo es posible si no tiene empleados, terminales ni fallas de marcación asociadas. Si los tiene, el sistema bloquea la eliminación y avisa cuántos hay de cada uno; hay que reasignarlos primero.
 
 ---
 

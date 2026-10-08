@@ -595,7 +595,11 @@ class CompanyResource extends Resource
     {
         return [
             RelationManagers\BranchesRelationManager::class,
+            RelationManagers\DepartmentsRelationManager::class,
             RelationManagers\EmployeesRelationManager::class,
+            RelationManagers\TerminalsRelationManager::class,
+            RelationManagers\PayrollPeriodsRelationManager::class,
+            RelationManagers\AguinaldoPeriodsRelationManager::class,
             RelationManagers\BankAccountsRelationManager::class,
             RelationManagers\AuditsRelationManager::class,
         ];

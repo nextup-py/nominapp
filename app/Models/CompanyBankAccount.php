@@ -16,6 +16,16 @@ class CompanyBankAccount extends Model
 {
     use HasFactory;
 
+    /** Red de seguridad: la cuenta principal no se elimina mientras haya otras activas que la reemplacen. */
+    protected static function booted(): void
+    {
+        static::deleting(function (CompanyBankAccount $account): void {
+            if (($message = $account->deletionBlocker()) !== null) {
+                throw new \DomainException($message);
+            }
+        });
+    }
+
     protected $fillable = [
         'company_id',
         'bank',
@@ -158,6 +168,28 @@ class CompanyBankAccount extends Model
     // =========================================================================
     // ACCIONES
     // =========================================================================
+
+    /**
+     * Motivo por el que no se puede eliminar, o null si se puede.
+     *
+     * La cuenta principal no se elimina si hay otras activas: hay que marcar otra como principal antes
+     * (misma regla que {@see self::deactivate()}). Si es la única cuenta, se permite eliminarla.
+     */
+    public function deletionBlocker(): ?string
+    {
+        if (! $this->is_primary) {
+            return null;
+        }
+
+        $otherActive = static::where('company_id', $this->company_id)
+            ->where('id', '!=', $this->id)
+            ->where('status', 'active')
+            ->exists();
+
+        return $otherActive
+            ? 'No se puede eliminar la cuenta principal. Marque otra cuenta como principal primero.'
+            : null;
+    }
 
     /**
      * Marca esta cuenta como principal y desmarca las demás de la misma empresa.
