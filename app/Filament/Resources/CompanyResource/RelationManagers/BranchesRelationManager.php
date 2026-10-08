@@ -195,14 +195,16 @@ class BranchesRelationManager extends RelationManager
                         ->icon('heroicon-o-trash')
                         ->color('danger')
                         ->modalHeading('¿Eliminar sucursal?')
-                        ->modalDescription(fn ($record) => "Se eliminará permanentemente la sucursal \"{$record->name}\".")
+                        ->modalDescription(fn ($record) => $record->deletionBlockers() !== []
+                            ? "La sucursal \"{$record->name}\" tiene {$record->deletionBlockersSummary()} y no se puede eliminar."
+                            : "Se eliminará permanentemente la sucursal \"{$record->name}\".")
                         ->modalSubmitActionLabel('Sí, eliminar')
                         ->before(function ($record, $action) {
-                            if ($record->employees()->exists()) {
+                            if ($record->deletionBlockers() !== []) {
                                 Notification::make()
                                     ->danger()
                                     ->title('No se puede eliminar')
-                                    ->body("La sucursal \"{$record->name}\" tiene empleados asignados. Reasignalos antes de eliminarla.")
+                                    ->body("La sucursal \"{$record->name}\" tiene {$record->deletionBlockersSummary()}. Reasígnelos antes de eliminarla.")
                                     ->send();
                                 $action->halt();
                             }

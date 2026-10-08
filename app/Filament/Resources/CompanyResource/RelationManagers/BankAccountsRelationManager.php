@@ -231,9 +231,19 @@ class BankAccountsRelationManager extends RelationManager
                     ->icon('heroicon-o-trash')
                     ->color('danger')
                     ->modalHeading('¿Eliminar cuenta bancaria?')
-                    ->modalDescription('¿Estás seguro? Esta acción no se puede deshacer.')
-                    ->modalSubmitActionLabel('Sí, eliminar'),
+                    ->modalDescription(fn (CompanyBankAccount $record) => $record->deletionBlocker()
+                        ?? ($record->is_primary
+                            ? 'Es la única cuenta de la empresa: al eliminarla quedará sin cuenta bancaria principal y no se podrán generar lotes de pago. Esta acción no se puede deshacer.'
+                            : '¿Estás seguro? Esta acción no se puede deshacer.'))
+                    ->modalSubmitActionLabel('Sí, eliminar')
+                    ->before(function (CompanyBankAccount $record, DeleteAction $action) {
+                        if (($message = $record->deletionBlocker()) !== null) {
+                            Notification::make()->danger()->title('No se puede eliminar')->body($message)->send();
+                            $action->halt();
+                        }
+                    }),
             ])
+            ->bulkActions([])
             ->defaultSort('is_primary', 'desc')
             ->paginationPageOptions([10, 25, 50, 100])
             ->emptyStateHeading('Sin cuentas bancarias')
