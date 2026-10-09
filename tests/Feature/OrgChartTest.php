@@ -287,11 +287,21 @@ it('el PDF se genera con los filtros y deja constancia de ellos', function () {
 
     $this->get(route('org-chart.pdf', ['company' => $this->company, 'department' => $this->sales->id]))
         ->assertOk()
-        ->assertHeader('content-type', 'application/pdf');
+        ->assertHeader('content-type', 'application/pdf')
+        ->assertHeader('cache-control', 'must-revalidate, no-cache, no-store, private');
 });
 
 it('muestra el estado vacío cuando los filtros no encuentran nada', function () {
     $this->get(route('org-chart.show', ['company' => $this->company, 'q' => 'inexistente']))
         ->assertOk()
         ->assertSee('Ningún cargo ni empleado coincide');
+});
+
+it('la vista usa los estilos compartidos del panel y ofrece el interruptor de tema', function () {
+    $html = $this->get(route('org-chart.show', $this->company))->assertOk()->getContent();
+
+    expect($html)
+        ->toContain('id="btnThemeToggle"')
+        ->toContain('color-scheme')
+        ->not->toContain('<style>');
 });

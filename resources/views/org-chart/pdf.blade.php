@@ -7,7 +7,7 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 15mm;
+            margin: 0;
         }
 
         * {
@@ -20,15 +20,15 @@
             font-family: Arial, sans-serif;
             font-size: 9px;
             line-height: 1.3;
-            color: #333;
-            padding: 10px;
+            color: #000;
+            padding: 15mm 20mm;
         }
 
         .header {
             text-align: center;
             margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #0d9488;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #000;
         }
 
         .company-logo {
@@ -41,16 +41,12 @@
             font-size: 16px;
             font-weight: bold;
             margin: 6px 0;
-            color: #0d9488;
+            text-transform: uppercase;
         }
 
         .header p {
             font-size: 11px;
             color: #666;
-        }
-
-        .org-content {
-            padding: 0 20px;
         }
 
         .company-root {
@@ -60,7 +56,7 @@
 
         .company-box {
             display: inline-block;
-            background: #0d9488;
+            background: #000;
             color: white;
             padding: 10px 30px;
             font-size: 12px;
@@ -77,12 +73,12 @@
             display: inline-block;
             width: 2px;
             height: 15px;
-            background: #0d9488;
+            background: #000;
         }
 
         /* Linea conectora horizontal */
         .connector-horizontal {
-            border-top: 2px solid #0d9488;
+            border-top: 1px solid #000;
             margin: 0 auto 6px auto;
             width: 80%;
         }
@@ -134,18 +130,11 @@
         }
 
         .position-header {
-            background: #0d9488;
+            background: #000;
             color: white;
             padding: 6px 10px;
             font-weight: bold;
             font-size: 9px;
-        }
-
-        .position-dept {
-            background: #fef3c7;
-            color: #92400e;
-            padding: 3px 10px;
-            font-size: 8px;
         }
 
         .position-body {
@@ -201,8 +190,8 @@
         .footer {
             position: fixed;
             bottom: 8mm;
-            left: 15mm;
-            right: 15mm;
+            left: 20mm;
+            right: 20mm;
             text-align: center;
             font-size: 8px;
             color: #999;
@@ -216,7 +205,7 @@
         }
 
         .dept-header {
-            background: #0d9488;
+            background: #000;
             color: white;
             padding: 5px 12px;
             font-size: 10px;
@@ -241,7 +230,7 @@
             <img src="{{ $companyLogo }}" alt="Logo" class="company-logo"><br>
         @endif
         <p>{{ $company->name }}</p>
-        <h1>ORGANIGRAMA</h1>
+        <h1>Organigrama</h1>
         @if (!empty($filterSummary))
             <p class="filter-summary">{{ $filterSummary }}</p>
         @endif

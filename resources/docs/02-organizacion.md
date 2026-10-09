@@ -137,6 +137,8 @@ El organigrama se genera automáticamente a partir de la jerarquía de cargos de
 
 **Filtros:** sobre el organigrama hay un buscador (por nombre de empleado o de cargo) y selectores de **Sucursal** (solo si hay más de una) y **Departamento**, además del interruptor **Mostrar vacantes** (activado por defecto). Clic en **Aplicar** para filtrar y en **Limpiar** para volver a ver todo. Los filtros quedan en la dirección de la página, así que se pueden compartir como enlace.
 
+**Modo oscuro:** el botón con el ícono de luna/sol de la cabecera cambia entre tema claro y oscuro; la página sigue por defecto la preferencia del sistema y recuerda la elección en ese navegador. En pantallas chicas el árbol se desplaza horizontalmente.
+
 **PDF:** **Exportar PDF** descarga el organigrama con los mismos filtros activos y deja constancia de ellos bajo el título (por ejemplo, "Departamento: Ventas · Sin vacantes").
 
 > Si un cargo tiene como superior a otro de un departamento distinto, se muestra como cargo principal dentro de su propio departamento. Revisar el campo **Reporta a** si la jerarquía no se ve como se espera.
