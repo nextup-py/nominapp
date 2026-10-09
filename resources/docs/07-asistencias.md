@@ -142,6 +142,17 @@ Cada vez que un empleado interactúa con el sistema de asistencia, se registra u
 | **Fin descanso** | Regreso de pausa |
 | **Salida jornada** | Fin del turno |
 
+### Segundo turno el mismo día
+
+Después de marcar la **salida**, el empleado puede marcar una **nueva entrada** el mismo día (por ejemplo, quien cubre dos turnos seguidos o un turno partido). Cada par entrada/salida es un **tramo** de la misma jornada:
+
+- Las **horas trabajadas** son la suma de los tramos; el tiempo entre una salida y la siguiente entrada **no se cuenta**.
+- La **tardanza** se calcula con la **primera entrada** del día y la **salida anticipada** con la **última salida**.
+- Mientras el segundo tramo está abierto (hay entrada sin salida) el día aparece **incompleto** y no muestra hora de salida ni horas trabajadas.
+- Las horas que superen las esperadas por el horario se calculan como **horas extra**, que RR.HH. aprueba como cualquier otra (ver **Aceptar doble turno como jornada normal** más abajo).
+- Entre la salida y la nueva entrada debe pasar un **mínimo** (5 minutos por defecto, configurable en **Configuración → Configuración General → Configuración Laboral**). Antes de ese tiempo el terminal no ofrece la entrada, para evitar reentradas por error.
+- En el **terminal**, tras una salida la nueva entrada **nunca se registra sola**: el empleado debe tocar **Entrada** en la pantalla. En el celular hay que tocar **Marcar**.
+
 ### Orígenes
 
 | Origen | Descripción |
@@ -282,6 +293,7 @@ Cada fila tiene botones de acción según el estado del registro:
 | Acción | Cuándo aparece | Qué hace |
 |--------|----------------|----------|
 | **Aprobar / Revocar Horas Extra** | El día tiene horas extras calculadas | Aprueba o revoca la aprobación. Solo las HE aprobadas se incluyen en la nómina |
+| **Aceptar doble turno como jornada normal** / **Volver a revisar doble turno** | El día tiene más de un turno y horas sobre el horario | Las horas del segundo turno dejan de contarse como extra (el empleado no cobra recargo por ellas) y el día sale de los pendientes. Queda registrado en el historial y se puede deshacer |
 | **Aprobar / Revocar Tardanza** | El día tiene minutos de tardanza | Aprueba o revoca el descuento por tardanza en nómina |
 | **PDF** | Siempre visible | Descarga el comprobante PDF del día de asistencia |
 | **Ajustar HE** (menú "...") | Siempre visible | Abre el formulario para ingresar horas extras manualmente |
@@ -323,6 +335,7 @@ Clic en cualquier fila de la tabla para abrir el detalle completo del día. Desd
 |--------|-------------|
 | **Editar** | Edita campos generales del registro (estado, notas, banderas) |
 | **Aprobar / Revocar Horas Extra** | Igual que en la tabla; visible solo si hay horas extras |
+| **Aceptar doble turno como jornada normal** | Igual que en la tabla; visible solo si el día tiene más de un turno |
 | **Aprobar / Revocar Tardanza** | Igual que en la tabla; visible solo si hay tardanza |
 | **Ajustar Horas Extra** | Ingresa horas extras manualmente sin necesidad de volver al listado |
 | **Exportar PDF** | Descarga el comprobante PDF del día |

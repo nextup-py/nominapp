@@ -320,6 +320,7 @@ class AttendanceDayResource extends Resource
             ->actions([
                 TableActionGroup::make([
                     self::getApproveOvertimeTableAction(),
+                    self::getRegularShiftTableAction(),
                     self::getApproveTardinessTableAction(),
                     self::getAdjustExtraHoursTableAction(),
                     self::getExportPdfTableAction(),
@@ -618,6 +619,82 @@ class AttendanceDayResource extends Resource
                     ->body("Las {$record->extra_hours} hrs extra han sido {$action}s exitosamente.")
                     ->success()
                     ->send();
+            });
+    }
+
+    /**
+     * Indica si corresponde ofrecer la decisión de doble turno: el día tiene más de una entrada y
+     * o bien horas extra por revisar, o bien ya se aceptó como jornada normal (para poder deshacerlo).
+     */
+    private static function canDecideRegularShift(AttendanceDay $record): bool
+    {
+        return ($record->second_shift_regular || (float) $record->extra_hours > 0) && $record->hasMultipleShifts();
+    }
+
+    /**
+     * Acepta o revierte un doble turno como jornada normal y recalcula el día.
+     * Aceptarlo deja las horas sobre el horario sin pago extra y quita el día de los pendientes.
+     */
+    private static function applyRegularShiftDecision(AttendanceDay $record, bool $accept): void
+    {
+        $extraBefore = (float) $record->extra_hours;
+
+        $record->second_shift_regular = $accept;
+        $record->overtime_approved = false;
+        AttendanceCalculator::apply($record);
+        $record->save();
+
+        Notification::make()
+            ->title($accept ? 'Doble turno aceptado como jornada normal' : 'Doble turno vuelto a revisión')
+            ->body($accept
+                ? "Las {$extraBefore} hrs del segundo turno ya no se cuentan como horas extra."
+                : "Las horas sobre el horario ({$record->extra_hours} hrs extra) vuelven a quedar pendientes de aprobación.")
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Retorna la acción de aceptar/revertir un doble turno como jornada normal para tabla.
+     */
+    public static function getRegularShiftTableAction(): TableAction
+    {
+        return TableAction::make('regular_shift')
+            ->label(fn (AttendanceDay $record) => $record->second_shift_regular ? 'Volver a revisar doble turno' : 'Aceptar doble turno como jornada normal')
+            ->icon('heroicon-o-clock')
+            ->color(fn (AttendanceDay $record) => $record->second_shift_regular ? 'gray' : 'info')
+            ->visible(fn (AttendanceDay $record) => self::canDecideRegularShift($record))
+            ->tooltip('El empleado hizo más de un turno el mismo día: las horas sobre el horario no se pagan como extra')
+            ->requiresConfirmation()
+            ->modalHeading(fn (AttendanceDay $record) => $record->second_shift_regular ? 'Volver a revisar el doble turno' : 'Aceptar el doble turno como jornada normal')
+            ->modalDescription(fn (AttendanceDay $record) => $record->second_shift_regular
+                ? 'Las horas sobre el horario volverán a contarse como horas extra pendientes de aprobación.'
+                : "Las {$record->extra_hours} hrs sobre el horario no se pagarán como horas extra y el día saldrá de los pendientes. Se puede deshacer.")
+            ->modalSubmitActionLabel(fn (AttendanceDay $record) => $record->second_shift_regular ? 'Sí, volver a revisar' : 'Sí, aceptar como jornada normal')
+            ->action(fn (AttendanceDay $record) => self::applyRegularShiftDecision($record, ! $record->second_shift_regular));
+    }
+
+    /**
+     * Retorna la acción de aceptar/revertir un doble turno como jornada normal para páginas (header actions).
+     */
+    public static function getRegularShiftAction(): Action
+    {
+        return Action::make('regular_shift')
+            ->label(fn (AttendanceDay $record) => $record->second_shift_regular ? 'Volver a revisar doble turno' : 'Aceptar doble turno como jornada normal')
+            ->icon('heroicon-o-clock')
+            ->color(fn (AttendanceDay $record) => $record->second_shift_regular ? 'gray' : 'info')
+            ->visible(fn (AttendanceDay $record) => self::canDecideRegularShift($record))
+            ->requiresConfirmation()
+            ->modalHeading(fn (AttendanceDay $record) => $record->second_shift_regular ? 'Volver a revisar el doble turno' : 'Aceptar el doble turno como jornada normal')
+            ->modalDescription(fn (AttendanceDay $record) => $record->second_shift_regular
+                ? 'Las horas sobre el horario volverán a contarse como horas extra pendientes de aprobación.'
+                : "Las {$record->extra_hours} hrs sobre el horario no se pagarán como horas extra y el día saldrá de los pendientes. Se puede deshacer.")
+            ->modalSubmitActionLabel(fn (AttendanceDay $record) => $record->second_shift_regular ? 'Sí, volver a revisar' : 'Sí, aceptar como jornada normal')
+            ->action(function (AttendanceDay $record, $livewire) {
+                self::applyRegularShiftDecision($record, ! $record->second_shift_regular);
+
+                if (method_exists($livewire, 'refreshFormData')) {
+                    $livewire->refreshFormData(['second_shift_regular', 'extra_hours', 'overtime_approved']);
+                }
             });
     }
 

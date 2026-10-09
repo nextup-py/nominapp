@@ -81,6 +81,17 @@ class ManageGeneralSettings extends SettingsPage
                             ->default(30)
                             ->suffix('minutos')
                             ->helperText('Minutos de gracia tras la hora de entrada antes de marcar al empleado como ausente'),
+
+                        TextInput::make('attendance_min_reentry_minutes')
+                            ->label('Mínimo entre salida y nueva entrada')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(240)
+                            ->default(5)
+                            ->suffix('minutos')
+                            ->helperText('Tiempo que debe pasar después de marcar la salida para poder marcar una nueva entrada el mismo día (segundo turno). Evita reentradas por error. 0 = sin mínimo.'),
                     ]),
 
                 Section::make('Configuración de Contratos')

@@ -246,7 +246,7 @@ class AttendanceEvent extends Model
             'check_in' => ['break_start', 'check_out'],
             'break_start' => ['break_end'],
             'break_end' => ['break_start', 'check_out'],
-            'check_out' => [],
+            'check_out' => ['check_in'],
             default => ['check_in'],
         };
     }

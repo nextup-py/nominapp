@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttendanceDayResource\Pages;
 
 use App\Filament\Resources\AttendanceDayResource;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
@@ -16,7 +17,7 @@ class EditAttendanceDay extends EditRecord
     /**
      * Acciones del encabezado: ver, aprobar HE, exportar PDF, calcular y eliminar.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
@@ -27,6 +28,7 @@ class EditAttendanceDay extends EditRecord
                 ->color('gray'),
 
             AttendanceDayResource::getApproveOvertimeAction(),
+            AttendanceDayResource::getRegularShiftAction(),
 
             AttendanceDayResource::getExportPdfAction(),
 

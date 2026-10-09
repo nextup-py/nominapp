@@ -22,6 +22,7 @@ class AttendanceEventObserver
      * Handle the AttendanceEvent "created" event.
      * Recalcula el AttendanceDay en tres situaciones:
      * - check_in cuando el día estaba marcado como ausente (entrada tardía)
+     * - check_in tras una salida (segundo turno del día): el día vuelve a quedar abierto
      * - check_out: actualiza horas trabajadas y horas extras en tiempo real
      * - break_end: actualiza minutos de pausa en tiempo real
      */
@@ -49,6 +50,14 @@ class AttendanceEventObserver
                     'date' => $day->date,
                 ]);
 
+                AttendanceCalculator::apply($day);
+                $day->save();
+
+                return;
+            }
+
+            // Nueva entrada tras una salida (segundo turno del día): el día vuelve a quedar abierto
+            if ($type === 'check_in' && $day->check_out_time !== null) {
                 AttendanceCalculator::apply($day);
                 $day->save();
 
