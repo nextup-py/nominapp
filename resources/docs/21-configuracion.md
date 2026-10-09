@@ -14,6 +14,7 @@ Acceder desde **Configuración → Configuración General**.
 
 - **Zona horaria:** `America/Asunción` por defecto (también se puede elegir entre otros husos horarios de la región).
 - **Tolerancia para ausencia:** minutos de gracia después de la hora de entrada antes de que el sistema marque al empleado como ausente (por defecto 30 minutos).
+- **Mínimo entre salida y nueva entrada:** minutos que deben pasar después de marcar la salida para poder marcar otra entrada el mismo día, por ejemplo en un doble turno (por defecto 5 minutos; 0 = sin mínimo). Evita reentradas por error.
 
 ### Configuración de Contratos
 

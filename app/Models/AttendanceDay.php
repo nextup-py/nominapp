@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\AttendanceCalculator;
+use App\Settings\GeneralSettings;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,7 @@ class AttendanceDay extends Model implements Auditable
     /** @var array<int, string> Campos auditados en el historial de cambios. */
     protected array $auditInclude = [
         'overtime_approved',
+        'second_shift_regular',
         'tardiness_deduction_approved',
         'notes',
         'manual_adjustment',
@@ -50,6 +52,7 @@ class AttendanceDay extends Model implements Auditable
         'is_holiday',
         'manual_adjustment',
         'overtime_approved',
+        'second_shift_regular',
         'overtime_limit_exceeded',
         'tardiness_deduction_approved',
         'on_vacation',
@@ -76,6 +79,7 @@ class AttendanceDay extends Model implements Auditable
         'is_holiday' => 'boolean',
         'manual_adjustment' => 'boolean',
         'overtime_approved' => 'boolean',
+        'second_shift_regular' => 'boolean',
         'overtime_limit_exceeded' => 'boolean',
         'tardiness_deduction_approved' => 'boolean',
         'on_vacation' => 'boolean',
@@ -116,7 +120,7 @@ class AttendanceDay extends Model implements Auditable
      *
      * @return array{day: ?self, last: ?AttendanceEvent, allowed: array<int, string>} `day` es null cuando debe crearse una jornada nueva para hoy (ninguna de las dos jornadas permite la transición pedida, o la de hoy sí la permite pero aún no existe). `allowed` ya viene filtrado por horario/descanso — usarlo para la validación final en el caller, no recalcular con AttendanceEvent::allowedNextEventTypes() directamente.
      */
-    public static function resolveForEvent(Employee $employee, Carbon $recordedAt, string $requestedEventType, bool $lockForUpdate = false): array
+    public static function resolveForEvent(Employee $employee, Carbon $recordedAt, string $requestedEventType, bool $lockForUpdate = false, bool $enforceReentryGap = true): array
     {
         $resolveLast = function (?self $day) use ($lockForUpdate) {
             if (! $day) {
@@ -135,6 +139,9 @@ class AttendanceDay extends Model implements Auditable
             $employee,
             $recordedAt
         );
+        if ($enforceReentryGap) {
+            $todayAllowed = static::filterAllowedByReentryGap($todayAllowed, $todayLast, $recordedAt);
+        }
 
         if (in_array($requestedEventType, $todayAllowed, true)) {
             return ['day' => $today, 'last' => $todayLast, 'allowed' => $todayAllowed];
@@ -157,6 +164,29 @@ class AttendanceDay extends Model implements Auditable
         }
 
         return ['day' => $today, 'last' => $todayLast, 'allowed' => $todayAllowed];
+    }
+
+    /**
+     * Quita 'check_in' mientras no pasó el mínimo configurado desde la última salida: una nueva
+     * entrada el mismo día (segundo turno) es válida, pero no a los pocos segundos de marcar la
+     * salida (doble toque, rostro reconocido dos veces). Con el mínimo en 0 no filtra nada.
+     *
+     * @param  array<int, string>  $allowed
+     * @return array<int, string>
+     */
+    private static function filterAllowedByReentryGap(array $allowed, ?AttendanceEvent $last, Carbon $at): array
+    {
+        if ($last?->event_type !== 'check_out' || ! in_array('check_in', $allowed, true)) {
+            return $allowed;
+        }
+
+        $minMinutes = (int) app(GeneralSettings::class)->attendance_min_reentry_minutes;
+
+        if ($minMinutes > 0 && $at->lt($last->recorded_at->copy()->addMinutes($minMinutes))) {
+            return array_values(array_diff($allowed, ['check_in']));
+        }
+
+        return $allowed;
     }
 
     /**
@@ -203,9 +233,13 @@ class AttendanceDay extends Model implements Auditable
 
         $overnightOpen = $yesterdayLast && $yesterdayLast->event_type !== 'check_out';
 
-        $allowed = static::filterAllowedByBreakSchedule(
-            AttendanceEvent::allowedNextEventTypes($todayLast?->event_type),
-            $employee,
+        $allowed = static::filterAllowedByReentryGap(
+            static::filterAllowedByBreakSchedule(
+                AttendanceEvent::allowedNextEventTypes($todayLast?->event_type),
+                $employee,
+                $recordedAt
+            ),
+            $todayLast,
             $recordedAt
         );
         if ($overnightOpen) {
@@ -219,6 +253,14 @@ class AttendanceDay extends Model implements Auditable
             'last' => $todayLast ?? ($overnightOpen ? $yesterdayLast : null),
             'allowed' => $allowed,
         ];
+    }
+
+    /**
+     * Indica si el día tiene más de una entrada (un segundo turno después de una salida).
+     */
+    public function hasMultipleShifts(): bool
+    {
+        return $this->events()->where('event_type', 'check_in')->count() > 1;
     }
 
     /**
@@ -432,6 +474,7 @@ class AttendanceDay extends Model implements Auditable
 
         $fieldLabels = [
             'overtime_approved' => 'HE aprobadas',
+            'second_shift_regular' => 'Doble turno como jornada normal',
             'tardiness_deduction_approved' => 'Desc. tardanza aprobado',
             'notes' => 'Notas',
             'manual_adjustment' => 'Ajuste manual',
@@ -458,7 +501,7 @@ class AttendanceDay extends Model implements Auditable
         }
 
         return match ($key) {
-            'overtime_approved', 'tardiness_deduction_approved', 'manual_adjustment' => $value ? 'Sí' : 'No',
+            'overtime_approved', 'second_shift_regular', 'tardiness_deduction_approved', 'manual_adjustment' => $value ? 'Sí' : 'No',
             'extra_hours_diurnas', 'extra_hours_nocturnas' => number_format((float) $value, 2).' hrs',
             'notes' => Str::limit((string) $value, 120),
             default => (string) $value,

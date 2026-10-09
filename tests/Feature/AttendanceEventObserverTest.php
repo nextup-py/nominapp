@@ -137,23 +137,19 @@ it('recalcula al registrar check_in cuando el día estaba ausente', function () 
         ->and($day->check_in_time)->toBe('10:00:00');
 });
 
-it('NO recalcula al registrar check_in si el día ya estaba presente', function () {
+it('NO recalcula al registrar check_in si el día ya estaba presente y sigue abierto', function () {
     $employee = makeObsEmployee();
     $day = makeObsDay($employee, 'present', [
         'check_in_time' => '08:00:00',
-        'check_out_time' => '17:00:00',
-        'total_hours' => 9.0,
-        'net_hours' => 9.0,
-        'extra_hours' => 0.0,
+        'check_out_time' => null,
     ]);
 
-    // Un segundo check_in no debe disparar recálculo
+    // Un check_in sobre un día abierto (sin salida previa) no dispara recálculo
     createObsEvent($day, 'check_in', '08:05:00');
 
     $day->refresh();
 
-    // Los valores se mantienen — no hubo recálculo por check_in presente
-    expect($day->total_hours)->toBe('9.00');
+    expect($day->check_in_time)->toBe('08:00:00');
 });
 
 it('no recalcula al registrar break_start', function () {
