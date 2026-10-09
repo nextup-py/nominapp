@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mysql:
-        image: mysql:8.0
+        image: mirror.gcr.io/library/mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: secret
           MYSQL_DATABASE: testing
