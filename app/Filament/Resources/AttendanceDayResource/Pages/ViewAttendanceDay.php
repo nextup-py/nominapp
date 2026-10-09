@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttendanceDayResource\Pages;
 
 use App\Filament\Resources\AttendanceDayResource;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -14,7 +15,7 @@ class ViewAttendanceDay extends ViewRecord
     /**
      * Acciones del encabezado: editar, aprobar HE/tardanza, ajustar HE, exportar PDF y calcular.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
@@ -25,6 +26,7 @@ class ViewAttendanceDay extends ViewRecord
                 ->color('primary'),
 
             AttendanceDayResource::getApproveOvertimeAction(),
+            AttendanceDayResource::getRegularShiftAction(),
 
             AttendanceDayResource::getApproveTardinessAction(),
 

@@ -14,6 +14,9 @@ class GeneralSettings extends Settings
 
     public int $absence_threshold_minutes;
 
+    /** Minutos mínimos entre una salida y una nueva entrada del mismo día (evita reentradas por error); 0 = sin mínimo. */
+    public int $attendance_min_reentry_minutes;
+
     public float $face_threshold;
 
     public float $face_min_confidence_gap;

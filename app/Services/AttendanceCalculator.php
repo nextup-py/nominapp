@@ -242,7 +242,9 @@ class AttendanceCalculator
             return;
         }
 
-        $day->extra_hours = self::calculateExtraHours($totalHours, $day->expected_hours);
+        // Doble turno que RR.HH. aceptó como jornada normal: las horas del segundo turno no son extra
+        $acceptedAsRegular = $isReopened && $day->second_shift_regular;
+        $day->extra_hours = $acceptedAsRegular ? 0 : self::calculateExtraHours($totalHours, $day->expected_hours);
 
         // Desglosar horas extra en diurnas/nocturnas y verificar límites legales (diario y semanal)
         if ($day->extra_hours > 0) {

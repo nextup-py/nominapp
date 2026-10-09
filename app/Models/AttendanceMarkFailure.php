@@ -326,6 +326,7 @@ class AttendanceMarkFailure extends Model
                 $recordedAt,
                 $eventType,
                 lockForUpdate: true,
+                enforceReentryGap: false,
             );
 
             if (! $day) {

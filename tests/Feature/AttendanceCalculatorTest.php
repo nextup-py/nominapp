@@ -13,6 +13,7 @@ use App\Models\Position;
 use App\Models\Vacation;
 use App\Models\VacationBalance;
 use App\Services\AttendanceCalculator;
+use App\Settings\GeneralSettings;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -572,4 +573,117 @@ it('resolveForEvent acepta la nueva entrada sobre la jornada de hoy después de 
     expect($resolved['day']?->id)->toBe($day->id)
         ->and($resolved['last']?->event_type)->toBe('check_out')
         ->and($resolved['allowed'])->toBe(['check_in']);
+});
+
+// ─── Mínimo entre salida y nueva entrada ──────────────────────────────────────
+
+it('no permite una nueva entrada antes del mínimo configurado desde la salida', function () {
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16');
+    addEvent($day, 'check_in', '07:00:00');
+    addEvent($day, 'check_out', '11:00:00');
+
+    $tooSoon = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-16 11:03:00'), 'check_in');
+    $enough = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-16 11:05:00'), 'check_in');
+
+    expect($tooSoon['allowed'])->toBe([])
+        ->and($enough['allowed'])->toBe(['check_in']);
+});
+
+it('sin mínimo configurado la nueva entrada se permite enseguida', function () {
+    $settings = app(GeneralSettings::class);
+    $settings->attendance_min_reentry_minutes = 0;
+    $settings->save();
+
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16');
+    addEvent($day, 'check_in', '07:00:00');
+    addEvent($day, 'check_out', '11:00:00');
+
+    $resolved = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-16 11:00:30'), 'check_in');
+
+    expect($resolved['allowed'])->toBe(['check_in']);
+});
+
+it('la aprobación manual de un conflicto puede saltarse el mínimo', function () {
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16');
+    addEvent($day, 'check_in', '07:00:00');
+    addEvent($day, 'check_out', '11:00:00');
+
+    $resolved = AttendanceDay::resolveForEvent(
+        $employee,
+        Carbon::parse('2026-03-16 11:01:00'),
+        'check_in',
+        enforceReentryGap: false,
+    );
+
+    expect($resolved['allowed'])->toBe(['check_in']);
+});
+
+it('el estado que ve el terminal no ofrece la entrada hasta pasar el mínimo', function () {
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16');
+    addEvent($day, 'check_in', '07:00:00');
+    addEvent($day, 'check_out', '11:00:00');
+
+    $soon = AttendanceDay::currentStateFor($employee, Carbon::parse('2026-03-16 11:01:00'));
+    $later = AttendanceDay::currentStateFor($employee, Carbon::parse('2026-03-16 11:30:00'));
+
+    expect($soon['allowed'])->toBe([])
+        ->and($later['allowed'])->toBe(['check_in']);
+});
+
+// ─── Doble turno aceptado como jornada normal ─────────────────────────────────
+
+it('las horas del segundo turno sobre el horario cuentan como extra', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16', ['expected_hours' => 8.0]);
+
+    addEvent($day, 'check_in', '07:00:00');
+    addEvent($day, 'check_out', '15:00:00');
+    addEvent($day, 'check_in', '15:30:00');
+    addEvent($day, 'check_out', '19:30:00');
+
+    AttendanceCalculator::apply($day);
+
+    expect((float) $day->total_hours)->toBe(12.0)
+        ->and((float) $day->extra_hours)->toBe(4.0);
+});
+
+it('un doble turno aceptado como jornada normal no genera horas extra y se puede deshacer', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16', ['expected_hours' => 8.0]);
+
+    addEvent($day, 'check_in', '07:00:00');
+    addEvent($day, 'check_out', '15:00:00');
+    addEvent($day, 'check_in', '15:30:00');
+    addEvent($day, 'check_out', '19:30:00');
+
+    $day->second_shift_regular = true;
+    AttendanceCalculator::apply($day);
+
+    expect((float) $day->total_hours)->toBe(12.0)
+        ->and((float) $day->extra_hours)->toBe(0.0)
+        ->and($day->overtime_limit_exceeded)->toBeFalse();
+
+    $day->second_shift_regular = false;
+    AttendanceCalculator::apply($day);
+
+    expect((float) $day->extra_hours)->toBe(4.0);
+});
+
+it('la marca de doble turno no afecta a un día de un solo turno', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16', ['expected_hours' => 8.0, 'second_shift_regular' => true]);
+
+    addEvent($day, 'check_in', '07:00:00');
+    addEvent($day, 'check_out', '17:00:00');
+
+    AttendanceCalculator::apply($day);
+
+    expect((float) $day->extra_hours)->toBe(2.0);
 });
