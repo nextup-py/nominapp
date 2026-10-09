@@ -25,6 +25,7 @@ php artisan db:seed --class=ProductionSeeder   # new client setup (sets admin us
 # Artisan commands (also run via scheduler)
 php artisan app:calculate-attendance          # calculate daily attendance totals (runs at 23:00)
 php artisan attendance:check-missing          # flag missing clock-ins (every 15min, 6am–8pm Mon–Sat)
+php artisan attendance:recalculate-overnight --dry-run  # corrige jornadas nocturnas con expected_hours negativas (manual, sin --dry-run guarda)
 php artisan face:expire-enrollments           # expire stale face enrollments (hourly)
 php artisan audits:purge                      # purge audit history older than the configured retention (daily 03:00)
 ```
@@ -268,6 +269,7 @@ Registro de amonestaciones laborales emitidas a empleados. Salvo la suspensión 
 - **Reglas (`validate()`):** máximo 8 días (`Warning::MAX_SUSPENSION_DAYS`); con 4 a 8 días es obligatorio `suspension_summary_done` (sumario administrativo previo, `Warning::SUMMARY_REQUIRED_FROM_DAYS`); el empleado debe estar activo y con salario/jornal definido; se bloquea si el empleado ya tiene nómina cuyo período solapa las fechas, si hay marcaciones reales de asistencia en esas fechas, si alguna fecha ya tiene una `Absence` con descuento (doble descuento con `AUS-INJ`) o si ya está cubierta por otra suspensión.
 - **Monto por día:** `Employee::getAbsenceDeductionAmount()` (jornal, o salario base / 30), misma convención que `AUS-INJ`.
 - **Trazabilidad:** tabla `warning_suspension_days` (una fila por día, con FK a la `EmployeeDeduction`). `WarningObserver` valida en `saving` y aplica en `saved`; al eliminar la amonestación o llevar `suspension_days` a 0 revierte deducciones y días (siempre que no haya nómina de esas fechas; si la hay, bloquea con aviso). Editar campos no relacionados con la suspensión (notas, documento) no la recalcula.
+- **Turnos que cruzan medianoche (`AttendanceCalculator`):** `expected_hours`, tardanza, salida anticipada y el reparto diurnas/nocturnas se calculan con instantes reales (`expectedBoundaries()`: la salida esperada pasa al día siguiente si es <= entrada); `nightMinutesBetween()` cuenta la franja 20:00–06:00 de `payroll.shift_boundaries`. Antes, un 23:00–07:00 daba `expected_hours = -16` (Carbon 3: `diffInMinutes` tiene signo). `attendance:recalculate-overnight` repara el histórico y omite días con extras aprobadas o ajuste manual.
 - **Asistencia:** `AttendanceCalculator::isSuspended()` deja el día en `on_leave` (como vacaciones o permiso), por lo que `attendance:check-missing` no genera ausencia y `LiquidacionService` no lo cuenta como `absent`. Antigüedad, vacaciones e IPS no se tocan.
 - **Dependencia:** el código `SUS-DIS` se crea on-demand con `firstOrCreate` (`type = other`, `is_mandatory = false`) y también lo siembran `ProductionSeeder` y `DeductionSeeder`.
 - **Pendiente fuera de alcance:** el reporte de la suspensión en el REOP (MTESS) es manual; el sistema solo deja el registro y el sumario.

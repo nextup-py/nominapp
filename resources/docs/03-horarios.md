@@ -17,6 +17,8 @@ Los horarios definen los turnos laborales de los empleados. Se usan para calcula
 | **Nocturno** | Turno entre 20:00 y 06:00 |
 | **Mixto** | Combinación de ambos |
 
+> **Turnos que cruzan medianoche** (ej. 23:00 a 07:00): la salida se entiende como del día siguiente. Las horas esperadas, la tardanza, la salida anticipada y las horas extra se calculan sobre ese tramo completo, y las horas extra de madrugada (00:00 a 06:00) cuentan como nocturnas.
+
 El tipo de jornada determina las horas mensuales de referencia y los multiplicadores de horas extra que se aplican en nómina.
 
 ## Crear un horario

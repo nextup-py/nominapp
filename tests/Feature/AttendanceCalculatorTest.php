@@ -476,6 +476,140 @@ it('siempre marca is_calculated = true y guarda calculated_at', function () {
         ->and($day->calculated_at)->not->toBeNull();
 });
 
+
+// ─── Turnos que cruzan medianoche ─────────────────────────────────────────────
+
+/** Agrega un evento en una fecha/hora absoluta (para marcaciones de madrugada del día siguiente). */
+function addEventAt(AttendanceDay $day, string $type, string $dateTime): AttendanceEvent
+{
+    return AttendanceEvent::create([
+        'attendance_day_id' => $day->id,
+        'employee_id' => $day->employee_id,
+        'event_type' => $type,
+        'recorded_at' => Carbon::parse($dateTime),
+    ]);
+}
+
+it('calcula horas esperadas positivas en un horario que cruza medianoche', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+    $schedule = \App\Models\Schedule::create(['name' => 'Nocturno 23-07', 'shift_type' => 'nocturno']);
+    $schedule->days()->create(['day_of_week' => 1, 'is_active' => true, 'start_time' => '23:00:00', 'end_time' => '07:00:00']);
+    \App\Services\ScheduleAssignmentService::assign($employee, $schedule, Carbon::parse('2026-01-01'));
+
+    $day = AttendanceDay::create(['employee_id' => $employee->id, 'date' => '2026-03-16', 'status' => 'absent']);
+    addEventAt($day, 'check_in', '2026-03-16 23:00:00');
+    addEventAt($day, 'check_out', '2026-03-17 07:00:00');
+
+    AttendanceCalculator::apply($day);
+
+    expect((float) $day->expected_hours)->toBe(8.0)
+        ->and((float) $day->total_hours)->toBe(8.0)
+        ->and((float) $day->extra_hours)->toBe(0.0)
+        ->and((int) $day->late_minutes)->toBe(0)
+        ->and((int) $day->early_leave_minutes)->toBe(0);
+});
+
+it('detecta salida anticipada antes de medianoche en un turno que termina de madrugada', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16', [
+        'expected_check_in' => '16:00:00',
+        'expected_check_out' => '01:00:00',
+        'expected_hours' => 9.0,
+    ]);
+
+    addEventAt($day, 'check_in', '2026-03-16 16:00:00');
+    addEventAt($day, 'check_out', '2026-03-16 23:30:00');
+
+    AttendanceCalculator::apply($day);
+
+    expect((int) $day->early_leave_minutes)->toBe(90);
+});
+
+it('no marca salida anticipada ni extra cuando sale pasada la medianoche a la hora prevista', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16', [
+        'expected_check_in' => '16:00:00',
+        'expected_check_out' => '01:00:00',
+        'expected_hours' => 9.0,
+    ]);
+
+    addEventAt($day, 'check_in', '2026-03-16 16:10:00');
+    addEventAt($day, 'check_out', '2026-03-17 01:00:00');
+
+    AttendanceCalculator::apply($day);
+
+    expect((int) $day->early_leave_minutes)->toBe(0)
+        ->and((int) $day->late_minutes)->toBe(10);
+});
+
+it('clasifica como nocturnas las horas extra de madrugada de un turno que cruza medianoche', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+    // Turno 18:00-04:00 (10h); sale a las 05:00 → 1h extra, toda dentro de 00:00-06:00
+    $day = makeAttDay($employee, '2026-03-16', [
+        'expected_check_in' => '18:00:00',
+        'expected_check_out' => '04:00:00',
+        'expected_hours' => 10.0,
+    ]);
+
+    addEventAt($day, 'check_in', '2026-03-16 18:00:00');
+    addEventAt($day, 'check_out', '2026-03-17 05:00:00');
+
+    AttendanceCalculator::apply($day);
+
+    expect((float) $day->extra_hours)->toBe(1.0)
+        ->and((float) $day->extra_hours_nocturnas)->toBe(1.0)
+        ->and((float) $day->extra_hours_diurnas)->toBe(0.0);
+});
+
+it('reparte las extra que cruzan las 06:00 entre nocturnas y diurnas', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+    // Turno 22:00-05:00 (7h); sale a las 07:00 → 2h extra: 1h nocturna (05-06) + 1h diurna (06-07)
+    $day = makeAttDay($employee, '2026-03-16', [
+        'expected_check_in' => '22:00:00',
+        'expected_check_out' => '05:00:00',
+        'expected_hours' => 7.0,
+    ]);
+
+    addEventAt($day, 'check_in', '2026-03-16 22:00:00');
+    addEventAt($day, 'check_out', '2026-03-17 07:00:00');
+
+    AttendanceCalculator::apply($day);
+
+    expect((float) $day->extra_hours)->toBe(2.0)
+        ->and((float) $day->extra_hours_nocturnas)->toBe(1.0)
+        ->and((float) $day->extra_hours_diurnas)->toBe(1.0);
+});
+
+it('attendance:recalculate-overnight corrige jornadas nocturnas con horas esperadas negativas y respeta las aprobadas', function () {
+    seedAttSettings();
+    $employee = makeAttEmployee();
+
+    $wrong = makeAttDay($employee, '2026-03-16', [
+        'expected_check_in' => '23:00:00', 'expected_check_out' => '07:00:00', 'expected_hours' => -16.0,
+    ]);
+    addEventAt($wrong, 'check_in', '2026-03-16 23:00:00');
+    addEventAt($wrong, 'check_out', '2026-03-17 07:00:00');
+
+    $approved = makeAttDay($employee, '2026-03-17', [
+        'expected_check_in' => '23:00:00', 'expected_check_out' => '07:00:00', 'expected_hours' => -16.0,
+        'overtime_approved' => true,
+    ]);
+
+    \Illuminate\Support\Facades\Artisan::call('attendance:recalculate-overnight', ['--dry-run' => true]);
+    expect((float) $wrong->fresh()->expected_hours)->toBe(-16.0);
+
+    \Illuminate\Support\Facades\Artisan::call('attendance:recalculate-overnight');
+
+    expect((float) $wrong->fresh()->expected_hours)->toBe(8.0)
+        ->and((float) $wrong->fresh()->extra_hours)->toBe(0.0)
+        ->and((float) $approved->fresh()->expected_hours)->toBe(-16.0);
+});
+
 // ─── Segundo turno el mismo día (varias entradas/salidas) ─────────────────────
 
 it('tras una salida permite una nueva entrada (segundo turno del día)', function () {
