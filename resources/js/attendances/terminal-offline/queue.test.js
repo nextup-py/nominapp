@@ -49,8 +49,8 @@ describe('allowedNextEventTypes', () => {
     it('tras break_start, solo permite break_end', () => {
         expect(allowedNextEventTypes('break_start')).toEqual(['break_end']);
     });
-    it('tras check_out, no permite nada más', () => {
-        expect(allowedNextEventTypes('check_out')).toEqual([]);
+    it('tras check_out, solo permite una nueva entrada (segundo turno del día)', () => {
+        expect(allowedNextEventTypes('check_out')).toEqual(['check_in']);
     });
     it('con hasScheduledBreak=false, filtra break_start', () => {
         expect(allowedNextEventTypes('check_in', false)).toEqual(['check_out']);

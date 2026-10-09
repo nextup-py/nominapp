@@ -142,6 +142,16 @@ Cada vez que un empleado interactúa con el sistema de asistencia, se registra u
 | **Fin descanso** | Regreso de pausa |
 | **Salida jornada** | Fin del turno |
 
+### Segundo turno el mismo día
+
+Después de marcar la **salida**, el empleado puede marcar una **nueva entrada** el mismo día (por ejemplo, quien cubre dos turnos seguidos o un turno partido). Cada par entrada/salida es un **tramo** de la misma jornada:
+
+- Las **horas trabajadas** son la suma de los tramos; el tiempo entre una salida y la siguiente entrada **no se cuenta**.
+- La **tardanza** se calcula con la **primera entrada** del día y la **salida anticipada** con la **última salida**.
+- Mientras el segundo tramo está abierto (hay entrada sin salida) el día aparece **incompleto** y no muestra hora de salida ni horas trabajadas.
+- Las horas que superen las esperadas por el horario se calculan como **horas extra**.
+- En el **terminal**, tras una salida la nueva entrada **nunca se registra sola**: el empleado debe tocar **Entrada** en la pantalla. En el celular hay que tocar **Marcar**.
+
 ### Orígenes
 
 | Origen | Descripción |

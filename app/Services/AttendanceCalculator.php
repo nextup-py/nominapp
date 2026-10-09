@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AttendanceDay;
+use App\Models\AttendanceEvent;
 use App\Models\Employee;
 use App\Models\EmployeeScheduleAssignment;
 use App\Models\Holiday;
@@ -210,13 +211,28 @@ class AttendanceCalculator
         $checkOut = self::getLastEventTime($events, self::EVENT_CHECK_OUT);
         $breakMinutes = self::calculateBreakMinutes($events);
 
+        // Con una segunda entrada tras una salida, el día tiene varios tramos: se suma cada uno
+        // (la pausa entre turnos no es tiempo trabajado) y, si el último tramo sigue abierto,
+        // el día queda incompleto hasta que se marque la salida.
+        $segments = self::resolveSegments($events);
+        $isReopened = $segments['closed_count'] > 1 || ($segments['closed_count'] >= 1 && $segments['open']);
+        if ($isReopened && $segments['open']) {
+            $checkOut = null;
+        }
+
         // Asignar valores REALES calculados (estos SÍ se recalculan siempre)
         $day->check_in_time = optional($checkIn)->format('H:i:s');
         $day->check_out_time = optional($checkOut)->format('H:i:s');
         $day->break_minutes = $breakMinutes;
 
         // Calcular horas trabajadas
-        [$totalHours, $netHours] = self::calculateWorkedHours($checkIn, $checkOut, $breakMinutes);
+        if ($isReopened) {
+            [$totalHours, $netHours] = $segments['open']
+                ? [null, null]
+                : self::hoursFromMinutes($segments['minutes'], $breakMinutes);
+        } else {
+            [$totalHours, $netHours] = self::calculateWorkedHours($checkIn, $checkOut, $breakMinutes);
+        }
         $day->total_hours = $totalHours;
         $day->net_hours = $netHours;
 
@@ -292,6 +308,44 @@ class AttendanceCalculator
     private static function getLastEventTime($events, string $eventType): ?Carbon
     {
         return $events->where('event_type', $eventType)->last()?->recorded_at;
+    }
+
+    /**
+     * Empareja cada entrada con la salida siguiente para obtener los tramos trabajados del día.
+     * Con una sola entrada y una sola salida es el mismo resultado que primera entrada → última salida.
+     *
+     * @param  Collection<int, AttendanceEvent>  $events  Ordenados por `recorded_at`.
+     * @return array{minutes: int, closed_count: int, open: bool} Minutos de los tramos cerrados, cantidad de tramos cerrados y si el último sigue abierto.
+     */
+    private static function resolveSegments($events): array
+    {
+        $minutes = 0;
+        $closed = 0;
+        $openedAt = null;
+
+        foreach ($events as $event) {
+            if ($event->event_type === self::EVENT_CHECK_IN) {
+                $openedAt ??= $event->recorded_at;
+            } elseif ($event->event_type === self::EVENT_CHECK_OUT && $openedAt) {
+                $minutes += (int) $openedAt->diffInMinutes($event->recorded_at);
+                $closed++;
+                $openedAt = null;
+            }
+        }
+
+        return ['minutes' => $minutes, 'closed_count' => $closed, 'open' => $openedAt !== null];
+    }
+
+    /**
+     * Convierte minutos trabajados (brutos) en horas totales y netas, descontando la pausa.
+     *
+     * @return array{0: float, 1: float}
+     */
+    private static function hoursFromMinutes(int $totalMinutes, int $breakMinutes): array
+    {
+        $netMinutes = max(0, $totalMinutes - $breakMinutes);
+
+        return [round($totalMinutes / 60, 2), round($netMinutes / 60, 2)];
     }
 
     /**

@@ -260,7 +260,9 @@ export async function startAutoIdentification(refs) {
                     onError: (message) => showError(refs.screens, refs.errorMessageEl, message),
                 };
 
-                if (allowedEvents.length === 1) {
+                // Tras una salida, la nueva entrada (segundo turno del día) nunca se registra sola:
+                // si el empleado vuelve a ser reconocido sin querer, no debe abrir otra jornada.
+                if (allowedEvents.length === 1 && result.last_event !== 'check_out') {
                     await registerMark(result.employee, allowedEvents[0], markCallbacks);
                 } else if (allowedEvents.length > 1) {
                     showTypeSelectionForEmployee(refs.screens, refs.typeSelectionDom, result.employee, allowedEvents, result.last_event, result.last_event_time);

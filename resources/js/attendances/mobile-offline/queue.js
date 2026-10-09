@@ -58,7 +58,7 @@ export function allowedNextEventTypes(lastEventType, hasScheduledBreak = true) {
             case 'break_end':
                 return ['break_start', 'check_out'];
             case 'check_out':
-                return [];
+                return ['check_in'];
             default:
                 return ['check_in'];
         }
