@@ -27,6 +27,8 @@ export default defineConfig({
                 'resources/css/shared/status-page.css',
                 'resources/js/planner/planner.js',
                 'resources/css/planner/planner.css',
+                'resources/js/org-chart/org-chart.js',
+                'resources/css/org-chart/org-chart.css',
             ],
             refresh: true,
         }),
