@@ -27,8 +27,7 @@ body {
     border: 1px solid var(--c-border);
     border-radius: var(--r);
     padding: var(--sp-5) var(--sp-6);
-    margin: 0 auto var(--sp-6);
-    max-width: 1200px;
+    margin-bottom: var(--sp-6);
     display: flex;
     justify-content: space-between;
     align-items: center;
