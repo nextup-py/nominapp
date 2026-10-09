@@ -202,8 +202,7 @@ class AttendanceCalculator
         }
 
         // Usar los valores esperados guardados (no los actuales del empleado)
-        $scheduledCheckIn = $day->expected_check_in;
-        $scheduledCheckOut = $day->expected_check_out;
+        [$expectedIn, $expectedOut] = self::expectedBoundaries($day);
 
         // Calcular tiempos de entrada, salida y descansos
         $checkIn = self::getFirstEventTime($events, self::EVENT_CHECK_IN);
@@ -231,8 +230,8 @@ class AttendanceCalculator
         // Desglosar horas extra en diurnas/nocturnas y verificar límites legales (diario y semanal)
         if ($day->extra_hours > 0) {
             [$diurnas, $nocturnas] = self::splitOvertimeHours(
-                $day->check_out_time,
-                $scheduledCheckOut,
+                $expectedOut,
+                $checkOut,
                 $day->extra_hours
             );
             $day->extra_hours_diurnas = $diurnas;
@@ -258,10 +257,10 @@ class AttendanceCalculator
         }
 
         // Calcular minutos de llegada tarde (basado en expected_check_in guardada)
-        $day->late_minutes = self::calculateLateMinutes($scheduledCheckIn, $day->check_in_time);
+        $day->late_minutes = self::calculateLateMinutes($expectedIn, $checkIn);
 
         // Calcular minutos de salida anticipada (basado en expected_check_out guardada)
-        $day->early_leave_minutes = self::calculateEarlyLeaveMinutes($scheduledCheckOut, $day->check_out_time);
+        $day->early_leave_minutes = self::calculateEarlyLeaveMinutes($expectedOut, $checkOut);
     }
 
     /**
@@ -270,12 +269,41 @@ class AttendanceCalculator
     private static function calculateExpectedHours(?string $checkIn, ?string $checkOut): ?float
     {
         if ($checkIn && $checkOut) {
-            $minutes = Carbon::parse($checkIn)->diffInMinutes(Carbon::parse($checkOut));
+            $start = Carbon::parse($checkIn);
+            $end = Carbon::parse($checkOut);
 
-            return round($minutes / 60, 2);
+            // Turno que cruza medianoche (salida <= entrada): termina al día siguiente.
+            if ($end->lessThanOrEqualTo($start)) {
+                $end->addDay();
+            }
+
+            return round($start->diffInMinutes($end) / 60, 2);
         }
 
         return null;
+    }
+
+    /**
+     * Resuelve la entrada y salida esperadas como instantes reales del día dado,
+     * moviendo la salida al día siguiente cuando el turno cruza medianoche.
+     *
+     * @return array{0: Carbon|null, 1: Carbon|null}
+     */
+    private static function expectedBoundaries(AttendanceDay $day): array
+    {
+        if (! $day->expected_check_in || ! $day->expected_check_out) {
+            return [null, null];
+        }
+
+        $date = Carbon::parse($day->date)->startOfDay();
+        $in = $date->copy()->setTimeFromTimeString($day->expected_check_in);
+        $out = $date->copy()->setTimeFromTimeString($day->expected_check_out);
+
+        if ($out->lessThanOrEqualTo($in)) {
+            $out->addDay();
+        }
+
+        return [$in, $out];
     }
 
     /**
@@ -352,30 +380,25 @@ class AttendanceCalculator
     }
 
     /**
-     * Calcula los minutos de llegada tarde.
+     * Calcula los minutos de llegada tarde comparando instantes reales.
      */
-    private static function calculateLateMinutes(?string $scheduledCheckIn, ?string $actualCheckIn): ?int
+    private static function calculateLateMinutes(?Carbon $expectedIn, ?Carbon $actualIn): ?int
     {
-        if ($scheduledCheckIn && $actualCheckIn) {
-            $expected = Carbon::parse($scheduledCheckIn);
-            $actual = Carbon::parse($actualCheckIn);
-
-            return $actual->greaterThan($expected) ? $expected->diffInMinutes($actual, true) : 0;
+        if ($expectedIn && $actualIn) {
+            return $actualIn->greaterThan($expectedIn) ? (int) $expectedIn->diffInMinutes($actualIn, true) : 0;
         }
 
         return null;
     }
 
     /**
-     * Calcula los minutos de salida anticipada.
+     * Calcula los minutos de salida anticipada comparando instantes reales
+     * (la salida esperada de un turno nocturno cae al día siguiente).
      */
-    private static function calculateEarlyLeaveMinutes(?string $scheduledCheckOut, ?string $actualCheckOut): ?int
+    private static function calculateEarlyLeaveMinutes(?Carbon $expectedOut, ?Carbon $actualOut): ?int
     {
-        if ($scheduledCheckOut && $actualCheckOut) {
-            $expected = Carbon::parse($scheduledCheckOut);
-            $actual = Carbon::parse($actualCheckOut);
-
-            return $actual->lessThan($expected) ? $expected->diffInMinutes($actual, true) : 0;
+        if ($expectedOut && $actualOut) {
+            return $actualOut->lessThan($expectedOut) ? (int) $expectedOut->diffInMinutes($actualOut, true) : 0;
         }
 
         return null;
@@ -383,48 +406,59 @@ class AttendanceCalculator
 
     /**
      * Desglosa las horas extra en diurnas (06:00-20:00) y nocturnas (20:00-06:00).
-     * El período de overtime va desde la hora de salida esperada hasta la hora de salida real.
+     * El período de overtime va desde la salida esperada hasta la salida real y se
+     * reparte por la fracción de ese tramo que cae dentro de la franja nocturna,
+     * incluida la madrugada (00:00-06:00) de turnos que cruzan medianoche.
+     *
+     * @return array{0: float|int, 1: float|int}
      */
-    private static function splitOvertimeHours(?string $checkOutTime, ?string $scheduledCheckOut, float $extraHours): array
+    private static function splitOvertimeHours(?Carbon $expectedOut, ?Carbon $actualOut, float $extraHours): array
     {
-        if (! $checkOutTime || ! $scheduledCheckOut || $extraHours <= 0) {
+        if (! $expectedOut || ! $actualOut || $extraHours <= 0 || $actualOut->lte($expectedOut)) {
             return [$extraHours, 0];
         }
 
-        $dayEnd = Carbon::parse(config('payroll.shift_boundaries.day_end', '20:00'));
-        $overtimeStart = Carbon::parse($scheduledCheckOut);
-        $overtimeEnd = Carbon::parse($checkOutTime);
+        $totalMinutes = $expectedOut->diffInMinutes($actualOut, true);
+        $nightMinutes = self::nightMinutesBetween($expectedOut, $actualOut);
 
-        // Si el checkout es antes del scheduled (no debería pasar con extra_hours > 0), todo diurno
-        if ($overtimeEnd->lte($overtimeStart)) {
+        if ($nightMinutes <= 0) {
             return [$extraHours, 0];
         }
 
-        // Calcular cuánto del período de overtime cae en horario diurno vs nocturno
-        // Si todo el overtime es antes de las 20:00 → todo diurno
-        if ($overtimeStart->gte($dayEnd)) {
-            // Todo el overtime está después de las 20:00 → todo nocturno
+        if ($nightMinutes >= $totalMinutes) {
             return [0, $extraHours];
         }
 
-        if ($overtimeEnd->lte($dayEnd)) {
-            // Todo el overtime está antes de las 20:00 → todo diurno
-            return [$extraHours, 0];
+        $nocturnas = round($extraHours * ($nightMinutes / $totalMinutes), 2);
+
+        return [round($extraHours - $nocturnas, 2), $nocturnas];
+    }
+
+    /**
+     * Minutos del intervalo que caen en la franja nocturna (de `day_end` a `day_start`
+     * del día siguiente, según `payroll.shift_boundaries`).
+     */
+    private static function nightMinutesBetween(Carbon $from, Carbon $to): float
+    {
+        [$dayStartH, $dayStartM] = array_map('intval', explode(':', config('payroll.shift_boundaries.day_start', '06:00')));
+        [$dayEndH, $dayEndM] = array_map('intval', explode(':', config('payroll.shift_boundaries.day_end', '20:00')));
+
+        $minutes = 0.0;
+
+        // Ventanas nocturnas que pueden tocar el intervalo: desde la víspera hasta el día de `to`.
+        for ($cursor = $from->copy()->startOfDay()->subDay(); $cursor->lte($to); $cursor->addDay()) {
+            $nightStart = $cursor->copy()->setTime($dayEndH, $dayEndM);
+            $nightEnd = $cursor->copy()->addDay()->setTime($dayStartH, $dayStartM);
+
+            $overlapStart = $from->greaterThan($nightStart) ? $from : $nightStart;
+            $overlapEnd = $to->lessThan($nightEnd) ? $to : $nightEnd;
+
+            if ($overlapEnd->greaterThan($overlapStart)) {
+                $minutes += $overlapStart->diffInMinutes($overlapEnd, true);
+            }
         }
 
-        // El overtime cruza la frontera de las 20:00 → dividir
-        $diurnoMinutes = $overtimeStart->diffInMinutes($dayEnd);
-        $totalOvertimeMinutes = $overtimeStart->diffInMinutes($overtimeEnd);
-
-        if ($totalOvertimeMinutes <= 0) {
-            return [$extraHours, 0];
-        }
-
-        $diurnoRatio = $diurnoMinutes / $totalOvertimeMinutes;
-        $diurnas = round($extraHours * $diurnoRatio, 2);
-        $nocturnas = round($extraHours - $diurnas, 2);
-
-        return [$diurnas, $nocturnas];
+        return $minutes;
     }
 
     /**
