@@ -285,6 +285,99 @@
             text-align: center;
         }
 
+        /* Vacantes, suspendidos y datos del empleado */
+        .position-node.is-vacant {
+            border-style: dashed;
+            background: #f9fafb;
+            opacity: 0.85;
+        }
+
+        .position-node.is-vacant .position-header {
+            background: #9ca3af;
+        }
+
+        .badge-vacant,
+        .badge-suspended {
+            display: inline-block;
+            margin-left: 4px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-size: 9px;
+            font-weight: 600;
+            vertical-align: middle;
+        }
+
+        .badge-vacant {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .badge-suspended {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .employee-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .employee-meta {
+            font-size: 10px;
+            color: #6b7280;
+        }
+
+        /* Filtros */
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 12px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+        }
+
+        .filters label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #4b5563;
+        }
+
+        .filters select,
+        .filters input[type="search"] {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            min-width: 170px;
+            background: white;
+        }
+
+        .filters .check {
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            padding-bottom: 7px;
+        }
+
+        .filters-actions {
+            display: flex;
+            gap: 8px;
+            padding-bottom: 1px;
+        }
+
+        .filters-actions button {
+            cursor: pointer;
+            font-family: inherit;
+        }
+
         /* Nodo de departamento */
         .department-node {
             display: inline-block;
@@ -597,7 +690,8 @@
                 padding: 0;
             }
 
-            .header-actions {
+            .header-actions,
+            .filters {
                 display: none;
             }
 
@@ -627,15 +721,17 @@
                     <h1>Organigrama</h1>
                     <p>{{ $company->name }}</p>
                     <div class="stats">
-                        <span class="stat">{{ count($orgData['tree']) }} departamentos</span>
-                        <span class="stat">{{ collect($orgData['tree'])->sum(fn($d) => count($d['positions'])) }} cargos</span>
-                        <span class="stat">{{ $company->employees()->where('status', 'active')->count() }}
-                            empleados</span>
+                        <span class="stat">{{ $orgData['stats']['departments'] }} {{ $orgData['stats']['departments'] === 1 ? 'departamento' : 'departamentos' }}</span>
+                        <span class="stat">{{ $orgData['stats']['positions'] }} {{ $orgData['stats']['positions'] === 1 ? 'cargo' : 'cargos' }}</span>
+                        <span class="stat">{{ $orgData['stats']['employees'] }} {{ $orgData['stats']['employees'] === 1 ? 'empleado' : 'empleados' }}</span>
+                        @if ($orgData['stats']['vacancies'] > 0)
+                            <span class="stat">{{ $orgData['stats']['vacancies'] }} {{ $orgData['stats']['vacancies'] === 1 ? 'vacante' : 'vacantes' }}</span>
+                        @endif
                     </div>
                 </div>
             </div>
             <div class="header-actions">
-                <a href="{{ route('org-chart.pdf', $company) }}" class="btn btn-primary" target="_blank">
+                <a href="{{ route('org-chart.pdf', ['company' => $company] + $pdfParams) }}" class="btn btn-primary" target="_blank">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
@@ -657,8 +753,46 @@
             </div>
         </div>
 
+        {{-- Filtros: se aplican en el servidor por parámetros de la URL, así el PDF respeta los mismos --}}
+        <form method="GET" action="{{ route('org-chart.show', $company) }}" class="filters">
+            <label>
+                Buscar
+                <input type="search" name="q" value="{{ $filters['search'] }}" maxlength="100"
+                    placeholder="Empleado o cargo">
+            </label>
+            @if ($branches->count() > 1)
+                <label>
+                    Sucursal
+                    <select name="branch">
+                        <option value="">Todas</option>
+                        @foreach ($branches as $id => $name)
+                            <option value="{{ $id }}" @selected($filters['branch'] === $id)>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            @endif
+            <label>
+                Departamento
+                <select name="department">
+                    <option value="">Todos</option>
+                    @foreach ($departments as $id => $name)
+                        <option value="{{ $id }}" @selected($filters['department'] === $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label class="check">
+                <input type="hidden" name="vacancies" value="0">
+                <input type="checkbox" name="vacancies" value="1" @checked($filters['vacancies'])>
+                Mostrar vacantes
+            </label>
+            <div class="filters-actions">
+                <button type="submit" class="btn btn-primary">Aplicar</button>
+                <a href="{{ route('org-chart.show', $company) }}" class="btn btn-secondary">Limpiar</a>
+            </div>
+        </form>
+
         <div class="org-chart">
-            @if (count($orgData['tree']) > 0)
+            @if (count($orgData['tree']) > 0 || count($orgData['unassigned']) > 0)
                 <div class="scroll-hint">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -667,13 +801,15 @@
                     </svg>
                     Desliza horizontalmente para ver todo el organigrama
                 </div>
-                <div class="tree">
-                    <ul>
-                        @foreach ($orgData['tree'] as $department)
-                            @include('org-chart.partials.department-node', ['department' => $department])
-                        @endforeach
-                    </ul>
-                </div>
+                @if (count($orgData['tree']) > 0)
+                    <div class="tree">
+                        <ul>
+                            @foreach ($orgData['tree'] as $department)
+                                @include('org-chart.partials.department-node', ['department' => $department])
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 @if (count($orgData['unassigned']) > 0)
                     <div class="unassigned-section">
@@ -689,7 +825,11 @@
                                             {{ strtoupper(substr($employee['name'], 0, 1)) }}
                                         </div>
                                     @endif
-                                    <span class="employee-name">{{ $employee['name'] }}</span>
+                                    <span class="employee-name">{{ $employee['name'] }}
+                                        @if ($employee['suspended'])
+                                            <span class="badge-suspended">Suspendido</span>
+                                        @endif
+                                    </span>
                                 </div>
                             @endforeach
                         </div>
@@ -704,8 +844,14 @@
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    <h3>No hay empleados</h3>
-                    <p>Esta empresa aun no tiene empleados activos registrados.</p>
+                    <h3>No hay resultados</h3>
+                    <p>
+                        @if ($filters['search'] || $filters['branch'] || $filters['department'])
+                            Ningún cargo ni empleado coincide con los filtros aplicados.
+                        @else
+                            Esta empresa aún no tiene empleados activos ni cargos registrados.
+                        @endif
+                    </p>
                 </div>
             @endif
         </div>
