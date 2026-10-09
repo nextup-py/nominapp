@@ -2,144 +2,66 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\OrgChartRequest;
 use App\Models\Company;
-use App\Models\Position;
+use App\Services\OrgChartService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Response;
 
 class OrgChartController extends Controller
 {
+    public function __construct(private readonly OrgChartService $orgChart) {}
+
     /**
-     * Muestra el organigrama de una empresa.
+     * Muestra el organigrama de una empresa con los filtros de la URL (sucursal, departamento, búsqueda y vacantes).
      */
-    public function show(Company $company)
+    public function show(OrgChartRequest $request, Company $company): View
     {
-        $orgData = $this->buildOrgChartData($company);
+        $orgData = $this->orgChart->build($company, $request->filters());
 
         return view('org-chart.show', [
             'company' => $company,
             'orgData' => $orgData,
+            'showBranch' => $orgData['showBranch'],
+            'filters' => $request->filters(),
+            'branches' => $company->branches()->orderBy('name')->pluck('name', 'id'),
+            'departments' => $company->departments()->orderBy('name')->pluck('name', 'id'),
+            'pdfParams' => $request->queryParams(),
         ]);
     }
 
     /**
-     * Exporta el organigrama a PDF.
+     * Exporta a PDF el organigrama tal como se ve con los filtros activos.
      */
-    public function exportPdf(Company $company)
+    public function exportPdf(OrgChartRequest $request, Company $company): Response
     {
-        $orgData = $this->buildOrgChartData($company);
-
         $logoPath = $company->logo;
         $companyLogo = $logoPath ? storage_path('app/public/'.$logoPath) : null;
         $companyLogo = $companyLogo && file_exists($companyLogo) ? $companyLogo : null;
 
         $pdf = Pdf::loadView('org-chart.pdf', [
             'company' => $company,
-            'orgData' => $orgData,
+            'orgData' => $this->orgChart->build($company, $request->filters()),
             'companyLogo' => $companyLogo,
+            'filterSummary' => $this->filterSummary($company, $request->filters()),
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream("organigrama-{$company->ruc}.pdf");
     }
 
     /**
-     * Construye la estructura de datos del organigrama agrupada por departamento.
+     * Texto con los filtros aplicados, para dejar constancia en el PDF (vacío si no hay ninguno).
+     *
+     * @param  array{branch: ?int, department: ?int, search: ?string, vacancies: bool}  $filters
      */
-    protected function buildOrgChartData(Company $company): array
+    private function filterSummary(Company $company, array $filters): string
     {
-        $employees = $company->employees()
-            ->with(['activeContract.position.department', 'activeContract.position.parent'])
-            ->where('status', 'active')
-            ->get();
-
-        $positionIdsWithEmployees = $employees->pluck('activeContract.position_id')->unique()->filter()->toArray();
-        $relevantPositionIds = $this->getRelevantPositionIds($positionIdsWithEmployees);
-
-        $positions = Position::with(['parent', 'children', 'department'])
-            ->whereIn('id', $relevantPositionIds)
-            ->get()
-            ->keyBy('id');
-
-        // Agrupar empleados por cargo
-        $employeesByPosition = [];
-        foreach ($employees as $employee) {
-            $posId = $employee->activeContract?->position_id ?? 0;
-            $employeesByPosition[$posId][] = [
-                'id' => $employee->id,
-                'name' => $employee->full_name,
-                'photo' => $employee->photo ? asset('storage/'.$employee->photo) : null,
-            ];
-        }
-
-        // Agrupar cargos por departamento y construir el árbol dentro de cada uno
-        $byDepartment = $positions->groupBy('department_id');
-        $tree = [];
-
-        foreach ($byDepartment as $deptPositions) {
-            $deptPositionsKeyed = $deptPositions->keyBy('id');
-            $deptPositionIds = $deptPositionsKeyed->keys()->toArray();
-            $department = $deptPositions->first()->department;
-
-            $tree[] = [
-                'name' => $department?->name ?? 'Sin Departamento',
-                'positions' => $this->buildPositionTree($deptPositionsKeyed, $deptPositionIds, $employeesByPosition),
-            ];
-        }
-
-        usort($tree, fn ($a, $b) => strcmp($a['name'], $b['name']));
-
-        return [
-            'tree' => $tree,
-            'unassigned' => $employeesByPosition[0] ?? [],
-        ];
-    }
-
-    /**
-     * Obtiene todos los IDs de cargos relevantes (con empleados + sus ancestros).
-     */
-    protected function getRelevantPositionIds(array $positionIds): array
-    {
-        $allIds = $positionIds;
-
-        foreach ($positionIds as $posId) {
-            $position = Position::find($posId);
-            while ($position && $position->parent_id) {
-                if (! in_array($position->parent_id, $allIds)) {
-                    $allIds[] = $position->parent_id;
-                }
-                $position = $position->parent;
-            }
-        }
-
-        return array_unique($allIds);
-    }
-
-    /**
-     * Construye el árbol de cargos de forma recursiva dentro de un departamento.
-     * En la llamada raíz ($parentId = null) son raíces los cargos sin padre
-     * o cuyo padre pertenece a otro departamento.
-     */
-    protected function buildPositionTree($positions, array $deptPositionIds, array $employeesByPosition, ?int $parentId = null): array
-    {
-        $tree = [];
-
-        foreach ($positions as $position) {
-            $isRoot = $parentId === null
-                ? (is_null($position->parent_id) || ! in_array($position->parent_id, $deptPositionIds))
-                : $position->parent_id === $parentId;
-
-            if ($isRoot) {
-                $tree[] = [
-                    'id' => $position->id,
-                    'name' => $position->name,
-                    'department' => $position->department?->name ?? 'Sin Departamento',
-                    'employees' => $employeesByPosition[$position->id] ?? [],
-                    'children' => $this->buildPositionTree($positions, $deptPositionIds, $employeesByPosition, $position->id),
-                ];
-            }
-        }
-
-        usort($tree, fn ($a, $b) => strcmp($a['name'], $b['name']));
-
-        return $tree;
+        return collect([
+            $filters['branch'] ? 'Sucursal: '.$company->branches()->whereKey($filters['branch'])->value('name') : null,
+            $filters['department'] ? 'Departamento: '.$company->departments()->whereKey($filters['department'])->value('name') : null,
+            $filters['search'] ? 'Búsqueda: "'.$filters['search'].'"' : null,
+            $filters['vacancies'] ? null : 'Sin vacantes',
+        ])->filter()->implode(' · ');
     }
 }

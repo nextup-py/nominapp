@@ -121,7 +121,22 @@ Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse
 
 ## Organigrama
 
-El organigrama se genera automáticamente a partir de la jerarquía de cargos. Para verlo o descargarlo en PDF:
+El organigrama se genera automáticamente a partir de la jerarquía de cargos de cada departamento. Para verlo o descargarlo en PDF:
 
 1. Abrir la empresa en **Organización → Empresas**
-2. Usar la acción **Organigrama** en el encabezado de la página (también disponible como acción de fila desde el listado de empresas)
+2. Usar la acción **Organigrama** en el encabezado de la página (también disponible en el menú de cada fila del listado de empresas)
+
+![Organigrama de una empresa con filtros y vacantes](/docs-images/02-organigrama.png)
+
+**Qué muestra:**
+- Cada cargo con los empleados activos que lo ocupan, con su **fecha de ingreso** ("Desde 03/2022") y, si la empresa tiene más de una sucursal, su **sucursal**.
+- Los empleados con **contrato suspendido** llevan la insignia **Suspendido**. Los empleados inactivos no aparecen.
+- Los cargos sin ningún ocupante aparecen atenuados, con borde punteado y la etiqueta **Vacante**. Un cargo ocupado solo en otra sucursal no es vacante.
+- Los empleados activos sin contrato vigente (y por lo tanto sin cargo) se listan aparte, en **Empleados sin cargo asignado**.
+- Los totales del encabezado (departamentos, cargos, empleados y vacantes) cuentan lo que se está viendo.
+
+**Filtros:** sobre el organigrama hay un buscador (por nombre de empleado o de cargo) y selectores de **Sucursal** (solo si hay más de una) y **Departamento**, además del interruptor **Mostrar vacantes** (activado por defecto). Clic en **Aplicar** para filtrar y en **Limpiar** para volver a ver todo. Los filtros quedan en la dirección de la página, así que se pueden compartir como enlace.
+
+**PDF:** **Exportar PDF** descarga el organigrama con los mismos filtros activos y deja constancia de ellos bajo el título (por ejemplo, "Departamento: Ventas · Sin vacantes").
+
+> Si un cargo tiene como superior a otro de un departamento distinto, se muestra como cargo principal dentro de su propio departamento. Revisar el campo **Reporta a** si la jerarquía no se ve como se espera.

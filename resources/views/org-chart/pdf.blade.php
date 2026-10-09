@@ -113,6 +113,17 @@
             text-align: center;
         }
 
+        .position-card.is-vacant {
+            border-style: dashed;
+            background: #f5f5f5;
+        }
+
+        .filter-summary {
+            font-size: 9px;
+            color: #555;
+            margin-top: 3px;
+        }
+
         .position-card {
             display: inline-block;
             text-align: left;
@@ -231,9 +242,12 @@
         @endif
         <p>{{ $company->name }}</p>
         <h1>ORGANIGRAMA</h1>
+        @if (!empty($filterSummary))
+            <p class="filter-summary">{{ $filterSummary }}</p>
+        @endif
     </div>
 
-    @if (count($orgData['tree']) > 0)
+    @if (count($orgData['tree']) > 0 || count($orgData['unassigned']) > 0)
         <div class="org-content">
             @php
                 // Aplanar cargos de un departamento por niveles para el PDF
@@ -273,15 +287,17 @@
                                 <tr>
                                     @foreach ($positions as $position)
                                         <td>
-                                            <div class="position-card">
-                                                <div class="position-header">{{ $position['name'] }}</div>
+                                            <div class="position-card {{ $position['vacant'] ? 'is-vacant' : '' }}">
+                                                <div class="position-header">{{ $position['name'] }}{{ $position['vacant'] ? ' (Vacante)' : '' }}</div>
                                                 <div class="position-body">
                                                     @if (count($position['employees']) > 0)
                                                         @foreach ($position['employees'] as $employee)
-                                                            <div class="employee-name">{{ $employee['name'] }}</div>
+                                                            <div class="employee-name">{{ $employee['name'] }}{{ $employee['suspended'] ? ' (Suspendido)' : '' }}</div>
                                                         @endforeach
+                                                    @elseif ($position['vacant'])
+                                                        <div class="no-employees">Sin ocupante</div>
                                                     @else
-                                                        <div class="no-employees">Sin empleados</div>
+                                                        <div class="no-employees">Sin empleados en esta vista</div>
                                                     @endif
                                                 </div>
                                             </div>
@@ -306,14 +322,14 @@
                 <div class="unassigned-title">Empleados sin cargo asignado</div>
                 <div class="unassigned-list">
                     @foreach ($orgData['unassigned'] as $employee)
-                        <span class="unassigned-employee">{{ $employee['name'] }}</span>
+                        <span class="unassigned-employee">{{ $employee['name'] }}{{ $employee['suspended'] ? ' (Suspendido)' : '' }}</span>
                     @endforeach
                 </div>
             </div>
         @endif
     @else
         <div class="empty-state">
-            <p>No hay empleados activos registrados en esta empresa.</p>
+            <p>No hay cargos ni empleados que coincidan con lo solicitado.</p>
         </div>
     @endif
 
