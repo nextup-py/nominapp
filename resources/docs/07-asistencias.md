@@ -4,6 +4,25 @@ El módulo de Asistencias registra las entradas y salidas de los empleados y cal
 
 > Para configurar horarios y patrones de rotación (incluyendo el planificador visual de turnos), ver el capítulo **Horarios**.
 
+## Por resolver
+
+Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que RR.HH. tiene pendiente. Cada tarjeta muestra un contador y la fecha más antigua; el botón **Resolver** abre la lista correspondiente ya filtrada, donde están las acciones para resolver cada caso.
+
+![Pantalla Por resolver con una tarjeta por tipo de pendiente](/docs-images/07-asistencias-por-resolver.png)
+
+| Tarjeta | Qué cuenta | Dónde se resuelve |
+|---------|-----------|-------------------|
+| **Jornadas sin salida** | Jornadas anteriores a hoy con entrada y sin salida | **Asistencias**, con el filtro *Sin salida registrada* (acción **Corregir marcaciones**) |
+| **Tardanzas por aprobar** | Minutos de atraso sin decisión de descuento | **Asistencias**, pestaña *Requieren atención* |
+| **Horas extra por aprobar** | Horas sobre el horario sin aprobar | **Asistencias**, pestaña *Requieren atención* |
+| **Ausencias por revisar** | Ausencias en estado *Pendiente* | **Ausencias**, pestaña *Pendientes* |
+| **Fallos de marcación** | Fallos con resolución *Pendiente* | **Fallos de marcación**, filtrados por *Pendiente* |
+
+- Las tres primeras tarjetas consideran solo los últimos 30 días; lo más viejo se revisa desde el listado completo.
+- El menú **Por resolver** muestra la suma de pendientes como insignia.
+- Cada tarjeta aparece solo si el usuario puede ver el módulo correspondiente (por ejemplo, quien no ve Ausencias no ve esa tarjeta).
+- Cuando no hay nada pendiente, la pantalla muestra **Todo al día**.
+
 ## Modos de marcación
 
 Ir a **Asistencias → Modos de Marcación** para ver los enlaces y códigos QR de cada modo.
