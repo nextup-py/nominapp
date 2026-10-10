@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\AbsenceActions;
 use App\Filament\Resources\AbsenceResource\Pages;
 use App\Filament\Resources\AbsenceResource\RelationManagers\AuditsRelationManager;
 use App\Models\Absence;
 use App\Models\AttendanceDay;
 use App\Models\EmployeeLeave;
-use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -22,6 +22,8 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action as TableAction;
+use Filament\Tables\Actions\ActionGroup as TableActionGroup;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
@@ -309,7 +311,17 @@ class AbsenceResource extends Resource
                             );
                     }),
             ])
-            ->actions([])
+            ->actions([
+                TableActionGroup::make([
+                    AbsenceActions::registerAttendance(TableAction::class),
+                    AbsenceActions::justify(TableAction::class),
+                    AbsenceActions::markUnjustified(TableAction::class),
+                ])
+                    ->label('Resolver')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('primary')
+                    ->tooltip('Registrar asistencia, justificar o marcar como injustificada'),
+            ])
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('bulk_justify')
@@ -507,16 +519,11 @@ class AbsenceResource extends Resource
     }
 
     /**
-     * Define la insignia de navegación para el recurso de ausencias, mostrando el número de ausencias pendientes de revisión del día hoy, o null si no hay ninguna.
+     * Define la insignia de navegación para el recurso de ausencias, mostrando todas las ausencias pendientes de revisión (sin importar el día en que se detectaron), o null si no hay ninguna.
      */
     public static function getNavigationBadge(): ?string
     {
-        $today = Carbon::today();
-
-        $pendingCount = Absence::query()
-            ->where('status', 'pending')
-            ->whereBetween('created_at', [$today, $today->copy()->endOfDay()])
-            ->count();
+        $pendingCount = Absence::query()->where('status', 'pending')->count();
 
         return $pendingCount > 0 ? (string) $pendingCount : null;
     }

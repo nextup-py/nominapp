@@ -20,35 +20,77 @@ class ListAttendanceMarkFailures extends ListRecords
     }
 
     /**
-     * Widget de diagnóstico: empleados con fallos de marcación recurrentes.
+     * Widget de diagnóstico: empleados con fallos de marcación recurrentes. Va al pie para que
+     * los pendientes (lo que hay que resolver) queden arriba, sin bajar la pantalla.
      *
      * @return array<class-string>
      */
-    protected function getHeaderWidgets(): array
+    protected function getFooterWidgets(): array
     {
         return [
             TopFailingEmployeesWidget::class,
         ];
     }
 
+    /** @var array{all: int, pending: int, terminal: int, mobile: int}|null Contadores de las pestañas (una sola consulta por ciclo). */
+    protected ?array $failureCounts = null;
+
     /**
-     * Tabs para filtrar por modo de marcación.
+     * Contadores de las pestañas calculados con una única consulta agregada.
+     *
+     * @return array{all: int, pending: int, terminal: int, mobile: int}
+     */
+    protected function getFailureCounts(): array
+    {
+        if ($this->failureCounts === null) {
+            $row = AttendanceMarkFailure::query()
+                ->selectRaw("count(*) as total, sum(resolution_status = 'pending') as pending, sum(mode = 'terminal') as terminal, sum(mode = 'mobile') as mobile")
+                ->toBase()
+                ->first();
+
+            $this->failureCounts = [
+                'all' => (int) ($row->total ?? 0),
+                'pending' => (int) ($row->pending ?? 0),
+                'terminal' => (int) ($row->terminal ?? 0),
+                'mobile' => (int) ($row->mobile ?? 0),
+            ];
+        }
+
+        return $this->failureCounts;
+    }
+
+    /** Abre en los pendientes: lo que RR.HH. tiene que resolver. */
+    public function getDefaultActiveTab(): string|int|null
+    {
+        return 'pending';
+    }
+
+    /**
+     * Pestañas: pendientes de revisión, todos y por modo de marcación.
      *
      * @return array<string, Tab>
      */
     public function getTabs(): array
     {
+        $counts = $this->getFailureCounts();
+
         return [
+            'pending' => Tab::make('Pendientes')
+                ->icon('heroicon-o-bell-alert')
+                ->badge($counts['pending'])
+                ->badgeColor($counts['pending'] > 0 ? 'danger' : 'gray')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('resolution_status', 'pending')),
+
             'all' => Tab::make('Todos')
-                ->badge(AttendanceMarkFailure::count()),
+                ->badge($counts['all']),
 
             'terminal' => Tab::make('Terminal')
-                ->badge(AttendanceMarkFailure::where('mode', 'terminal')->count())
+                ->badge($counts['terminal'])
                 ->badgeColor('info')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('mode', 'terminal')),
 
             'mobile' => Tab::make('Móvil')
-                ->badge(AttendanceMarkFailure::where('mode', 'mobile')->count())
+                ->badge($counts['mobile'])
                 ->badgeColor('success')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('mode', 'mobile')),
         ];
