@@ -309,8 +309,9 @@ Las columnas de tardanza, horas trabajadas, horas extra y pendiente se muestran 
 
 ### Acciones en la tabla (fila a fila)
 
-Cada fila tiene dos menús:
+Cada fila tiene un botón y dos menús:
 
+- **Corregir marcaciones** (lápiz): abre una ventana con todas las marcaciones del día, sin salir del listado. Se puede cambiar el tipo o la fecha y hora de una marcación, agregar una con **Agregar marcación** o quitarla con el ícono de papelera. Al **Guardar correcciones** la jornada se recalcula. Una salida de madrugada se carga con la fecha del día siguiente. No se admiten horas futuras ni una secuencia imposible (por ejemplo, dos entradas seguidas); en ese caso no se guarda nada y se explica el motivo. Las marcaciones agregadas o modificadas quedan con canal **Manual**. Requiere permiso para editar marcaciones.
 - **Aprobar** (ícono de check): reúne las decisiones sobre el día.
 - **Más**: ajustar, recalcular y exportar.
 
