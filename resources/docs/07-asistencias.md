@@ -8,6 +8,8 @@ El módulo de Asistencias registra las entradas y salidas de los empleados y cal
 
 Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que RR.HH. tiene pendiente. Cada tarjeta muestra un contador y la fecha más antigua; el botón **Resolver** abre la lista correspondiente ya filtrada, donde están las acciones para resolver cada caso.
 
+![Pantalla Por resolver con una tarjeta por tipo de pendiente](/docs-images/07-asistencias-por-resolver.png)
+
 | Tarjeta | Qué cuenta | Dónde se resuelve |
 |---------|-----------|-------------------|
 | **Jornadas sin salida** | Jornadas anteriores a hoy con entrada y sin salida | **Asistencias**, con el filtro *Sin salida registrada* (acción **Corregir marcaciones**) |
