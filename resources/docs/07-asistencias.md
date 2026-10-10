@@ -153,6 +153,16 @@ Después de marcar la **salida**, el empleado puede marcar una **nueva entrada**
 - Entre la salida y la nueva entrada debe pasar un **mínimo** (5 minutos por defecto, configurable en **Configuración → Configuración General → Configuración Laboral**). Antes de ese tiempo el terminal no ofrece la entrada, para evitar reentradas por error.
 - En el **terminal**, tras una salida la nueva entrada **nunca se registra sola**: el empleado debe tocar **Entrada** en la pantalla. En el celular hay que tocar **Marcar**.
 
+### Jornadas sin salida
+
+Si un empleado marca **entrada** y nunca marca **salida**, la jornada queda abierta: no se calculan sus horas. Para que no pase inadvertido:
+
+- **Filtro "Sin salida registrada"** en **Asistencias** (listado de jornadas): muestra las jornadas de días anteriores a hoy cuyo último evento no es una salida (se cuentan desde el día siguiente al turno, así un turno nocturno de ayer ya terminado aparece y uno de hoy en curso no). Se combina con las pestañas, por ejemplo **Incompletos**.
+- **Aviso diario en la campanita** (08:52) para quienes pueden ver asistencias: indica cuántas jornadas quedaron sin salida y cuál es la más antigua, con un botón **Ver jornadas** que abre el listado con el filtro activo. No se repite mientras el aviso anterior siga sin leer. Se consideran los últimos 30 días.
+- **Para corregirla**, abrir la jornada y agregar la salida que falta desde sus marcaciones.
+
+Si el empleado después marca una **salida** y la jornada abierta es de hace 2 o más días, el sistema no la cuelga de esa jornada vieja: queda como **conflicto** en **Fallos de Marcación**, con una sección **Jornada abierta anterior** que enlaza a la jornada sin salida. Primero se corrige esa jornada y recién después se resuelve el conflicto.
+
 ### Orígenes
 
 | Origen | Descripción |

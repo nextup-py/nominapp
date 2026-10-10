@@ -194,11 +194,14 @@ class AttendanceEventSyncService
                 'allowed_events' => $allowed,
             ]);
 
+            $staleOpen = AttendanceDay::staleOpenDayConflictInfo($employee, $recordedAt);
+
             $this->recordSyncFailure(
                 $terminal,
                 'sync_conflict',
-                'La secuencia de marcación ya no es válida en el servidor al sincronizar (último evento registrado: '.($last->event_type ?? 'ninguno').').',
+                'La secuencia de marcación ya no es válida en el servidor al sincronizar (último evento registrado: '.($last->event_type ?? 'ninguno').').'.$staleOpen['message'],
                 [
+                    ...$staleOpen['metadata'],
                     'client_event_id' => $clientEventId,
                     'attempted_event' => $eventData['event_type'],
                     'last_event' => $last?->event_type,
