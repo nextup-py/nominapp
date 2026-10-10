@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\TerminalCommandActions;
 use App\Filament\Actions\TerminalLinkActions;
+use App\Filament\Actions\TerminalPairingActions;
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\CommandsRelationManager;
@@ -718,7 +719,7 @@ class TerminalResource extends Resource
                         ->tooltip('Invalida el acceso del dispositivo a la sincronización offline — requerirá volver a vincular')
                         ->icon('heroicon-o-shield-exclamation')
                         ->color('danger')
-                        ->visible(fn (Terminal $record) => $record->hasActiveSyncToken())
+                        ->visible(fn (Terminal $record) => TerminalPairingActions::canManage() && $record->hasActiveSyncToken())
                         ->requiresConfirmation()
                         ->modalHeading('Desvincular dispositivo')
                         ->modalDescription(fn (Terminal $record) => "El dispositivo vinculado al terminal \"{$record->name}\" perderá acceso a la sincronización offline de inmediato. Para volver a usarlo habrá que vincularlo de nuevo (por código o con un enlace de configuración).")
