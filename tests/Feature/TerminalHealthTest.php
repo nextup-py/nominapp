@@ -257,6 +257,18 @@ it('marca desde cuándo la cola no está vacía y lo limpia cuando se vacía', f
     expect($terminal->fresh()->queue_backlog_since)->toBeNull();
 });
 
+it('los eventos en conflicto no cuentan como cola pendiente (el dispositivo nunca los vacía)', function () {
+    $terminal = makeHealthTerminal();
+    Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
+
+    $this->postJson('/api/v1/terminal/heartbeat', ['pending_events' => 0, 'conflict_events' => 2])->assertOk();
+
+    expect($terminal->fresh()->queue_backlog_since)->toBeNull()
+        ->and($terminal->fresh()->last_conflict_events_count)->toBe(2)
+        ->and($terminal->fresh()->isQueueStuck())->toBeFalse()
+        ->and($terminal->fresh()->sync_queue_status)->toBe('conflict');
+});
+
 it('currentAppVersion() es estable y isAppOutdated() compara con lo que reportó el dispositivo', function () {
     $terminal = makeHealthTerminal();
 

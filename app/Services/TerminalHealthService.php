@@ -153,7 +153,6 @@ class TerminalHealthService
 
             return [$this->raise($terminal, 'queue_stuck', 'health_queue_stuck', [
                 'pending' => $terminal->last_pending_events_count,
-                'conflicts' => $terminal->last_conflict_events_count,
                 'since' => $terminal->queue_backlog_since?->toIso8601String(),
             ])];
         }
