@@ -43,7 +43,7 @@ class ListAttendanceDays extends ListRecords
     {
         $today = Carbon::today()->toDateString();
         $yesterday = Carbon::yesterday()->toDateString();
-        $attention = '('.AttendanceDay::missingCheckOutSql().') or ('.AttendanceDay::PENDING_TARDINESS_SQL.') or ('.AttendanceDay::PENDING_OVERTIME_SQL.')';
+        $attention = 'attendance_days.date >= ? and (('.AttendanceDay::missingCheckOutSql().') or ('.AttendanceDay::PENDING_TARDINESS_SQL.') or ('.AttendanceDay::PENDING_OVERTIME_SQL.'))';
 
         $stats = AttendanceDay::where('status', 'present')->selectRaw(
             "COUNT(*) as total,
@@ -53,7 +53,7 @@ class ListAttendanceDays extends ListRecords
             SUM(CASE WHEN date = ? THEN 1 ELSE 0 END) as today,
             SUM(CASE WHEN date = ? THEN 1 ELSE 0 END) as yesterday,
             SUM(CASE WHEN {$attention} THEN 1 ELSE 0 END) as attention",
-            [$today, $yesterday, ...AttendanceDay::missingCheckOutBindings()]
+            [$today, $yesterday, AttendanceDay::attentionWindowStart(), ...AttendanceDay::missingCheckOutBindings()]
         )->first();
 
         return [

@@ -271,7 +271,7 @@ El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Ca
 
 | Pestaña | Descripción |
 |---------|-------------|
-| **Requieren atención** | Jornadas **sin salida** (de días anteriores a hoy), con **tardanza por aprobar** o con **horas extra por aprobar**. Al resolver una (aprobar, corregir la salida, aceptar el doble turno) sale de la lista |
+| **Requieren atención** | Jornadas de los **últimos 30 días** que están **sin salida** (de días anteriores a hoy), con **tardanza por aprobar** o con **horas extra por aprobar**. Al resolver una (aprobar, corregir la salida, aceptar el doble turno) sale de la lista |
 | **Ayer** | Todas las jornadas de ayer, para revisar el día completo |
 | **Hoy** | Las jornadas de hoy, en curso |
 | **Todos** | Todos los registros presentes |
@@ -279,7 +279,7 @@ El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Ca
 | **Sin calcular** | Registros pendientes de cálculo (recién creados o con eventos nuevos) |
 | **Incompletos** | Registros sin horas calculadas (por ejemplo, con entrada y sin salida) |
 
-> Una jornada ya resuelta no aparece en **Requieren atención**. Para volver a verla (por ejemplo, para revocar una aprobación) abrir **Todos**.
+> Una jornada ya resuelta no aparece en **Requieren atención**, y tampoco las de hace más de 30 días. Para verlas (por ejemplo, para revocar una aprobación o revisar algo antiguo) abrir **Todos** o **Incompletos**.
 
 ### Columnas de la tabla
 

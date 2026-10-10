@@ -77,6 +77,7 @@ it('RR.HH. acepta el doble turno como jornada normal desde la tabla y se puede v
     $day = makeDoubleShiftDay();
 
     Livewire::test(ListAttendanceDays::class)
+        ->set('activeTab', 'all')
         ->callTableAction('regular_shift', $day)
         ->assertHasNoTableActionErrors();
 

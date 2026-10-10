@@ -221,6 +221,13 @@ class AttendanceDay extends Model implements Auditable
         return $query->whereRaw(self::missingCheckOutSql(), self::missingCheckOutBindings());
     }
 
+    /**
+     * Días hacia atrás que mira "Requieren atención". Sin límite, el primer día el listado mostraría
+     * todo el historial de tardanzas y extras sin aprobar y taparía lo urgente; lo más viejo sigue en
+     * "Todos" e "Incompletos".
+     */
+    public const ATTENTION_WINDOW_DAYS = 30;
+
     /** Condición SQL de tardanza con descuento todavía sin decidir por RR.HH. */
     public const PENDING_TARDINESS_SQL = 'attendance_days.late_minutes > 0 and coalesce(attendance_days.tardiness_deduction_approved, 0) = 0';
 
@@ -251,17 +258,26 @@ class AttendanceDay extends Model implements Auditable
 
     /**
      * Jornadas que requieren una decisión o corrección de RR.HH.: sin salida, tardanza por aprobar
-     * o horas extra por aprobar. Es la definición de la pestaña "Requieren atención" de Asistencias.
+     * o horas extra por aprobar, dentro de los últimos `ATTENTION_WINDOW_DAYS` días. Es la definición de la
+     * pestaña "Requieren atención" de Asistencias.
      *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
     public function scopeNeedsAttention(Builder $query): Builder
     {
-        return $query->where(fn (Builder $q) => $q
-            ->whereRaw(self::missingCheckOutSql(), self::missingCheckOutBindings())
-            ->orWhereRaw(self::PENDING_TARDINESS_SQL)
-            ->orWhereRaw(self::PENDING_OVERTIME_SQL));
+        return $query
+            ->where('attendance_days.date', '>=', self::attentionWindowStart())
+            ->where(fn (Builder $q) => $q
+                ->whereRaw(self::missingCheckOutSql(), self::missingCheckOutBindings())
+                ->orWhereRaw(self::PENDING_TARDINESS_SQL)
+                ->orWhereRaw(self::PENDING_OVERTIME_SQL));
+    }
+
+    /** Primer día (inclusive, `Y-m-d`) que considera "Requieren atención". */
+    public static function attentionWindowStart(): string
+    {
+        return Carbon::today()->subDays(self::ATTENTION_WINDOW_DAYS)->toDateString();
     }
 
     /**

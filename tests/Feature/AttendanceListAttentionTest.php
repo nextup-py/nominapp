@@ -153,3 +153,22 @@ it('aprobar la tardanza desde las acciones agrupadas saca la jornada de "Requier
     expect($day->fresh()->tardiness_deduction_approved)->toBeTrue()
         ->and(AttendanceDay::needsAttention()->whereKey($day->id)->exists())->toBeFalse();
 });
+
+it('"Requieren atención" solo mira los últimos 30 días; lo más viejo sigue en "Todos"', function () {
+    $employee = makeAttentionEmployee();
+    $recent = makeAttentionDay($employee, '2026-09-20', [['check_in', '08:00']]);          // 20 días atrás
+    $old = makeAttentionDay($employee, '2026-08-20', [['check_in', '08:00']]);             // 51 días atrás
+    $oldLate = makeAttentionDay($employee, '2026-08-19', [['check_in', '08:20'], ['check_out', '17:00']], ['late_minutes' => 20]);
+
+    $ids = AttendanceDay::needsAttention()->pluck('id')->all();
+
+    expect($ids)->toContain($recent->id)->not->toContain($old->id, $oldLate->id);
+
+    $component = Livewire::test(ListAttendanceDays::class)
+        ->assertCanSeeTableRecords([$recent])
+        ->assertCanNotSeeTableRecords([$old, $oldLate]);
+
+    expect((int) $component->instance()->getTabs()['attention']->getBadge())->toBe(1);
+
+    $component->set('activeTab', 'all')->assertCanSeeTableRecords([$recent, $old, $oldLate]);
+});
