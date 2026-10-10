@@ -16,7 +16,7 @@ Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que 
 | **Tardanzas por aprobar** | Minutos de atraso sin decisión de descuento | **Asistencias**, pestaña *Requieren atención* |
 | **Horas extra por aprobar** | Horas sobre el horario sin aprobar | **Asistencias**, pestaña *Requieren atención* |
 | **Ausencias por revisar** | Ausencias en estado *Pendiente* | **Ausencias**, pestaña *Pendientes* |
-| **Fallos de marcación** | Fallos con resolución *Pendiente* | **Fallos de marcación**, pestaña *Pendientes* |
+| **Fallos de marcación** | Fallos *Pendientes* que se pueden resolver (no cuenta los rostros no reconocidos) | **Fallos de marcación**, pestaña *Para revisar* |
 
 - Las tres primeras tarjetas consideran solo los últimos 30 días; lo más viejo se revisa desde el listado completo.
 - El menú **Por resolver** muestra la suma de pendientes como insignia.
@@ -248,7 +248,7 @@ Cuando un intento de marcación (terminal o dispositivo personal) no puede compl
 
 ### Revisar un fallo
 
-1. Ir a **Asistencias → Fallos de Marcación**. La lista abre en la pestaña **Pendientes** (con su contador); **Todos**, **Terminal** y **Móvil** muestran el historial por modo. La columna **Qué hacer** resume el paso siguiente de cada fallo (por ejemplo, *Aprobar si el empleado sí estuvo, o descartar*, o *Sin datos para aprobar: ver diagnóstico*). **Modo**, **Sucursal**, **Mensaje** e **IP** están ocultas por defecto y se activan desde el selector de columnas. El resumen de empleados con fallos recurrentes está al pie de la página
+1. Ir a **Asistencias → Fallos de Marcación**. La lista abre en la pestaña **Para revisar** (conflictos de sincronización, secuencias inválidas y otros fallos que RR.HH. puede resolver). **Rostros no reconocidos** reúne los intentos donde el terminal no identificó a nadie o el rostro fue ambiguo: no hay empleado ni marcación que aprobar, y el botón **Descartar rostros no reconocidos** (arriba a la derecha) los descarta todos de una vez, con confirmación y sin tocar los de *Para revisar*. **Todos**, **Terminal** y **Móvil** muestran el historial por modo. La columna **Qué hacer** resume el paso siguiente de cada fallo (por ejemplo, *Aprobar si el empleado sí estuvo, o descartar*, o *Sin datos para aprobar: ver diagnóstico*). **Modo**, **Sucursal**, **Mensaje** e **IP** están ocultas por defecto y se activan desde el selector de columnas. El resumen de empleados con fallos recurrentes está al pie de la página
 2. Clic en un registro para ver el detalle completo: empleado (si se pudo identificar), sucursal, mensaje de error, IP, coordenadas GPS y metadatos adicionales
 3. Usar el botón **Diagnóstico** para ver una explicación en lenguaje simple de qué pudo haber causado el fallo
 
