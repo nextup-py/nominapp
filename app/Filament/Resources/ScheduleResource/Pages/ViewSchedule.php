@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ScheduleResource\Pages;
 use App\Filament\Resources\ScheduleResource;
 use App\Models\Schedule;
 use App\Models\ScheduleDay;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Infolists\Components\Group;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -21,11 +22,12 @@ class ViewSchedule extends ViewRecord
     /**
      * Retorna las acciones del encabezado de la vista.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
         return [
+            ScheduleResource::duplicateAction(Action::class),
             EditAction::make()->label('Editar')->icon('heroicon-o-pencil-square')->color('primary'),
         ];
     }
