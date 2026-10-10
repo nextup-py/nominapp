@@ -248,6 +248,12 @@ class AttendanceDayResource extends Resource
                     ->native(false)
                     ->multiple(),
 
+                Filter::make('missing_check_out')
+                    ->label('Sin salida registrada')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->missingCheckOut())
+                    ->indicator('Sin salida registrada'),
+
                 Filter::make('date')
                     ->label('Rango de Fechas')
                     ->form([

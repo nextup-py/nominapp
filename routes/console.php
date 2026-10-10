@@ -105,6 +105,14 @@ Schedule::command('contracts:notify-expiring')
     });
 
 /**
+ * Avisar a RR.HH. de las jornadas con entrada y sin salida (desde el día siguiente al turno).
+ * Se ejecuta a las 08:52, cuando ya terminaron los turnos nocturnos; no repite si el aviso sigue sin leer.
+ */
+Schedule::command('attendance:notify-open-shifts')
+    ->dailyAt('08:52')
+    ->withoutOverlapping();
+
+/**
  * Expirar enrollments faciales vencidos
  * Se ejecuta cada hora para marcar como 'expired' los registros
  * en estado pending_capture cuyo expires_at ya pasó

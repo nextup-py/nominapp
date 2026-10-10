@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\AttendanceCalculator;
 use App\Settings\GeneralSettings;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -164,6 +165,74 @@ class AttendanceDay extends Model implements Auditable
         }
 
         return ['day' => $today, 'last' => $todayLast, 'allowed' => $todayAllowed];
+    }
+
+    /** Días hacia atrás que se revisan al buscar una jornada vieja que quedó abierta. */
+    public const STALE_OPEN_LOOKBACK_DAYS = 7;
+
+    /** Último evento que deja una jornada abierta (sin `check_out`). */
+    private const OPEN_LAST_EVENTS = ['check_in', 'break_start', 'break_end'];
+
+    /**
+     * Jornadas anteriores a hoy que tienen marcaciones pero cuyo último evento no es una salida:
+     * el empleado entró y nunca salió. Se cuentan desde el día siguiente al turno, así un turno
+     * nocturno que arrancó ayer no se confunde con una jornada de hoy en curso.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeMissingCheckOut(Builder $query): Builder
+    {
+        return $query
+            ->where('date', '<', Carbon::today()->toDateString())
+            ->whereRaw(
+                '(select e.event_type from attendance_events e where e.attendance_day_id = attendance_days.id order by e.recorded_at desc, e.id desc limit 1) in (?, ?, ?)',
+                self::OPEN_LAST_EVENTS
+            );
+    }
+
+    /**
+     * La jornada abierta más reciente del empleado que ya es más vieja que "ayer" respecto de
+     * `$recordedAt` (la de ayer la resuelve `resolveForEvent()` por turno nocturno). Sirve para
+     * avisar a RR.HH., en el conflicto de una salida huérfana, que quedó una entrada sin cerrar.
+     */
+    public static function staleOpenDayFor(Employee $employee, Carbon $recordedAt): ?self
+    {
+        return static::query()
+            ->where('employee_id', $employee->id)
+            ->where('date', '<', $recordedAt->copy()->subDay()->toDateString())
+            ->where('date', '>=', $recordedAt->copy()->subDays(self::STALE_OPEN_LOOKBACK_DAYS)->toDateString())
+            ->whereRaw(
+                '(select e.event_type from attendance_events e where e.attendance_day_id = attendance_days.id order by e.recorded_at desc, e.id desc limit 1) in (?, ?, ?)',
+                self::OPEN_LAST_EVENTS
+            )
+            ->orderByDesc('date')
+            ->first();
+    }
+
+    /**
+     * Datos de la jornada vieja abierta para guardar en el `metadata` de un conflicto, y el texto
+     * que se agrega al mensaje. Vacío si el empleado no tiene ninguna.
+     *
+     * @return array{metadata: array<string, mixed>, message: string}
+     */
+    public static function staleOpenDayConflictInfo(Employee $employee, Carbon $recordedAt): array
+    {
+        $day = static::staleOpenDayFor($employee, $recordedAt);
+
+        if (! $day) {
+            return ['metadata' => [], 'message' => ''];
+        }
+
+        $date = $day->date->format('d/m/Y');
+
+        return [
+            'metadata' => [
+                'open_day_id' => $day->id,
+                'open_day_date' => $day->date->toDateString(),
+            ],
+            'message' => " El empleado tiene una jornada abierta sin salida del {$date}: corregirla desde Asistencias antes de resolver este conflicto.",
+        ];
     }
 
     /**

@@ -407,6 +407,18 @@ class AttendanceMarkFailureResource extends Resource
                             ->visible(fn (AttendanceMarkFailure $record) => ! $record->isPending()),
                     ]),
 
+                InfoSection::make('Jornada abierta anterior')
+                    ->icon('heroicon-o-exclamation-triangle')
+                    ->description('El empleado tiene una entrada sin salida. Corregirla desde Asistencias (agregar la salida que falta) antes de resolver este conflicto.')
+                    ->schema([
+                        TextEntry::make('metadata.open_day_date')
+                            ->label('Jornada sin salida del')
+                            ->formatStateUsing(fn (?string $state) => $state ? Carbon::parse($state)->format('d/m/Y') : null)
+                            ->url(fn (AttendanceMarkFailure $record) => AttendanceDayResource::getUrl('view', ['record' => $record->metadata['open_day_id']]))
+                            ->color('primary'),
+                    ])
+                    ->visible(fn (AttendanceMarkFailure $record) => filled($record->metadata['open_day_id'] ?? null)),
+
                 InfoSection::make('Red y Ubicación')
                     ->icon('heroicon-o-map-pin')
                     ->columns(2)
