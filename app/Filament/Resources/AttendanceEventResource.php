@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AttendanceEventResource\Pages;
 use App\Models\AttendanceEvent;
+use App\Services\AttendanceEventCorrectionService;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -16,6 +17,7 @@ use Filament\Forms\Get;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
@@ -28,6 +30,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 /** Recurso Filament para gestionar marcaciones de asistencia. */
 class AttendanceEventResource extends Resource
@@ -298,6 +301,17 @@ class AttendanceEventResource extends Resource
                             'event_type' => $data['event_type'],
                             'recorded_at' => Carbon::parse($data['_date'].' '.$data['time']),
                         ])
+                        ->using(function (Model $record, array $data, $action): Model {
+                            try {
+                                app(AttendanceEventCorrectionService::class)
+                                    ->applySingle($record, $data['event_type'], $data['recorded_at']);
+                            } catch (\InvalidArgumentException $e) {
+                                Notification::make()->danger()->title('No se guardaron los cambios')->body($e->getMessage())->send();
+                                $action->halt();
+                            }
+
+                            return $record->fresh();
+                        })
                         ->successNotificationTitle('Marcación actualizada'),
 
                     DeleteAction::make()

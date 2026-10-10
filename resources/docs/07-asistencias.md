@@ -218,6 +218,8 @@ Desde la sección **Marcaciones** del detalle del día, clic en el ícono de edi
 
 > ⚠️ Al editar una marcación, solo se puede modificar el **tipo de evento** y la **hora**. La fecha no puede cambiarse para evitar mover el evento a otro día de forma accidental.
 
+> Al guardar se valida el día completo igual que en **Corregir marcaciones**: no se admiten horas futuras ni una secuencia imposible (por ejemplo, una salida de descanso sin inicio de descanso); en ese caso no se cambia nada y se explica el motivo. Si se guarda, la marcación queda con canal **Manual** y la jornada se recalcula.
+
 Después de editar, usar el botón **Recalcular** en el encabezado para actualizar los totales del día.
 
 ### Eliminar una marcación

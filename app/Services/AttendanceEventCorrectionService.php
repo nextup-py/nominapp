@@ -70,6 +70,38 @@ class AttendanceEventCorrectionService
     }
 
     /**
+     * Cambia el tipo y/o la hora de una sola marcación validando la secuencia completa del día, igual que
+     * la acción "Corregir marcaciones", y recalcula la jornada. Una marcación sin jornada se actualiza tal cual.
+     *
+     * @throws InvalidArgumentException Si la secuencia resultante no es válida.
+     */
+    public function applySingle(AttendanceEvent $event, string $eventType, Carbon|string $recordedAt): void
+    {
+        $unchanged = $event->event_type === $eventType
+            && $event->recorded_at->copy()->seconds(0)->equalTo(Carbon::parse($recordedAt)->seconds(0));
+
+        if ($unchanged) {
+            return;
+        }
+
+        $day = $event->day;
+
+        if ($day === null) {
+            $event->update(['event_type' => $eventType, 'recorded_at' => $recordedAt, 'source' => 'manual']);
+
+            return;
+        }
+
+        $rows = $day->events()->orderBy('recorded_at')->orderBy('id')->get()
+            ->map(fn (AttendanceEvent $existing) => $existing->is($event)
+                ? ['id' => $existing->id, 'event_type' => $eventType, 'recorded_at' => $recordedAt]
+                : ['id' => $existing->id, 'event_type' => $existing->event_type, 'recorded_at' => $existing->recorded_at])
+            ->all();
+
+        $this->apply($day, $rows);
+    }
+
+    /**
      * Aplica la corrección: elimina lo que ya no está, actualiza lo modificado, crea lo nuevo y recalcula la jornada.
      *
      * @param  array<int, array<string, mixed>>  $rows
