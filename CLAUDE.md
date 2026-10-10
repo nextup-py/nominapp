@@ -250,6 +250,7 @@ Registro documental de permisos y licencias de empleados. **Sin integración con
 **Integración bidireccional con Ausencias (`Absence`):**
 - `EmployeeLeave::approve(int $approvedById): array` — al aprobar, busca todas las `Absence` del empleado en el período con estado `pending` o `unjustified` y llama a `justify()` en cada una. Retorna `['justified_count' => N]`.
 - `Absence::justify(int $reviewedById, ?string $reviewNotes, ?int $employeeLeaveId)` — al justificar una ausencia desde el modal, siempre se requiere vincular un `EmployeeLeave` aprobado que cubra esa fecha. La FK `employee_leave_id` queda almacenada en la ausencia.
+- **Acciones de resolución compartidas:** `App\Filament\Actions\AbsenceActions` (`registerAttendance()`, `justify()`, `markUnjustified()`) se construye con la clase de acción de tabla o de página (mismo patrón que `TerminalLinkActions`) y usa el `$record` inyectado, no `$this->record`: lo usan el menú **Resolver** de cada fila de `AbsenceResource` y los encabezados de `ViewAbsence`. La insignia del menú cuenta **todas** las ausencias `pending` (no solo las del día), igual que la tarjeta de **Por resolver**.
 - Una licencia no puede **crear** ausencias — solo justifica las que ya existen en el período.
 - No se puede justificar una ausencia sin vincularla a un permiso aprobado. Si no existe ninguno, el modal muestra un aviso y deshabilita el campo.
 

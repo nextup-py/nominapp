@@ -18,9 +18,11 @@ Las ausencias registran los días en que un empleado no asistió sin justificaci
 
 ![Detalle de una ausencia con sus acciones](/docs-images/09-ausencia-detalle.png)
 
-1. Ir a **Empleados → Ausencias**
-2. Clic sobre la ausencia a revisar
-3. Desde el detalle, según el estado actual, están disponibles:
+1. Ir a **Asistencias → Ausencias** (el menú muestra como insignia **todas** las ausencias pendientes, sin importar el día en que se detectaron)
+2. Resolver la ausencia de una de dos formas:
+   - **Desde la lista:** en la fila, menú **Resolver** (ícono de check) con las tres acciones de abajo, sin abrir el detalle.
+   - **Desde el detalle:** clic sobre la ausencia; las mismas acciones están en el encabezado.
+3. Según el estado actual, están disponibles:
 
 | Acción | Disponible desde | Qué hace |
 |--------|-------------------|----------|
