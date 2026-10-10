@@ -137,7 +137,10 @@ class AttendanceDayResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'present')->with(['employee.branch.company', 'employee.activeContract.position.department']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'present')
+                ->select('attendance_days.*')
+                ->selectRaw(AttendanceDay::lastEventTypeSql().' as last_event_type')
+                ->with(['employee.branch.company', 'employee.activeContract.position.department']))
             ->columns([
                 TextColumn::make('date')
                     ->label('Fecha')
@@ -201,14 +204,14 @@ class AttendanceDayResource extends Resource
                     ->suffix(' min')
                     ->default(0)
                     ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
 
                 TextColumn::make('total_hours')
                     ->label('Horas trabajadas')
                     ->suffix(' hrs')
                     ->default(0)
                     ->numeric(2)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
 
                 TextColumn::make('extra_hours')
                     ->label('Hrs Extra')
@@ -216,7 +219,15 @@ class AttendanceDayResource extends Resource
                     ->default(0)
                     ->numeric(2)
                     ->color(fn ($state) => $state > 0 ? 'warning' : 'gray')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
+
+                TextColumn::make('attention')
+                    ->label('Pendiente')
+                    ->getStateUsing(fn (AttendanceDay $record) => $record->attentionReasons())
+                    ->badge()
+                    ->color(fn (string $state) => $state === 'Sin salida' ? 'danger' : 'warning')
+                    ->placeholder('Al día')
+                    ->toggleable(),
 
             ])
             ->filters([
@@ -328,10 +339,19 @@ class AttendanceDayResource extends Resource
                     self::getApproveOvertimeTableAction(),
                     self::getRegularShiftTableAction(),
                     self::getApproveTardinessTableAction(),
+                ])
+                    ->label('Aprobar')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->tooltip('Aprobar horas extra y tardanzas'),
+
+                TableActionGroup::make([
                     self::getAdjustExtraHoursTableAction(),
-                    self::getExportPdfTableAction(),
                     self::getCalculateTableAction(),
-                ]),
+                    self::getExportPdfTableAction(),
+                ])
+                    ->label('Más')
+                    ->tooltip('Ajustar, recalcular o exportar'),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

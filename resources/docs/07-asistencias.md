@@ -267,11 +267,19 @@ Ir a **Asistencias → Asistencias** para ver el resumen calculado de cada emple
 
 ### Pestañas de filtrado
 
+El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Cada pestaña muestra un contador.
+
 | Pestaña | Descripción |
 |---------|-------------|
+| **Requieren atención** | Jornadas de los **últimos 30 días** que están **sin salida** (de días anteriores a hoy), con **tardanza por aprobar** o con **horas extra por aprobar**. Al resolver una (aprobar, corregir la salida, aceptar el doble turno) sale de la lista |
+| **Ayer** | Todas las jornadas de ayer, para revisar el día completo |
+| **Hoy** | Las jornadas de hoy, en curso |
 | **Todos** | Todos los registros presentes |
 | **Calculados** | Registros donde ya se ejecutó el cálculo de horas |
 | **Sin calcular** | Registros pendientes de cálculo (recién creados o con eventos nuevos) |
+| **Incompletos** | Registros sin horas calculadas (por ejemplo, con entrada y sin salida) |
+
+> Una jornada ya resuelta no aparece en **Requieren atención**, y tampoco las de hace más de 30 días. Para verlas (por ejemplo, para revocar una aprobación o revisar algo antiguo) abrir **Todos** o **Incompletos**.
 
 ### Columnas de la tabla
 
@@ -286,6 +294,9 @@ Ir a **Asistencias → Asistencias** para ver el resumen calculado de cada emple
 | **Tardanza** | Minutos de retraso respecto al horario esperado |
 | **Horas trabajadas** | Total de horas marcadas en el día |
 | **Hrs Extra** | Horas extras calculadas (en amarillo si hay) |
+| **Pendiente** | Qué falta resolver en el día: **Sin salida**, **Tardanza por aprobar** y/o **Extras por aprobar**. Si no falta nada muestra **Al día** |
+
+Las columnas de tardanza, horas trabajadas, horas extra y pendiente se muestran por defecto; se pueden ocultar desde el selector de columnas de la tabla.
 
 ### Indicadores de color en Entrada y Salida
 
@@ -298,16 +309,26 @@ Ir a **Asistencias → Asistencias** para ver el resumen calculado de cada emple
 
 ### Acciones en la tabla (fila a fila)
 
-Cada fila tiene botones de acción según el estado del registro:
+Cada fila tiene dos menús:
+
+- **Aprobar** (ícono de check): reúne las decisiones sobre el día.
+- **Más**: ajustar, recalcular y exportar.
+
+**Menú Aprobar**
 
 | Acción | Cuándo aparece | Qué hace |
 |--------|----------------|----------|
-| **Aprobar / Revocar Horas Extra** | El día tiene horas extras calculadas | Aprueba o revoca la aprobación. Solo las HE aprobadas se incluyen en la nómina |
+| **Aprobar / Revocar** (horas extra) | El día tiene horas extras calculadas | Aprueba o revoca la aprobación. Solo las HE aprobadas se incluyen en la nómina |
 | **Aceptar doble turno como jornada normal** / **Volver a revisar doble turno** | El día tiene más de un turno y horas sobre el horario | Las horas del segundo turno dejan de contarse como extra (el empleado no cobra recargo por ellas) y el día sale de los pendientes. Queda registrado en el historial y se puede deshacer |
-| **Aprobar / Revocar Tardanza** | El día tiene minutos de tardanza | Aprueba o revoca el descuento por tardanza en nómina |
-| **PDF** | Siempre visible | Descarga el comprobante PDF del día de asistencia |
-| **Ajustar HE** (menú "...") | Siempre visible | Abre el formulario para ingresar horas extras manualmente |
-| **Calcular / Recalcular** (menú "...") | Siempre visible | Ejecuta el cálculo de horas, tardanza y extras para ese día |
+| **Aprobar Tardanza / Revocar Tardanza** | El día tiene minutos de tardanza | Aprueba o revoca el descuento por tardanza en nómina |
+
+**Menú Más**
+
+| Acción | Cuándo aparece | Qué hace |
+|--------|----------------|----------|
+| **Ajustar Horas Extra** | Siempre visible | Abre el formulario para ingresar horas extras manualmente |
+| **Calcular / Recalcular** | Siempre visible | Ejecuta el cálculo de horas, tardanza y extras para ese día |
+| **Exportar PDF** | Siempre visible | Descarga el comprobante PDF del día de asistencia |
 
 ### Acciones globales del encabezado
 
