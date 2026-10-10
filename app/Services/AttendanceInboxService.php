@@ -67,9 +67,9 @@ class AttendanceInboxService
             $sections[] = self::section(
                 'mark_failures', 'Fallos de marcación', 'Marcaciones que el terminal o el celular rechazaron y esperan una decisión.',
                 'heroicon-o-exclamation-triangle', 'danger',
-                AttendanceMarkFailure::query()->where('resolution_status', 'pending'),
+                AttendanceMarkFailure::query()->pendingToReview(),
                 'occurred_at',
-                AttendanceMarkFailureResource::getUrl('index', ['activeTab' => 'pending']),
+                AttendanceMarkFailureResource::getUrl('index', ['activeTab' => 'review']),
             );
         }
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Notifications\SyncConflictPendingNotification;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
@@ -243,6 +244,40 @@ class AttendanceMarkFailure extends Model
             'approved' => 'success',
             'dismissed' => 'gray',
         ];
+    }
+
+    // ──────────────────────────────────────────
+    // Fallos accionables vs. rostros no reconocidos
+    // ──────────────────────────────────────────
+
+    /**
+     * Tipos en los que el rostro no se pudo atribuir a nadie: no tienen empleado, así que no hay marcación que
+     * reconstruir. Son ruido de uso (alguien frente al terminal, mala luz) y se descartan en bloque.
+     */
+    public const UNRECOGNIZED_FACE_TYPES = ['face_no_match', 'face_ambiguous'];
+
+    /**
+     * Pendientes que RR.HH. puede resolver: todos salvo los rostros no reconocidos.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePendingToReview(Builder $query): Builder
+    {
+        return $query->where('resolution_status', 'pending')
+            ->whereNotIn('failure_type', self::UNRECOGNIZED_FACE_TYPES);
+    }
+
+    /**
+     * Pendientes de rostro no reconocido o ambiguo (sin empleado identificado).
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePendingUnrecognizedFaces(Builder $query): Builder
+    {
+        return $query->where('resolution_status', 'pending')
+            ->whereIn('failure_type', self::UNRECOGNIZED_FACE_TYPES);
     }
 
     // ──────────────────────────────────────────
