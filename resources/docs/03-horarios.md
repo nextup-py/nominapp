@@ -75,7 +75,7 @@ Las ausencias no se generan hacia atrás: solo se crean automáticamente las de 
 
 También se puede asignar sin abrir el horario. En **Empleados**, menú de la fila → **Asignar horario**, o seleccione varios empleados y use **Asignar horario** en las acciones masivas. Se elige el horario y la vigencia (**Rige desde**, **Hasta**, notas). Los empleados inactivos y los que ya tienen ese mismo horario vigente se omiten, y la notificación informa cuántos se asignaron. Requiere permiso de edición sobre horarios.
 
-Para encontrar a quienes **no tienen horario fijo, rotación ni turnos planificados** (los turnos cargados en el Planificador en los últimos 14 días o a futuro cuentan como horario), use el filtro **Sin horario asignado** del listado de Empleados. El mismo aviso aparece como tarjeta **Empleados sin horario** en **Asistencias → Por resolver** y como mensaje bajo el título de **Asistencias**, con enlace al listado ya filtrado.
+Para encontrar a quienes **no tienen horario fijo, rotación ni turnos planificados** (los turnos cargados en el Planificador en los últimos 14 días o a futuro cuentan como horario), use el filtro **Sin horario asignado** del listado de Empleados. El mismo aviso aparece (con un enlace al **Planificador de Turnos** para quienes se organizan por turnos) como tarjeta **Empleados sin horario** en **Asistencias → Por resolver** y como mensaje bajo el título de **Asistencias**, con enlace al listado ya filtrado.
 
 Para quitar la asignación de un empleado sin darle otro horario, usar **Remover** en la fila del empleado (o la acción masiva "Remover seleccionados") — esto cierra la asignación con fecha de hoy, sin eliminar el historial.
 

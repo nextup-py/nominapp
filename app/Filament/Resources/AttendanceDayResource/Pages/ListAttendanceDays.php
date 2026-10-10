@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttendanceDayResource\Pages;
 
 use App\Filament\Pages\AttendanceReport;
+use App\Filament\Pages\ShiftPlannerPage;
 use App\Filament\Resources\AttendanceDayResource;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\AttendanceDay;
@@ -39,7 +40,10 @@ class ListAttendanceDays extends ListRecords
         $url = EmployeeResource::getUrl('index', ['activeTab' => 'active', 'tableFilters' => ['without_schedule' => ['isActive' => true]]]);
         $label = $count === 1 ? '1 empleado activo no tiene' : "{$count} empleados activos no tienen";
 
-        return new HtmlString(e("{$label} horario asignado: sus marcaciones no calculan horas ni ausencias.").' <a href="'.e($url).'" style="color: rgb(var(--primary-600)); text-decoration: underline;">Ver y asignar</a>');
+        $link = fn (string $href, string $text): string => '<a href="'.e($href).'" style="color: rgb(var(--primary-600)); text-decoration: underline;">'.e($text).'</a>';
+        $planner = ShiftPlannerPage::canAccess() ? ' · '.$link(ShiftPlannerPage::getUrl(), 'Planificar turnos') : '';
+
+        return new HtmlString(e("{$label} horario asignado: sus marcaciones no calculan horas ni ausencias.").' '.$link($url, 'Ver y asignar').$planner);
     }
 
     /**

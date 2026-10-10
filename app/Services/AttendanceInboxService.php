@@ -75,7 +75,7 @@ class AttendanceInboxService
 
         if (EmployeeResource::canViewAny()) {
             $sections[] = self::section(
-                'no_schedule', 'Empleados sin horario', 'Sin horario ni rotación no se calculan horas esperadas, tardanzas ni ausencias: hay que asignarles uno.',
+                'no_schedule', 'Empleados sin horario', 'Sin horario, rotación ni turnos planificados no se calculan horas esperadas, tardanzas ni ausencias: hay que asignarles un horario o planificarles turnos.',
                 'heroicon-o-clock', 'warning',
                 Employee::query()->active()->withoutSchedule(),
                 null,
