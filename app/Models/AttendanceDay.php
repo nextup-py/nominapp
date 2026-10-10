@@ -281,6 +281,72 @@ class AttendanceDay extends Model implements Auditable
     }
 
     /**
+     * Estado de la jornada para la ficha mensual: unifica `status`, vacaciones y justificación en una sola clave.
+     *
+     * @return 'present'|'absent'|'absent_justified'|'leave'|'vacation'|'holiday'|'day_off'|'unknown'
+     */
+    public function sheetState(): string
+    {
+        if ($this->status === 'present') {
+            return 'present';
+        }
+
+        if ($this->on_vacation) {
+            return 'vacation';
+        }
+
+        return match ($this->status) {
+            'absent' => $this->justified_absence ? 'absent_justified' : 'absent',
+            'on_leave' => 'leave',
+            'holiday' => 'holiday',
+            'weekend' => 'day_off',
+            default => 'unknown',
+        };
+    }
+
+    /**
+     * Etiquetas de los estados de la ficha mensual (incluye los días sin jornada registrada).
+     *
+     * @return array<string, string>
+     */
+    public static function getSheetStateLabels(): array
+    {
+        return [
+            'present' => 'Presente',
+            'absent' => 'Ausente',
+            'absent_justified' => 'Ausencia justificada',
+            'leave' => 'Permiso',
+            'vacation' => 'Vacaciones',
+            'holiday' => 'Feriado',
+            'day_off' => 'Franco',
+            'unknown' => 'Sin dato',
+            'no_record' => 'Sin registro',
+            'upcoming' => '',
+        ];
+    }
+
+    /**
+     * Colores semánticos de los estados de la ficha mensual.
+     *
+     * @return array<string, string>
+     */
+    public static function getSheetStateColors(): array
+    {
+        return [
+            'present' => 'success',
+            'absent' => 'danger',
+            'absent_justified' => 'info',
+            'leave' => 'info',
+            'vacation' => 'info',
+            'holiday' => 'gray',
+            'day_off' => 'gray',
+            'unknown' => 'gray',
+            'no_record' => 'gray',
+            'upcoming' => 'gray',
+        ];
+    }
+
+    /**
      * Motivos por los que la jornada requiere atención, para mostrarlos como badges en el listado.
      * Usa `last_event_type` si el listado ya lo trajo (evita una consulta por fila).
      *
