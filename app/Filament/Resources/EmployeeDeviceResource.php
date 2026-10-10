@@ -264,7 +264,7 @@ class EmployeeDeviceResource extends Resource
                     ->tooltip('Invalida el acceso de este dispositivo a la marcación offline — el empleado deberá vincularse de nuevo con CI + fecha de nacimiento')
                     ->icon('heroicon-o-shield-exclamation')
                     ->color('danger')
-                    ->visible(fn (EmployeeDevice $record) => $record->isActive())
+                    ->visible(fn (EmployeeDevice $record) => $record->isActive() && (auth()->user()?->can('update_employee_device') ?? false))
                     ->requiresConfirmation()
                     ->modalHeading('Revocar dispositivo')
                     ->modalDescription(fn (EmployeeDevice $record) => "El dispositivo vinculado de {$record->employee->full_name} perderá acceso a la marcación offline de inmediato. Deberá vincularse de nuevo con CI + fecha de nacimiento.")

@@ -90,7 +90,7 @@ Si un empleado perdió su celular o cambió de dispositivo sin avisar, un admini
 
 1. Ir a **Asistencias → Dispositivos de Empleados**
 2. Localizar el dispositivo activo del empleado
-3. Clic en **Revocar**
+3. Clic en **Revocar** (solo aparece con permiso para editar dispositivos de empleados)
 4. Confirmar
 
 Al revocar, el dispositivo pierde acceso de inmediato. El empleado deberá vincularse de nuevo con CI + fecha de nacimiento la próxima vez que quiera marcar desde el celular.
@@ -271,6 +271,8 @@ En la lista, marcar las casillas de los fallos y usar, en el menú **Abrir accio
 - **Descartar seleccionados** los marca como revisados sin crear ninguna marcación; admite una nota opcional.
 
 Al terminar, una notificación indica cuántos se procesaron y cuántos se omitieron.
+
+> **Aprobar** y **Descartar** (también los masivos) solo aparecen para quien tiene permiso para editar fallos de marcación; quien solo puede ver conserva el **Diagnóstico**.
 
 > El botón **Aprobar** solo aparece si el fallo puede resolverse. Fallos genéricos (rostro no reconocido, empleado no encontrado) no tienen suficiente información para reconstruir una marcación — en esos casos, si el empleado sí estuvo presente, usar la acción **Registrar asistencia** desde el módulo de Ausencias en su lugar.
 

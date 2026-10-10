@@ -231,6 +231,12 @@ class AttendanceMarkFailureResource extends Resource
             ->paginated([25, 50, 100]);
     }
 
+    /** Indica si el usuario puede resolver fallos de marcación (aprobar o descartar). */
+    public static function canResolve(): bool
+    {
+        return auth()->user()?->can('update_attendance_mark_failure') ?? false;
+    }
+
     /**
      * Aprueba en bloque los fallos pendientes que se pueden reconstruir, con el tipo de evento y la hora
      * originales de cada uno (sin ajustes manuales: para corregir uno, usar **Aprobar** en su fila).
@@ -242,7 +248,7 @@ class AttendanceMarkFailureResource extends Resource
             ->label('Aprobar seleccionados')
             ->icon('heroicon-o-check-circle')
             ->color('success')
-            ->visible(fn () => auth()->user()?->can('update_attendance_mark_failure') ?? false)
+            ->visible(fn () => static::canResolve())
             ->requiresConfirmation()
             ->modalHeading('Aprobar fallos seleccionados')
             ->modalDescription(function (Collection $records) {
@@ -285,7 +291,7 @@ class AttendanceMarkFailureResource extends Resource
             ->label('Descartar seleccionados')
             ->icon('heroicon-o-x-circle')
             ->color('gray')
-            ->visible(fn () => auth()->user()?->can('update_attendance_mark_failure') ?? false)
+            ->visible(fn () => static::canResolve())
             ->requiresConfirmation()
             ->modalHeading('Descartar fallos seleccionados')
             ->modalDescription('Se marcarán como revisados sin crear ninguna marcación de asistencia. Los ya revisados se omiten.')
@@ -323,14 +329,16 @@ class AttendanceMarkFailureResource extends Resource
      * datos del fallo, permitiendo ajustar el tipo de evento y la hora antes
      * de confirmar (ej. si el admin determina que en realidad correspondía
      * otro tipo de marcación). Solo visible si `canBeResolved()`.
+     *
+     * @param  class-string  $class  `Filament\Tables\Actions\Action` (tabla) o `Filament\Actions\Action` (encabezado de página).
      */
-    public static function getApproveAction(): Action
+    public static function getApproveAction(string $class = Action::class): mixed
     {
-        return Action::make('approve')
+        return $class::make('approve')
             ->label('Aprobar')
             ->icon('heroicon-o-check-circle')
             ->color('success')
-            ->visible(fn (AttendanceMarkFailure $record) => $record->canBeResolved())
+            ->visible(fn (AttendanceMarkFailure $record) => static::canResolve() && $record->canBeResolved())
             ->modalHeading('Aprobar marcación')
             ->modalDescription('Se creará la marcación de asistencia correspondiente. Podés ajustar el tipo de evento y la hora antes de confirmar.')
             ->modalSubmitActionLabel('Aprobar y registrar')
@@ -380,14 +388,16 @@ class AttendanceMarkFailureResource extends Resource
      * Acción "Descartar" — marca el fallo como revisado sin crear ninguna
      * marcación. Transición irreversible (sin undo), por eso solo vive en
      * los header actions del ViewRecord, nunca como row action de la tabla.
+     *
+     * @param  class-string  $class  `Filament\Tables\Actions\Action` o `Filament\Actions\Action` (encabezado de página).
      */
-    public static function getDismissAction(): Action
+    public static function getDismissAction(string $class = Action::class): mixed
     {
-        return Action::make('dismiss')
+        return $class::make('dismiss')
             ->label('Descartar')
             ->icon('heroicon-o-x-circle')
             ->color('gray')
-            ->visible(fn (AttendanceMarkFailure $record) => $record->isPending())
+            ->visible(fn (AttendanceMarkFailure $record) => static::canResolve() && $record->isPending())
             ->requiresConfirmation()
             ->modalHeading('Descartar fallo')
             ->modalDescription('Se marcará este fallo como revisado sin crear ninguna marcación de asistencia. Usalo cuando el conflicto ya no aplica — por ejemplo, si la marcación se cargó manualmente desde otro lado.')
