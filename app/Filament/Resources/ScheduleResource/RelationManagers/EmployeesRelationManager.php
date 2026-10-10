@@ -210,6 +210,7 @@ class EmployeesRelationManager extends RelationManager
                         $employees = Employee::whereIn('id', $data['employee_ids'])->get();
                         $assigned = 0;
                         $errors = [];
+                        $assignedEmployees = collect();
 
                         foreach ($employees as $employee) {
                             try {
@@ -221,6 +222,7 @@ class EmployeesRelationManager extends RelationManager
                                     notes: $data['notes'] ?? null,
                                 );
                                 $assigned++;
+                                $assignedEmployees->push($employee);
                             } catch (\Exception) {
                                 $errors[] = $employee->full_name;
                             }
@@ -232,6 +234,14 @@ class EmployeesRelationManager extends RelationManager
                                 ->title('Empleados asignados')
                                 ->body("Se asignó \"{$schedule->name}\" a {$assigned} empleado(s) a partir del ".Carbon::parse($data['valid_from'])->format('d/m/Y').'.')
                                 ->send();
+                        }
+
+                        if ($data['recalculate'] ?? false) {
+                            ScheduleAssignmentActions::recalculateAssigned(
+                                $assignedEmployees,
+                                Carbon::parse($data['valid_from'])->startOfDay(),
+                                filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until'])->startOfDay() : null,
+                            );
                         }
 
                         if (! empty($errors)) {

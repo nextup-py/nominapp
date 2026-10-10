@@ -10,6 +10,7 @@ use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkAction;
@@ -42,7 +43,7 @@ class ScheduleAssignmentActions
                 ->required()
                 ->native(false)
                 ->displayFormat('d/m/Y')
-                ->helperText('Puede ser una fecha futura para programar el cambio: el horario actual sigue hasta el día anterior. Los días ya calculados no se recalculan solos.'),
+                ->helperText('Puede ser una fecha futura para programar el cambio: el horario actual sigue hasta el día anterior. Los días ya calculados solo se recalculan si activa la opción de abajo.'),
 
             DatePicker::make('valid_until')
                 ->label('Hasta (opcional)')
@@ -50,6 +51,12 @@ class ScheduleAssignmentActions
                 ->displayFormat('d/m/Y')
                 ->afterOrEqual('valid_from')
                 ->helperText('Vacío = sin fecha de fin.'),
+
+            Toggle::make('recalculate')
+                ->label('Recalcular las jornadas ya registradas desde esa fecha')
+                ->helperText('Solo cuando "Rige desde" es hoy o anterior. Se omiten las jornadas con extras o tardanza aprobadas, ajuste manual o doble turno aceptado, y las de períodos con nómina generada; al terminar se informa cuántas.')
+                ->default(false)
+                ->columnSpanFull(),
 
             Textarea::make('notes')
                 ->label('Notas (opcional)')
@@ -148,6 +155,7 @@ class ScheduleAssignmentActions
         $assigned = 0;
         $skipped = 0;
         $failed = [];
+        $assignedEmployees = collect();
 
         foreach ($employees as $employee) {
             if ($employee->status !== 'active' || $employee->getScheduleForDate($from)?->id === $schedule->id) {
@@ -159,6 +167,7 @@ class ScheduleAssignmentActions
             try {
                 ScheduleAssignmentService::assign($employee, $schedule, $from, $until, $data['notes'] ?? null);
                 $assigned++;
+                $assignedEmployees->push($employee);
             } catch (\Exception) {
                 $failed[] = $employee->full_name;
             }
@@ -170,6 +179,37 @@ class ScheduleAssignmentActions
                 .($failed ? ' Revisar solapamientos en: '.implode(', ', $failed).'.' : ''))
             ->color($failed ? 'warning' : 'success')
             ->persistent((bool) $failed)
+            ->send();
+
+        if ($data['recalculate'] ?? false) {
+            static::recalculateAssigned($assignedEmployees, $from, $until);
+        }
+    }
+
+    /**
+     * Recalcula las jornadas ya registradas de los empleados recién asignados (si la vigencia ya empezó) y
+     * avisa cuántas se recalcularon, cuántas se omitieron por decisiones de RR.HH. y cuántas por nómina generada.
+     *
+     * @param  Collection<int, Employee>  $employees
+     */
+    public static function recalculateAssigned(Collection $employees, Carbon $from, ?Carbon $until = null): void
+    {
+        if ($employees->isEmpty() || $from->isFuture()) {
+            return;
+        }
+
+        $totals = ['recalculated' => 0, 'protected' => 0, 'payroll_locked' => 0];
+
+        foreach ($employees as $employee) {
+            foreach (ScheduleAssignmentService::recalculateDays($employee, $from, $until) as $key => $count) {
+                $totals[$key] += $count;
+            }
+        }
+
+        Notification::make()
+            ->title("{$totals['recalculated']} jornada(s) recalculada(s)")
+            ->body("Omitidas por decisiones de RR.HH. (extras o tardanza aprobadas, ajuste manual, doble turno): {$totals['protected']}. Omitidas por nómina ya generada: {$totals['payroll_locked']}.")
+            ->color(($totals['protected'] + $totals['payroll_locked']) > 0 ? 'warning' : 'success')
             ->send();
     }
 }

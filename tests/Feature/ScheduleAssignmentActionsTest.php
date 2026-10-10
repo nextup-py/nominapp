@@ -3,12 +3,16 @@
 use App\Filament\Resources\AttendanceDayResource\Pages\ListAttendanceDays;
 use App\Filament\Resources\EmployeeResource\Pages\ListEmployees;
 use App\Filament\Resources\ScheduleResource\Pages\ListSchedules;
+use App\Models\AttendanceDay;
+use App\Models\AttendanceEvent;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\PayrollPeriod;
 use App\Models\Schedule;
 use App\Models\User;
 use App\Services\AttendanceInboxService;
+use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -163,4 +167,85 @@ it('asignar desde el horario respeta la fecha de inicio elegida', function () {
         ->callTableAction('assignToEmployees', $schedule, data: ['employee_ids' => [$employee->id], 'valid_from' => $from]);
 
     expect($employee->scheduleAssignments()->first()->valid_from->toDateString())->toBe($from);
+});
+
+/** Jornada registrada hace `$daysAgo` días con entrada 09:30 sin horario (sin expected_check_in). */
+function pastDayFor(Employee $employee, int $daysAgo, array $attributes = []): AttendanceDay
+{
+    $date = Carbon::today()->subDays($daysAgo);
+    $day = AttendanceDay::create(array_merge([
+        'employee_id' => $employee->id, 'date' => $date->toDateString(), 'status' => 'present',
+        'is_calculated' => true, 'is_weekend' => false, 'is_holiday' => false, 'on_vacation' => false, 'justified_absence' => false,
+    ], $attributes));
+
+    AttendanceEvent::create(['attendance_day_id' => $day->id, 'employee_id' => $employee->id, 'event_type' => 'check_in', 'recorded_at' => $date->copy()->setTime(9, 30)]);
+    AttendanceEvent::create(['attendance_day_id' => $day->id, 'employee_id' => $employee->id, 'event_type' => 'check_out', 'recorded_at' => $date->copy()->setTime(17, 0)]);
+
+    return $day->fresh();
+}
+
+/** Horario de lunes a domingo 09:00-17:00 para que cualquier día de prueba sea laboral. */
+function everyDaySchedule(): Schedule
+{
+    $schedule = scheduleTestSchedule('Todos los dias');
+    foreach (range(1, 7) as $dow) {
+        $schedule->days()->create(['day_of_week' => $dow, 'is_active' => true, 'start_time' => '09:00', 'end_time' => '17:00']);
+    }
+
+    return $schedule;
+}
+
+it('recalcula las jornadas pasadas al asignar con la opción activada y protege las decididas por RR.HH.', function () {
+    scheduleAsSuperAdmin();
+    $employee = scheduleTestEmployee();
+    $schedule = everyDaySchedule();
+    $plain = pastDayFor($employee, 3);
+    $approved = pastDayFor($employee, 4, ['overtime_approved' => true]);
+    $manual = pastDayFor($employee, 5, ['manual_adjustment' => true]);
+
+    Livewire::test(ListEmployees::class)
+        ->callTableAction('assign_schedule', $employee, data: [
+            'schedule_id' => $schedule->id, 'valid_from' => Carbon::today()->subDays(10)->toDateString(), 'recalculate' => true,
+        ])
+        ->assertHasNoTableActionErrors();
+
+    expect($plain->fresh()->expected_check_in)->not->toBeNull()
+        ->and((float) $plain->fresh()->expected_hours)->toBe(8.0)
+        ->and($approved->fresh()->expected_check_in)->toBeNull()
+        ->and($manual->fresh()->expected_check_in)->toBeNull();
+});
+
+it('no recalcula si la opción está desactivada', function () {
+    scheduleAsSuperAdmin();
+    $employee = scheduleTestEmployee();
+    $schedule = everyDaySchedule();
+    $day = pastDayFor($employee, 3);
+
+    Livewire::test(ListEmployees::class)
+        ->callTableAction('assign_schedule', $employee, data: [
+            'schedule_id' => $schedule->id, 'valid_from' => Carbon::today()->subDays(10)->toDateString(), 'recalculate' => false,
+        ]);
+
+    expect($day->fresh()->expected_check_in)->toBeNull();
+});
+
+it('no recalcula jornadas de períodos con nómina generada', function () {
+    $employee = scheduleTestEmployee();
+    $schedule = everyDaySchedule();
+    $locked = pastDayFor($employee, 3);
+    $free = pastDayFor($employee, 20);
+    $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => Carbon::today()->subDays(30), 'valid_until' => null]);
+
+    $period = PayrollPeriod::query()->create([
+        'company_id' => $employee->branch->company_id, 'start_date' => Carbon::today()->subDays(5)->toDateString(),
+        'end_date' => Carbon::today()->toDateString(), 'status' => 'draft', 'period_type' => 'mensual', 'name' => 'Periodo prueba',
+    ]);
+    DB::table('payrolls')->insert(['employee_id' => $employee->id, 'payroll_period_id' => $period->id, 'base_salary' => 0, 'gross_salary' => 0, 'net_salary' => 0, 'created_at' => now(), 'updated_at' => now()]);
+
+    $result = ScheduleAssignmentService::recalculateDays($employee, Carbon::today()->subDays(25));
+
+    expect($result['payroll_locked'])->toBe(1)
+        ->and($result['recalculated'])->toBe(1)
+        ->and($locked->fresh()->expected_check_in)->toBeNull()
+        ->and($free->fresh()->expected_check_in)->not->toBeNull();
 });

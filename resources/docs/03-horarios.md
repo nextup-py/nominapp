@@ -58,9 +58,18 @@ La asignación se hace **desde el horario, no desde el perfil del empleado**:
 3. En la pestaña **Empleados Asignados**, clic en **Asignar**
 4. Seleccionar uno o varios empleados (opcionalmente filtrando por sucursal) y confirmar
 
-En el mismo formulario se elige **Rige desde** (por defecto hoy), **Hasta** (opcional) y notas. Una fecha futura programa el cambio: el horario actual sigue vigente hasta el día anterior. Los días ya calculados no se recalculan solos.
+En el mismo formulario se elige **Rige desde** (por defecto hoy), **Hasta** (opcional) y notas. Una fecha futura programa el cambio: el horario actual sigue vigente hasta el día anterior. Los días ya calculados no se recalculan solos: para que las jornadas ya registradas tomen el horario nuevo, active **Recalcular las jornadas ya registradas desde esa fecha** (solo con fecha de inicio de hoy o anterior).
 
 > Si alguno de los empleados seleccionados ya tiene un horario vigente, se muestra una advertencia (⚠) — al confirmar, ese horario anterior se cierra automáticamente (el día anterior a **Rige desde**) y el nuevo queda vigente desde esa fecha.
+
+### Recalcular jornadas ya registradas
+
+Un recálculo normal en **Asistencias** conserva las horas esperadas con que se calculó cada jornada. Por eso, al asignar un horario a un empleado que ya tenía marcaciones, la opción **Recalcular las jornadas ya registradas desde esa fecha** vuelve a calcular esas jornadas con el horario nuevo (horas esperadas, tardanza, extras). Está desactivada por defecto y, al terminar, la notificación informa cuántas jornadas se recalcularon y cuántas se omitieron:
+
+- Las que tienen **horas extra o tardanza aprobadas**, **ajuste manual** o **doble turno aceptado como jornada normal**: no se pisa lo que RR.HH. ya decidió.
+- Las de períodos con **nómina ya generada** para ese empleado.
+
+Las ausencias no se generan hacia atrás: solo se crean automáticamente las de hoy y ayer.
 
 ### Asignar desde el listado de Empleados
 

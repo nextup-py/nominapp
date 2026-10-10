@@ -296,6 +296,7 @@ class ScheduleResource extends Resource
                     ->action(function (Schedule $record, array $data) {
                         $assigned = 0;
                         $errors = [];
+                        $assignedEmployees = collect();
 
                         foreach (Employee::whereIn('id', $data['employee_ids'])->get() as $employee) {
                             try {
@@ -307,6 +308,7 @@ class ScheduleResource extends Resource
                                     notes: $data['notes'] ?? null,
                                 );
                                 $assigned++;
+                                $assignedEmployees->push($employee);
                             } catch (\Exception $e) {
                                 $errors[] = $employee->full_name;
                             }
@@ -318,6 +320,14 @@ class ScheduleResource extends Resource
                                 ->title('Horario asignado')
                                 ->body("Se asignó \"{$record->name}\" a {$assigned} empleado(s) a partir del ".Carbon::parse($data['valid_from'])->format('d/m/Y').'.')
                                 ->send();
+                        }
+
+                        if ($data['recalculate'] ?? false) {
+                            ScheduleAssignmentActions::recalculateAssigned(
+                                $assignedEmployees,
+                                Carbon::parse($data['valid_from'])->startOfDay(),
+                                filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until'])->startOfDay() : null,
+                            );
                         }
 
                         if (! empty($errors)) {
