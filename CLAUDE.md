@@ -1555,7 +1555,7 @@ El `lockForUpdate()` serializa las transacciones concurrentes sobre esa fila —
 
 ### Deployment a producción — Cliente Macro (Sedacosmetica)
 
-**Servidor propio del cliente Macro (Sedacosmetica):** `sedvouco@bh7104` — CentOS, cPanel, PHP 8.2 via `/opt/cpanel/ea-php82/root/usr/bin/php`, Node 16 (sin RAM suficiente para Vite build). Esta sección aplica únicamente a la instalación de Macro; ver la sección siguiente para Bar777/Arca (infraestructura de TechForge, mecanismo distinto).
+**Servidor propio del cliente Macro (Sedacosmetica):** `sedvouco@bh7104` — CentOS, cPanel, PHP 8.2 via `/opt/cpanel/ea-php82/root/usr/bin/php`, Node 16 (sin RAM suficiente para Vite build). Esta sección aplica únicamente a la instalación de Macro; ver la sección siguiente para Bar777 (infraestructura de TechForge, mecanismo distinto).
 
 **Limitación Node 16:** Vite 6 + Rollup requieren Node ≥18 y ~512MB RAM para compilar. El servidor falla con `RangeError: WebAssembly.instantiate(): Out of memory`. **Solución permanente: buildear en local y subir assets via rsync.**
 
@@ -1587,15 +1587,15 @@ rsync -avz --delete public/build/ sedvouco@bh7104:/ruta/nominapp/public/build/
 ```
 Tareas activas: `app:calculate-attendance` (23:00 diario), `attendance:check-missing` (cada 15min, 6am-8pm, lun-sáb), `face:expire-enrollments` (cada hora), `contracts:expire` (00:05 diario), `contracts:notify-expiring` (08:00 diario), `audits:purge` (03:00 diario).
 
-### Deployment a Bar777 y Arca (VPS TechForge — CloudPanel)
+### Deployment a Bar777 (VPS TechForge — CloudPanel)
 
-Distinto del servidor cPanel de arriba. Bar777 y Arca corren en el mismo VPS de TechForge (`144.202.33.145`, CloudPanel), cada uno con su propio site user y checkout independiente del repo.
+Distinto del servidor cPanel de arriba. Bar777 corre en un VPS de TechForge (`144.202.33.145`, CloudPanel), con su propio site user y checkout del repo (la instancia Arca ya no existe).
 
-**Mecanismo:** GitHub Actions se conecta directo por SSH y ejecuta el deploy él mismo (no hay webhook ni script server-side como `deploy.php`). La lógica del pipeline vive en un **workflow reusable** compartido: `nextup-py/deploy-actions/.github/workflows/laravel-deploy.yml`. El `deploy.yml` de este repo (`nominapp`) es solo un caller con 2 jobs (`deploy-bar777`, `deploy-arca`), disparado manualmente vía `workflow_dispatch` eligiendo la instancia.
+**Mecanismo:** GitHub Actions se conecta directo por SSH y ejecuta el deploy él mismo (no hay webhook ni script server-side como `deploy.php`). La lógica del pipeline vive en un **workflow reusable** compartido: `nextup-py/deploy-actions/.github/workflows/laravel-deploy.yml`. El `deploy.yml` de este repo (`nominapp`) es solo un caller con un job por instancia (`deploy-bar777`, `deploy-nextup-demo`), disparado manualmente vía `workflow_dispatch` eligiendo la instancia.
 
-**Usuarios SSH dedicados:** `bar777-deploy` y `arca-deploy` (usuarios SSH separados del site user original de CloudPanel, creados en Sites → SSH/FTP → Add User). Cada uno tiene su propia clave SSH y está en el grupo Unix del site user correspondiente (acceso a archivos vía permisos de grupo, no por ser dueño).
+**Usuario SSH dedicado:** `bar777-deploy` (usuario SSH separado del site user original de CloudPanel, creados en Sites → SSH/FTP → Add User). Tiene su propia clave SSH y está en el grupo Unix del site user (acceso a archivos vía permisos de grupo, no por ser dueño).
 
-**Deploy Key de solo lectura:** `git pull` en el servidor se autentica con una Deploy Key de solo lectura del repo (compartida entre `bar777-deploy` y `arca-deploy`, guardada en `~/.ssh/id_ed25519` de cada usuario). Es independiente de la clave SSH que usa GitHub Actions para conectarse al servidor.
+**Deploy Key de solo lectura:** `git pull` en el servidor se autentica con una Deploy Key de solo lectura del repo (guardada en `~/.ssh/id_ed25519` de `bar777-deploy`). Es independiente de la clave SSH que usa GitHub Actions para conectarse al servidor.
 
 **Pasos del deploy** (job `deploy`, corre después de que pasa el job `test` con Pest + MySQL de servicio):
 1. `artisan down`
@@ -1611,7 +1611,7 @@ Distinto del servidor cPanel de arriba. Bar777 y Arca corren en el mismo VPS de 
 11. Tag de release best-effort (`|| true` — la Deploy Key es de solo lectura, no puede pushear tags)
 12. Health check HTTP post-deploy
 
-**Secrets** (Repository secrets en `nominapp`, prefijados `BAR777_*` / `ARCA_*` — no Environment secrets, porque un job que llama a un reusable workflow no puede tener `environment:` seteado): `SSH_HOST`, `SSH_PORT`, `SSH_USER`, `SSH_PRIVATE_KEY`, `DEPLOY_PATH`, `APP_URL`.
+**Secrets** (Repository secrets en `nominapp`, prefijados `BAR777_*` / `NEXTUP_DEMO_*` — no Environment secrets, porque un job que llama a un reusable workflow no puede tener `environment:` seteado): `SSH_HOST`, `SSH_PORT`, `SSH_USER`, `SSH_PRIVATE_KEY`, `DEPLOY_PATH`, `APP_URL`.
 
 **Documentación completa** (arquitectura, gotchas encontrados, decisiones de diseño): ver `nominapp-pipeline-deploy-ssh-reusable-workflow.md` en Drive, carpeta `05-Infraestructura`.
 
