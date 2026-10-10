@@ -273,7 +273,7 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 | **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia) |
 | **Terminal reconectado** | Volvió a reportar después de haber avisado la desconexión |
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
-| **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones pendientes o en conflicto no se vacían hace más del tiempo configurado |
+| **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones **pendientes** no se envían hace más del tiempo configurado. Las marcaciones **en conflicto** no cuentan: el servidor ya las rechazó y quedan en **Fallos de Marcación** para revisar |
 | **Batería baja en terminal** | El nivel bajó del porcentaje configurado y no está cargando (solo si el navegador informa la batería) |
 | **Terminal sin empleados enrolados** | La sucursal del terminal no tiene ningún empleado activo con rostro registrado: no podrá identificar a nadie. Enrolar a los empleados o revisar a qué sucursal pertenecen |
 | **Terminal sin empleados en caché** | El terminal está en línea pero reporta 0 empleados en su caché, aunque su sucursal tiene empleados enrolados. Enviar el comando remoto **Limpiar caché** o **Recargar app** |

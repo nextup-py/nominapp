@@ -5,7 +5,7 @@ on:
       environment:
         description: 'Instancia a la que desplegar'
         type: choice
-        options: [bar777, arca, nextup-demo]
+        options: [bar777, nextup-demo]
         required: true
 jobs:
   deploy-bar777:
@@ -24,27 +24,6 @@ jobs:
       SSH_PRIVATE_KEY: ${{ secrets.BAR777_SSH_PRIVATE_KEY }}
       DEPLOY_PATH: ${{ secrets.BAR777_DEPLOY_PATH }}
       APP_URL: ${{ secrets.BAR777_APP_URL }}
-      SMTP_HOST: ${{ secrets.SMTP_HOST }}
-      SMTP_PORT: ${{ secrets.SMTP_PORT }}
-      SMTP_USER: ${{ secrets.SMTP_USER }}
-      SMTP_PASS: ${{ secrets.SMTP_PASS }}
-      NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
-  deploy-arca:
-    if: ${{ inputs.environment == 'arca' }}
-    permissions:
-      contents: write
-    uses: nextup-py/deploy-actions/.github/workflows/laravel-deploy.yml@9fc64c40637a060f8c1ac7c792c44d0717244b03 # v1.2.0
-    with:
-      environment_name: arca
-      run_tests: true
-      run_migrations: true
-    secrets:
-      SSH_HOST: ${{ secrets.ARCA_SSH_HOST }}
-      SSH_PORT: ${{ secrets.ARCA_SSH_PORT }}
-      SSH_USER: ${{ secrets.ARCA_SSH_USER }}
-      SSH_PRIVATE_KEY: ${{ secrets.ARCA_SSH_PRIVATE_KEY }}
-      DEPLOY_PATH: ${{ secrets.ARCA_DEPLOY_PATH }}
-      APP_URL: ${{ secrets.ARCA_APP_URL }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_USER: ${{ secrets.SMTP_USER }}

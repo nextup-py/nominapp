@@ -63,7 +63,7 @@ class TerminalHealthNotification extends Notification
                 ->danger(),
             'queue_stuck' => $notification
                 ->title('Cola de marcaciones atascada')
-                ->body("El terminal {$name} tiene {$this->terminal->last_pending_events_count} marcación(es) pendiente(s) y {$this->terminal->last_conflict_events_count} en conflicto que no se vacían.")
+                ->body("El terminal {$name} tiene {$this->terminal->last_pending_events_count} marcación(es) pendiente(s) que no se envían hace más del tiempo configurado.")
                 ->icon('heroicon-o-queue-list')
                 ->warning(),
             'battery_low' => $notification

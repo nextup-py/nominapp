@@ -458,8 +458,8 @@ class Terminal extends Model implements AuthenticatableContract
     }
 
     /**
-     * Registra un heartbeat: contadores de la cola offline, desde cuándo la cola no
-     * está vacía y el último reporte de estado del dispositivo (si el cliente lo envía;
+     * Registra un heartbeat: contadores de la cola offline, desde cuándo hay marcaciones
+     * pendientes y el último reporte de estado del dispositivo (si el cliente lo envía;
      * los clientes viejos no lo hacen).
      *
      * @param  array<string, mixed>|null  $deviceReport
@@ -473,9 +473,11 @@ class Terminal extends Model implements AuthenticatableContract
             'last_conflict_events_count' => $conflictEvents,
         ];
 
-        if ($pendingEvents !== null || $conflictEvents !== null) {
-            $backlog = ($pendingEvents ?? 0) + ($conflictEvents ?? 0);
-            $attributes['queue_backlog_since'] = $backlog > 0 ? ($this->queue_backlog_since ?? now()) : null;
+        // Solo cuentan las marcaciones pendientes: un evento en conflicto ya fue rechazado por el servidor (queda en
+        // `AttendanceMarkFailure`) y el dispositivo lo conserva sin reintentarlo, así que nunca "se vacía" y
+        // dejaría la cola como atascada para siempre.
+        if ($pendingEvents !== null) {
+            $attributes['queue_backlog_since'] = $pendingEvents > 0 ? ($this->queue_backlog_since ?? now()) : null;
         }
 
         if ($deviceReport !== null) {
