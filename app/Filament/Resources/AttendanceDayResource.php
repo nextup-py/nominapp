@@ -5,13 +5,18 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AttendanceDayResource\Pages;
 use App\Filament\Resources\AttendanceDayResource\RelationManagers;
 use App\Models\AttendanceDay;
+use App\Models\AttendanceEvent;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Services\AttendanceCalculator;
+use App\Services\AttendanceEventCorrectionService;
 use App\Settings\PayrollSettings;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -137,7 +142,10 @@ class AttendanceDayResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'present')->with(['employee.branch.company', 'employee.activeContract.position.department']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'present')
+                ->select('attendance_days.*')
+                ->selectRaw(AttendanceDay::lastEventTypeSql().' as last_event_type')
+                ->with(['employee.branch.company', 'employee.activeContract.position.department']))
             ->columns([
                 TextColumn::make('date')
                     ->label('Fecha')
@@ -201,14 +209,14 @@ class AttendanceDayResource extends Resource
                     ->suffix(' min')
                     ->default(0)
                     ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
 
                 TextColumn::make('total_hours')
                     ->label('Horas trabajadas')
                     ->suffix(' hrs')
                     ->default(0)
                     ->numeric(2)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
 
                 TextColumn::make('extra_hours')
                     ->label('Hrs Extra')
@@ -216,7 +224,15 @@ class AttendanceDayResource extends Resource
                     ->default(0)
                     ->numeric(2)
                     ->color(fn ($state) => $state > 0 ? 'warning' : 'gray')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
+
+                TextColumn::make('attention')
+                    ->label('Pendiente')
+                    ->getStateUsing(fn (AttendanceDay $record) => $record->attentionReasons())
+                    ->badge()
+                    ->color(fn (string $state) => $state === 'Sin salida' ? 'danger' : 'warning')
+                    ->placeholder('Al día')
+                    ->toggleable(),
 
             ])
             ->filters([
@@ -324,14 +340,25 @@ class AttendanceDayResource extends Resource
                     }),
             ])
             ->actions([
+                self::getFixEventsTableAction(),
+
                 TableActionGroup::make([
                     self::getApproveOvertimeTableAction(),
                     self::getRegularShiftTableAction(),
                     self::getApproveTardinessTableAction(),
+                ])
+                    ->label('Aprobar')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->tooltip('Aprobar horas extra y tardanzas'),
+
+                TableActionGroup::make([
                     self::getAdjustExtraHoursTableAction(),
-                    self::getExportPdfTableAction(),
                     self::getCalculateTableAction(),
-                ]),
+                    self::getExportPdfTableAction(),
+                ])
+                    ->label('Más')
+                    ->tooltip('Ajustar, recalcular o exportar'),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -657,6 +684,74 @@ class AttendanceDayResource extends Resource
                 : "Las horas sobre el horario ({$record->extra_hours} hrs extra) vuelven a quedar pendientes de aprobación.")
             ->success()
             ->send();
+    }
+
+    /**
+     * Corrige las marcaciones de la jornada desde el listado: agregar, cambiar tipo u hora y eliminar.
+     */
+    public static function getFixEventsTableAction(): TableAction
+    {
+        return TableAction::make('fix_events')
+            ->label('Corregir marcaciones')
+            ->icon('heroicon-o-pencil-square')
+            ->color('warning')
+            ->visible(fn () => auth()->user()?->can('update_attendance_event') ?? false)
+            ->tooltip('Agregar, cambiar o eliminar las marcaciones del día sin salir del listado')
+            ->modalHeading(fn (AttendanceDay $record) => 'Marcaciones del '.$record->date->format('d/m/Y').' — '.($record->employee?->full_name ?? 'Empleado'))
+            ->modalDescription('Los cambios se aplican al guardar y la jornada se recalcula. Una salida de madrugada va con la fecha del día siguiente.')
+            ->modalWidth('2xl')
+            ->modalSubmitActionLabel('Guardar correcciones')
+            ->mountUsing(function (Form $form, AttendanceDay $record) {
+                $form->fill([
+                    'events' => $record->events()->orderBy('recorded_at')->orderBy('id')->get()
+                        ->map(fn (AttendanceEvent $event) => [
+                            'id' => $event->id,
+                            'event_type' => $event->event_type,
+                            'recorded_at' => $event->recorded_at->format('Y-m-d H:i:s'),
+                        ])->all(),
+                ]);
+            })
+            ->form([
+                Repeater::make('events')
+                    ->label('Marcaciones')
+                    ->schema([
+                        Hidden::make('id'),
+                        Select::make('event_type')
+                            ->label('Tipo')
+                            ->options(AttendanceEvent::getEventTypeOptions())
+                            ->native(false)
+                            ->required(),
+                        DateTimePicker::make('recorded_at')
+                            ->label('Fecha y hora')
+                            ->seconds(false)
+                            ->native(false)
+                            ->displayFormat('d/m/Y H:i')
+                            ->maxDate(now())
+                            ->required(),
+                    ])
+                    ->columns(2)
+                    ->addActionLabel('Agregar marcación')
+                    ->defaultItems(0)
+                    ->reorderable(false)
+                    ->itemLabel(fn (array $state) => filled($state['event_type'] ?? null)
+                        ? AttendanceEvent::getEventTypeLabel($state['event_type'])
+                        : 'Nueva marcación')
+                    ->deleteAction(fn ($action) => $action->requiresConfirmation()->modalSubmitActionLabel('Sí, quitar')),
+            ])
+            ->action(function (AttendanceDay $record, array $data, TableAction $action) {
+                try {
+                    $summary = app(AttendanceEventCorrectionService::class)->apply($record, $data['events'] ?? []);
+                } catch (\InvalidArgumentException $e) {
+                    Notification::make()->danger()->title('No se guardaron los cambios')->body($e->getMessage())->send();
+                    $action->halt();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Marcaciones corregidas')
+                    ->body("Agregadas: {$summary['created']}, modificadas: {$summary['updated']}, eliminadas: {$summary['deleted']}. La jornada se recalculó.")
+                    ->send();
+            });
     }
 
     /**
