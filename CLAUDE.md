@@ -26,6 +26,7 @@ php artisan db:seed --class=ProductionSeeder   # new client setup (sets admin us
 php artisan app:calculate-attendance          # calculate daily attendance totals (runs at 23:00)
 php artisan attendance:check-missing          # flag missing clock-ins (every 15min, 6am–8pm Mon–Sat)
 php artisan attendance:notify-open-shifts     # avisa a RR.HH. de jornadas con entrada y sin salida (daily 08:52)
+php artisan attendance:backfill --from=2026-09-01 --dry-run   # repara un rango pasado (scheduler apagado): crea ausencias pendientes y calcula jornadas sin calcular; no recalcula las ya calculadas (sin --dry-run guarda)
 php artisan attendance:recalculate-overnight --dry-run  # corrige jornadas nocturnas con expected_hours negativas (manual, sin --dry-run guarda)
 php artisan face:expire-enrollments           # expire stale face enrollments (hourly)
 php artisan audits:purge                      # purge audit history older than the configured retention (daily 03:00)
