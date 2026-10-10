@@ -168,7 +168,7 @@ class AttendanceDayResource extends Resource
                     ->badge()
                     ->color('info')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('employee.activeContract.position.name')
                     ->label('Cargo')
@@ -216,7 +216,7 @@ class AttendanceDayResource extends Resource
                     ->suffix(' hrs')
                     ->default(0)
                     ->numeric(2)
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('extra_hours')
                     ->label('Hrs Extra')
@@ -694,6 +694,7 @@ class AttendanceDayResource extends Resource
         return TableAction::make('fix_events')
             ->label('Corregir marcaciones')
             ->icon('heroicon-o-pencil-square')
+            ->iconButton()
             ->color('warning')
             ->visible(fn () => auth()->user()?->can('update_attendance_event') ?? false)
             ->tooltip('Agregar, cambiar o eliminar las marcaciones del día sin salir del listado')

@@ -328,7 +328,7 @@ El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Ca
 | **Hrs Extra** | Horas extras calculadas (en amarillo si hay) |
 | **Pendiente** | Qué falta resolver en el día: **Sin salida**, **Tardanza por aprobar** y/o **Extras por aprobar**. Si no falta nada muestra **Al día** |
 
-Las columnas de tardanza, horas trabajadas, horas extra y pendiente se muestran por defecto; se pueden ocultar desde el selector de columnas de la tabla.
+Las columnas de tardanza, horas extra y pendiente se muestran por defecto. **Sucursal** y **Horas trabajadas** quedan ocultas para que los botones de cada fila entren en pantalla; se activan desde el selector de columnas de la tabla.
 
 ### Indicadores de color en Entrada y Salida
 
@@ -343,7 +343,7 @@ Las columnas de tardanza, horas trabajadas, horas extra y pendiente se muestran 
 
 Cada fila tiene un botón y dos menús:
 
-- **Corregir marcaciones** (lápiz): abre una ventana con todas las marcaciones del día, sin salir del listado. Se puede cambiar el tipo o la fecha y hora de una marcación, agregar una con **Agregar marcación** o quitarla con el ícono de papelera. Al **Guardar correcciones** la jornada se recalcula. Una salida de madrugada se carga con la fecha del día siguiente. No se admiten horas futuras ni una secuencia imposible (por ejemplo, dos entradas seguidas); en ese caso no se guarda nada y se explica el motivo. Las marcaciones agregadas o modificadas quedan con canal **Manual**. Requiere permiso para editar marcaciones.
+- **Corregir marcaciones** (ícono de lápiz; al pasar el cursor muestra su nombre): abre una ventana con todas las marcaciones del día, sin salir del listado. Se puede cambiar el tipo o la fecha y hora de una marcación, agregar una con **Agregar marcación** o quitarla con el ícono de papelera. Al **Guardar correcciones** la jornada se recalcula. Una salida de madrugada se carga con la fecha del día siguiente. No se admiten horas futuras ni una secuencia imposible (por ejemplo, dos entradas seguidas); en ese caso no se guarda nada y se explica el motivo. Las marcaciones agregadas o modificadas quedan con canal **Manual**. Requiere permiso para editar marcaciones.
 
 ![Ventana Corregir marcaciones con las marcaciones del día](/docs-images/07-asistencias-corregir.png)
 
