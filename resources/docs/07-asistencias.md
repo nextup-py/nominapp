@@ -4,6 +4,25 @@ El módulo de Asistencias registra las entradas y salidas de los empleados y cal
 
 > Para configurar horarios y patrones de rotación (incluyendo el planificador visual de turnos), ver el capítulo **Horarios**.
 
+## Por resolver
+
+Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que RR.HH. tiene pendiente. Cada tarjeta muestra un contador y la fecha más antigua; el botón **Resolver** abre la lista correspondiente ya filtrada, donde están las acciones para resolver cada caso.
+
+![Pantalla Por resolver con una tarjeta por tipo de pendiente](/docs-images/07-asistencias-por-resolver.png)
+
+| Tarjeta | Qué cuenta | Dónde se resuelve |
+|---------|-----------|-------------------|
+| **Jornadas sin salida** | Jornadas anteriores a hoy con entrada y sin salida | **Asistencias**, con el filtro *Sin salida registrada* (acción **Corregir marcaciones**) |
+| **Tardanzas por aprobar** | Minutos de atraso sin decisión de descuento | **Asistencias**, pestaña *Requieren atención* |
+| **Horas extra por aprobar** | Horas sobre el horario sin aprobar | **Asistencias**, pestaña *Requieren atención* |
+| **Ausencias por revisar** | Ausencias en estado *Pendiente* | **Ausencias**, pestaña *Pendientes* |
+| **Fallos de marcación** | Fallos con resolución *Pendiente* | **Fallos de marcación**, pestaña *Pendientes* |
+
+- Las tres primeras tarjetas consideran solo los últimos 30 días; lo más viejo se revisa desde el listado completo.
+- El menú **Por resolver** muestra la suma de pendientes como insignia.
+- Cada tarjeta aparece solo si el usuario puede ver el módulo correspondiente (por ejemplo, quien no ve Ausencias no ve esa tarjeta).
+- Cuando no hay nada pendiente, la pantalla muestra **Todo al día**.
+
 ## Modos de marcación
 
 Ir a **Asistencias → Modos de Marcación** para ver los enlaces y códigos QR de cada modo.
@@ -227,7 +246,7 @@ Cuando un intento de marcación (terminal o dispositivo personal) no puede compl
 
 ### Revisar un fallo
 
-1. Ir a **Asistencias → Fallos de Marcación**
+1. Ir a **Asistencias → Fallos de Marcación**. La lista abre en la pestaña **Pendientes** (con su contador); **Todos**, **Terminal** y **Móvil** muestran el historial por modo. La columna **Qué hacer** resume el paso siguiente de cada fallo (por ejemplo, *Aprobar si el empleado sí estuvo, o descartar*, o *Sin datos para aprobar: ver diagnóstico*). **Modo**, **Sucursal**, **Mensaje** e **IP** están ocultas por defecto y se activan desde el selector de columnas. El resumen de empleados con fallos recurrentes está al pie de la página
 2. Clic en un registro para ver el detalle completo: empleado (si se pudo identificar), sucursal, mensaje de error, IP, coordenadas GPS y metadatos adicionales
 3. Usar el botón **Diagnóstico** para ver una explicación en lenguaje simple de qué pudo haber causado el fallo
 
@@ -239,6 +258,17 @@ Solo disponible cuando el fallo trae datos suficientes para reconstruir el event
 2. Revisar (y ajustar si hace falta) el **tipo de evento** y la **fecha y hora**
 3. Agregar notas si corresponde
 4. Confirmar — el sistema crea la marcación de asistencia correspondiente y marca el fallo como **Aprobado**
+
+### Resolver varios a la vez
+
+![Lista de fallos de marcación con dos filas seleccionadas](/docs-images/07-fallos-marcacion-lista.png)
+
+En la lista, marcar las casillas de los fallos y usar, en el menú **Abrir acciones**, **Aprobar seleccionados** o **Descartar seleccionados** (requiere permiso para editar fallos de marcación):
+
+- **Aprobar seleccionados** registra la marcación original de cada fallo que se pueda reconstruir, con su tipo de evento y hora originales (sin ajustes). Los ya revisados y los que no tienen datos suficientes se omiten. Si hay que corregir el tipo o la hora de uno, usar **Aprobar** en su fila.
+- **Descartar seleccionados** los marca como revisados sin crear ninguna marcación; admite una nota opcional.
+
+Al terminar, una notificación indica cuántos se procesaron y cuántos se omitieron.
 
 > El botón **Aprobar** solo aparece si el fallo puede resolverse. Fallos genéricos (rostro no reconocido, empleado no encontrado) no tienen suficiente información para reconstruir una marcación — en esos casos, si el empleado sí estuvo presente, usar la acción **Registrar asistencia** desde el módulo de Ausencias en su lugar.
 

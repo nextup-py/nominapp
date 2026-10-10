@@ -20,12 +20,15 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\BulkAction;
+use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\Indicator;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -81,7 +84,8 @@ class AttendanceMarkFailureResource extends Resource
                     ->label('Modo')
                     ->badge()
                     ->formatStateUsing(fn (string $state) => AttendanceMarkFailure::getModeLabel($state))
-                    ->color(fn (string $state) => AttendanceMarkFailure::getModeColor($state)),
+                    ->color(fn (string $state) => AttendanceMarkFailure::getModeColor($state))
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('failure_type')
                     ->label('Tipo de fallo')
@@ -106,7 +110,7 @@ class AttendanceMarkFailureResource extends Resource
                 TextColumn::make('branch.name')
                     ->label('Sucursal')
                     ->default('—')
-                    ->toggleable(isToggledHiddenByDefault: false),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('attempted_event_type')
                     ->label('Evento intentado')
@@ -132,6 +136,12 @@ class AttendanceMarkFailureResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (string $state) => AttendanceMarkFailure::getResolutionStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state) => AttendanceMarkFailure::getResolutionStatusColors()[$state] ?? 'gray'),
+
+                TextColumn::make('next_step')
+                    ->label('Qué hacer')
+                    ->getStateUsing(fn (AttendanceMarkFailure $record) => $record->getNextStepHint())
+                    ->color('gray')
+                    ->wrap(),
 
                 TextColumn::make('failure_message')
                     ->label('Mensaje')
@@ -212,8 +222,100 @@ class AttendanceMarkFailureResource extends Resource
                     static::getApproveAction(),
                 ]),
             ])
-            ->bulkActions([])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    static::getApproveBulkAction(),
+                    static::getDismissBulkAction(),
+                ]),
+            ])
             ->paginated([25, 50, 100]);
+    }
+
+    /**
+     * Aprueba en bloque los fallos pendientes que se pueden reconstruir, con el tipo de evento y la hora
+     * originales de cada uno (sin ajustes manuales: para corregir uno, usar **Aprobar** en su fila).
+     * Omite los ya revisados y los que no tienen datos suficientes, e informa cuántos procesó.
+     */
+    public static function getApproveBulkAction(): BulkAction
+    {
+        return BulkAction::make('approve_bulk')
+            ->label('Aprobar seleccionados')
+            ->icon('heroicon-o-check-circle')
+            ->color('success')
+            ->visible(fn () => auth()->user()?->can('update_attendance_mark_failure') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('Aprobar fallos seleccionados')
+            ->modalDescription(function (Collection $records) {
+                $resolvable = $records->filter(fn (AttendanceMarkFailure $record) => $record->canBeResolved())->count();
+
+                return "Se registrará la marcación original de {$resolvable} fallo(s) de {$records->count()} seleccionado(s). Los ya revisados o sin datos suficientes se omiten.";
+            })
+            ->modalSubmitActionLabel('Sí, aprobar')
+            ->deselectRecordsAfterCompletion()
+            ->action(function (Collection $records) {
+                $approved = 0;
+                $failed = 0;
+                $skipped = 0;
+
+                foreach ($records as $record) {
+                    if (! $record->canBeResolved()) {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    $result = $record->approve(Auth::id());
+                    $result['success'] ? $approved++ : $failed++;
+                }
+
+                Notification::make()
+                    ->title("{$approved} fallo(s) aprobado(s)")
+                    ->body("No se pudieron aprobar: {$failed}. Omitidos (ya revisados o sin datos): {$skipped}.")
+                    ->color($failed > 0 ? 'warning' : 'success')
+                    ->send();
+            });
+    }
+
+    /**
+     * Descarta en bloque los fallos pendientes sin registrar ninguna marcación. Omite los ya revisados.
+     */
+    public static function getDismissBulkAction(): BulkAction
+    {
+        return BulkAction::make('dismiss_bulk')
+            ->label('Descartar seleccionados')
+            ->icon('heroicon-o-x-circle')
+            ->color('gray')
+            ->visible(fn () => auth()->user()?->can('update_attendance_mark_failure') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('Descartar fallos seleccionados')
+            ->modalDescription('Se marcarán como revisados sin crear ninguna marcación de asistencia. Los ya revisados se omiten.')
+            ->modalSubmitActionLabel('Sí, descartar')
+            ->deselectRecordsAfterCompletion()
+            ->form([
+                Textarea::make('notes')
+                    ->label('Notas (opcional)')
+                    ->rows(2),
+            ])
+            ->action(function (Collection $records, array $data) {
+                $dismissed = 0;
+                $skipped = 0;
+
+                foreach ($records as $record) {
+                    if (! $record->isPending()) {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    $record->dismiss(Auth::id(), $data['notes'] ?? null)['success'] ? $dismissed++ : $skipped++;
+                }
+
+                Notification::make()
+                    ->success()
+                    ->title("{$dismissed} fallo(s) descartado(s)")
+                    ->body("Omitidos (ya revisados): {$skipped}.")
+                    ->send();
+            });
     }
 
     /**
