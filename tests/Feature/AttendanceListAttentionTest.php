@@ -63,7 +63,7 @@ function makeAttentionDay(Employee $employee, string $date, array $events, array
     }
 
     $day = $day->fresh();
-    $day->forceFill(array_merge(['late_minutes' => null, 'extra_hours' => null], $attrs))->saveQuietly();
+    $day->forceFill(array_merge(['late_minutes' => null, 'extra_hours' => null, 'expected_check_in' => '09:00:00', 'expected_check_out' => '17:00:00'], $attrs))->saveQuietly();
 
     return $day->fresh();
 }

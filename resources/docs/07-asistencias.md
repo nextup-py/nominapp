@@ -15,6 +15,7 @@ Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que 
 | **Jornadas sin salida** | Jornadas anteriores a hoy con entrada y sin salida | **Asistencias**, con el filtro *Sin salida registrada* (acción **Corregir marcaciones**) |
 | **Tardanzas por aprobar** | Minutos de atraso sin decisión de descuento | **Asistencias**, pestaña *Requieren atención* |
 | **Horas extra por aprobar** | Horas sobre el horario sin aprobar | **Asistencias**, pestaña *Requieren atención* |
+| **Jornadas sin horario ese día** | Jornadas con marcaciones y sin horario esperado (el empleado no tiene horario o trabajó en un día libre): no se les calculan tardanza ni extras | **Asistencias**, pestaña *Requieren atención* |
 | **Ausencias por revisar** | Ausencias en estado *Pendiente* | **Ausencias**, pestaña *Pendientes* |
 | **Fallos de marcación** | Fallos *Pendientes* que se pueden resolver (no cuenta los rostros no reconocidos) | **Fallos de marcación**, pestaña *Para revisar* |
 | **Empleados sin horario** | Empleados activos sin horario fijo, rotación ni turnos planificados (no se les calculan horas, tardanzas ni ausencias) | **Empleados**, filtro *Sin horario asignado* (acción **Asignar horario**) |
@@ -302,13 +303,15 @@ El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Ca
 
 | Pestaña | Descripción |
 |---------|-------------|
-| **Requieren atención** | Jornadas de los **últimos 30 días** que están **sin salida** (de días anteriores a hoy), con **tardanza por aprobar** o con **horas extra por aprobar**. Al resolver una (aprobar, corregir la salida, aceptar el doble turno) sale de la lista |
+| **Requieren atención** | Jornadas de los **últimos 30 días** que están **sin salida** (de días anteriores a hoy), con **tardanza por aprobar**, con **horas extra por aprobar** o **sin horario ese día**. Al resolver una (aprobar, corregir la salida, aceptar el doble turno) sale de la lista |
 | **Ayer** | Todas las jornadas de ayer, para revisar el día completo |
 | **Hoy** | Las jornadas de hoy, en curso |
 | **Todos** | Todos los registros presentes |
 | **Calculados** | Registros donde ya se ejecutó el cálculo de horas |
 | **Sin calcular** | Registros pendientes de cálculo (recién creados o con eventos nuevos) |
 | **Incompletos** | Registros sin horas calculadas (por ejemplo, con entrada y sin salida) |
+
+> **Sin horario ese día:** un empleado sin horario asignado puede marcar entrada y salida con normalidad, pero la jornada se calcula sin horas esperadas (sin tardanza ni extras) y no se le detectan faltas. Esas jornadas quedan marcadas con el motivo *Sin horario ese día* hasta que se le asigne un horario (y, si corresponde, se recalculen). Además, **cada día a las 08:55** la campanita avisa a quienes pueden asignar horarios cuántos empleados activos siguen sin uno (no se repite mientras el aviso anterior esté sin leer). Quien no tiene horario tampoco ve el botón de inicio de descanso, que solo aparece si su turno de ese día tiene descanso.
 
 > Una jornada ya resuelta no aparece en **Requieren atención**, y tampoco las de hace más de 30 días. Para verlas (por ejemplo, para revocar una aprobación o revisar algo antiguo) abrir **Todos** o **Incompletos**.
 

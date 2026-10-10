@@ -113,6 +113,14 @@ Schedule::command('attendance:notify-open-shifts')
     ->withoutOverlapping();
 
 /**
+ * Avisar a RR.HH. de los empleados activos sin horario asignado (no se les calcula tardanza ni extras
+ * ni se les detectan faltas). Una vez al día; no repite si el aviso sigue sin leer.
+ */
+Schedule::command('attendance:notify-no-schedule')
+    ->dailyAt('08:55')
+    ->withoutOverlapping();
+
+/**
  * Expirar enrollments faciales vencidos
  * Se ejecuta cada hora para marcar como 'expired' los registros
  * en estado pending_capture cuyo expires_at ya pasó

@@ -235,6 +235,24 @@ class AttendanceDay extends Model implements Auditable
     public const PENDING_OVERTIME_SQL = 'attendance_days.extra_hours > 0 and coalesce(attendance_days.overtime_approved, 0) = 0 and coalesce(attendance_days.second_shift_regular, 0) = 0';
 
     /**
+     * Condición SQL de jornada calculada con marcaciones pero sin horario esperado ese día: el empleado no
+     * tiene horario, rotación ni turno planificado, o trabajó en un día libre de su horario. No se calculan
+     * tardanza ni horas extra, así que RR.HH. debe revisarla.
+     */
+    public const NO_EXPECTED_SHIFT_SQL = 'attendance_days.is_calculated = 1 and attendance_days.check_in_time is not null and attendance_days.expected_check_in is null';
+
+    /**
+     * Jornadas con marcaciones y sin horario esperado ese día.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeNoExpectedShift(Builder $query): Builder
+    {
+        return $query->whereRaw(self::NO_EXPECTED_SHIFT_SQL);
+    }
+
+    /**
      * Jornadas con tardanza cuyo descuento RR.HH. todavía no aprobó.
      *
      * @param  Builder<static>  $query
@@ -271,7 +289,8 @@ class AttendanceDay extends Model implements Auditable
             ->where(fn (Builder $q) => $q
                 ->whereRaw(self::missingCheckOutSql(), self::missingCheckOutBindings())
                 ->orWhereRaw(self::PENDING_TARDINESS_SQL)
-                ->orWhereRaw(self::PENDING_OVERTIME_SQL));
+                ->orWhereRaw(self::PENDING_OVERTIME_SQL)
+                ->orWhereRaw(self::NO_EXPECTED_SHIFT_SQL));
     }
 
     /** Primer día (inclusive, `Y-m-d`) que considera "Requieren atención". */
@@ -370,6 +389,10 @@ class AttendanceDay extends Model implements Auditable
 
         if ((float) $this->extra_hours > 0 && ! $this->overtime_approved && ! $this->second_shift_regular) {
             $reasons[] = 'Extras por aprobar';
+        }
+
+        if ($this->is_calculated && $this->check_in_time !== null && $this->expected_check_in === null) {
+            $reasons[] = 'Sin horario ese día';
         }
 
         return $reasons;
