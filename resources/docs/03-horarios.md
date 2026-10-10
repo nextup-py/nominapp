@@ -84,6 +84,10 @@ Un recálculo normal en **Asistencias** conserva las horas esperadas con que se 
 
 Las ausencias no se generan hacia atrás: solo se crean automáticamente las de hoy y ayer.
 
+### Horario sugerido según las marcaciones
+
+Al abrir **Asignar horario** sobre un empleado (fila del listado de **Empleados**), si tiene al menos 3 jornadas completas (con entrada y salida) en los últimos 30 días, el sistema compara sus horas reales con los días activos de cada horario y **preselecciona el que mejor coincide**, siempre que el desvío promedio sea de 60 minutos o menos. La descripción de la ventana indica cuántas jornadas se usaron. Es solo una ayuda: se puede elegir otro horario antes de confirmar, y nunca se asigna nada sin confirmar. Un horario que tiene libres los días en que el empleado trabajó se penaliza.
+
 ### Asignar desde el listado de Empleados
 
 También se puede asignar sin abrir el horario. En **Empleados**, menú de la fila → **Asignar horario**, o seleccione varios empleados y use **Asignar horario** en las acciones masivas. Se elige el horario y la vigencia (**Rige desde**, **Hasta**, notas). Los empleados inactivos y los que ya tienen ese mismo horario vigente se omiten, y la notificación informa cuántos se asignaron. Requiere permiso de edición sobre horarios.
