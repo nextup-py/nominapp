@@ -86,6 +86,7 @@ it('cuenta cada tipo de pendiente por separado', function () {
         'overtime' => 1,
         'absences' => 1,
         'mark_failures' => 1,
+        'no_schedule' => 1,
     ]);
 });
 
@@ -131,7 +132,8 @@ it('la página muestra los contadores y la insignia del menú suma el total', fu
         ->assertSee('Tardanzas por aprobar')
         ->assertSee('Horas extra por aprobar');
 
-    expect(AttendanceInbox::getNavigationBadge())->toBe('2');
+    // Dos pendientes de asistencia más el empleado de prueba, que no tiene horario asignado.
+    expect(AttendanceInbox::getNavigationBadge())->toBe('3');
 });
 
 it('muestra "Todo al día" cuando no hay nada pendiente', function () {

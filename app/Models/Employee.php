@@ -10,6 +10,7 @@ use App\Settings\PayrollSettings;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -486,6 +488,41 @@ class Employee extends Model implements AuthenticatableContract
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    /** Días hacia atrás en que un turno planificado (override del Planificador) cuenta como "tiene turno". */
+    public const PLANNED_SHIFT_LOOKBACK_DAYS = 14;
+
+    /**
+     * Empleados sin horario, rotación ni turnos planificados en la fecha (hoy por defecto): ni asignación de
+     * horario fijo vigente, ni horario legacy (`schedule_id`), ni patrón rotativo, ni turnos puntuales del
+     * Planificador (overrides) en los últimos `PLANNED_SHIFT_LOOKBACK_DAYS` días o a futuro. Sin nada de eso no
+     * se calculan horas esperadas, tardanzas ni ausencias automáticas. Es la única definición de "sin horario";
+     * no filtra por estado del empleado.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeWithoutSchedule($query, ?Carbon $date = null)
+    {
+        $day = ($date ?? Carbon::today())->toDateString();
+
+        return $query
+            ->whereNull('employees.schedule_id')
+            ->whereNotExists(fn ($sub) => $sub->select(DB::raw(1))
+                ->from('employee_schedule_assignments as esa')
+                ->whereColumn('esa.employee_id', 'employees.id')
+                ->where('esa.valid_from', '<=', $day)
+                ->where(fn ($w) => $w->whereNull('esa.valid_until')->orWhere('esa.valid_until', '>=', $day)))
+            ->whereNotExists(fn ($sub) => $sub->select(DB::raw(1))
+                ->from('rotation_assignments as ra')
+                ->whereColumn('ra.employee_id', 'employees.id')
+                ->where('ra.valid_from', '<=', $day)
+                ->where(fn ($w) => $w->whereNull('ra.valid_until')->orWhere('ra.valid_until', '>=', $day)))
+            ->whereNotExists(fn ($sub) => $sub->select(DB::raw(1))
+                ->from('shift_overrides as so')
+                ->whereColumn('so.employee_id', 'employees.id')
+                ->where('so.override_date', '>=', Carbon::parse($day)->subDays(self::PLANNED_SHIFT_LOOKBACK_DAYS)->toDateString()));
     }
 
     /**
