@@ -140,8 +140,11 @@ class Schedule extends Model
     public function duplicate(string $name): self
     {
         return DB::transaction(function () use ($name): self {
-            $copy = $this->replicate(['created_at', 'updated_at']);
-            $copy->name = $name;
+            $copy = new self([
+                'name' => $name,
+                'description' => $this->description,
+                'shift_type' => $this->shift_type,
+            ]);
             $copy->save();
 
             foreach ($this->days()->with('breaks')->get() as $day) {

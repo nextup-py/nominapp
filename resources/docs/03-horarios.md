@@ -49,6 +49,19 @@ Desde la pestaña **Descansos** (o dentro de cada día), puede agregar pausas:
 
 El sistema descuenta automáticamente los minutos de descanso al calcular las horas trabajadas del día.
 
+### Avisos del formulario
+
+- **Tipo de jornada sugerido:** debajo del campo se indica el tipo que corresponde según las horas cargadas (diurno si no pasa de las 20:00 ni empieza antes de las 06:00; nocturno si algún día tiene 3,5 horas o más en la franja 20:00–06:00; mixto en el resto). Es solo una sugerencia: el tipo se elige a mano.
+- **Pocos días activos:** si el horario tiene uno o dos días activos, aparece un aviso. Quien lo tenga asignado se considera libre los demás días, así que un turno que se reparte en varios horarios por día conviene cargarlo en uno solo con todos sus días.
+
+### Duplicar un horario
+
+La acción **Duplicar** (en el listado y en el detalle del horario) copia los días, horas y descansos con un nombre nuevo, para partir de un horario parecido en vez de armarlo desde cero. No copia los empleados asignados. Requiere permiso para crear horarios.
+
+### Eliminar un horario
+
+Un horario con empleados asignados —vigentes o históricos— o usado como horario fijo de algún empleado **no se puede eliminar**: borrarlo perdería el historial con el que se calculan las jornadas pasadas. Primero hay que reasignar a esos empleados a otro horario.
+
 ## Asignar un horario a un empleado
 
 La asignación se hace **desde el horario, no desde el perfil del empleado**:
