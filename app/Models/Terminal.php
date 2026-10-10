@@ -601,6 +601,38 @@ class Terminal extends Model implements AuthenticatableContract
         return $level === null ? null : (int) $level;
     }
 
+    /** Desfase del reloj del dispositivo respecto del servidor, en segundos, según el último reporte (null si no lo informa). */
+    public function reportedClockSkewSeconds(): ?int
+    {
+        $seconds = $this->device_report['clock_skew_seconds'] ?? null;
+
+        return $seconds === null ? null : (int) $seconds;
+    }
+
+    /** Empleados en caché que informó el dispositivo en su último reporte (null si no lo informa). */
+    public function reportedCachedEmployees(): ?int
+    {
+        $count = $this->device_report['cached_employees'] ?? null;
+
+        return $count === null ? null : (int) $count;
+    }
+
+    /**
+     * Empleados activos de la sucursal del terminal con rostro registrado: son los únicos que el terminal puede
+     * identificar y cachear. Cero significa que, por más que sincronice, no podrá identificar a nadie.
+     */
+    public function enrolledEmployeesCount(): int
+    {
+        return Employee::query()->active()->withFace()->where('branch_id', $this->branch_id)->count();
+    }
+
+    /** El último reporte llegó dentro del umbral de desconexión: sus datos (batería, caché, reloj) son confiables. */
+    public function hasFreshDeviceReport(): bool
+    {
+        return $this->device_report_at !== null
+            && $this->device_report_at->gte(now()->subMinutes($this->effectiveStaleMinutes()));
+    }
+
     /** Indica si el último reporte dice que el dispositivo está enchufado (null si no se sabe). */
     public function reportedCharging(): ?bool
     {

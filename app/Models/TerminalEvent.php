@@ -75,6 +75,13 @@ class TerminalEvent extends Model
             'health_queue_recovered' => 'Cola de marcaciones normalizada',
             'health_battery_low' => 'Batería baja',
             'health_battery_ok' => 'Batería recuperada',
+            'health_no_enrolled' => 'Sucursal sin empleados enrolados',
+            'health_enrolled_ok' => 'Sucursal con empleados enrolados',
+            'health_cache_empty' => 'Caché de empleados vacía',
+            'health_cache_ok' => 'Caché de empleados normalizada',
+            'health_clock_skew' => 'Reloj desajustado',
+            'health_clock_ok' => 'Reloj normalizado',
+            'monitoring_configured' => 'Monitoreo configurado',
             'command_sent' => 'Comando enviado',
             'command_done' => 'Comando ejecutado',
             'command_failed' => 'Comando falló',
@@ -107,6 +114,13 @@ class TerminalEvent extends Model
             'health_queue_recovered' => 'success',
             'health_battery_low' => 'warning',
             'health_battery_ok' => 'success',
+            'health_no_enrolled' => 'warning',
+            'health_enrolled_ok' => 'success',
+            'health_cache_empty' => 'warning',
+            'health_cache_ok' => 'success',
+            'health_clock_skew' => 'warning',
+            'health_clock_ok' => 'success',
+            'monitoring_configured' => 'info',
             'command_sent' => 'info',
             'command_done' => 'success',
             'command_failed' => 'danger',
@@ -146,6 +160,12 @@ class TerminalEvent extends Model
         }
         if (isset($payload['pending']) || isset($payload['conflicts'])) {
             $parts[] = ($payload['pending'] ?? 0).' pendientes, '.($payload['conflicts'] ?? 0).' en conflicto';
+        }
+        if (isset($payload['seconds'])) {
+            $parts[] = 'Desfase: '.($payload['seconds'] > 0 ? '+' : '').$payload['seconds'].' s';
+        }
+        if (isset($payload['enrolled'])) {
+            $parts[] = $payload['enrolled'].' empleado(s) enrolado(s)';
         }
         if (isset($payload['level'])) {
             $parts[] = 'Nivel: '.$payload['level'].'%';

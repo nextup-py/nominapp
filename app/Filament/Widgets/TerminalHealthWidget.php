@@ -40,7 +40,7 @@ class TerminalHealthWidget extends BaseWidget
         $stale = $byStatus->get('stale', collect());
         $unlinked = $byStatus->get('unlinked', collect());
         $offHours = $byStatus->get('off_hours', collect());
-        $withIssues = $terminals->filter(fn (Terminal $t) => $t->connectivity_status === 'online' && ($t->isQueueStuck() || ($t->health_snapshot['low_battery'] ?? false)));
+        $withIssues = $terminals->filter(fn (Terminal $t) => static::hasDeviceIssue($t));
 
         return [
             Stat::make('Terminales en línea', $online->count())
@@ -64,12 +64,28 @@ class TerminalHealthWidget extends BaseWidget
                 ->icon('heroicon-o-link-slash')
                 ->url(static::listUrl('unlinked')),
 
-            Stat::make('Con alertas de cola o batería', $withIssues->count())
+            Stat::make('Con alertas del dispositivo', $withIssues->count())
                 ->description($withIssues->isEmpty() ? ($offHours->isEmpty() ? 'Sin alertas' : "{$offHours->count()} fuera de horario") : static::names($withIssues))
                 ->descriptionIcon($withIssues->isEmpty() ? 'heroicon-o-check-circle' : 'heroicon-o-exclamation-triangle')
                 ->color($withIssues->isEmpty() ? 'success' : 'warning')
                 ->icon('heroicon-o-battery-50'),
         ];
+    }
+
+    /**
+     * Terminal con una alerta del dispositivo abierta: cola atascada, batería baja, caché vacía o reloj desajustado
+     * (solo en línea) o sucursal sin empleados enrolados (vinculado).
+     */
+    private static function hasDeviceIssue(Terminal $terminal): bool
+    {
+        $snapshot = $terminal->health_snapshot ?? [];
+
+        if ($terminal->connectivity_status === 'online'
+            && ($terminal->isQueueStuck() || ($snapshot['low_battery'] ?? false) || ($snapshot['cache_empty'] ?? false) || ($snapshot['clock_skew'] ?? false))) {
+            return true;
+        }
+
+        return $terminal->connectivity_status !== 'unlinked' && ($snapshot['no_enrolled'] ?? false);
     }
 
     /**

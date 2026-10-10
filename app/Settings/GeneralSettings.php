@@ -29,6 +29,9 @@ class GeneralSettings extends Settings
     /** Porcentaje de batería (sin cargador) por debajo del cual se avisa. */
     public int $terminal_low_battery_percent;
 
+    /** Segundos de desfase del reloj de un terminal (respecto del servidor) a partir de los cuales se avisa. */
+    public int $terminal_clock_skew_max_seconds;
+
     /** Días de retención de la bitácora de terminales; 0 = conservar siempre. */
     public int $terminal_events_retention_days;
 
