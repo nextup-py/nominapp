@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ScheduleResource\RelationManagers;
 
 use App\Exports\ScheduleEmployeesExport;
+use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Branch;
 use App\Models\Employee;
@@ -203,7 +204,7 @@ class EmployeesRelationManager extends RelationManager
                     ->modalHeading('Asignar Empleados al Horario')
                     ->modalSubmitActionLabel('Asignar')
                     ->modalWidth('2xl')
-                    ->form(fn () => $this->form($this->makeForm())->getComponents())
+                    ->form(fn () => [...$this->form($this->makeForm())->getComponents(), ...ScheduleAssignmentActions::periodFields()])
                     ->action(function (array $data) {
                         $schedule = $this->getOwnerRecord();
                         $employees = Employee::whereIn('id', $data['employee_ids'])->get();
@@ -215,7 +216,9 @@ class EmployeesRelationManager extends RelationManager
                                 ScheduleAssignmentService::assign(
                                     employee: $employee,
                                     schedule: $schedule,
-                                    validFrom: Carbon::today(),
+                                    validFrom: Carbon::parse($data['valid_from'])->startOfDay(),
+                                    validUntil: filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until'])->startOfDay() : null,
+                                    notes: $data['notes'] ?? null,
                                 );
                                 $assigned++;
                             } catch (\Exception) {
@@ -227,7 +230,7 @@ class EmployeesRelationManager extends RelationManager
                             Notification::make()
                                 ->success()
                                 ->title('Empleados asignados')
-                                ->body("Se asignó \"{$schedule->name}\" a {$assigned} empleado(s) a partir de hoy.")
+                                ->body("Se asignó \"{$schedule->name}\" a {$assigned} empleado(s) a partir del ".Carbon::parse($data['valid_from'])->format('d/m/Y').'.')
                                 ->send();
                         }
 

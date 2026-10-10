@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Resources\ScheduleResource\Pages;
 use App\Filament\Resources\ScheduleResource\RelationManagers\EmployeesRelationManager;
 use App\Models\Branch;
@@ -285,6 +286,8 @@ class ScheduleResource extends Resource
                             ->required()
                             ->native(false)
                             ->columnSpanFull(),
+
+                        ...ScheduleAssignmentActions::periodFields(),
                     ])
                     ->modalHeading('Asignar Horario a Empleados')
                     ->modalDescription('Selecciona los empleados a los que deseas asignar este horario. Solo se mostrarán empleados activos que no tengan este horario asignado actualmente.')
@@ -299,7 +302,9 @@ class ScheduleResource extends Resource
                                 ScheduleAssignmentService::assign(
                                     employee: $employee,
                                     schedule: $record,
-                                    validFrom: Carbon::today(),
+                                    validFrom: Carbon::parse($data['valid_from'])->startOfDay(),
+                                    validUntil: filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until'])->startOfDay() : null,
+                                    notes: $data['notes'] ?? null,
                                 );
                                 $assigned++;
                             } catch (\Exception $e) {
@@ -311,7 +316,7 @@ class ScheduleResource extends Resource
                             Notification::make()
                                 ->success()
                                 ->title('Horario asignado')
-                                ->body("Se asignó \"{$record->name}\" a {$assigned} empleado(s) a partir de hoy.")
+                                ->body("Se asignó \"{$record->name}\" a {$assigned} empleado(s) a partir del ".Carbon::parse($data['valid_from'])->format('d/m/Y').'.')
                                 ->send();
                         }
 

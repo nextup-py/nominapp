@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Resources\EmployeeResource\Pages;
 use App\Filament\Resources\EmployeeResource\RelationManagers;
 use App\Models\Branch;
@@ -947,6 +948,11 @@ class EmployeeResource extends Resource
                         blank: fn (Builder $query) => $query,
                     ),
 
+                Filter::make('without_schedule')
+                    ->label('Sin horario asignado')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->withoutSchedule()),
+
                 SelectFilter::make('birthday_month')
                     ->label('Mes de cumpleaños')
                     ->options([
@@ -976,6 +982,8 @@ class EmployeeResource extends Resource
             ])
             ->actions([
                 ActionGroup::make([
+                    ScheduleAssignmentActions::row(),
+
                     Action::make('capture_face')
                         ->label(fn (Employee $record): string => $record->has_face ? 'Re-enrolar rostro' : 'Enrolar rostro')
                         ->icon('heroicon-o-camera')
@@ -1087,6 +1095,8 @@ class EmployeeResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    ScheduleAssignmentActions::bulk(),
+
                     BulkAction::make('activate')
                         ->label('Activar seleccionados')
                         ->icon('heroicon-o-check-circle')

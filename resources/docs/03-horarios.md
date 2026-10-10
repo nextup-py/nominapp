@@ -58,7 +58,15 @@ La asignación se hace **desde el horario, no desde el perfil del empleado**:
 3. En la pestaña **Empleados Asignados**, clic en **Asignar**
 4. Seleccionar uno o varios empleados (opcionalmente filtrando por sucursal) y confirmar
 
-> Si alguno de los empleados seleccionados ya tiene un horario vigente, se muestra una advertencia (⚠) — al confirmar, ese horario anterior se cierra automáticamente (fecha de fin = hoy) y el nuevo queda vigente desde hoy.
+En el mismo formulario se elige **Rige desde** (por defecto hoy), **Hasta** (opcional) y notas. Una fecha futura programa el cambio: el horario actual sigue vigente hasta el día anterior. Los días ya calculados no se recalculan solos.
+
+> Si alguno de los empleados seleccionados ya tiene un horario vigente, se muestra una advertencia (⚠) — al confirmar, ese horario anterior se cierra automáticamente (el día anterior a **Rige desde**) y el nuevo queda vigente desde esa fecha.
+
+### Asignar desde el listado de Empleados
+
+También se puede asignar sin abrir el horario. En **Empleados**, menú de la fila → **Asignar horario**, o seleccione varios empleados y use **Asignar horario** en las acciones masivas. Se elige el horario y la vigencia (**Rige desde**, **Hasta**, notas). Los empleados inactivos y los que ya tienen ese mismo horario vigente se omiten, y la notificación informa cuántos se asignaron. Requiere permiso de edición sobre horarios.
+
+Para encontrar a quienes **no tienen horario ni rotación vigente**, use el filtro **Sin horario asignado** del listado de Empleados. El mismo aviso aparece como tarjeta **Empleados sin horario** en **Asistencias → Por resolver** y como mensaje bajo el título de **Asistencias**, con enlace al listado ya filtrado.
 
 Para quitar la asignación de un empleado sin darle otro horario, usar **Remover** en la fila del empleado (o la acción masiva "Remover seleccionados") — esto cierra la asignación con fecha de hoy, sin eliminar el historial.
 

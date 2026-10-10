@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Filament\Resources\AbsenceResource;
 use App\Filament\Resources\AttendanceDayResource;
 use App\Filament\Resources\AttendanceMarkFailureResource;
+use App\Filament\Resources\EmployeeResource;
 use App\Models\Absence;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceMarkFailure;
+use App\Models\Employee;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -71,6 +73,16 @@ class AttendanceInboxService
             );
         }
 
+        if (EmployeeResource::canViewAny()) {
+            $sections[] = self::section(
+                'no_schedule', 'Empleados sin horario', 'Sin horario ni rotación no se calculan horas esperadas, tardanzas ni ausencias: hay que asignarles uno.',
+                'heroicon-o-clock', 'warning',
+                Employee::query()->active()->withoutSchedule(),
+                null,
+                EmployeeResource::getUrl('index', ['activeTab' => 'active', 'tableFilters' => ['without_schedule' => ['isActive' => true]]]),
+            );
+        }
+
         return $sections;
     }
 
@@ -89,9 +101,9 @@ class AttendanceInboxService
     /**
      * @return array{key: string, label: string, description: string, icon: string, color: string, count: int, oldest: Carbon|null, url: string}
      */
-    private static function section(string $key, string $label, string $description, string $icon, string $color, Builder $query, string $dateColumn, string $url): array
+    private static function section(string $key, string $label, string $description, string $icon, string $color, Builder $query, ?string $dateColumn, string $url): array
     {
-        $stats = (clone $query)->selectRaw("count(*) as total, min({$dateColumn}) as oldest")->toBase()->first();
+        $stats = (clone $query)->selectRaw('count(*) as total, '.($dateColumn ? "min({$dateColumn})" : 'null').' as oldest')->toBase()->first();
 
         return [
             'key' => $key,

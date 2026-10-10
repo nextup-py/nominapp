@@ -17,6 +17,7 @@ Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que 
 | **Horas extra por aprobar** | Horas sobre el horario sin aprobar | **Asistencias**, pestaña *Requieren atención* |
 | **Ausencias por revisar** | Ausencias en estado *Pendiente* | **Ausencias**, pestaña *Pendientes* |
 | **Fallos de marcación** | Fallos con resolución *Pendiente* | **Fallos de marcación**, pestaña *Pendientes* |
+| **Empleados sin horario** | Empleados activos sin horario fijo ni rotación vigente hoy (no se les calculan horas, tardanzas ni ausencias) | **Empleados**, filtro *Sin horario asignado* (acción **Asignar horario**) |
 
 - Las tres primeras tarjetas consideran solo los últimos 30 días; lo más viejo se revisa desde el listado completo.
 - El menú **Por resolver** muestra la suma de pendientes como insignia.

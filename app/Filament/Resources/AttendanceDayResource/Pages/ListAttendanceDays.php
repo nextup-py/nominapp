@@ -4,17 +4,43 @@ namespace App\Filament\Resources\AttendanceDayResource\Pages;
 
 use App\Filament\Pages\AttendanceReport;
 use App\Filament\Resources\AttendanceDayResource;
+use App\Filament\Resources\EmployeeResource;
 use App\Models\AttendanceDay;
+use App\Models\Employee;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 /** Página de listado de asistencias diarias — muestra únicamente registros con estado presente. */
 class ListAttendanceDays extends ListRecords
 {
     protected static string $resource = AttendanceDayResource::class;
+
+    /**
+     * Aviso bajo el título cuando hay empleados activos sin horario ni rotación: sus marcaciones no calculan
+     * horas ni ausencias. Enlaza al listado de Empleados ya filtrado.
+     */
+    public function getSubheading(): string|Htmlable|null
+    {
+        if (! EmployeeResource::canViewAny()) {
+            return null;
+        }
+
+        $count = Employee::query()->active()->withoutSchedule()->count();
+
+        if ($count === 0) {
+            return null;
+        }
+
+        $url = EmployeeResource::getUrl('index', ['activeTab' => 'active', 'tableFilters' => ['without_schedule' => ['isActive' => true]]]);
+        $label = $count === 1 ? '1 empleado activo no tiene' : "{$count} empleados activos no tienen";
+
+        return new HtmlString(e("{$label} horario asignado: sus marcaciones no calculan horas ni ausencias.").' <a href="'.e($url).'" style="color: rgb(var(--primary-600)); text-decoration: underline;">Ver y asignar</a>');
+    }
 
     /**
      * Define las acciones del encabezado de la página
