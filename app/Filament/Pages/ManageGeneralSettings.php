@@ -176,6 +176,17 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('%')
                             ->helperText('Se avisa cuando un terminal sin cargador baja de este nivel (solo si el navegador informa la batería)'),
 
+                        TextInput::make('terminal_clock_skew_max_seconds')
+                            ->label('Desfase de reloj tolerado')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(30)
+                            ->maxValue(3600)
+                            ->default(120)
+                            ->suffix('segundos')
+                            ->helperText('Se avisa cuando el reloj de un terminal difiere del servidor por más de este valor en varios reportes seguidos. Las marcaciones ya se corrigen con ese desfase; avisar sirve para que alguien revise la fecha y hora del dispositivo'),
+
                         TextInput::make('terminal_events_retention_days')
                             ->label('Retención de la bitácora de terminales')
                             ->numeric()

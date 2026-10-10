@@ -198,6 +198,8 @@ Al crear o editar un terminal, la sección **Monitoreo** permite ajustar cuándo
 
 Sin nada configurado, el terminal se vigila las 24 horas, todos los días. El detalle muestra el **Umbral de desconexión** y el **Horario de vigilancia** vigentes.
 
+Para no cargarlo terminal por terminal, en el listado se seleccionan varios y se usa la acción masiva **Configurar monitoreo**: se elige el umbral y el horario (los mismos campos de arriba) y se aplican a todos los seleccionados, reemplazando los que tenían. Con **Quitar el umbral y el horario propios** vuelven a vigilarse las 24 horas con el umbral general. Cada cambio queda en la **Bitácora** de cada terminal (**Monitoreo configurado**). Requiere el permiso **Editar Terminal**.
+
 ### Cola de sincronización
 
 Complementa a la conectividad: un terminal puede verse **En línea** y tener marcaciones atascadas.
@@ -254,6 +256,10 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Quedó sin vincular** | Un terminal vinculado perdió su acceso |
 | **Cola de marcaciones atascada** / **normalizada** | La cola dejó de vaciarse o volvió a la normalidad |
 | **Batería baja** / **recuperada** | El nivel cruzó el porcentaje configurado |
+| **Sucursal sin empleados enrolados** / **con empleados enrolados** | La sucursal del terminal se quedó sin ningún empleado activo con rostro registrado, o volvió a tenerlos |
+| **Caché de empleados vacía** / **normalizada** | El terminal en línea reportó 0 empleados en caché habiendo empleados enrolados, o volvió a tenerlos |
+| **Reloj desajustado** / **normalizado** | El reloj del dispositivo pasó (o dejó de pasar) el desfase tolerado |
+| **Monitoreo configurado** | Un usuario cambió el umbral u horario de vigilancia con la acción masiva |
 | **Comando enviado** / **ejecutado** / **falló** / **vencido** | Ciclo de un comando remoto (ver [Comandos remotos](#comandos-remotos)) |
 
 No se registra un evento por cada latido: solo los cambios. Los eventos se eliminan automáticamente pasada la **retención** configurada (por defecto 90 días; ver **Configuración General → Terminales de Marcación**).
@@ -269,12 +275,15 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
 | **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones pendientes o en conflicto no se vacían hace más del tiempo configurado |
 | **Batería baja en terminal** | El nivel bajó del porcentaje configurado y no está cargando (solo si el navegador informa la batería) |
+| **Terminal sin empleados enrolados** | La sucursal del terminal no tiene ningún empleado activo con rostro registrado: no podrá identificar a nadie. Enrolar a los empleados o revisar a qué sucursal pertenecen |
+| **Terminal sin empleados en caché** | El terminal está en línea pero reporta 0 empleados en su caché, aunque su sucursal tiene empleados enrolados. Enviar el comando remoto **Limpiar caché** o **Recargar app** |
+| **Reloj del terminal desajustado** | El reloj del dispositivo difiere del servidor por más del valor tolerado en tres reportes seguidos. Activar la fecha y hora automáticas del dispositivo |
 
-Los umbrales de la cola atascada y de la batería baja se editan en **Configuración General → Terminales de Marcación**. Los terminales **inactivos** no se evalúan, y al aplicar esta función por primera vez el sistema solo toma una foto del estado actual, sin avisar de lo que ya estaba así. Que la cola se normalice o que la batería se recupere queda en la **Bitácora**, sin notificación.
+Los umbrales de la cola atascada, la batería baja y el desfase de reloj tolerado se editan en **Configuración General → Terminales de Marcación**. Los terminales **inactivos** no se evalúan, y al aplicar esta función por primera vez el sistema solo toma una foto del estado actual, sin avisar de lo que ya estaba así. Que la cola se normalice o que la batería se recupere queda en la **Bitácora**, sin notificación.
 
 ### Escritorio
 
-El **Escritorio** muestra la tarjeta **Salud de los terminales** para quien puede ver terminales: cuántos están **en línea**, **desconectados** y **sin vincular** (con los nombres de los que tienen problemas y un enlace al listado ya filtrado) y cuántos tienen alertas de cola o batería. Solo cuenta terminales activos.
+El **Escritorio** muestra la tarjeta **Salud de los terminales** para quien puede ver terminales: cuántos están **en línea**, **desconectados** y **sin vincular** (con los nombres de los que tienen problemas y un enlace al listado ya filtrado) y cuántos tienen **alertas del dispositivo** (cola atascada, batería baja, caché vacía, reloj desajustado o sucursal sin empleados enrolados). Solo cuenta terminales activos.
 
 ![Salud de los terminales en el panel de inicio](/docs-images/23-terminales-widget-dashboard.png)
 
@@ -336,6 +345,19 @@ Si la URL fue compartida por error, usar **Cambiar URL del terminal** (menú **M
 
 ---
 
+## Configurar el dispositivo para que no se duerma
+
+Un terminal que figura **Desconectado** a media mañana casi siempre es una tablet que apagó la pantalla o suspendió la pestaña. Al instalar el dispositivo conviene:
+
+1. **Pantalla siempre encendida mientras carga:** en los ajustes de pantalla del equipo, desactivar el apagado automático (en Android, *Opciones de desarrollador → Mantener activo*, o *Pantalla → Tiempo de espera* al máximo).
+2. **Dejarlo enchufado:** el estado del dispositivo informa la batería y avisa cuando baja del umbral sin cargador.
+3. **Instalarlo como app** (menú del navegador → *Instalar aplicación* o *Añadir a pantalla de inicio*): el detalle del terminal muestra el **Modo** (instalado o en pestaña del navegador) y un terminal instalado se suspende menos.
+4. **Sin ahorro de energía para el navegador:** quitar el navegador o la app instalada de la lista de optimización de batería.
+5. **Fecha y hora automáticas:** si el reloj se desajusta, el panel avisa (**Reloj del terminal desajustado**). Las marcaciones se corrigen con el desfase detectado, pero conviene dejar la hora automática.
+6. **Permiso de cámara concedido** y la página del terminal abierta (sin cerrar la pestaña).
+
+Si aun así el terminal se apaga de noche o fuera de horario, definir su **horario de vigilancia** (ver **Monitoreo del terminal**) para que no se avise de desconexiones esperadas.
+
 ## Qué se ve en el dispositivo
 
 | Pantalla | Cuándo aparece |
@@ -363,6 +385,8 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 | Dice **Sin empleados sincronizados** | El terminal todavía no descargó rostros | Verificar conexión y tocar **Sincronizar ahora**. Solo se descargan los empleados **activos** de la **sucursal del terminal** que tengan su **registro facial** completo |
 | El terminal figura **Desconectado** | Dispositivo apagado, sin internet o con la página cerrada | Encenderlo, verificar internet y abrir la URL del terminal |
 | Recibo avisos de desconexión de noche o los fines de semana | El local está cerrado y el terminal se apaga | Definir su **horario de vigilancia** en la sección **Monitoreo** del terminal |
+| Aviso de **Terminal sin empleados enrolados** | Ningún empleado activo de la sucursal del terminal tiene rostro registrado (o los empleados figuran en otra sucursal) | Enrolar a los empleados o corregir su sucursal en su ficha |
+| Aviso de **Terminal sin empleados en caché** | El terminal en línea descargó 0 empleados aunque la sucursal tiene enrolados | Enviar **Limpiar caché** y, si sigue igual, **Recargar app** |
 | El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |
 | El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Recargar la página del terminal dos veces |
 | Un comando remoto figura **Vencido** | El terminal no se conectó en 15 minutos (apagado, sin internet) o corre una versión vieja de la aplicación que no entiende comandos | Verificar que esté encendido y con internet, recargar su página dos veces y volver a enviar el comando |

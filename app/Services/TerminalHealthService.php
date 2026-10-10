@@ -28,12 +28,15 @@ class TerminalHealthService
     /** Puntos por encima del umbral que debe recuperar la batería para dejar de estar "baja" (evita parpadeo). */
     private const BATTERY_HYSTERESIS = 5;
 
+    /** Reportes seguidos con el reloj desfasado antes de avisar (evita avisar por un reporte suelto). */
+    private const CLOCK_SKEW_CONSECUTIVE_REPORTS = 3;
+
     public function __construct(private readonly GeneralSettings $settings) {}
 
     /**
      * Evalúa un terminal, actualiza su estado guardado y dispara los avisos de las transiciones.
      *
-     * @return array<int, string> Tipos de aviso emitidos (`offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`).
+     * @return array<int, string> Tipos de aviso emitidos (`offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty`, `clock_skew`).
      */
     public function evaluate(Terminal $terminal): array
     {
@@ -55,6 +58,11 @@ class TerminalHealthService
             'offline_alerted' => (bool) ($previous['offline_alerted'] ?? false),
             'queue_stuck' => (bool) ($previous['queue_stuck'] ?? false),
             'low_battery' => (bool) ($previous['low_battery'] ?? false),
+            'cache_empty' => (bool) ($previous['cache_empty'] ?? false),
+            'no_enrolled' => (bool) ($previous['no_enrolled'] ?? false),
+            'clock_skew' => (bool) ($previous['clock_skew'] ?? false),
+            'clock_hits' => (int) ($previous['clock_hits'] ?? 0),
+            'clock_report_at' => $previous['clock_report_at'] ?? null,
         ];
 
         $alerts = [];
@@ -62,11 +70,16 @@ class TerminalHealthService
         if ($previous === null) {
             $snapshot['queue_stuck'] = $terminal->isQueueStuck();
             $snapshot['low_battery'] = $this->lowBattery($terminal, false) ?? false;
+            $snapshot['no_enrolled'] = $linked && $terminal->enrolledEmployeesCount() === 0;
+            $snapshot['cache_empty'] = $this->cacheEmpty($terminal, $connectivity, $terminal->enrolledEmployeesCount()) ?? false;
+            $snapshot['clock_report_at'] = $terminal->device_report_at?->toIso8601String();
         } else {
             $alerts = [
                 ...$this->evaluateConnectivity($terminal, $previous, $connectivity, $snapshot),
                 ...$this->evaluateQueue($terminal, $connectivity, $snapshot),
                 ...$this->evaluateBattery($terminal, $snapshot),
+                ...$this->evaluateEnrollment($terminal, $connectivity, $snapshot),
+                ...$this->evaluateClock($terminal, $snapshot),
             ];
         }
 
@@ -177,6 +190,98 @@ class TerminalHealthService
     }
 
     /**
+     * Terminal que no podría identificar a nadie: `no_enrolled` (la sucursal no tiene ningún empleado activo con rostro
+     * registrado) y `cache_empty` (hay empleados enrolados pero el terminal en línea reporta 0 en su caché).
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function evaluateEnrollment(Terminal $terminal, string $connectivity, array &$snapshot): array
+    {
+        $alerts = [];
+        $enrolled = $terminal->enrolledEmployeesCount();
+        $linked = $connectivity !== 'unlinked';
+
+        $none = $linked && $enrolled === 0;
+
+        if ($none && ! $snapshot['no_enrolled']) {
+            $snapshot['no_enrolled'] = true;
+            $alerts[] = $this->raise($terminal, 'no_enrolled', 'health_no_enrolled');
+        } elseif (! $none && $snapshot['no_enrolled'] && $enrolled > 0) {
+            $snapshot['no_enrolled'] = false;
+            $this->record($terminal, 'health_enrolled_ok', ['enrolled' => $enrolled]);
+        }
+
+        $empty = $this->cacheEmpty($terminal, $connectivity, $enrolled);
+
+        if ($empty === true && ! $snapshot['cache_empty']) {
+            $snapshot['cache_empty'] = true;
+            $alerts[] = $this->raise($terminal, 'cache_empty', 'health_cache_empty', ['enrolled' => $enrolled]);
+        } elseif ($empty === false && $snapshot['cache_empty']) {
+            $snapshot['cache_empty'] = false;
+            $this->record($terminal, 'health_cache_ok', ['cached' => $terminal->reportedCachedEmployees()]);
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Caché vacía con empleados enrolados, según el último reporte fresco de un terminal en línea.
+     *
+     * @return bool|null null si no se puede determinar (sin conexión, sin reporte fresco o sin dato): se conserva el estado.
+     */
+    private function cacheEmpty(Terminal $terminal, string $connectivity, int $enrolled): ?bool
+    {
+        $cached = $terminal->reportedCachedEmployees();
+
+        if ($connectivity !== 'online' || $cached === null || ! $terminal->hasFreshDeviceReport()) {
+            return null;
+        }
+
+        return $cached === 0 && $enrolled > 0;
+    }
+
+    /**
+     * Reloj desajustado: el desfase del último reporte supera el máximo tolerado en varios reportes seguidos.
+     * Solo cuenta reportes nuevos (cada minuto de evaluación no suma el mismo reporte dos veces).
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function evaluateClock(Terminal $terminal, array &$snapshot): array
+    {
+        $skew = $terminal->reportedClockSkewSeconds();
+        $reportAt = $terminal->device_report_at?->toIso8601String();
+
+        if ($skew === null || $reportAt === null || $reportAt === $snapshot['clock_report_at']) {
+            return [];
+        }
+
+        $snapshot['clock_report_at'] = $reportAt;
+
+        if (abs($skew) > $this->settings->terminal_clock_skew_max_seconds) {
+            $snapshot['clock_hits']++;
+
+            if (! $snapshot['clock_skew'] && $snapshot['clock_hits'] >= self::CLOCK_SKEW_CONSECUTIVE_REPORTS) {
+                $snapshot['clock_skew'] = true;
+
+                return [$this->raise($terminal, 'clock_skew', 'health_clock_skew', ['seconds' => $skew])];
+            }
+
+            return [];
+        }
+
+        $snapshot['clock_hits'] = 0;
+
+        if ($snapshot['clock_skew']) {
+            $snapshot['clock_skew'] = false;
+            $this->record($terminal, 'health_clock_ok', ['seconds' => $skew]);
+        }
+
+        return [];
+    }
+
+    /**
      * Batería baja según el último reporte: nivel por debajo del umbral y sin cargador. Con
      * `$wasLow` aplica histéresis (sigue baja hasta recuperar umbral + 5 puntos o enchufarse).
      *
@@ -185,8 +290,7 @@ class TerminalHealthService
     private function lowBattery(Terminal $terminal, bool $wasLow): ?bool
     {
         $level = $terminal->reportedBatteryLevel();
-        $reportIsFresh = $terminal->device_report_at !== null
-            && $terminal->device_report_at->gte(now()->subMinutes($terminal->effectiveStaleMinutes()));
+        $reportIsFresh = $terminal->hasFreshDeviceReport();
 
         if ($level === null || ! $reportIsFresh) {
             return null;

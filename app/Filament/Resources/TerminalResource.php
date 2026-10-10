@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\TerminalCommandActions;
 use App\Filament\Actions\TerminalLinkActions;
+use App\Filament\Actions\TerminalMonitoringActions;
 use App\Filament\Actions\TerminalPairingActions;
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
@@ -15,6 +16,7 @@ use App\Models\Company;
 use App\Models\Terminal;
 use App\Settings\GeneralSettings;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -151,40 +153,7 @@ class TerminalResource extends Resource
                     ->description('Cuándo se considera desconectado este terminal y en qué horario se vigila. Todo es opcional.')
                     ->icon('heroicon-o-wifi')
                     ->compact()
-                    ->schema([
-                        TextInput::make('stale_after_minutes')
-                            ->label('Considerar desconectado tras')
-                            ->numeric()
-                            ->integer()
-                            ->minValue(Terminal::MIN_STALE_MINUTES)
-                            ->maxValue(10080)
-                            ->suffix('minutos')
-                            ->placeholder(fn () => 'Usa el umbral general ('.app(GeneralSettings::class)->terminal_stale_threshold_hours.' h)')
-                            ->helperText('Mínimo '.Terminal::MIN_STALE_MINUTES.' minutos (el terminal reporta cada ~90 s). Vacío = umbral general de Configuración General.')
-                            ->columnSpanFull(),
-
-                        CheckboxList::make('watch_days')
-                            ->label('Días que se vigila')
-                            ->options(Terminal::WATCH_DAY_OPTIONS)
-                            ->columns(7)
-                            ->bulkToggleable()
-                            ->helperText('Ninguno marcado = todos los días. Fuera de estos días no se avisa que está desconectado.')
-                            ->columnSpanFull(),
-
-                        TimePicker::make('watch_from')
-                            ->label('Vigilar desde')
-                            ->seconds(false)
-                            ->native(false)
-                            ->requiredWith('watch_to')
-                            ->helperText('Hora de Asunción. Vacío = todo el día.'),
-
-                        TimePicker::make('watch_to')
-                            ->label('Vigilar hasta')
-                            ->seconds(false)
-                            ->native(false)
-                            ->requiredWith('watch_from')
-                            ->helperText('Un rango que cruza la medianoche (ej. 22:00 a 06:00) pertenece al día en que empieza.'),
-                    ])
+                    ->schema(static::monitoringFields())
                     ->columns(2),
 
                 Section::make('Instalación')
@@ -738,6 +707,7 @@ class TerminalResource extends Resource
                 BulkActionGroup::make([
                     TerminalLinkActions::openLinkWindowBulk(),
                     TerminalCommandActions::bulk(),
+                    TerminalMonitoringActions::bulk(),
                     DeleteBulkAction::make()
                         ->modalDescription('Esta acción no se puede deshacer. Las marcaciones ya registradas con los terminales seleccionados no se eliminan, pero perderán la referencia a qué dispositivo físico las generó.')
                         ->modalSubmitActionLabel('Sí, eliminar'),
@@ -747,6 +717,50 @@ class TerminalResource extends Resource
             ->emptyStateHeading('No hay terminales registradas')
             ->emptyStateDescription('Crea una terminal y configurá el dispositivo físico con su URL de acceso.')
             ->emptyStateIcon('heroicon-o-computer-desktop');
+    }
+
+    /**
+     * Campos de monitoreo (umbral de desconexión y horario de vigilancia), compartidos por el formulario del
+     * terminal y la acción masiva **Configurar monitoreo**.
+     *
+     * @return array<int, Component>
+     */
+    public static function monitoringFields(): array
+    {
+        return [
+            TextInput::make('stale_after_minutes')
+                ->label('Considerar desconectado tras')
+                ->numeric()
+                ->integer()
+                ->minValue(Terminal::MIN_STALE_MINUTES)
+                ->maxValue(10080)
+                ->suffix('minutos')
+                ->placeholder(fn () => 'Usa el umbral general ('.app(GeneralSettings::class)->terminal_stale_threshold_hours.' h)')
+                ->helperText('Mínimo '.Terminal::MIN_STALE_MINUTES.' minutos (el terminal reporta cada ~90 s). Vacío = umbral general de Configuración General.')
+                ->columnSpanFull(),
+
+            CheckboxList::make('watch_days')
+                ->label('Días que se vigila')
+                ->options(Terminal::WATCH_DAY_OPTIONS)
+                ->columns(7)
+                ->bulkToggleable()
+                ->helperText('Ninguno marcado = todos los días. Fuera de estos días no se avisa que está desconectado.')
+                ->columnSpanFull(),
+
+            TimePicker::make('watch_from')
+                ->label('Vigilar desde')
+                ->seconds(false)
+                ->native(false)
+                ->requiredWith('watch_to')
+                ->helperText('Hora de Asunción. Vacío = todo el día.'),
+
+            TimePicker::make('watch_to')
+                ->label('Vigilar hasta')
+                ->seconds(false)
+                ->native(false)
+                ->requiredWith('watch_from')
+                ->helperText('Un rango que cruza la medianoche (ej. 22:00 a 06:00) pertenece al día en que empieza.'),
+        ];
     }
 
     /** Versión de la app que corre en el dispositivo, avisando si quedó desactualizada respecto del servidor. */

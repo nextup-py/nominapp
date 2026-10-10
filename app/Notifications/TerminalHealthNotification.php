@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Aviso por la campanita sobre un cambio de salud de un terminal (ver
- * `TerminalHealthService`): `offline`, `recovered`, `unlinked`, `queue_stuck` o `battery_low`.
+ * `TerminalHealthService`): `offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty` o `clock_skew`.
  */
 class TerminalHealthNotification extends Notification
 {
@@ -70,6 +70,21 @@ class TerminalHealthNotification extends Notification
                 ->title('Batería baja en terminal')
                 ->body("El terminal {$name} está al {$this->terminal->reportedBatteryLevel()}% y sin cargador.")
                 ->icon('heroicon-o-battery-0')
+                ->warning(),
+            'no_enrolled' => $notification
+                ->title('Terminal sin empleados enrolados')
+                ->body("La sucursal del terminal {$name} no tiene ningún empleado activo con rostro registrado: no podrá identificar a nadie. Enrolar a los empleados o revisar su sucursal.")
+                ->icon('heroicon-o-user-group')
+                ->warning(),
+            'cache_empty' => $notification
+                ->title('Terminal sin empleados en caché')
+                ->body("El terminal {$name} está en línea pero reporta 0 empleados en su caché, aunque su sucursal tiene empleados enrolados. Enviar el comando remoto Limpiar caché o Recargar app.")
+                ->icon('heroicon-o-circle-stack')
+                ->warning(),
+            'clock_skew' => $notification
+                ->title('Reloj del terminal desajustado')
+                ->body("El reloj del terminal {$name} difiere del servidor en ".($this->terminal->reportedClockSkewSeconds() ?? 0).' segundos. Revisar la fecha y hora del dispositivo (activar la hora automática).')
+                ->icon('heroicon-o-clock')
                 ->warning(),
             default => $notification->title('Aviso de terminal')->body("Cambió el estado del terminal {$name}.")->icon('heroicon-o-computer-desktop'),
         };
