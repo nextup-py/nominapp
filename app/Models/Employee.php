@@ -490,10 +490,15 @@ class Employee extends Model implements AuthenticatableContract
         return $query->where('status', 'active');
     }
 
+    /** Días hacia atrás en que un turno planificado (override del Planificador) cuenta como "tiene turno". */
+    public const PLANNED_SHIFT_LOOKBACK_DAYS = 14;
+
     /**
-     * Empleados sin horario ni rotación vigente en la fecha (hoy por defecto): ni asignación de horario fijo
-     * vigente, ni horario legacy (`schedule_id`), ni patrón rotativo. Sin horario no se calculan horas esperadas,
-     * tardanzas ni ausencias automáticas. Es la única definición de "sin horario"; no filtra por estado del empleado.
+     * Empleados sin horario, rotación ni turnos planificados en la fecha (hoy por defecto): ni asignación de
+     * horario fijo vigente, ni horario legacy (`schedule_id`), ni patrón rotativo, ni turnos puntuales del
+     * Planificador (overrides) en los últimos `PLANNED_SHIFT_LOOKBACK_DAYS` días o a futuro. Sin nada de eso no
+     * se calculan horas esperadas, tardanzas ni ausencias automáticas. Es la única definición de "sin horario";
+     * no filtra por estado del empleado.
      *
      * @param  Builder<static>  $query
      * @return Builder<static>
@@ -513,7 +518,11 @@ class Employee extends Model implements AuthenticatableContract
                 ->from('rotation_assignments as ra')
                 ->whereColumn('ra.employee_id', 'employees.id')
                 ->where('ra.valid_from', '<=', $day)
-                ->where(fn ($w) => $w->whereNull('ra.valid_until')->orWhere('ra.valid_until', '>=', $day)));
+                ->where(fn ($w) => $w->whereNull('ra.valid_until')->orWhere('ra.valid_until', '>=', $day)))
+            ->whereNotExists(fn ($sub) => $sub->select(DB::raw(1))
+                ->from('shift_overrides as so')
+                ->whereColumn('so.employee_id', 'employees.id')
+                ->where('so.override_date', '>=', Carbon::parse($day)->subDays(self::PLANNED_SHIFT_LOOKBACK_DAYS)->toDateString()));
     }
 
     /**

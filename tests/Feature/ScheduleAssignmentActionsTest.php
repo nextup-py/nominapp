@@ -10,6 +10,8 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\PayrollPeriod;
 use App\Models\Schedule;
+use App\Models\ShiftOverride;
+use App\Models\ShiftTemplate;
 use App\Models\User;
 use App\Services\AttendanceInboxService;
 use App\Services\ScheduleAssignmentService;
@@ -248,4 +250,24 @@ it('no recalcula jornadas de períodos con nómina generada', function () {
         ->and($result['recalculated'])->toBe(1)
         ->and($locked->fresh()->expected_check_in)->toBeNull()
         ->and($free->fresh()->expected_check_in)->not->toBeNull();
+});
+
+it('no considera sin horario a quien tiene turnos planificados en el Planificador', function () {
+    $planned = scheduleTestEmployee();
+    $future = scheduleTestEmployee();
+    $stale = scheduleTestEmployee();
+    $none = scheduleTestEmployee();
+    $shift = ShiftTemplate::create([
+        'company_id' => $planned->branch->company_id, 'name' => 'Madrugada', 'shift_type' => 'nocturno',
+        'is_day_off' => false, 'start_time' => '20:00', 'end_time' => '04:00', 'break_minutes' => 0, 'is_active' => true,
+    ]);
+
+    foreach ([[$planned, Carbon::today()->subDays(3)], [$future, Carbon::today()->addDays(2)], [$stale, Carbon::today()->subDays(Employee::PLANNED_SHIFT_LOOKBACK_DAYS + 6)]] as [$employee, $date]) {
+        ShiftOverride::create(['employee_id' => $employee->id, 'override_date' => $date->toDateString(), 'shift_id' => $shift->id, 'reason_type' => 'cambio_turno']);
+    }
+
+    $ids = Employee::query()->withoutSchedule()->pluck('id')->all();
+
+    expect($ids)->toContain($stale->id, $none->id)
+        ->and($ids)->not->toContain($planned->id, $future->id);
 });
