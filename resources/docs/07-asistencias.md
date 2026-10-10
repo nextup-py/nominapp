@@ -343,12 +343,13 @@ Las columnas de tardanza, horas extra y pendiente se muestran por defecto. **Suc
 
 ### Acciones en la tabla (fila a fila)
 
-Cada fila tiene un botón y dos menús:
+Cada fila tiene dos botones y dos menús:
 
 - **Corregir marcaciones** (ícono de lápiz; al pasar el cursor muestra su nombre): abre una ventana con todas las marcaciones del día, sin salir del listado. Se puede cambiar el tipo o la fecha y hora de una marcación, agregar una con **Agregar marcación** o quitarla con el ícono de papelera. Al **Guardar correcciones** la jornada se recalcula. Una salida de madrugada se carga con la fecha del día siguiente. No se admiten horas futuras ni una secuencia imposible (por ejemplo, dos entradas seguidas); en ese caso no se guarda nada y se explica el motivo. Las marcaciones agregadas o modificadas quedan con canal **Manual**. Requiere permiso para editar marcaciones.
 
 ![Ventana Corregir marcaciones con las marcaciones del día](/docs-images/07-asistencias-corregir.png)
 
+- **Ver ficha del mes** (ícono de calendario): abre la ficha mensual del empleado, en el mes de esa jornada (ver **Ficha mensual del empleado**).
 - **Aprobar** (ícono de check): reúne las decisiones sobre el día.
 - **Más**: ajustar, recalcular y exportar.
 
@@ -385,6 +386,36 @@ Desde el encabezado del listado de asistencias están disponibles:
 - **Rango de fechas** — acceso rápido (hoy, esta semana, quincena, mes) o fechas manuales
 
 ---
+
+## Ficha mensual del empleado
+
+Para ver el mes completo de un empleado en una sola pantalla, usar el botón **Ver ficha del mes** (ícono de calendario) de cualquier fila de **Asistencias → Asistencias**. La ficha abre en el mes de esa jornada. Es solo de consulta: no modifica nada.
+
+![Ficha mensual de un empleado con los totales y la cuadrícula de días](/docs-images/07-ficha-mensual.png)
+
+**Encabezado:** nombre, CI, sucursal y cargo del empleado, y los botones **Anterior**, **Siguiente** y **Mes actual** para cambiar de mes, y **Volver a Asistencias**.
+
+**Totales del mes** (cuatro bloques):
+
+| Bloque | Qué cuenta |
+|--------|-----------|
+| **Días** | Presente, ausente, ausencia justificada, permiso, vacaciones y feriados o francos |
+| **Horas** | Horas trabajadas, esperadas, extras y extras aprobadas |
+| **Tardanzas** | Días con tardanza, minutos totales y minutos con descuento aprobado |
+| **Pendientes de resolver** | Jornadas sin salida, tardanzas por aprobar y extras por aprobar |
+
+**Cuadrícula de días:** una celda por día, de lunes a domingo. Cada celda tiene un color según el estado y muestra la entrada y salida, las horas trabajadas, los minutos de tardanza y las horas extra, y las alertas del día (**Sin salida**, **Aprobar tardanza**, **Aprobar extras**).
+
+| Estado | Color |
+|--------|-------|
+| Presente | Verde |
+| Ausente | Rojo |
+| Ausencia justificada, permiso y vacaciones | Azul |
+| Feriado, franco y días sin registro | Gris |
+
+El día de hoy se destaca con un borde. Los días que todavía no llegaron quedan vacíos y los pasados sin jornada dicen **Sin registro**. Un clic en un día con jornada abre su detalle, donde están **Corregir marcaciones** y las aprobaciones.
+
+> La ficha aparece solo para quien puede ver las asistencias y no figura en el menú: se abre desde el botón de cada fila.
 
 ## Vista de detalle de un día de asistencia
 
