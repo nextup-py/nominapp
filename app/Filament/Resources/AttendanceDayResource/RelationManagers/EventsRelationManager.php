@@ -188,27 +188,27 @@ class EventsRelationManager extends RelationManager
                         return $record->fresh();
                     })
                     ->form([
-                    Select::make('event_type')
-                        ->label('Tipo de Evento')
-                        ->options(AttendanceEvent::getEventTypeOptions())
-                        ->native(false)
-                        ->required()
-                        ->columnSpanFull(),
+                        Select::make('event_type')
+                            ->label('Tipo de Evento')
+                            ->options(AttendanceEvent::getEventTypeOptions())
+                            ->native(false)
+                            ->required()
+                            ->columnSpanFull(),
 
-                    Hidden::make('_date'),
+                        Hidden::make('_date'),
 
-                    Placeholder::make('fecha_display')
-                        ->label('Fecha')
-                        ->content(fn (Get $get) => $get('_date')
-                            ? Carbon::parse($get('_date'))->translatedFormat('l d/m/Y')
-                            : '—'
-                        ),
+                        Placeholder::make('fecha_display')
+                            ->label('Fecha')
+                            ->content(fn (Get $get) => $get('_date')
+                                ? Carbon::parse($get('_date'))->translatedFormat('l d/m/Y')
+                                : '—'
+                            ),
 
-                    TimePicker::make('time')
-                        ->label('Hora')
-                        ->seconds(false)
-                        ->native(false)
-                        ->required(),
+                        TimePicker::make('time')
+                            ->label('Hora')
+                            ->seconds(false)
+                            ->native(false)
+                            ->required(),
                     ])
                     ->mutateRecordDataUsing(function (array $data) {
                         // $record->attributesToArray() serializa recorded_at en UTC

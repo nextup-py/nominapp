@@ -3,6 +3,7 @@
 use App\Filament\Resources\ScheduleResource\Pages\CreateSchedule;
 use App\Filament\Resources\ScheduleResource\Pages\EditSchedule;
 use App\Filament\Resources\ScheduleResource\Pages\ListSchedules;
+use App\Filament\Resources\ScheduleResource\Pages\ViewSchedule;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -110,4 +111,15 @@ it('duplica desde el listado y avisa si el nombre ya existe', function () {
         ->assertHasNoTableActionErrors();
 
     expect(Schedule::where('name', 'Copia nueva')->first()?->days()->count())->toBe(1);
+});
+
+it('duplica desde el detalle del horario', function () {
+    $schedule = Schedule::create(['name' => 'Detalle', 'shift_type' => 'diurno']);
+    $schedule->days()->create(['day_of_week' => 2, 'is_active' => true, 'start_time' => '08:00', 'end_time' => '16:00']);
+
+    Livewire::test(ViewSchedule::class, ['record' => $schedule->getKey()])
+        ->callAction('duplicate', data: ['name' => 'Detalle copia'])
+        ->assertHasNoActionErrors();
+
+    expect(Schedule::where('name', 'Detalle copia')->first()?->days()->count())->toBe(1);
 });
