@@ -281,6 +281,26 @@ class AttendanceMarkFailure extends Model
     }
 
     /**
+     * Texto corto con lo que RR.HH. puede hacer con el fallo, para la lista.
+     * Los resueltos indican cómo terminaron; los pendientes sin datos suficientes
+     * para reconstruir la marcación remiten al diagnóstico.
+     */
+    public function getNextStepHint(): string
+    {
+        if ($this->resolution_status === 'approved') {
+            return 'Marcación registrada';
+        }
+
+        if ($this->resolution_status === 'dismissed') {
+            return 'Descartado sin registrar';
+        }
+
+        return $this->canBeResolved()
+            ? 'Aprobar si el empleado sí estuvo, o descartar'
+            : 'Sin datos para aprobar: ver diagnóstico';
+    }
+
+    /**
      * Aprueba el fallo y crea el `AttendanceEvent` correspondiente,
      * revalidando la secuencia contra el estado *actual* del empleado (puede
      * haber cambiado desde que se registró el fallo — ej. otra marcación

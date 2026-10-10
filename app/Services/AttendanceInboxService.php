@@ -67,7 +67,7 @@ class AttendanceInboxService
                 'heroicon-o-exclamation-triangle', 'danger',
                 AttendanceMarkFailure::query()->where('resolution_status', 'pending'),
                 'occurred_at',
-                AttendanceMarkFailureResource::getUrl('index', ['tableFilters' => ['resolution_status' => ['value' => 'pending']]]),
+                AttendanceMarkFailureResource::getUrl('index', ['activeTab' => 'pending']),
             );
         }
 
