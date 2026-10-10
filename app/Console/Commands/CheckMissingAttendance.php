@@ -15,6 +15,7 @@ class CheckMissingAttendance extends Command
     // La firma del comando y su descripción.
     protected $signature = 'attendance:check-missing
                             {--date= : Fecha específica a procesar (formato Y-m-d). Si no se especifica, usa hoy}
+                            {--only-date : Procesar solo la fecha indicada, sin revisar también el día anterior (lo usa attendance:backfill)}
                             {--dry-run : Ejecutar en modo prueba sin crear registros}';
 
     protected $description = 'Verifica empleados sin marcación y crea registros de ausencia si pasó el tiempo límite';
@@ -60,7 +61,9 @@ class CheckMissingAttendance extends Command
         // normal, el registro de ayer ya existe (se creó el mismo día dentro
         // de la ventana del cron), así que ese chequeo extra se salta casi
         // gratis por "ya tiene registro" (ver processEmployee()).
-        foreach ([$date->copy()->subDay(), $date] as $dateToProcess) {
+        $datesToProcess = $this->option('only-date') ? [$date] : [$date->copy()->subDay(), $date];
+
+        foreach ($datesToProcess as $dateToProcess) {
             $this->newLine();
             $this->info('📅 Procesando '.$dateToProcess->toDateString().'...');
 
