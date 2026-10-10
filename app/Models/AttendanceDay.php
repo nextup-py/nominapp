@@ -174,6 +174,41 @@ class AttendanceDay extends Model implements Auditable
     private const OPEN_LAST_EVENTS = ['check_in', 'break_start', 'break_end'];
 
     /**
+     * Subconsulta SQL (correlacionada con `attendance_days`) con el tipo del último evento del día.
+     * Es la única definición de "último evento": la usan los scopes, el listado de Asistencias y
+     * sus contadores, para que coincidan siempre.
+     */
+    public static function lastEventTypeSql(): string
+    {
+        return '(select e.event_type from attendance_events e where e.attendance_day_id = attendance_days.id order by e.recorded_at desc, e.id desc limit 1)';
+    }
+
+    /** Condición SQL de "jornada abierta": el último evento no es una salida (placeholders para los 3 tipos). */
+    private static function openLastEventSql(): string
+    {
+        return self::lastEventTypeSql().' in (?, ?, ?)';
+    }
+
+    /**
+     * Condición SQL de "sin salida registrada": jornada anterior a hoy cuya última marcación deja
+     * la jornada abierta. Los bindings son `[hoy, ...tipos abiertos]` (ver `missingCheckOutBindings()`).
+     */
+    public static function missingCheckOutSql(): string
+    {
+        return 'attendance_days.date < ? and '.self::openLastEventSql();
+    }
+
+    /**
+     * Bindings de `missingCheckOutSql()`.
+     *
+     * @return array<int, string>
+     */
+    public static function missingCheckOutBindings(): array
+    {
+        return [Carbon::today()->toDateString(), ...self::OPEN_LAST_EVENTS];
+    }
+
+    /**
      * Jornadas anteriores a hoy que tienen marcaciones pero cuyo último evento no es una salida:
      * el empleado entró y nunca salió. Se cuentan desde el día siguiente al turno, así un turno
      * nocturno que arrancó ayer no se confunde con una jornada de hoy en curso.
@@ -183,12 +218,79 @@ class AttendanceDay extends Model implements Auditable
      */
     public function scopeMissingCheckOut(Builder $query): Builder
     {
-        return $query
-            ->where('date', '<', Carbon::today()->toDateString())
-            ->whereRaw(
-                '(select e.event_type from attendance_events e where e.attendance_day_id = attendance_days.id order by e.recorded_at desc, e.id desc limit 1) in (?, ?, ?)',
-                self::OPEN_LAST_EVENTS
-            );
+        return $query->whereRaw(self::missingCheckOutSql(), self::missingCheckOutBindings());
+    }
+
+    /** Condición SQL de tardanza con descuento todavía sin decidir por RR.HH. */
+    public const PENDING_TARDINESS_SQL = 'attendance_days.late_minutes > 0 and coalesce(attendance_days.tardiness_deduction_approved, 0) = 0';
+
+    /** Condición SQL de horas extra sin aprobar (un doble turno aceptado como jornada normal no cuenta). */
+    public const PENDING_OVERTIME_SQL = 'attendance_days.extra_hours > 0 and coalesce(attendance_days.overtime_approved, 0) = 0 and coalesce(attendance_days.second_shift_regular, 0) = 0';
+
+    /**
+     * Jornadas con tardanza cuyo descuento RR.HH. todavía no aprobó.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePendingTardiness(Builder $query): Builder
+    {
+        return $query->whereRaw(self::PENDING_TARDINESS_SQL);
+    }
+
+    /**
+     * Jornadas con horas extra todavía sin aprobar.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePendingOvertime(Builder $query): Builder
+    {
+        return $query->whereRaw(self::PENDING_OVERTIME_SQL);
+    }
+
+    /**
+     * Jornadas que requieren una decisión o corrección de RR.HH.: sin salida, tardanza por aprobar
+     * o horas extra por aprobar. Es la definición de la pestaña "Requieren atención" de Asistencias.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeNeedsAttention(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->whereRaw(self::missingCheckOutSql(), self::missingCheckOutBindings())
+            ->orWhereRaw(self::PENDING_TARDINESS_SQL)
+            ->orWhereRaw(self::PENDING_OVERTIME_SQL));
+    }
+
+    /**
+     * Motivos por los que la jornada requiere atención, para mostrarlos como badges en el listado.
+     * Usa `last_event_type` si el listado ya lo trajo (evita una consulta por fila).
+     *
+     * @return array<int, string>
+     */
+    public function attentionReasons(): array
+    {
+        $reasons = [];
+
+        $lastEvent = array_key_exists('last_event_type', $this->attributes)
+            ? $this->attributes['last_event_type']
+            : $this->events()->latest('recorded_at')->latest('id')->value('event_type');
+
+        if ($this->date->lt(Carbon::today()) && in_array($lastEvent, self::OPEN_LAST_EVENTS, true)) {
+            $reasons[] = 'Sin salida';
+        }
+
+        if ((int) $this->late_minutes > 0 && ! $this->tardiness_deduction_approved) {
+            $reasons[] = 'Tardanza por aprobar';
+        }
+
+        if ((float) $this->extra_hours > 0 && ! $this->overtime_approved && ! $this->second_shift_regular) {
+            $reasons[] = 'Extras por aprobar';
+        }
+
+        return $reasons;
     }
 
     /**
@@ -202,10 +304,7 @@ class AttendanceDay extends Model implements Auditable
             ->where('employee_id', $employee->id)
             ->where('date', '<', $recordedAt->copy()->subDay()->toDateString())
             ->where('date', '>=', $recordedAt->copy()->subDays(self::STALE_OPEN_LOOKBACK_DAYS)->toDateString())
-            ->whereRaw(
-                '(select e.event_type from attendance_events e where e.attendance_day_id = attendance_days.id order by e.recorded_at desc, e.id desc limit 1) in (?, ?, ?)',
-                self::OPEN_LAST_EVENTS
-            )
+            ->whereRaw(self::openLastEventSql(), self::OPEN_LAST_EVENTS)
             ->orderByDesc('date')
             ->first();
     }

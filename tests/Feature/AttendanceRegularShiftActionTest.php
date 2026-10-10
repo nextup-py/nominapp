@@ -85,7 +85,9 @@ it('RR.HH. acepta el doble turno como jornada normal desde la tabla y se puede v
         ->and((float) $day->extra_hours)->toBe(0.0)
         ->and($day->overtime_approved)->toBeFalse();
 
+    // Resuelto, el día sale de "Requieren atención": para deshacerlo se busca en "Todos".
     Livewire::test(ListAttendanceDays::class)
+        ->set('activeTab', 'all')
         ->callTableAction('regular_shift', $day);
 
     $day->refresh();
@@ -98,7 +100,8 @@ it('aceptar el doble turno revoca una aprobación de horas extra previa', functi
     $day = makeDoubleShiftDay();
     $day->update(['overtime_approved' => true]);
 
-    Livewire::test(ListAttendanceDays::class)->callTableAction('regular_shift', $day);
+    // Con las extras ya aprobadas el día no está en "Requieren atención": se abre "Todos".
+    Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')->callTableAction('regular_shift', $day);
 
     expect($day->fresh()->overtime_approved)->toBeFalse();
 });
