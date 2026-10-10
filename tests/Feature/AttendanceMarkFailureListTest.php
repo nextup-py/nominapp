@@ -51,7 +51,7 @@ it('abre en la pestaña de pendientes y muestra solo esos fallos', function () {
     $resolved->update(['resolution_status' => 'dismissed']);
 
     Livewire::test(ListAttendanceMarkFailures::class)
-        ->assertSet('activeTab', 'pending')
+        ->assertSet('activeTab', 'review')
         ->assertCanSeeTableRecords([$pending])
         ->assertCanNotSeeTableRecords([$resolved])
         ->set('activeTab', 'all')
@@ -66,7 +66,8 @@ it('calcula los contadores de las pestañas con una sola consulta agregada', fun
 
     $tabs = Livewire::test(ListAttendanceMarkFailures::class)->instance()->getTabs();
 
-    expect($tabs['pending']->getBadge())->toBe(2)
+    expect($tabs['review']->getBadge())->toBe(1)
+        ->and($tabs['faces']->getBadge())->toBe(1)
         ->and($tabs['all']->getBadge())->toBe(3)
         ->and($tabs['terminal']->getBadge())->toBe(2)
         ->and($tabs['mobile']->getBadge())->toBe(1);
@@ -130,4 +131,50 @@ it('las acciones masivas exigen permiso de edición', function () {
     Livewire::test(ListAttendanceMarkFailures::class)
         ->assertTableBulkActionVisible('approve_bulk')
         ->assertTableBulkActionVisible('dismiss_bulk');
+});
+
+it('separa los rostros no reconocidos de lo que RR.HH. puede resolver', function () {
+    failureAsSuperAdmin();
+    $actionable = resolvableFailure();
+    $face = AttendanceMarkFailure::record(['mode' => 'terminal', 'failure_type' => 'face_no_match', 'failure_message' => 'x']);
+    $ambiguous = AttendanceMarkFailure::record(['mode' => 'terminal', 'failure_type' => 'face_ambiguous', 'failure_message' => 'x']);
+
+    Livewire::test(ListAttendanceMarkFailures::class)
+        ->assertCanSeeTableRecords([$actionable])
+        ->assertCanNotSeeTableRecords([$face, $ambiguous])
+        ->set('activeTab', 'faces')
+        ->assertCanSeeTableRecords([$face, $ambiguous])
+        ->assertCanNotSeeTableRecords([$actionable]);
+});
+
+it('descarta en bloque solo los rostros no reconocidos pendientes', function () {
+    failureAsSuperAdmin();
+    $actionable = resolvableFailure();
+    $face = AttendanceMarkFailure::record(['mode' => 'terminal', 'failure_type' => 'face_no_match', 'failure_message' => 'x']);
+    $ambiguous = AttendanceMarkFailure::record(['mode' => 'terminal', 'failure_type' => 'face_ambiguous', 'failure_message' => 'x']);
+
+    Livewire::test(ListAttendanceMarkFailures::class)
+        ->callAction('dismiss_unrecognized_faces')
+        ->assertHasNoActionErrors();
+
+    expect($face->fresh()->resolution_status)->toBe('dismissed')
+        ->and($ambiguous->fresh()->resolution_status)->toBe('dismissed')
+        ->and($face->fresh()->resolved_by_id)->not->toBeNull()
+        ->and($actionable->fresh()->resolution_status)->toBe('pending');
+});
+
+it('oculta el descarte en bloque sin permiso o sin rostros pendientes', function () {
+    failureAsSuperAdmin();
+    resolvableFailure();
+
+    Livewire::test(ListAttendanceMarkFailures::class)->assertActionHidden('dismiss_unrecognized_faces');
+
+    AttendanceMarkFailure::record(['mode' => 'terminal', 'failure_type' => 'face_no_match', 'failure_message' => 'x']);
+    auth()->logout();
+    $viewer = User::factory()->create();
+    $role = Role::firstOrCreate(['name' => 'Solo ver fallos', 'guard_name' => 'web']);
+    $role->givePermissionTo(Permission::firstOrCreate(['name' => 'view_any_attendance_mark_failure', 'guard_name' => 'web']));
+    test()->actingAs($viewer->assignRole($role));
+
+    Livewire::test(ListAttendanceMarkFailures::class)->assertActionHidden('dismiss_unrecognized_faces');
 });

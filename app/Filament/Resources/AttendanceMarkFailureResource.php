@@ -6,6 +6,7 @@ use App\Filament\Resources\AttendanceMarkFailureResource\Pages;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceMarkFailure;
 use Carbon\Carbon;
+use Filament\Actions\Action as HeaderAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -279,6 +280,37 @@ class AttendanceMarkFailureResource extends Resource
                     ->body("No se pudieron aprobar: {$failed}. Omitidos (ya revisados o sin datos): {$skipped}.")
                     ->color($failed > 0 ? 'warning' : 'success')
                     ->send();
+            });
+    }
+
+    /**
+     * Acción de encabezado de la lista: descarta de una vez todos los fallos pendientes de rostro no reconocido
+     * o ambiguo (sin empleado, no hay marcación que reconstruir). Los accionables no se tocan.
+     */
+    public static function getDismissUnrecognizedFacesAction(): HeaderAction
+    {
+        return HeaderAction::make('dismiss_unrecognized_faces')
+            ->label('Descartar rostros no reconocidos')
+            ->icon('heroicon-o-x-circle')
+            ->color('gray')
+            ->visible(fn () => static::canResolve() && AttendanceMarkFailure::query()->pendingUnrecognizedFaces()->exists())
+            ->requiresConfirmation()
+            ->modalHeading('Descartar rostros no reconocidos')
+            ->modalDescription(fn () => 'Se descartarán '.AttendanceMarkFailure::query()->pendingUnrecognizedFaces()->count().' fallo(s) donde el rostro no se reconoció o fue ambiguo, sin crear ninguna marcación. Los fallos de la pestaña Para revisar no se tocan.')
+            ->modalSubmitActionLabel('Sí, descartar')
+            ->action(function () {
+                if (! static::canResolve()) {
+                    return;
+                }
+
+                $dismissed = AttendanceMarkFailure::query()->pendingUnrecognizedFaces()->update([
+                    'resolution_status' => 'dismissed',
+                    'resolved_at' => now(),
+                    'resolved_by_id' => Auth::id(),
+                    'resolution_notes' => 'Descartado en bloque: rostro no reconocido.',
+                ]);
+
+                Notification::make()->success()->title("{$dismissed} fallo(s) descartado(s)")->send();
             });
     }
 

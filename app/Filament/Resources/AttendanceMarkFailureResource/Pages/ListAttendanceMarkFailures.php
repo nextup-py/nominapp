@@ -16,7 +16,9 @@ class ListAttendanceMarkFailures extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            AttendanceMarkFailureResource::getDismissUnrecognizedFacesAction(),
+        ];
     }
 
     /**
@@ -32,25 +34,26 @@ class ListAttendanceMarkFailures extends ListRecords
         ];
     }
 
-    /** @var array{all: int, pending: int, terminal: int, mobile: int}|null Contadores de las pestañas (una sola consulta por ciclo). */
+    /** @var array{all: int, review: int, faces: int, terminal: int, mobile: int}|null Contadores de las pestañas (una sola consulta por ciclo). */
     protected ?array $failureCounts = null;
 
     /**
      * Contadores de las pestañas calculados con una única consulta agregada.
      *
-     * @return array{all: int, pending: int, terminal: int, mobile: int}
+     * @return array{all: int, review: int, faces: int, terminal: int, mobile: int}
      */
     protected function getFailureCounts(): array
     {
         if ($this->failureCounts === null) {
             $row = AttendanceMarkFailure::query()
-                ->selectRaw("count(*) as total, sum(resolution_status = 'pending') as pending, sum(mode = 'terminal') as terminal, sum(mode = 'mobile') as mobile")
+                ->selectRaw("count(*) as total, sum(resolution_status = 'pending' and failure_type not in (?, ?)) as review, sum(resolution_status = 'pending' and failure_type in (?, ?)) as faces, sum(mode = 'terminal') as terminal, sum(mode = 'mobile') as mobile", [...AttendanceMarkFailure::UNRECOGNIZED_FACE_TYPES, ...AttendanceMarkFailure::UNRECOGNIZED_FACE_TYPES])
                 ->toBase()
                 ->first();
 
             $this->failureCounts = [
                 'all' => (int) ($row->total ?? 0),
-                'pending' => (int) ($row->pending ?? 0),
+                'review' => (int) ($row->review ?? 0),
+                'faces' => (int) ($row->faces ?? 0),
                 'terminal' => (int) ($row->terminal ?? 0),
                 'mobile' => (int) ($row->mobile ?? 0),
             ];
@@ -59,14 +62,14 @@ class ListAttendanceMarkFailures extends ListRecords
         return $this->failureCounts;
     }
 
-    /** Abre en los pendientes: lo que RR.HH. tiene que resolver. */
+    /** Abre en "Para revisar": lo que RR.HH. puede resolver, sin el ruido de rostros no reconocidos. */
     public function getDefaultActiveTab(): string|int|null
     {
-        return 'pending';
+        return 'review';
     }
 
     /**
-     * Pestañas: pendientes de revisión, todos y por modo de marcación.
+     * Pestañas: para revisar, rostros no reconocidos, todos y por modo de marcación.
      *
      * @return array<string, Tab>
      */
@@ -75,11 +78,17 @@ class ListAttendanceMarkFailures extends ListRecords
         $counts = $this->getFailureCounts();
 
         return [
-            'pending' => Tab::make('Pendientes')
+            'review' => Tab::make('Para revisar')
                 ->icon('heroicon-o-bell-alert')
-                ->badge($counts['pending'])
-                ->badgeColor($counts['pending'] > 0 ? 'danger' : 'gray')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('resolution_status', 'pending')),
+                ->badge($counts['review'])
+                ->badgeColor($counts['review'] > 0 ? 'danger' : 'gray')
+                ->modifyQueryUsing(fn (Builder $query) => $query->pendingToReview()),
+
+            'faces' => Tab::make('Rostros no reconocidos')
+                ->icon('heroicon-o-face-frown')
+                ->badge($counts['faces'])
+                ->badgeColor('gray')
+                ->modifyQueryUsing(fn (Builder $query) => $query->pendingUnrecognizedFaces()),
 
             'all' => Tab::make('Todos')
                 ->badge($counts['all']),
