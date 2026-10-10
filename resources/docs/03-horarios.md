@@ -25,7 +25,7 @@ El tipo de jornada determina las horas mensuales de referencia y los multiplicad
 
 1. Ir a **Organización → Horarios**
 2. Clic en **Nuevo horario**
-3. Ingresar el nombre (ej: "Administrativo 08:00–17:00") y seleccionar el tipo de jornada
+3. Ingresar el nombre (ej: "Administrativo 08:00–17:00"; no puede repetirse con el de otro horario) y seleccionar el tipo de jornada
 4. Guardar
 
 ![Detalle de un horario con sus días configurados](/docs-images/03-horario-detalle.png)

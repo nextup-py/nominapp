@@ -64,6 +64,8 @@ class ScheduleResource extends Resource
                             ->placeholder('Ej: Horario Diurno')
                             ->required()
                             ->maxLength(60)
+                            ->unique(ignoreRecord: true)
+                            ->validationMessages(['unique' => 'Ya existe un horario con ese nombre. Usá uno distinto para no confundirlos al asignar.'])
                             ->helperText('Nombre descriptivo para identificar el horario'),
 
                         Select::make('shift_type')
