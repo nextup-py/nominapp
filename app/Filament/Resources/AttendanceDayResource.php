@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Pages\EmployeeMonthSheet;
 use App\Filament\Resources\AttendanceDayResource\Pages;
 use App\Filament\Resources\AttendanceDayResource\RelationManagers;
 use App\Models\AttendanceDay;
@@ -184,6 +185,7 @@ class AttendanceDayResource extends Resource
                     ->badge()
                     ->color(fn ($state) => AttendanceDay::getStatusColor($state))
                     ->icon(fn ($state) => AttendanceDay::getStatusIcon($state))
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
 
                 TextColumn::make('check_in_time')
@@ -341,6 +343,7 @@ class AttendanceDayResource extends Resource
             ])
             ->actions([
                 self::getFixEventsTableAction(),
+                self::getMonthSheetTableAction(),
 
                 TableActionGroup::make([
                     self::getApproveOvertimeTableAction(),
@@ -684,6 +687,23 @@ class AttendanceDayResource extends Resource
                 : "Las horas sobre el horario ({$record->extra_hours} hrs extra) vuelven a quedar pendientes de aprobación.")
             ->success()
             ->send();
+    }
+
+    /**
+     * Abre la ficha mensual del empleado en el mes de la jornada (botón de solo ícono, junto a Corregir marcaciones).
+     */
+    public static function getMonthSheetTableAction(): TableAction
+    {
+        return TableAction::make('view_month')
+            ->label('Ver ficha del mes')
+            ->icon('heroicon-o-calendar-days')
+            ->iconButton()
+            ->color('gray')
+            ->tooltip('Ver el mes completo de este empleado: días, horas y alertas')
+            ->url(fn (AttendanceDay $record) => EmployeeMonthSheet::getUrl([
+                'employee' => $record->employee_id,
+                'month' => $record->date->format('Y-m'),
+            ]));
     }
 
     /**
