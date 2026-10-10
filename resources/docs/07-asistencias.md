@@ -203,6 +203,8 @@ Si un empleado no puede marcar por problema técnico, olvido u otra razón, el a
 3. Seleccionar **empleado**, **tipo de evento** (entrada, salida, etc.) y **fecha y hora**
 4. Guardar
 
+> **Ir a la jornada de una marcación:** en **Asistencias → Marcaciones**, el botón **Ver jornada** de cada fila abre el día de asistencia al que pertenece, donde se ven todas sus marcaciones juntas. Para corregir varias de una vez, usar **Corregir marcaciones** desde **Asistencias → Asistencias**. El botón solo aparece a quien puede ver las asistencias.
+
 ### Crear una marcación desde el detalle del día
 
 Desde el detalle de un registro de asistencia (**Asistencias → Asistencias** → clic en el registro), se puede gestionar directamente la lista de marcaciones del día:

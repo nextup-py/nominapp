@@ -18,6 +18,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
@@ -212,6 +213,14 @@ class AttendanceEventResource extends Resource
 
             ])
             ->actions([
+                Action::make('view_day')
+                    ->label('Ver jornada')
+                    ->icon('heroicon-o-calendar-days')
+                    ->color('gray')
+                    ->tooltip('Abrir la jornada de este día para ver todas sus marcaciones y corregirlas')
+                    ->visible(fn (AttendanceEvent $record) => $record->attendance_day_id !== null && AttendanceDayResource::canViewAny())
+                    ->url(fn (AttendanceEvent $record) => AttendanceDayResource::getUrl('view', ['record' => $record->attendance_day_id])),
+
                 ViewAction::make()
                     ->modalHeading('Detalle de Marcación')
                     ->modalCancelActionLabel('Cerrar')
