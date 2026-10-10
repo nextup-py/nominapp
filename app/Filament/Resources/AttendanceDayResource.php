@@ -185,6 +185,7 @@ class AttendanceDayResource extends Resource
                     ->badge()
                     ->color(fn ($state) => AttendanceDay::getStatusColor($state))
                     ->icon(fn ($state) => AttendanceDay::getStatusIcon($state))
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
 
                 TextColumn::make('check_in_time')

@@ -322,7 +322,7 @@ El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Ca
 | **Fecha** | Día del registro |
 | **Empleado** | Nombre y CI del empleado |
 | **Sucursal** | Sucursal a la que pertenece el empleado |
-| **Estado** | Estado del día (Presente, Ausente, etc.) |
+| **Estado** | Estado del día (Presente, Ausente, etc.). Oculta por defecto para que los botones de fila entren sin scroll; se activa desde el selector de columnas |
 | **Entrada** | Hora de entrada marcada, con indicador de color |
 | **Salida** | Hora de salida marcada, con indicador de color |
 | **Tardanza** | Minutos de retraso respecto al horario esperado |
