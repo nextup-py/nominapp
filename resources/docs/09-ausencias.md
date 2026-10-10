@@ -22,6 +22,9 @@ Las ausencias registran los días en que un empleado no asistió sin justificaci
 2. Resolver la ausencia de una de dos formas:
    - **Desde la lista:** en la fila, menú **Resolver** (ícono de check) con las tres acciones de abajo, sin abrir el detalle.
    - **Desde el detalle:** clic sobre la ausencia; las mismas acciones están en el encabezado.
+
+![Lista de ausencias con el menú Resolver abierto en una fila](/docs-images/09-ausencias-resolver.png)
+
 3. Según el estado actual, están disponibles:
 
 | Acción | Disponible desde | Qué hace |
