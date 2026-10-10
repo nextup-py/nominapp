@@ -104,26 +104,22 @@ El sistema usa reconocimiento facial para identificar al empleado sin usuario ni
 
 ### Proceso completo de registro facial
 
-**Paso 1 — Generar el enlace de captura:**
+Para encontrar a quienes todavía no tienen rostro, ir a **Empleados** y filtrar **Reconocimiento facial → Sin rostro registrado**. Hay dos formas de enrolar a un empleado activo, ambas desde el menú de acciones de su fila o desde la sección **Reconocimiento Facial** de su detalle:
 
-1. Ir al perfil del empleado en **Empleados**
-2. Ir a la pestaña **Registro Facial**
-3. Clic en **Nuevo registro** (o **Generar enlace**)
-4. El sistema genera un enlace con token temporal
+**Opción A — Enrolar rostro (el administrador captura):**
 
-**Paso 2 — El empleado captura su rostro:**
+1. Clic en **Enrolar rostro** (**Re-enrolar rostro** o **Actualizar rostro** si ya tiene uno, lo que reemplaza el anterior)
+2. Capturar el rostro con la cámara del equipo, con el empleado presente
+3. El registro queda **Aprobado** de inmediato: no requiere aprobación posterior
 
-1. El empleado abre el enlace generado en su dispositivo (celular o PC con cámara)
-2. Sigue el proceso de captura facial (el sistema toma varias muestras)
-3. Al finalizar, el registro queda en estado **Pendiente de aprobación**
+**Opción B — Enlace de enrolamiento (el empleado captura):**
 
-**Paso 3 — El administrador aprueba:**
+1. Clic en **Generar enlace de enrolamiento** (o, en **Asistencias → Registro Facial**, el botón **Generar Enlace** con vigencia de 4, 24 o 72 horas). El enlace vence según el tiempo configurado en **Configuración General**
+2. El empleado abre el enlace en su celular o PC con cámara y sigue la captura (el sistema toma varias muestras). El registro queda **Pendiente de aprobación**
+3. Ir a **Asistencias → Registro Facial**, buscar el registro, revisar la imagen y el score de calidad, y clic en **Aprobar** (o **Rechazar** si la calidad es insuficiente)
+4. Si el enlace venció o se perdió, usar **Ver Enlace** o **Regenerar Enlace** en esa misma lista
 
-1. Ir a **Asistencias → Registro Facial**
-2. Buscar el registro en estado **Pendiente de aprobación**
-3. Revisar la imagen capturada y el score de calidad
-4. Clic en **Aprobar** (o **Rechazar** si la calidad es insuficiente)
-5. Al aprobar, el descriptor facial queda activo y el empleado puede marcar
+Una vez aprobado, el terminal de la sucursal incorpora el rostro en su siguiente sincronización y el empleado puede marcar.
 
 ### Estados del registro facial
 
