@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\PayrollPeriodResource\Pages\EditPayrollPeriod;
 use App\Filament\Resources\PayrollPeriodResource\Pages\ViewPayrollPeriod;
+use App\Models\AttendanceDay;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Contract;
@@ -211,4 +212,36 @@ it('respeta el permiso create_disbursement_batch (reutilizado) en create_payroll
     $this->actingAs(actingAsPeriodPermUser(['create_disbursement_batch']));
     Livewire::test(ViewPayrollPeriod::class, ['record' => $period->getRouteKey()])
         ->assertActionVisible('create_payroll_batch');
+});
+
+it('el modal de Cerrar Planilla avisa de las jornadas del período sin horario esperado', function () {
+    $this->actingAs(actingAsPeriodPermUser(['close_payroll_period']));
+    $period = makePeriodPermPeriod('processing');
+    $payroll = makePeriodPermPayroll($period, 'paid');
+
+    $inside = $period->start_date->copy()->addDays(2)->toDateString();
+    $outside = $period->start_date->copy()->subDays(5)->toDateString();
+    $base = ['employee_id' => $payroll->employee_id, 'status' => 'present', 'is_calculated' => true, 'check_in_time' => '09:00:00', 'check_out_time' => '16:00:00'];
+
+    AttendanceDay::create($base + ['date' => $inside]);
+    AttendanceDay::create($base + ['date' => $outside]);
+    AttendanceDay::create($base + ['date' => $period->start_date->copy()->addDays(3)->toDateString(), 'expected_check_in' => '09:00:00', 'expected_check_out' => '16:00:00']);
+
+    $description = Livewire::test(ViewPayrollPeriod::class, ['record' => $period->getRouteKey()])
+        ->mountAction('close_period')
+        ->instance()->getMountedAction()->getModalDescription();
+
+    expect((string) $description)->toContain('1 jornada del período se registró sin horario esperado');
+});
+
+it('el modal de Cerrar Planilla no menciona jornadas sin horario si no hay ninguna', function () {
+    $this->actingAs(actingAsPeriodPermUser(['close_payroll_period']));
+    $period = makePeriodPermPeriod('processing');
+    makePeriodPermPayroll($period, 'paid');
+
+    $description = Livewire::test(ViewPayrollPeriod::class, ['record' => $period->getRouteKey()])
+        ->mountAction('close_period')
+        ->instance()->getMountedAction()->getModalDescription();
+
+    expect((string) $description)->not->toContain('sin horario esperado');
 });

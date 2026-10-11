@@ -72,6 +72,7 @@ it('cuenta cada tipo de pendiente por separado', function () {
     inboxDay($employee, 4, ['late_minutes' => 5]);
     inboxDay($employee, 5, ['extra_hours' => 1.5]);
     inboxDay($employee, 6, ['late_minutes' => 9, 'tardiness_deduction_approved' => true]);
+    inboxDay($employee, 8, ['expected_check_in' => null, 'expected_check_out' => null]);
 
     $day = inboxDay($employee, 7);
     Absence::create(['employee_id' => $employee->id, 'attendance_day_id' => $day->id, 'status' => 'pending']);
@@ -84,6 +85,7 @@ it('cuenta cada tipo de pendiente por separado', function () {
         'missing_check_out' => 1,
         'tardiness' => 2,
         'overtime' => 1,
+        'no_expected_shift' => 1,
         'absences' => 1,
         'mark_failures' => 1,
         'no_schedule' => 1,

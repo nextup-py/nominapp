@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ScheduleResource\Pages;
 
 use App\Filament\Resources\ScheduleResource;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
@@ -15,7 +16,7 @@ class EditSchedule extends EditRecord
     /**
      * Retorna las acciones del encabezado: ver registro y eliminar.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
@@ -32,6 +33,18 @@ class EditSchedule extends EditRecord
                 ->modalHeading('¿Eliminar horario?')
                 ->modalDescription(fn () => "¿Estás seguro de que deseas eliminar el horario \"{$this->record->name}\"? Esta acción no se puede deshacer.")
                 ->modalSubmitActionLabel('Sí, eliminar')
+                ->before(function (DeleteAction $action): void {
+                    if ($this->record->deletionBlockers() !== []) {
+                        Notification::make()
+                            ->danger()
+                            ->title('No se puede eliminar el horario')
+                            ->body(ucfirst($this->record->deletionBlockersSummary()).'.')
+                            ->persistent()
+                            ->send();
+
+                        $action->halt();
+                    }
+                })
                 ->successNotificationTitle('Horario eliminado')
                 ->successRedirectUrl($this->getResource()::getUrl('index')),
         ];

@@ -5,6 +5,7 @@ namespace App\Filament\Actions;
 use App\Models\Employee;
 use App\Models\Schedule;
 use App\Services\ScheduleAssignmentService;
+use App\Services\ScheduleSuggestionService;
 use Carbon\Carbon;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
@@ -99,10 +100,20 @@ class ScheduleAssignmentActions
             ->modalDescription(function (Employee $record): string {
                 $current = $record->getScheduleForDate(Carbon::today());
 
-                return $current
+                $text = $current
                     ? "Horario actual: {$current->name}. Al asignar uno nuevo, el actual se cierra el día anterior a la fecha de inicio."
                     : 'Este empleado no tiene horario vigente: hasta que tenga uno no se calculan horas, tardanzas ni ausencias.';
+
+                $suggestion = app(ScheduleSuggestionService::class)->suggestFor($record);
+
+                return $suggestion
+                    ? "{$text} Sugerido según sus marcaciones: {$suggestion['schedule']->name} ({$suggestion['days']} jornadas completas en los últimos ".ScheduleSuggestionService::LOOKBACK_DAYS.' días, desvío promedio de '.$suggestion['deviation'].' min).'
+                    : $text;
             })
+            ->fillForm(fn (Employee $record): array => [
+                'schedule_id' => app(ScheduleSuggestionService::class)->suggestFor($record)['schedule']->id ?? null,
+                'valid_from' => Carbon::today(),
+            ])
             ->form(static::formFields())
             ->modalSubmitActionLabel('Asignar')
             ->action(fn (Employee $record, array $data) => static::apply(collect([$record]), $data));

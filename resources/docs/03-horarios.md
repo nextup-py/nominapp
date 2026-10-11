@@ -25,7 +25,7 @@ El tipo de jornada determina las horas mensuales de referencia y los multiplicad
 
 1. Ir a **Organización → Horarios**
 2. Clic en **Nuevo horario**
-3. Ingresar el nombre (ej: "Administrativo 08:00–17:00") y seleccionar el tipo de jornada
+3. Ingresar el nombre (ej: "Administrativo 08:00–17:00"; no puede repetirse con el de otro horario) y seleccionar el tipo de jornada
 4. Guardar
 
 ![Detalle de un horario con sus días configurados](/docs-images/03-horario-detalle.png)
@@ -49,6 +49,23 @@ Desde la pestaña **Descansos** (o dentro de cada día), puede agregar pausas:
 
 El sistema descuenta automáticamente los minutos de descanso al calcular las horas trabajadas del día.
 
+### Avisos del formulario
+
+- **Tipo de jornada sugerido:** debajo del campo se indica el tipo que corresponde según las horas cargadas (diurno si no pasa de las 20:00 ni empieza antes de las 06:00; nocturno si algún día tiene 3,5 horas o más en la franja 20:00–06:00; mixto en el resto). Es solo una sugerencia: el tipo se elige a mano.
+- **Pocos días activos:** si el horario tiene uno o dos días activos, aparece un aviso. Quien lo tenga asignado se considera libre los demás días, así que un turno que se reparte en varios horarios por día conviene cargarlo en uno solo con todos sus días.
+
+![Formulario de un horario con el tipo de jornada sugerido y el aviso de pocos días activos](/docs-images/03-horario-formulario.png)
+
+### Duplicar un horario
+
+La acción **Duplicar** (en el listado y en el detalle del horario) copia los días, horas y descansos con un nombre nuevo, para partir de un horario parecido en vez de armarlo desde cero. No copia los empleados asignados. Requiere permiso para crear horarios.
+
+![Ventana Duplicar horario con el nombre propuesto](/docs-images/03-horario-duplicar.png)
+
+### Eliminar un horario
+
+Un horario con empleados asignados —vigentes o históricos— o usado como horario fijo de algún empleado **no se puede eliminar**: borrarlo perdería el historial con el que se calculan las jornadas pasadas. Primero hay que reasignar a esos empleados a otro horario.
+
 ## Asignar un horario a un empleado
 
 La asignación se hace **desde el horario, no desde el perfil del empleado**:
@@ -70,6 +87,12 @@ Un recálculo normal en **Asistencias** conserva las horas esperadas con que se 
 - Las de períodos con **nómina ya generada** para ese empleado.
 
 Las ausencias no se generan hacia atrás: solo se crean automáticamente las de hoy y ayer.
+
+### Horario sugerido según las marcaciones
+
+Al abrir **Asignar horario** sobre un empleado (fila del listado de **Empleados**), si tiene al menos 3 jornadas completas (con entrada y salida) en los últimos 30 días, el sistema compara sus horas reales con los días activos de cada horario y **preselecciona el que mejor coincide**, siempre que el desvío promedio sea de 60 minutos o menos. La descripción de la ventana indica cuántas jornadas se usaron. Es solo una ayuda: se puede elegir otro horario antes de confirmar, y nunca se asigna nada sin confirmar. Un horario que tiene libres los días en que el empleado trabajó se penaliza.
+
+![Ventana Asignar horario con el horario sugerido preseleccionado](/docs-images/03-asignar-horario-sugerido.png)
 
 ### Asignar desde el listado de Empleados
 

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttendanceDayResource\RelationManagers;
 
 use App\Models\AttendanceEvent;
+use App\Services\AttendanceEventCorrectionService;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -13,6 +14,7 @@ use Filament\Forms\Get;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
@@ -21,6 +23,7 @@ use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /** RelationManager que muestra y gestiona las marcaciones de un día de asistencia. */
@@ -173,6 +176,17 @@ class EventsRelationManager extends RelationManager
                     ->modalHeading('Editar Marcación')
                     ->modalSubmitActionLabel('Guardar cambios')
                     ->successNotificationTitle('Marcación actualizada')
+                    ->using(function (Model $record, array $data, $action): Model {
+                        try {
+                            app(AttendanceEventCorrectionService::class)
+                                ->applySingle($record, $data['event_type'], $data['recorded_at']);
+                        } catch (\InvalidArgumentException $e) {
+                            Notification::make()->danger()->title('No se guardaron los cambios')->body($e->getMessage())->send();
+                            $action->halt();
+                        }
+
+                        return $record->fresh();
+                    })
                     ->form([
                         Select::make('event_type')
                             ->label('Tipo de Evento')

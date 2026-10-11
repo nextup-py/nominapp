@@ -51,6 +51,13 @@ class AttendanceInboxService
                 'date',
                 AttendanceDayResource::getUrl('index', ['activeTab' => 'attention']),
             );
+            $sections[] = self::section(
+                'no_expected_shift', 'Jornadas sin horario ese día', 'Marcaron, pero no tenían horario ese día (sin horario asignado o día libre): no se calculan tardanza ni extras.',
+                'heroicon-o-question-mark-circle', 'warning',
+                self::recentDays()->whereRaw(AttendanceDay::NO_EXPECTED_SHIFT_SQL),
+                'date',
+                AttendanceDayResource::getUrl('index', ['activeTab' => 'attention']),
+            );
         }
 
         if (AbsenceResource::canViewAny()) {

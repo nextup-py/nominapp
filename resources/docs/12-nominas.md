@@ -58,7 +58,7 @@ Para agregar manualmente un empleado que no fue incluido: clic en **Agregar Reci
 
 ### Cerrar una planilla
 
-El botón **Cerrar Planilla** solo está habilitado cuando **no** quedan recibos en estado Borrador o Aprobado (el botón muestra un tooltip explicando qué falta si está deshabilitado). Al cerrar, los recibos quedan bloqueados y no se pueden generar más.
+El botón **Cerrar Planilla** solo está habilitado cuando **no** quedan recibos en estado Borrador o Aprobado (el botón muestra un tooltip explicando qué falta si está deshabilitado). Al cerrar, los recibos quedan bloqueados y no se pueden generar más. El aviso de confirmación también indica cuántos recibos faltan y cuántas jornadas del período se registraron **sin horario esperado** (sin tardanza ni horas extra calculadas), para revisarlas antes de cerrar; no bloquea el cierre.
 
 > Si hay empleados activos sin recibo al momento de cerrar, el sistema lo informa como advertencia en el modal de confirmación, pero permite continuar.
 

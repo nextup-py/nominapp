@@ -6,6 +6,7 @@ use App\Filament\Pages\ContractReport;
 use App\Filament\Pages\SalaryReport;
 use App\Filament\Resources\DisbursementBatchResource;
 use App\Filament\Resources\PayrollPeriodResource;
+use App\Models\AttendanceDay;
 use App\Models\Company;
 use App\Models\Contract;
 use App\Models\DisbursementBatch;
@@ -239,6 +240,17 @@ class ViewPayrollPeriod extends ViewRecord
                     if ($missingCount > 0) {
                         $noun = $missingCount === 1 ? 'empleado activo no tiene recibo' : 'empleados activos no tienen recibo';
                         $base .= " Atención: {$missingCount} {$noun} en esta planilla.";
+                    }
+
+                    $noShiftDays = AttendanceDay::query()
+                        ->noExpectedShift()
+                        ->whereBetween('attendance_days.date', [$this->record->start_date->toDateString(), $this->record->end_date->toDateString()])
+                        ->whereIn('attendance_days.employee_id', $payrollEmployeeIds)
+                        ->count();
+
+                    if ($noShiftDays > 0) {
+                        $noun = $noShiftDays === 1 ? 'jornada del período se registró' : 'jornadas del período se registraron';
+                        $base .= " Atención: {$noShiftDays} {$noun} sin horario esperado, por lo que no se calcularon tardanza ni horas extra.";
                     }
 
                     return $base;

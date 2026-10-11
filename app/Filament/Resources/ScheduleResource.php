@@ -12,6 +12,7 @@ use App\Models\ScheduleDay;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -64,6 +65,8 @@ class ScheduleResource extends Resource
                             ->placeholder('Ej: Horario Diurno')
                             ->required()
                             ->maxLength(60)
+                            ->unique(ignoreRecord: true)
+                            ->validationMessages(['unique' => 'Ya existe un horario con ese nombre. Usá uno distinto para no confundirlos al asignar.'])
                             ->helperText('Nombre descriptivo para identificar el horario'),
 
                         Select::make('shift_type')
@@ -71,7 +74,13 @@ class ScheduleResource extends Resource
                             ->options(Schedule::getShiftTypeOptions())
                             ->required()
                             ->native(false)
-                            ->helperText('Selecciona el tipo de jornada laboral'),
+                            ->helperText(function (Get $get): string {
+                                $suggested = Schedule::suggestShiftType($get('days') ?? []);
+
+                                return $suggested
+                                    ? 'Según las horas cargadas se sugiere: '.Schedule::getShiftTypeLabels()[$suggested].'.'
+                                    : 'Selecciona el tipo de jornada laboral';
+                            }),
 
                         TextInput::make('description')
                             ->label('Descripción')
@@ -86,6 +95,19 @@ class ScheduleResource extends Resource
                 Section::make('Configuración de Días')
                     ->description('Activá los días laborales e ingresá los horarios. Los horarios nocturnos pueden tener hora de salida menor a la de entrada.')
                     ->schema([
+                        Placeholder::make('few_days_notice')
+                            ->label('Pocos días activos')
+                            ->content(function (Get $get): string {
+                                $active = collect($get('days') ?? [])->where('is_active', true)->count();
+
+                                return "Este horario tiene solo {$active} día(s) activo(s): quien lo tenga asignado se considerará libre los demás días. Si es un turno partido por días, cargá todos los días en un único horario.";
+                            })
+                            ->visible(function (Get $get): bool {
+                                $active = collect($get('days') ?? [])->where('is_active', true)->count();
+
+                                return $active > 0 && $active <= Schedule::FEW_ACTIVE_DAYS;
+                            }),
+
                         Repeater::make('days')
                             ->relationship(modifyQueryUsing: fn ($query) => $query->orderBy('day_of_week'))
                             ->label(false)
@@ -112,6 +134,7 @@ class ScheduleResource extends Resource
                                     ->label('Entrada')
                                     ->native(false)
                                     ->seconds(false)
+                                    ->live(onBlur: true)
                                     ->required(fn (Get $get): bool => (bool) $get('is_active'))
                                     ->visible(fn (Get $get): bool => (bool) $get('is_active'))
                                     ->columnSpan(1),
@@ -120,6 +143,7 @@ class ScheduleResource extends Resource
                                     ->label('Salida')
                                     ->native(false)
                                     ->seconds(false)
+                                    ->live(onBlur: true)
                                     ->required(fn (Get $get): bool => (bool) $get('is_active'))
                                     ->visible(fn (Get $get): bool => (bool) $get('is_active'))
                                     ->columnSpan(1),
@@ -231,6 +255,8 @@ class ScheduleResource extends Resource
                     ->native(false),
             ])
             ->actions([
+                static::duplicateAction(Action::class),
+
                 Action::make('assignToEmployees')
                     ->label('Asignar a Empleados')
                     ->icon('heroicon-o-user-plus')
@@ -344,6 +370,44 @@ class ScheduleResource extends Resource
             ->emptyStateHeading('No hay horarios registrados')
             ->emptyStateDescription('Comienza a crear horarios de trabajo para asignar a los empleados.')
             ->emptyStateIcon('heroicon-o-clock');
+    }
+
+    /**
+     * Acción "Duplicar": copia el horario con sus días y descansos bajo un nombre nuevo (sin asignaciones).
+     * Se construye con la clase de acción de tabla o de página, según dónde se use.
+     *
+     * @param  class-string<\Filament\Actions\Action|Action>  $actionClass
+     */
+    public static function duplicateAction(string $actionClass): \Filament\Actions\Action|Action
+    {
+        return $actionClass::make('duplicate')
+            ->label('Duplicar')
+            ->icon('heroicon-o-document-duplicate')
+            ->color('gray')
+            ->visible(fn (): bool => (bool) auth()->user()?->can('create_schedule'))
+            ->modalHeading('Duplicar horario')
+            ->modalDescription('Se copian los días, horas y descansos. Los empleados asignados no se copian.')
+            ->modalSubmitActionLabel('Duplicar')
+            ->fillForm(fn (Schedule $record): array => ['name' => "{$record->name} (copia)"])
+            ->form([
+                TextInput::make('name')
+                    ->label('Nombre del nuevo horario')
+                    ->required()
+                    ->maxLength(60)
+                    ->unique(Schedule::class, 'name')
+                    ->validationMessages(['unique' => 'Ya existe un horario con ese nombre.']),
+            ])
+            ->action(function (Schedule $record, array $data) {
+                $copy = $record->duplicate($data['name']);
+
+                Notification::make()
+                    ->success()
+                    ->title('Horario duplicado')
+                    ->body("Se creó \"{$copy->name}\". Revisá las horas y asignalo a los empleados.")
+                    ->send();
+
+                return redirect(static::getUrl('edit', ['record' => $copy]));
+            });
     }
 
     /**

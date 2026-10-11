@@ -12,6 +12,7 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Position;
 use App\Models\User;
+use App\Services\AttendanceEventCorrectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -121,3 +122,57 @@ it('el modal de editar marcación en AttendanceDayResource prellena la fecha cor
     expect($data['_date'])->toBe($expectedDate)
         ->and($data['time'])->toContain('21:32');
 });
+
+// ─── Validación de la secuencia al editar ───────────────────────────────────
+
+function makeEditableDayWithEvents(): array
+{
+    // La edición rechaza marcaciones futuras: se fija la hora para que el test no dependa del momento en que corre.
+    Carbon::setTestNow(Carbon::today()->setTime(23, 30));
+
+    $event = makeEditableAttendanceEvent();
+    $day = $event->day;
+    $event->update(['event_type' => 'check_in', 'recorded_at' => Carbon::today()->setTime(8, 0)]);
+    $out = AttendanceEvent::create([
+        'attendance_day_id' => $day->id, 'event_type' => 'check_out',
+        'recorded_at' => Carbon::today()->setTime(15, 0), 'source' => 'terminal',
+    ]);
+
+    return [$day, $event->fresh(), $out];
+}
+
+it('editar una marcación rechaza una secuencia inválida y no toca nada', function () {
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+    [$day, $in, $out] = makeEditableDayWithEvents();
+
+    Livewire::test(ManageAttendanceEvents::class)
+        ->callTableAction('edit', $out, data: ['event_type' => 'break_end', 'time' => '15:00']);
+
+    expect($out->fresh()->event_type)->toBe('check_out')
+        ->and($out->fresh()->source)->toBe('terminal');
+});
+
+it('editar una marcación con datos válidos la marca como manual y recalcula la jornada', function () {
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+    [$day, $in, $out] = makeEditableDayWithEvents();
+
+    Livewire::test(ManageAttendanceEvents::class)
+        ->callTableAction('edit', $out, data: ['event_type' => 'check_out', 'time' => '16:00']);
+
+    expect($out->fresh()->recorded_at->format('H:i'))->toBe('16:00')
+        ->and($out->fresh()->source)->toBe('manual')
+        ->and($day->fresh()->check_out_time)->toStartWith('16:00');
+});
+
+it('editar una marcación rechaza una hora futura', function () {
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+    [$day, $in, $out] = makeEditableDayWithEvents();
+
+    $service = new AttendanceEventCorrectionService;
+
+    expect(fn () => $service->applySingle($out, 'check_out', now()->addHours(3)))
+        ->toThrow(InvalidArgumentException::class);
+    expect($out->fresh()->recorded_at->format('H:i'))->toBe('15:00');
+});
+
+afterEach(fn () => Carbon::setTestNow());
