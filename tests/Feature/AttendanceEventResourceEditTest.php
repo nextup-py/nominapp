@@ -127,6 +127,9 @@ it('el modal de editar marcación en AttendanceDayResource prellena la fecha cor
 
 function makeEditableDayWithEvents(): array
 {
+    // La edición rechaza marcaciones futuras: se fija la hora para que el test no dependa del momento en que corre.
+    Carbon::setTestNow(Carbon::today()->setTime(23, 30));
+
     $event = makeEditableAttendanceEvent();
     $day = $event->day;
     $event->update(['event_type' => 'check_in', 'recorded_at' => Carbon::today()->setTime(8, 0)]);
@@ -171,3 +174,5 @@ it('editar una marcación rechaza una hora futura', function () {
         ->toThrow(InvalidArgumentException::class);
     expect($out->fresh()->recorded_at->format('H:i'))->toBe('15:00');
 });
+
+afterEach(fn () => Carbon::setTestNow());
