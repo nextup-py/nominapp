@@ -190,6 +190,10 @@ Si un empleado marca **entrada** y nunca marca **salida**, la jornada queda abie
 
 > Es una ayuda para no cargar a mano decenas de jornadas olvidadas: la hora propuesta es la del horario, no la real. Si las horas reales importan (por ejemplo, para horas extra), corregirlas una por una.
 
+**Descartar jornadas sin horario (marcaciones de prueba):** en el listado de Asistencias, con las jornadas *sin horario esperado* seleccionadas, la acción masiva **Descartar jornadas sin horario** las elimina junto con sus marcaciones. Sirve para limpiar lo que dejó la instalación de un terminal. Solo la ve quien puede eliminar jornadas, el modal indica cuántas se eliminarán y **no se puede deshacer**. Se omiten las jornadas que ya tienen horario esperado o aún no están calculadas, las dentro de una nómina ya generada y las con extras o tardanza aprobadas, ajuste manual o doble turno aceptado.
+
+> **Mínimo entre salida y nueva entrada en turnos nocturnos:** el mínimo configurado también se aplica cuando la salida quedó en la jornada del día anterior. Una entrada marcada en el mismo minuto de esa salida ya no abre una jornada nueva por error.
+
 Si el empleado después marca una **salida** y la jornada abierta es de hace 2 o más días, el sistema no la cuelga de esa jornada vieja: queda como **conflicto** en **Fallos de Marcación**, con una sección **Jornada abierta anterior** que enlaza a la jornada sin salida. Primero se corrige esa jornada y recién después se resuelve el conflicto.
 
 ### Orígenes

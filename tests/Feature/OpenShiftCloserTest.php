@@ -176,10 +176,13 @@ it('no descarta jornadas dentro de una nómina generada', function () {
     $employee = closerEmployee();
     $day = closerDay($employee, 3, [['check_in', '10:00'], ['check_out', '10:05']], null, null, ['check_in_time' => '10:00:00']);
     $period = PayrollPeriod::create([
-        'company_id' => $employee->branch->company_id, 'start_date' => Carbon::today()->subDays(10)->toDateString(),
-        'end_date' => Carbon::today()->toDateString(), 'status' => 'processing', 'period_type' => 'monthly',
+        'name' => 'Octubre 2026', 'start_date' => '2026-10-01', 'end_date' => '2026-10-31', 'frequency' => 'monthly', 'status' => 'processing',
     ]);
-    Payroll::create(['employee_id' => $employee->id, 'payroll_period_id' => $period->id, 'status' => 'draft']);
+    Payroll::create([
+        'employee_id' => $employee->id, 'payroll_period_id' => $period->id, 'status' => 'draft',
+        'base_salary' => 2_550_000, 'gross_salary' => 2_550_000, 'net_salary' => 2_550_000,
+        'total_deductions' => 0, 'total_perceptions' => 0, 'payment_method' => 'transfer',
+    ]);
 
     expect(app(UnscheduledDayDiscarder::class)->discard($day))->toBe(UnscheduledDayDiscarder::SKIP_PAYROLL_LOCKED)
         ->and(AttendanceDay::find($day->id))->not->toBeNull();
@@ -201,5 +204,5 @@ it('descarta en bloque desde el listado solo con permiso de eliminar', function 
 
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(ListAttendanceDays::class)->assertTableBulkActionHidden('discard_unscheduled_days');
+    expect(AttendanceDayResource::getDiscardUnscheduledDaysBulkAction()->isVisible())->toBeFalse();
 });
