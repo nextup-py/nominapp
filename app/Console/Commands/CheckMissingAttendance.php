@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\AttendanceDay;
 use App\Models\Employee;
+use App\Models\Terminal;
 use App\Services\AttendanceCalculator;
 use App\Settings\GeneralSettings;
 use Illuminate\Console\Command;
@@ -145,6 +146,21 @@ class CheckMissingAttendance extends Command
     }
 
     /**
+     * Indica si la sucursal del empleado tiene terminales pero ninguno vinculado
+     * y el empleado no tiene un dispositivo personal activo.
+     */
+    protected function branchCannotMark(Employee $employee): bool
+    {
+        if (! $employee->branch_id || $employee->activeDevice()->exists()) {
+            return false;
+        }
+
+        $terminals = Terminal::where('branch_id', $employee->branch_id)->where('status', 'active');
+
+        return (clone $terminals)->exists() && ! $terminals->syncLinked()->exists();
+    }
+
+    /**
      * Procesa un empleado individual
      */
     protected function processEmployee(Employee $employee, Carbon $date, int $thresholdMinutes, bool $dryRun): string
@@ -156,6 +172,13 @@ class CheckMissingAttendance extends Command
 
         // Si ya existe un registro, omitir
         if ($existingRecord) {
+            return 'skipped';
+        }
+
+        // Sucursal con terminales registrados pero ninguno vinculado (día de instalación):
+        // nadie puede marcar ahí, así que la falta no es del empleado. Quien tiene
+        // celular vinculado sí puede marcar, por eso no se omite.
+        if ($this->branchCannotMark($employee)) {
             return 'skipped';
         }
 

@@ -226,3 +226,27 @@ it('rechaza un evento de un empleado inexistente o inactivo y lo registra para r
         ->first();
     expect($failure)->not->toBeNull();
 });
+
+it('toma como entregada una marcación repetida a pocos segundos, sin generar conflicto', function () {
+    $employee = makeSyncEmployee();
+    $terminal = makeSyncTerminal($employee);
+    $service = app(AttendanceEventSyncService::class);
+
+    $first = $service->syncBatch($terminal, [[
+        'client_event_id' => (string) Str::uuid(),
+        'employee_id' => $employee->id,
+        'event_type' => 'check_in',
+        'recorded_at' => '2026-08-19 08:00:00',
+    ]]);
+    $repeat = $service->syncBatch($terminal, [[
+        'client_event_id' => (string) Str::uuid(),
+        'employee_id' => $employee->id,
+        'event_type' => 'check_in',
+        'recorded_at' => '2026-08-19 08:00:15',
+    ]]);
+
+    expect($repeat[0]['status'])->toBe('duplicate')
+        ->and($repeat[0]['event_id'])->toBe($first[0]['event_id'])
+        ->and(AttendanceEvent::count())->toBe(1)
+        ->and(AttendanceMarkFailure::count())->toBe(0);
+});

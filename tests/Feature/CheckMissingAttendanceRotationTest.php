@@ -11,6 +11,7 @@ use App\Models\RotationPattern;
 use App\Models\Schedule;
 use App\Models\ScheduleDay;
 use App\Models\ShiftTemplate;
+use App\Models\Terminal;
 use App\Services\RotationService;
 use App\Services\ScheduleAssignmentService;
 use App\Settings\GeneralSettings;
@@ -315,4 +316,42 @@ it('no duplica la ausencia si ya existe un AttendanceDay para la fecha', functio
     Artisan::call('attendance:check-missing', ['--date' => $today->toDateString()]);
 
     expect(AttendanceDay::where('employee_id', $employee->id)->where('date', $today->toDateString())->count())->toBe(1);
+});
+
+/** Arma un empleado con horario fijo lunes 08:00–17:00 y deja la hora en 08:30 de ese lunes. */
+function makeCheckMissingScheduledEmployee(): array
+{
+    $employee = makeCheckMissingEmployee(makeCheckMissingCompany());
+    $schedule = Schedule::create(['name' => 'Horario Terminal CheckMissing '.$employee->id, 'shift_type' => 'diurno', 'description' => null]);
+    $today = Carbon::parse('2026-08-24');
+    ScheduleDay::create([
+        'schedule_id' => $schedule->id,
+        'day_of_week' => $today->dayOfWeekIso,
+        'is_active' => true,
+        'start_time' => '08:00',
+        'end_time' => '17:00',
+    ]);
+    ScheduleAssignmentService::assign($employee, $schedule, $today->copy()->subYear());
+    Carbon::setTestNow($today->copy()->setTime(8, 30));
+
+    return [$employee, $today];
+}
+
+it('no crea ausencia si la sucursal tiene terminales pero ninguno vinculado', function () {
+    [$employee, $today] = makeCheckMissingScheduledEmployee();
+    Terminal::create(['name' => 'Terminal sin vincular', 'branch_id' => $employee->branch_id]);
+
+    Artisan::call('attendance:check-missing', ['--date' => $today->toDateString()]);
+
+    expect(AttendanceDay::where('employee_id', $employee->id)->where('date', $today->toDateString())->exists())->toBeFalse();
+});
+
+it('crea ausencia si la sucursal tiene un terminal vinculado', function () {
+    [$employee, $today] = makeCheckMissingScheduledEmployee();
+    $terminal = Terminal::create(['name' => 'Terminal vinculado', 'branch_id' => $employee->branch_id]);
+    $terminal->createToken('terminal', [Terminal::SYNC_ABILITY]);
+
+    Artisan::call('attendance:check-missing', ['--date' => $today->toDateString()]);
+
+    expect(AttendanceDay::where('employee_id', $employee->id)->where('date', $today->toDateString())->value('status'))->toBe('absent');
 });

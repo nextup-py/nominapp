@@ -150,6 +150,14 @@ class MobileEventSyncService
         }
 
         if (! in_array($eventData['event_type'], $allowed, true)) {
+            if (AttendanceEvent::isRepeatOf($last, $eventData['event_type'], $recordedAt)) {
+                return [
+                    'client_event_id' => $clientEventId,
+                    'status' => 'duplicate',
+                    'event_id' => $last->id,
+                ];
+            }
+
             Log::warning("Sync de dispositivo — evento '{$eventData['event_type']}' ya no es válido para el empleado {$employee->id} (último registrado: ".($last->event_type ?? 'ninguno').')', [
                 'employee_id' => $employee->id,
                 'client_event_id' => $clientEventId,
