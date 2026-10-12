@@ -11,6 +11,7 @@ use App\Models\Payroll;
 use App\Models\PayrollPeriod;
 use App\Models\User;
 use App\Services\OpenShiftCloser;
+use App\Services\UnscheduledDayDiscarder;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -153,4 +154,55 @@ it('la acción masiva solo se ofrece a quien puede editar marcaciones', function
 
     $this->actingAs(tap(User::factory()->create(), fn (User $u) => $u->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
     expect(AttendanceDayResource::getCloseOpenShiftsBulkAction()->isVisible())->toBeTrue();
+});
+
+it('descarta jornadas sin horario esperado con sus marcaciones y omite las que no corresponden', function () {
+    $employee = closerEmployee();
+    $test = closerDay($employee, 3, [['check_in', '10:00'], ['check_out', '10:05']], null, null, ['check_in_time' => '10:00:00']);
+    $withShift = closerDay($employee, 4, [['check_in', '09:00'], ['check_out', '16:00']], '09:00:00', '16:00:00', ['check_in_time' => '09:00:00']);
+    $approved = closerDay($employee, 5, [['check_in', '10:00'], ['check_out', '11:00']], null, null, ['check_in_time' => '10:00:00', 'manual_adjustment' => true]);
+
+    $discarder = app(UnscheduledDayDiscarder::class);
+
+    expect($discarder->discard($withShift))->toBe(UnscheduledDayDiscarder::SKIP_HAS_SHIFT)
+        ->and($discarder->discard($approved))->toBe(UnscheduledDayDiscarder::SKIP_PROTECTED)
+        ->and($discarder->discard($test))->toBeNull()
+        ->and(AttendanceDay::find($test->id))->toBeNull()
+        ->and(AttendanceEvent::where('attendance_day_id', $test->id)->count())->toBe(0)
+        ->and(AttendanceDay::find($withShift->id))->not->toBeNull();
+});
+
+it('no descarta jornadas dentro de una nómina generada', function () {
+    $employee = closerEmployee();
+    $day = closerDay($employee, 3, [['check_in', '10:00'], ['check_out', '10:05']], null, null, ['check_in_time' => '10:00:00']);
+    $period = PayrollPeriod::create([
+        'name' => 'Octubre 2026', 'start_date' => '2026-10-01', 'end_date' => '2026-10-31', 'frequency' => 'monthly', 'status' => 'processing',
+    ]);
+    Payroll::create([
+        'employee_id' => $employee->id, 'payroll_period_id' => $period->id, 'status' => 'draft',
+        'base_salary' => 2_550_000, 'gross_salary' => 2_550_000, 'net_salary' => 2_550_000,
+        'total_deductions' => 0, 'total_perceptions' => 0, 'payment_method' => 'transfer',
+    ]);
+
+    expect(app(UnscheduledDayDiscarder::class)->discard($day))->toBe(UnscheduledDayDiscarder::SKIP_PAYROLL_LOCKED)
+        ->and(AttendanceDay::find($day->id))->not->toBeNull();
+});
+
+it('descarta en bloque desde el listado solo con permiso de eliminar', function () {
+    $employee = closerEmployee();
+    $test = closerDay($employee, 3, [['check_in', '10:00']], null, null, ['check_in_time' => '10:00:00']);
+    $withShift = closerDay($employee, 4, [['check_in', '09:00'], ['check_out', '16:00']], '09:00:00', '16:00:00', ['check_in_time' => '09:00:00']);
+
+    $this->actingAs(tap(User::factory()->create(), fn (User $u) => $u->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+
+    Livewire::test(ListAttendanceDays::class)
+        ->set('activeTab', 'all')
+        ->callTableBulkAction('discard_unscheduled_days', [$test, $withShift]);
+
+    expect(AttendanceDay::find($test->id))->toBeNull()
+        ->and(AttendanceDay::find($withShift->id))->not->toBeNull();
+
+    $this->actingAs(User::factory()->create());
+
+    expect(AttendanceDayResource::getDiscardUnscheduledDaysBulkAction()->isVisible())->toBeFalse();
 });

@@ -114,7 +114,7 @@ class OpenShiftCloser
     }
 
     /** Indica si la fecha de la jornada cae en un período con nómina generada para el empleado. */
-    private function isPayrollLocked(AttendanceDay $day): bool
+    public function isPayrollLocked(AttendanceDay $day): bool
     {
         $this->payrollRanges[$day->employee_id] ??= Payroll::query()
             ->where('employee_id', $day->employee_id)

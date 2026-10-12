@@ -168,6 +168,7 @@ Después de marcar la **salida**, el empleado puede marcar una **nueva entrada**
 - Mientras el segundo tramo está abierto (hay entrada sin salida) el día aparece **incompleto** y no muestra hora de salida ni horas trabajadas.
 - Las horas que superen las esperadas por el horario se calculan como **horas extra**, que RR.HH. aprueba como cualquier otra (ver **Aceptar doble turno como jornada normal** más abajo).
 - Entre la salida y la nueva entrada debe pasar un **mínimo** (5 minutos por defecto, configurable en **Configuración → Configuración General → Configuración Laboral**). Antes de ese tiempo el terminal no ofrece la entrada, para evitar reentradas por error.
+- Después de la **entrada** también debe pasar un mínimo antes de poder marcar la **salida** (2 minutos por defecto): una salida segundos después de entrar no se acepta. Y una jornada abierta de ayer con la última marcación de hace más de 16 horas (límite configurable) ya no recibe la salida; queda para corregir desde **Sin salida registrada**.
 - En el **terminal**, tras una salida la nueva entrada **nunca se registra sola**: el empleado debe tocar **Entrada** en la pantalla. En el celular hay que tocar **Marcar**.
 
 ### Jornadas sin salida
@@ -189,6 +190,10 @@ Si un empleado marca **entrada** y nunca marca **salida**, la jornada queda abie
 ![Ventana de confirmación de Cerrar jornadas sin salida con el resumen de cuántas se cierran y cuántas se omiten](/docs-images/07-asistencias-cerrar-sin-salida.png)
 
 > Es una ayuda para no cargar a mano decenas de jornadas olvidadas: la hora propuesta es la del horario, no la real. Si las horas reales importan (por ejemplo, para horas extra), corregirlas una por una.
+
+**Descartar jornadas sin horario (marcaciones de prueba):** en el listado de Asistencias, con las jornadas *sin horario esperado* seleccionadas, la acción masiva **Descartar jornadas sin horario** las elimina junto con sus marcaciones. Sirve para limpiar lo que dejó la instalación de un terminal. Solo la ve quien puede eliminar jornadas, el modal indica cuántas se eliminarán y **no se puede deshacer**. Se omiten las jornadas que ya tienen horario esperado o aún no están calculadas, las dentro de una nómina ya generada y las con extras o tardanza aprobadas, ajuste manual o doble turno aceptado.
+
+> **Mínimo entre salida y nueva entrada en turnos nocturnos:** el mínimo configurado también se aplica cuando la salida quedó en la jornada del día anterior. Una entrada marcada en el mismo minuto de esa salida ya no abre una jornada nueva por error.
 
 Si el empleado después marca una **salida** y la jornada abierta es de hace 2 o más días, el sistema no la cuelga de esa jornada vieja: queda como **conflicto** en **Fallos de Marcación**, con una sección **Jornada abierta anterior** que enlaza a la jornada sin salida. Primero se corrige esa jornada y recién después se resuelve el conflicto.
 

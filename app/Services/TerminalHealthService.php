@@ -7,6 +7,7 @@ use App\Models\TerminalEvent;
 use App\Models\User;
 use App\Notifications\TerminalHealthNotification;
 use App\Settings\GeneralSettings;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -28,6 +29,9 @@ class TerminalHealthService
     /** Puntos por encima del umbral que debe recuperar la batería para dejar de estar "baja" (evita parpadeo). */
     private const BATTERY_HYSTERESIS = 5;
 
+    /** Minutos con la versión de la app desactualizada (terminal en línea) antes de avisar. */
+    public const APP_OUTDATED_ALERT_MINUTES = 120;
+
     /** Reportes seguidos con el reloj desfasado antes de avisar (evita avisar por un reporte suelto). */
     private const CLOCK_SKEW_CONSECUTIVE_REPORTS = 3;
 
@@ -36,7 +40,7 @@ class TerminalHealthService
     /**
      * Evalúa un terminal, actualiza su estado guardado y dispara los avisos de las transiciones.
      *
-     * @return array<int, string> Tipos de aviso emitidos (`offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty`, `clock_skew`).
+     * @return array<int, string> Tipos de aviso emitidos (`offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty`, `clock_skew`, `app_outdated`).
      */
     public function evaluate(Terminal $terminal): array
     {
@@ -63,6 +67,8 @@ class TerminalHealthService
             'clock_skew' => (bool) ($previous['clock_skew'] ?? false),
             'clock_hits' => (int) ($previous['clock_hits'] ?? 0),
             'clock_report_at' => $previous['clock_report_at'] ?? null,
+            'app_outdated' => (bool) ($previous['app_outdated'] ?? false),
+            'app_outdated_since' => $previous['app_outdated_since'] ?? null,
         ];
 
         $alerts = [];
@@ -80,6 +86,7 @@ class TerminalHealthService
                 ...$this->evaluateBattery($terminal, $snapshot),
                 ...$this->evaluateEnrollment($terminal, $connectivity, $snapshot),
                 ...$this->evaluateClock($terminal, $snapshot),
+                ...$this->evaluateAppVersion($terminal, $connectivity, $snapshot),
             ];
         }
 
@@ -275,6 +282,47 @@ class TerminalHealthService
         if ($snapshot['clock_skew']) {
             $snapshot['clock_skew'] = false;
             $this->record($terminal, 'health_clock_ok', ['seconds' => $skew]);
+        }
+
+        return [];
+    }
+
+    /**
+     * App desactualizada: el terminal en línea, con reporte fresco, sigue con una versión distinta de la actual
+     * durante más de `APP_OUTDATED_ALERT_MINUTES`. Tras un despliegue es normal un rato; el aviso es para el que no se recarga.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function evaluateAppVersion(Terminal $terminal, string $connectivity, array &$snapshot): array
+    {
+        $outdated = $terminal->isAppOutdated();
+
+        if ($connectivity !== 'online' || $outdated === null || ! $terminal->hasFreshDeviceReport()) {
+            return [];
+        }
+
+        if ($outdated) {
+            $snapshot['app_outdated_since'] ??= now()->toIso8601String();
+            $since = Carbon::parse($snapshot['app_outdated_since']);
+
+            if (! $snapshot['app_outdated'] && $since->lte(now()->subMinutes(self::APP_OUTDATED_ALERT_MINUTES))) {
+                $snapshot['app_outdated'] = true;
+
+                return [$this->raise($terminal, 'app_outdated', 'health_app_outdated', [
+                    'reported' => $terminal->device_report['app_version'] ?? null,
+                    'current' => Terminal::currentAppVersion(),
+                ])];
+            }
+
+            return [];
+        }
+
+        $snapshot['app_outdated_since'] = null;
+
+        if ($snapshot['app_outdated']) {
+            $snapshot['app_outdated'] = false;
+            $this->record($terminal, 'health_app_ok');
         }
 
         return [];

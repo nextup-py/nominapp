@@ -35,6 +35,8 @@ class SettingsSeeder extends Seeder
             'timezone' => 'America/Asuncion',
             'absence_threshold_minutes' => 30,
             'attendance_min_reentry_minutes' => 5,
+            'attendance_min_exit_minutes' => 2,
+            'attendance_overnight_max_hours' => 16,
 
             // Contratos
             'contract_alert_days' => 30,

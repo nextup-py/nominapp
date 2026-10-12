@@ -92,6 +92,28 @@ class ManageGeneralSettings extends SettingsPage
                             ->default(5)
                             ->suffix('minutos')
                             ->helperText('Tiempo que debe pasar después de marcar la salida para poder marcar una nueva entrada el mismo día (segundo turno). Evita reentradas por error. 0 = sin mínimo.'),
+
+                        TextInput::make('attendance_min_exit_minutes')
+                            ->label('Mínimo entre entrada y salida')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(60)
+                            ->default(2)
+                            ->suffix('minutos')
+                            ->helperText('Tiempo que debe pasar después de marcar la entrada para poder marcar la salida. Evita salidas por un toque equivocado. 0 = sin mínimo.'),
+
+                        TextInput::make('attendance_overnight_max_hours')
+                            ->label('Límite de jornada nocturna abierta')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(48)
+                            ->default(16)
+                            ->suffix('horas')
+                            ->helperText('Si la última marcación de la jornada de ayer es más antigua que esto, ya no se considera un turno nocturno en curso: una salida nueva no se le asigna y queda como conflicto. 0 = sin límite.'),
                     ]),
 
                 Section::make('Configuración de Contratos')

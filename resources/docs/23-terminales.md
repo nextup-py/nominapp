@@ -259,6 +259,7 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Sucursal sin empleados enrolados** / **con empleados enrolados** | La sucursal del terminal se quedó sin ningún empleado activo con rostro registrado, o volvió a tenerlos |
 | **Caché de empleados vacía** / **normalizada** | El terminal en línea reportó 0 empleados en caché habiendo empleados enrolados, o volvió a tenerlos |
 | **Reloj desajustado** / **normalizado** | El reloj del dispositivo pasó (o dejó de pasar) el desfase tolerado |
+| **App desactualizada** / **actualizada** | El terminal en línea siguió con una versión anterior de la app durante más de 2 horas (o ya se actualizó) |
 | **Monitoreo configurado** | Un usuario cambió el umbral u horario de vigilancia con la acción masiva |
 | **Comando enviado** / **ejecutado** / **falló** / **vencido** | Ciclo de un comando remoto (ver [Comandos remotos](#comandos-remotos)) |
 
@@ -277,6 +278,7 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 | **Batería baja en terminal** | El nivel bajó del porcentaje configurado y no está cargando (solo si el navegador informa la batería) |
 | **Terminal sin empleados enrolados** | La sucursal del terminal no tiene ningún empleado activo con rostro registrado: no podrá identificar a nadie. Enrolar a los empleados o revisar a qué sucursal pertenecen |
 | **Terminal sin empleados en caché** | El terminal está en línea pero reporta 0 empleados en su caché, aunque su sucursal tiene empleados enrolados. Enviar el comando remoto **Limpiar caché** o **Recargar app** |
+| **Terminal con la app desactualizada** | El terminal está en línea pero sigue con una versión anterior de la app más de 2 horas después de reportarla así. Enviar el comando remoto **Recargar app** |
 | **Reloj del terminal desajustado** | El reloj del dispositivo difiere del servidor por más del valor tolerado en tres reportes seguidos. Activar la fecha y hora automáticas del dispositivo |
 
 Los umbrales de la cola atascada, la batería baja y el desfase de reloj tolerado se editan en **Configuración General → Terminales de Marcación**. Los terminales **inactivos** no se evalúan, y al aplicar esta función por primera vez el sistema solo toma una foto del estado actual, sin avisar de lo que ya estaba así. Que la cola se normalice o que la batería se recupere queda en la **Bitácora**, sin notificación.
