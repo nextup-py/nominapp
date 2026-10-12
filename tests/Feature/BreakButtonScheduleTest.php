@@ -97,6 +97,8 @@ it('sin horario asignado, no ofrece ni acepta "Inicio de descanso"', function ()
 
     expect(markAttendanceEvent($employee, 'check_in')['ok'])->toBeTrue();
 
+    Carbon::setTestNow(Carbon::now()->addMinutes(5));
+
     $state = AttendanceDay::currentStateFor($employee, Carbon::now());
     expect($state['allowed'])->not->toContain('break_start')
         ->and($state['allowed'])->toContain('check_out');

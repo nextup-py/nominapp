@@ -168,6 +168,7 @@ Después de marcar la **salida**, el empleado puede marcar una **nueva entrada**
 - Mientras el segundo tramo está abierto (hay entrada sin salida) el día aparece **incompleto** y no muestra hora de salida ni horas trabajadas.
 - Las horas que superen las esperadas por el horario se calculan como **horas extra**, que RR.HH. aprueba como cualquier otra (ver **Aceptar doble turno como jornada normal** más abajo).
 - Entre la salida y la nueva entrada debe pasar un **mínimo** (5 minutos por defecto, configurable en **Configuración → Configuración General → Configuración Laboral**). Antes de ese tiempo el terminal no ofrece la entrada, para evitar reentradas por error.
+- Después de la **entrada** también debe pasar un mínimo antes de poder marcar la **salida** (2 minutos por defecto): una salida segundos después de entrar no se acepta. Y una jornada abierta de ayer con la última marcación de hace más de 16 horas (límite configurable) ya no recibe la salida; queda para corregir desde **Sin salida registrada**.
 - En el **terminal**, tras una salida la nueva entrada **nunca se registra sola**: el empleado debe tocar **Entrada** en la pantalla. En el celular hay que tocar **Marcar**.
 
 ### Jornadas sin salida

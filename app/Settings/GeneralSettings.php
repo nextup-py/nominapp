@@ -17,6 +17,12 @@ class GeneralSettings extends Settings
     /** Minutos mínimos entre una salida y una nueva entrada del mismo día (evita reentradas por error); 0 = sin mínimo. */
     public int $attendance_min_reentry_minutes;
 
+    /** Minutos mínimos entre una entrada y la salida siguiente (evita salidas por toque equivocado); 0 = sin mínimo. */
+    public int $attendance_min_exit_minutes;
+
+    /** Horas máximas desde la última marcación de una jornada abierta de ayer para seguir tratándola como turno nocturno en curso; 0 = sin límite. */
+    public int $attendance_overnight_max_hours;
+
     public float $face_threshold;
 
     public float $face_min_confidence_gap;

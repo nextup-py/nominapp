@@ -141,6 +141,7 @@ class AttendanceDay extends Model implements Auditable
             $recordedAt
         );
         if ($enforceReentryGap) {
+            $todayAllowed = static::filterAllowedByExitGap($todayAllowed, $todayLast, $recordedAt);
             $gapLast = $todayLast ?? $resolveLast(static::where('employee_id', $employee->id)
                 ->where('date', $recordedAt->copy()->subDay()->toDateString())
                 ->first());
@@ -162,6 +163,7 @@ class AttendanceDay extends Model implements Auditable
 
         if ($yesterdayLast
             && $yesterdayLast->event_type !== 'check_out'
+            && (! $enforceReentryGap || static::isWithinOvernightLimit($yesterdayLast, $recordedAt))
             && in_array($requestedEventType, $yesterdayAllowed, true)
         ) {
             return ['day' => $yesterday, 'last' => $yesterdayLast, 'allowed' => $yesterdayAllowed];
@@ -466,6 +468,39 @@ class AttendanceDay extends Model implements Auditable
     }
 
     /**
+     * Quita 'check_out' de lo permitido mientras no pase el mínimo configurado desde la entrada: un toque
+     * equivocado de Salida segundos después de entrar no debe cerrar la jornada.
+     *
+     * @param  array<int, string>  $allowed
+     * @return array<int, string>
+     */
+    private static function filterAllowedByExitGap(array $allowed, ?AttendanceEvent $last, Carbon $at): array
+    {
+        if ($last?->event_type !== 'check_in' || ! in_array('check_out', $allowed, true)) {
+            return $allowed;
+        }
+
+        $minMinutes = (int) app(GeneralSettings::class)->attendance_min_exit_minutes;
+
+        if ($minMinutes > 0 && $at->lt($last->recorded_at->copy()->addMinutes($minMinutes))) {
+            return array_values(array_diff($allowed, ['check_out']));
+        }
+
+        return $allowed;
+    }
+
+    /**
+     * Indica si la última marcación de una jornada abierta de ayer es lo bastante reciente para seguir
+     * siendo un turno nocturno en curso (límite `attendance_overnight_max_hours`, 0 = sin límite).
+     */
+    private static function isWithinOvernightLimit(AttendanceEvent $last, Carbon $at): bool
+    {
+        $maxHours = (int) app(GeneralSettings::class)->attendance_overnight_max_hours;
+
+        return $maxHours <= 0 || $last->recorded_at->copy()->addHours($maxHours)->gte($at);
+    }
+
+    /**
      * Quita 'break_start' del listado de transiciones permitidas si el turno del
      * empleado para esa fecha no tiene descanso configurado. 'break_end' nunca
      * se filtra — si ya empezó la pausa, siempre debe poder cerrarla.
@@ -507,7 +542,9 @@ class AttendanceDay extends Model implements Auditable
             ->first();
         $yesterdayLast = $yesterday ? AttendanceEvent::where('attendance_day_id', $yesterday->id)->latest('recorded_at')->first() : null;
 
-        $overnightOpen = $yesterdayLast && $yesterdayLast->event_type !== 'check_out';
+        $overnightOpen = $yesterdayLast
+            && $yesterdayLast->event_type !== 'check_out'
+            && static::isWithinOvernightLimit($yesterdayLast, $recordedAt);
 
         $allowed = static::filterAllowedByReentryGap(
             static::filterAllowedByBreakSchedule(
@@ -518,6 +555,7 @@ class AttendanceDay extends Model implements Auditable
             $todayLast ?? $yesterdayLast,
             $recordedAt
         );
+        $allowed = static::filterAllowedByExitGap($allowed, $todayLast, $recordedAt);
         if ($overnightOpen) {
             $allowed = array_values(array_unique(array_merge(
                 $allowed,

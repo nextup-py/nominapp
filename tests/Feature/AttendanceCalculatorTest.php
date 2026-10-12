@@ -777,6 +777,56 @@ it('aplica el mínimo también cuando la salida quedó en la jornada del día an
         ->and($state['allowed'])->toBe([]);
 });
 
+it('no permite la salida antes del mínimo desde la entrada', function () {
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16');
+    addEvent($day, 'check_in', '22:02:51');
+
+    $tooSoon = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-16 22:03:03'), 'check_out');
+    $enough = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-16 22:05:00'), 'check_out');
+    $state = AttendanceDay::currentStateFor($employee, Carbon::parse('2026-03-16 22:03:03'));
+
+    expect($tooSoon['allowed'])->not->toContain('check_out')
+        ->and($enough['allowed'])->toContain('check_out')
+        ->and($state['allowed'])->not->toContain('check_out');
+});
+
+it('la aprobación manual de un conflicto puede saltarse el mínimo de salida', function () {
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16');
+    addEvent($day, 'check_in', '22:02:51');
+
+    $resolved = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-16 22:03:03'), 'check_out', enforceReentryGap: false);
+
+    expect($resolved['allowed'])->toContain('check_out');
+});
+
+it('una jornada abierta de ayer más vieja que el límite ya no recibe la salida', function () {
+    $employee = makeAttEmployee();
+    $friday = makeAttDay($employee, '2026-03-13');
+    $friday->events()->create(['employee_id' => $employee->id, 'event_type' => 'check_in', 'recorded_at' => Carbon::parse('2026-03-13 22:15:00'), 'source' => 'terminal']);
+    $saturday = makeAttDay($employee, '2026-03-14');
+    $saturday->events()->create(['employee_id' => $employee->id, 'event_type' => 'check_in', 'recorded_at' => Carbon::parse('2026-03-14 22:02:00'), 'source' => 'terminal']);
+    $saturday->events()->create(['employee_id' => $employee->id, 'event_type' => 'check_out', 'recorded_at' => Carbon::parse('2026-03-14 22:03:00'), 'source' => 'terminal']);
+
+    $second = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-14 22:03:15'), 'check_out');
+    $state = AttendanceDay::currentStateFor($employee, Carbon::parse('2026-03-14 22:10:00'));
+
+    expect($second['day']?->id)->toBe($saturday->id)
+        ->and($second['allowed'])->not->toContain('check_out')
+        ->and($state['allowed'])->not->toContain('check_out');
+});
+
+it('una jornada nocturna reciente de ayer sigue aceptando la salida', function () {
+    $employee = makeAttEmployee();
+    $yesterday = makeAttDay($employee, '2026-03-13');
+    $yesterday->events()->create(['employee_id' => $employee->id, 'event_type' => 'check_in', 'recorded_at' => Carbon::parse('2026-03-13 22:00:00'), 'source' => 'terminal']);
+
+    $resolved = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-14 06:00:00'), 'check_out');
+
+    expect($resolved['day']?->id)->toBe($yesterday->id);
+});
+
 it('el estado que ve el terminal no ofrece la entrada hasta pasar el mínimo', function () {
     $employee = makeAttEmployee();
     $day = makeAttDay($employee, '2026-03-16');
