@@ -103,6 +103,8 @@ it('omite las jornadas donde inventar la salida sería arriesgado', function (st
     'quedó en un descanso' => [OpenShiftCloser::SKIP_ON_BREAK, fn () => closerDay(closerEmployee(), 2, [['check_in', '08:55'], ['break_start', '12:00']])],
     'sin hora de salida esperada' => [OpenShiftCloser::SKIP_NO_EXPECTED_EXIT, fn () => closerDay(closerEmployee(), 2, [['check_in', '08:55']], null, null)],
     'salida esperada anterior a la última marcación' => [OpenShiftCloser::SKIP_EXIT_BEFORE_LAST_EVENT, fn () => closerDay(closerEmployee(), 2, [['check_in', '17:30']])],
+    'entrada lejos del horario (salida del turno anterior)' => [OpenShiftCloser::SKIP_ENTRY_FAR_FROM_SHIFT, fn () => closerDay(closerEmployee(), 2, [['check_in', '01:05']], '17:30:00', '02:00:00')],
+    'entrada de fin de turno de un horario diurno' => [OpenShiftCloser::SKIP_ENTRY_FAR_FROM_SHIFT, fn () => closerDay(closerEmployee(), 2, [['check_in', '17:50']], '08:00:00', '18:00:00')],
     'con extras aprobadas' => [OpenShiftCloser::SKIP_PROTECTED, fn () => closerDay(closerEmployee(), 2, [['check_in', '08:55']], '09:00:00', '16:00:00', ['overtime_approved' => true])],
     'con ajuste manual' => [OpenShiftCloser::SKIP_PROTECTED, fn () => closerDay(closerEmployee(), 2, [['check_in', '08:55']], '09:00:00', '16:00:00', ['manual_adjustment' => true])],
 ]);
@@ -205,4 +207,14 @@ it('descarta en bloque desde el listado solo con permiso de eliminar', function 
     $this->actingAs(User::factory()->create());
 
     expect(AttendanceDayResource::getDiscardUnscheduledDaysBulkAction()->isVisible())->toBeFalse();
+});
+
+it('cierra una entrada tardía dentro del margen, también en turnos que cruzan medianoche', function () {
+    $late = closerDay(closerEmployee(), 2, [['check_in', '11:30']], '09:00:00', '16:00:00');
+    $nightOk = closerDay(closerEmployee(), 3, [['check_in', '22:20']], '22:00:00', '07:00:00');
+
+    $closer = app(OpenShiftCloser::class);
+
+    expect($closer->evaluate($late)['skip'])->toBeNull()
+        ->and($closer->evaluate($nightOk)['skip'])->toBeNull();
 });

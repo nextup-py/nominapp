@@ -395,7 +395,7 @@ class AttendanceCalculator
             if ($event->event_type === self::EVENT_BREAK_START) {
                 $breakStart = $event->recorded_at;
             } elseif ($event->event_type === self::EVENT_BREAK_END && $breakStart) {
-                $totalMinutes += Carbon::parse($breakStart)->diffInMinutes($event->recorded_at);
+                $totalMinutes += (int) Carbon::parse($breakStart)->diffInMinutes($event->recorded_at);
                 $breakStart = null; // Reset para el siguiente par
             }
         }

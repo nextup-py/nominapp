@@ -184,6 +184,7 @@ Si un empleado marca **entrada** y nunca marca **salida**, la jornada queda abie
 - las que quedaron **en un descanso** (hay que decidir cómo cerrarlas),
 - las **sin horario esperado** (no hay hora de salida para proponer),
 - las cuya salida esperada es **anterior a su última marcación**,
+- las cuya **primera entrada está a más de 3 horas del inicio del horario**: suele ser la salida del turno anterior marcada como entrada, y cerrarla con la salida del horario daría una jornada de casi 24 horas,
 - las **dentro de una nómina ya generada** del empleado,
 - las con **extras o tardanza aprobadas**, ajuste manual o doble turno aceptado como jornada normal.
 
