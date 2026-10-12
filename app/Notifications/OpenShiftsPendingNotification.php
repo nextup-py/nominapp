@@ -21,6 +21,7 @@ class OpenShiftsPendingNotification extends Notification
     public function __construct(
         public readonly int $count,
         public readonly Carbon $oldestDate,
+        public readonly int $closable = 0,
     ) {}
 
     /**
@@ -44,10 +45,14 @@ class OpenShiftsPendingNotification extends Notification
             'tableFilters' => ['missing_check_out' => ['isActive' => true]],
         ]);
 
+        $proposal = $this->closable > 0
+            ? " {$this->closable} se pueden cerrar con la hora de salida del horario: revisá y aprobá el cierre en bloque."
+            : '';
+
         return [
             ...FilamentNotification::make()
                 ->title("{$this->count} {$plural} sin salida registrada")
-                ->body("Hay empleados que marcaron entrada y nunca salida. La más antigua es del {$this->oldestDate->format('d/m/Y')}. Corregirlas desde Asistencias para que se calculen las horas.")
+                ->body("Hay empleados que marcaron entrada y nunca salida. La más antigua es del {$this->oldestDate->format('d/m/Y')}. Corregirlas desde Asistencias para que se calculen las horas.{$proposal}")
                 ->icon('heroicon-o-clock')
                 ->warning()
                 ->actions([
@@ -55,6 +60,7 @@ class OpenShiftsPendingNotification extends Notification
                 ])
                 ->getDatabaseMessage(),
             'open_shifts_count' => $this->count,
+            'closable_count' => $this->closable,
         ];
     }
 }

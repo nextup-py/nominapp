@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\AttendanceDay;
 use App\Models\User;
 use App\Notifications\OpenShiftsPendingNotification;
+use App\Services\OpenShiftCloser;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
@@ -22,7 +23,7 @@ class NotifyOpenShifts extends Command
 
     protected $description = 'Avisa a RR.HH. de las jornadas con entrada y sin salida desde el día siguiente al turno';
 
-    public function handle(): int
+    public function handle(OpenShiftCloser $closer): int
     {
         $open = AttendanceDay::query()
             ->missingCheckOut()
@@ -37,6 +38,7 @@ class NotifyOpenShifts extends Command
         }
 
         $oldest = Carbon::parse((clone $open)->min('date'));
+        $closable = (clone $open)->get()->filter(fn (AttendanceDay $day) => $closer->evaluate($day)['skip'] === null)->count();
         $notified = 0;
 
         foreach (User::all() as $user) {
@@ -52,11 +54,11 @@ class NotifyOpenShifts extends Command
                 continue;
             }
 
-            $user->notify(new OpenShiftsPendingNotification($count, $oldest));
+            $user->notify(new OpenShiftsPendingNotification($count, $oldest, $closable));
             $notified++;
         }
 
-        $this->info("{$count} jornada(s) sin salida; aviso enviado a {$notified} usuario(s).");
+        $this->info("{$count} jornada(s) sin salida ({$closable} con cierre propuesto); aviso enviado a {$notified} usuario(s).");
 
         return self::SUCCESS;
     }
