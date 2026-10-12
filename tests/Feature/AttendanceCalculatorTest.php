@@ -10,12 +10,15 @@ use App\Models\Employee;
 use App\Models\EmployeeLeave;
 use App\Models\Holiday;
 use App\Models\Position;
+use App\Models\Schedule;
 use App\Models\Vacation;
 use App\Models\VacationBalance;
 use App\Services\AttendanceCalculator;
+use App\Services\ScheduleAssignmentService;
 use App\Settings\GeneralSettings;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
@@ -476,7 +479,6 @@ it('siempre marca is_calculated = true y guarda calculated_at', function () {
         ->and($day->calculated_at)->not->toBeNull();
 });
 
-
 // ─── Turnos que cruzan medianoche ─────────────────────────────────────────────
 
 /** Agrega un evento en una fecha/hora absoluta (para marcaciones de madrugada del día siguiente). */
@@ -493,9 +495,9 @@ function addEventAt(AttendanceDay $day, string $type, string $dateTime): Attenda
 it('calcula horas esperadas positivas en un horario que cruza medianoche', function () {
     seedAttSettings();
     $employee = makeAttEmployee();
-    $schedule = \App\Models\Schedule::create(['name' => 'Nocturno 23-07', 'shift_type' => 'nocturno']);
+    $schedule = Schedule::create(['name' => 'Nocturno 23-07', 'shift_type' => 'nocturno']);
     $schedule->days()->create(['day_of_week' => 1, 'is_active' => true, 'start_time' => '23:00:00', 'end_time' => '07:00:00']);
-    \App\Services\ScheduleAssignmentService::assign($employee, $schedule, Carbon::parse('2026-01-01'));
+    ScheduleAssignmentService::assign($employee, $schedule, Carbon::parse('2026-01-01'));
 
     $day = AttendanceDay::create(['employee_id' => $employee->id, 'date' => '2026-03-16', 'status' => 'absent']);
     addEventAt($day, 'check_in', '2026-03-16 23:00:00');
@@ -600,10 +602,10 @@ it('attendance:recalculate-overnight corrige jornadas nocturnas con horas espera
         'overtime_approved' => true,
     ]);
 
-    \Illuminate\Support\Facades\Artisan::call('attendance:recalculate-overnight', ['--dry-run' => true]);
+    Artisan::call('attendance:recalculate-overnight', ['--dry-run' => true]);
     expect((float) $wrong->fresh()->expected_hours)->toBe(-16.0);
 
-    \Illuminate\Support\Facades\Artisan::call('attendance:recalculate-overnight');
+    Artisan::call('attendance:recalculate-overnight');
 
     expect((float) $wrong->fresh()->expected_hours)->toBe(8.0)
         ->and((float) $wrong->fresh()->extra_hours)->toBe(0.0)
@@ -753,6 +755,26 @@ it('la aprobación manual de un conflicto puede saltarse el mínimo', function (
     );
 
     expect($resolved['allowed'])->toBe(['check_in']);
+});
+
+it('aplica el mínimo también cuando la salida quedó en la jornada del día anterior (turno nocturno)', function () {
+    $employee = makeAttEmployee();
+    $day = makeAttDay($employee, '2026-03-16');
+    addEvent($day, 'check_in', '21:00:00');
+    $day->events()->create([
+        'employee_id' => $employee->id,
+        'event_type' => 'check_out',
+        'recorded_at' => Carbon::parse('2026-03-17 05:58:00'),
+        'source' => 'terminal',
+    ]);
+
+    $tooSoon = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-17 05:58:30'), 'check_in');
+    $enough = AttendanceDay::resolveForEvent($employee, Carbon::parse('2026-03-17 06:05:00'), 'check_in');
+    $state = AttendanceDay::currentStateFor($employee, Carbon::parse('2026-03-17 05:59:00'));
+
+    expect($tooSoon['allowed'])->toBe([])
+        ->and($enough['allowed'])->toBe(['check_in'])
+        ->and($state['allowed'])->toBe([]);
 });
 
 it('el estado que ve el terminal no ofrece la entrada hasta pasar el mínimo', function () {

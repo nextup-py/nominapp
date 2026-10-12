@@ -141,7 +141,10 @@ class AttendanceDay extends Model implements Auditable
             $recordedAt
         );
         if ($enforceReentryGap) {
-            $todayAllowed = static::filterAllowedByReentryGap($todayAllowed, $todayLast, $recordedAt);
+            $gapLast = $todayLast ?? $resolveLast(static::where('employee_id', $employee->id)
+                ->where('date', $recordedAt->copy()->subDay()->toDateString())
+                ->first());
+            $todayAllowed = static::filterAllowedByReentryGap($todayAllowed, $gapLast, $recordedAt);
         }
 
         if (in_array($requestedEventType, $todayAllowed, true)) {
@@ -512,7 +515,7 @@ class AttendanceDay extends Model implements Auditable
                 $employee,
                 $recordedAt
             ),
-            $todayLast,
+            $todayLast ?? $yesterdayLast,
             $recordedAt
         );
         if ($overnightOpen) {
