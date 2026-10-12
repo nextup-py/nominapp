@@ -387,7 +387,12 @@ Cada fila tiene dos botones y dos menús:
 |--------|----------------|----------|
 | **Ajustar Horas Extra** | Siempre visible | Abre el formulario para ingresar horas extras manualmente |
 | **Calcular / Recalcular** | Siempre visible | Ejecuta el cálculo de horas, tardanza y extras para ese día |
+| **Excluir del cálculo** / **Incluir en el cálculo** | Requiere el permiso de edición de asistencias | Para marcaciones de prueba o de instalación: pide un motivo, deja la jornada fuera del cálculo (sin tardanza, extras, pago ni pendientes) y conserva las marcaciones. Se ve en la pestaña **Excluidos del cálculo** y se puede deshacer. No se permite si el empleado ya tiene nómina generada para esa fecha |
 | **Exportar PDF** | Siempre visible | Descarga el comprobante PDF del día de asistencia |
+
+> **Marcaciones repetidas:** si el mismo empleado marca el mismo tipo de evento con pocos segundos de diferencia (doble toque, reintento), el servidor lo toma como ya registrado y no genera un conflicto en **Fallos de Marcación**.
+
+> **Ausencias automáticas:** no se generan ausencias para empleados de una sucursal cuyos terminales aún no están vinculados (por ejemplo, el día de la instalación), salvo que el empleado tenga su celular vinculado.
 
 ### Acciones globales del encabezado
 

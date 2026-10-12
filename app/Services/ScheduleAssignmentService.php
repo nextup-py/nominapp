@@ -133,7 +133,7 @@ class ScheduleAssignmentService
 
                 if ($periods->contains(fn (array $range) => $date >= $range[0] && $date <= $range[1])) {
                     $result['payroll_locked']++;
-                } elseif ($day->overtime_approved || $day->tardiness_deduction_approved || $day->manual_adjustment || $day->second_shift_regular) {
+                } elseif ($day->overtime_approved || $day->tardiness_deduction_approved || $day->manual_adjustment || $day->second_shift_regular || $day->excluded_from_calculation) {
                     $result['protected']++;
                 } else {
                     // En un recálculo normal se conservan las horas esperadas ya guardadas; acá se pide

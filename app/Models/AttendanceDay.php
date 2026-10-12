@@ -21,6 +21,8 @@ class AttendanceDay extends Model implements Auditable
     protected array $auditInclude = [
         'overtime_approved',
         'second_shift_regular',
+        'excluded_from_calculation',
+        'exclusion_reason',
         'tardiness_deduction_approved',
         'notes',
         'manual_adjustment',
@@ -54,6 +56,8 @@ class AttendanceDay extends Model implements Auditable
         'manual_adjustment',
         'overtime_approved',
         'second_shift_regular',
+        'excluded_from_calculation',
+        'exclusion_reason',
         'overtime_limit_exceeded',
         'tardiness_deduction_approved',
         'on_vacation',
@@ -81,6 +85,7 @@ class AttendanceDay extends Model implements Auditable
         'manual_adjustment' => 'boolean',
         'overtime_approved' => 'boolean',
         'second_shift_regular' => 'boolean',
+        'excluded_from_calculation' => 'boolean',
         'overtime_limit_exceeded' => 'boolean',
         'tardiness_deduction_approved' => 'boolean',
         'on_vacation' => 'boolean',
@@ -200,7 +205,7 @@ class AttendanceDay extends Model implements Auditable
      */
     public static function missingCheckOutSql(): string
     {
-        return 'attendance_days.date < ? and '.self::openLastEventSql();
+        return 'attendance_days.date < ? and coalesce(attendance_days.excluded_from_calculation, 0) = 0 and '.self::openLastEventSql();
     }
 
     /**
@@ -244,7 +249,7 @@ class AttendanceDay extends Model implements Auditable
      * tiene horario, rotación ni turno planificado, o trabajó en un día libre de su horario. No se calculan
      * tardanza ni horas extra, así que RR.HH. debe revisarla.
      */
-    public const NO_EXPECTED_SHIFT_SQL = 'attendance_days.is_calculated = 1 and attendance_days.check_in_time is not null and attendance_days.expected_check_in is null';
+    public const NO_EXPECTED_SHIFT_SQL = 'attendance_days.is_calculated = 1 and coalesce(attendance_days.excluded_from_calculation, 0) = 0 and attendance_days.check_in_time is not null and attendance_days.expected_check_in is null';
 
     /**
      * Jornadas con marcaciones y sin horario esperado ese día.
@@ -789,6 +794,8 @@ class AttendanceDay extends Model implements Auditable
         $fieldLabels = [
             'overtime_approved' => 'HE aprobadas',
             'second_shift_regular' => 'Doble turno como jornada normal',
+            'excluded_from_calculation' => 'Excluida del cálculo',
+            'exclusion_reason' => 'Motivo de exclusión',
             'tardiness_deduction_approved' => 'Desc. tardanza aprobado',
             'notes' => 'Notas',
             'manual_adjustment' => 'Ajuste manual',
@@ -815,7 +822,7 @@ class AttendanceDay extends Model implements Auditable
         }
 
         return match ($key) {
-            'overtime_approved', 'second_shift_regular', 'tardiness_deduction_approved', 'manual_adjustment' => $value ? 'Sí' : 'No',
+            'overtime_approved', 'second_shift_regular', 'excluded_from_calculation', 'tardiness_deduction_approved', 'manual_adjustment' => $value ? 'Sí' : 'No',
             'extra_hours_diurnas', 'extra_hours_nocturnas' => number_format((float) $value, 2).' hrs',
             'notes' => Str::limit((string) $value, 120),
             default => (string) $value,

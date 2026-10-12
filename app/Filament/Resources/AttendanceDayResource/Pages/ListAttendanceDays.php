@@ -110,6 +110,11 @@ class ListAttendanceDays extends ListRecords
                 ->badgeColor('gray')
                 ->icon('heroicon-o-calendar-days'),
 
+            'excluded' => Tab::make('Excluidos del cálculo')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('excluded_from_calculation', true))
+                ->badgeColor('gray')
+                ->icon('heroicon-o-no-symbol'),
+
             'calculated' => Tab::make('Calculados')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('is_calculated', true))
                 ->badge($stats->calculated)

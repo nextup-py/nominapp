@@ -118,3 +118,56 @@ it('no ofrece la decisión en un día de un solo turno con horas extra', functio
 
     expect(AttendanceDayResource::getRegularShiftTableAction()->getName())->toBe('regular_shift');
 });
+
+it('excluye una jornada del cálculo conservando las marcaciones y la saca de los pendientes', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+    expect((float) $day->extra_hours)->toBe(4.0);
+
+    Livewire::test(ListAttendanceDays::class)
+        ->set('activeTab', 'all')
+        ->callTableAction('exclude_from_calculation', $day, data: ['reason' => 'Prueba de instalación'])
+        ->assertHasNoTableActionErrors();
+
+    $day->refresh();
+    expect($day->excluded_from_calculation)->toBeTrue()
+        ->and($day->exclusion_reason)->toBe('Prueba de instalación')
+        ->and($day->status)->toBe('on_leave')
+        ->and((int) $day->late_minutes)->toBe(0)
+        ->and((float) $day->extra_hours)->toBe(0.0)
+        ->and($day->events()->count())->toBe(4)
+        ->and(AttendanceDay::query()->needsAttention()->whereKey($day->id)->exists())->toBeFalse();
+});
+
+it('vuelve a incluir la jornada en el cálculo', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+
+    Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')
+        ->callTableAction('exclude_from_calculation', $day, data: ['reason' => 'Prueba']);
+    expect($day->fresh()->excluded_from_calculation)->toBeTrue();
+
+    Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')
+        ->assertCanSeeTableRecords([$day])
+        ->callTableAction('exclude_from_calculation', $day->fresh())
+        ->assertHasNoTableActionErrors();
+
+    $day->refresh();
+    expect($day->excluded_from_calculation)->toBeFalse()
+        ->and($day->exclusion_reason)->toBeNull()
+        ->and($day->status)->toBe('present')
+        ->and($day->check_in_time)->not->toBeNull()
+        ->and((float) $day->total_hours)->toBeGreaterThan(0.0);
+});
+
+it('exige el motivo al excluir', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+
+    Livewire::test(ListAttendanceDays::class)
+        ->set('activeTab', 'all')
+        ->callTableAction('exclude_from_calculation', $day, data: ['reason' => ''])
+        ->assertHasTableActionErrors(['reason' => 'required']);
+
+    expect($day->fresh()->excluded_from_calculation)->toBeFalse();
+});
