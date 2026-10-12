@@ -11,6 +11,7 @@ use App\Models\Branch;
 use App\Models\Employee;
 use App\Services\AttendanceCalculator;
 use App\Services\AttendanceEventCorrectionService;
+use App\Services\OpenShiftCloser;
 use App\Settings\PayrollSettings;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -503,6 +504,8 @@ class AttendanceDayResource extends Resource
                                 ->send();
                         }),
 
+                    self::getCloseOpenShiftsBulkAction(),
+
                     BulkAction::make('calculate')
                         ->label('Calcular/Recalcular')
                         ->icon('heroicon-o-calculator')
@@ -704,6 +707,74 @@ class AttendanceDayResource extends Resource
                 'employee' => $record->employee_id,
                 'month' => $record->date->format('Y-m'),
             ]));
+    }
+
+    /**
+     * Acción masiva que cierra las jornadas sin salida con la hora de fin del horario esperado de cada día.
+     * Omite (y lo informa) las que no tienen horario, quedaron en un descanso, están en una nómina generada o
+     * tienen aprobaciones de RR.HH.; lo cerrado queda como marcación manual.
+     */
+    public static function getCloseOpenShiftsBulkAction(): BulkAction
+    {
+        return BulkAction::make('close_open_shifts')
+            ->label('Cerrar con la salida esperada')
+            ->icon('heroicon-o-arrow-left-start-on-rectangle')
+            ->color('warning')
+            ->visible(fn () => auth()->user()?->can('update_attendance_event') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('Cerrar jornadas sin salida')
+            ->modalDescription(function (Collection $records): string {
+                $closer = app(OpenShiftCloser::class);
+                $skips = [];
+                $closable = 0;
+
+                foreach ($records as $day) {
+                    $skip = $closer->evaluate($day)['skip'];
+                    $skip === null ? $closable++ : $skips[$skip] = ($skips[$skip] ?? 0) + 1;
+                }
+
+                $text = "Se agregará como salida la hora de fin del horario esperado a {$closable} de {$records->count()} jornada(s) seleccionada(s). Quedan como marcaciones manuales y cada jornada se recalcula.";
+
+                if ($skips !== []) {
+                    $labels = OpenShiftCloser::getSkipLabels();
+                    $text .= ' Se omitirán: '.collect($skips)->map(fn (int $count, string $reason) => ($labels[$reason] ?? $reason).": {$count}")->implode('; ').'.';
+                }
+
+                return $text;
+            })
+            ->modalSubmitActionLabel('Sí, cerrar')
+            ->deselectRecordsAfterCompletion()
+            ->action(function (Collection $records): void {
+                $closer = app(OpenShiftCloser::class);
+                $closed = 0;
+                $skips = [];
+                $failed = 0;
+
+                foreach ($records as $day) {
+                    try {
+                        $skip = $closer->close($day);
+                    } catch (\InvalidArgumentException) {
+                        $failed++;
+
+                        continue;
+                    }
+
+                    $skip === null ? $closed++ : $skips[$skip] = ($skips[$skip] ?? 0) + 1;
+                }
+
+                $labels = OpenShiftCloser::getSkipLabels();
+                $body = "Cerradas: {$closed}.";
+
+                if ($skips !== []) {
+                    $body .= ' Omitidas: '.collect($skips)->map(fn (int $count, string $reason) => ($labels[$reason] ?? $reason).": {$count}")->implode('; ').'.';
+                }
+
+                if ($failed > 0) {
+                    $body .= " Con secuencia inválida (sin cambios): {$failed}.";
+                }
+
+                Notification::make()->title('Jornadas cerradas')->body($body)->color($closed > 0 ? 'success' : 'warning')->send();
+            });
     }
 
     /**

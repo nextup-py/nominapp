@@ -12,7 +12,7 @@ Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que 
 
 | Tarjeta | Qué cuenta | Dónde se resuelve |
 |---------|-----------|-------------------|
-| **Jornadas sin salida** | Jornadas anteriores a hoy con entrada y sin salida | **Asistencias**, con el filtro *Sin salida registrada* (acción **Corregir marcaciones**) |
+| **Jornadas sin salida** | Jornadas anteriores a hoy con entrada y sin salida | **Asistencias**, con el filtro *Sin salida registrada* (acción **Corregir marcaciones**, o **Cerrar con la salida esperada** para varias a la vez) |
 | **Tardanzas por aprobar** | Minutos de atraso sin decisión de descuento | **Asistencias**, pestaña *Requieren atención* |
 | **Horas extra por aprobar** | Horas sobre el horario sin aprobar | **Asistencias**, pestaña *Requieren atención* |
 | **Jornadas sin horario ese día** | Jornadas con marcaciones y sin horario esperado (el empleado no tiene horario o trabajó en un día libre): no se les calculan tardanza ni extras | **Asistencias**, pestaña *Requieren atención* |
@@ -177,6 +177,18 @@ Si un empleado marca **entrada** y nunca marca **salida**, la jornada queda abie
 - **Filtro "Sin salida registrada"** en **Asistencias** (listado de jornadas): muestra las jornadas de días anteriores a hoy cuyo último evento no es una salida (se cuentan desde el día siguiente al turno, así un turno nocturno de ayer ya terminado aparece y uno de hoy en curso no). Se combina con las pestañas, por ejemplo **Incompletos**.
 - **Aviso diario en la campanita** (08:52) para quienes pueden ver asistencias: indica cuántas jornadas quedaron sin salida y cuál es la más antigua, con un botón **Ver jornadas** que abre el listado con el filtro activo. No se repite mientras el aviso anterior siga sin leer. Se consideran los últimos 30 días.
 - **Para corregirla**, abrir la jornada y agregar la salida que falta desde sus marcaciones.
+
+**Cerrar varias jornadas a la vez:** en **Asistencias**, con el filtro *Sin salida registrada* activo, marcar las jornadas (o **Seleccionar todos**) y elegir **Cerrar con la salida esperada** en el menú de acciones masivas. La ventana de confirmación resume cuántas se cerrarán y cuántas se omitirán, y por qué. A cada jornada se le agrega como salida la **hora de fin de su horario esperado** (en un turno que cruza medianoche, del día siguiente); queda como marcación **Manual** y la jornada se recalcula. Se omiten, y quedan para corregir a mano con **Corregir marcaciones**:
+
+- las que quedaron **en un descanso** (hay que decidir cómo cerrarlas),
+- las **sin horario esperado** (no hay hora de salida para proponer),
+- las cuya salida esperada es **anterior a su última marcación**,
+- las **dentro de una nómina ya generada** del empleado,
+- las con **extras o tardanza aprobadas**, ajuste manual o doble turno aceptado como jornada normal.
+
+![Ventana de confirmación de Cerrar jornadas sin salida con el resumen de cuántas se cierran y cuántas se omiten](/docs-images/07-asistencias-cerrar-sin-salida.png)
+
+> Es una ayuda para no cargar a mano decenas de jornadas olvidadas: la hora propuesta es la del horario, no la real. Si las horas reales importan (por ejemplo, para horas extra), corregirlas una por una.
 
 Si el empleado después marca una **salida** y la jornada abierta es de hace 2 o más días, el sistema no la cuelga de esa jornada vieja: queda como **conflicto** en **Fallos de Marcación**, con una sección **Jornada abierta anterior** que enlaza a la jornada sin salida. Primero se corrige esa jornada y recién después se resuelve el conflicto.
 
