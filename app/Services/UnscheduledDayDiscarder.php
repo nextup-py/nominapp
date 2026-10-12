@@ -48,7 +48,7 @@ class UnscheduledDayDiscarder
             return self::SKIP_PAYROLL_LOCKED;
         }
 
-        if ($day->overtime_approved || $day->tardiness_deduction_approved || $day->manual_adjustment || $day->second_shift_regular || $day->excluded_from_calculation) {
+        if ($day->hasProtectedDecisions()) {
             return self::SKIP_PROTECTED;
         }
 
