@@ -145,7 +145,7 @@ class AttendanceDayResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'present')
+            ->modifyQueryUsing(fn (Builder $query) => $query->where(fn (Builder $q) => $q->where('status', 'present')->orWhere('excluded_from_calculation', true))
                 ->select('attendance_days.*')
                 ->selectRaw(AttendanceDay::lastEventTypeSql().' as last_event_type')
                 ->with(['employee.branch.company', 'employee.activeContract.position.department']))
@@ -360,6 +360,7 @@ class AttendanceDayResource extends Resource
                 TableActionGroup::make([
                     self::getAdjustExtraHoursTableAction(),
                     self::getCalculateTableAction(),
+                    self::getExcludeFromCalculationTableAction(),
                     self::getExportPdfTableAction(),
                 ])
                     ->label('Más')
@@ -671,6 +672,46 @@ class AttendanceDayResource extends Resource
     private static function canDecideRegularShift(AttendanceDay $record): bool
     {
         return ($record->second_shift_regular || (float) $record->extra_hours > 0) && $record->hasMultipleShifts();
+    }
+
+    /**
+     * Excluye (o vuelve a incluir) una jornada del cálculo: marcaciones de prueba o de instalación
+     * que no deben generar tardanza, extras ni pago. Las marcaciones se conservan.
+     */
+    public static function getExcludeFromCalculationTableAction(): TableAction
+    {
+        return TableAction::make('exclude_from_calculation')
+            ->label(fn (AttendanceDay $record) => $record->excluded_from_calculation ? 'Incluir en el cálculo' : 'Excluir del cálculo')
+            ->icon(fn (AttendanceDay $record) => $record->excluded_from_calculation ? 'heroicon-o-arrow-uturn-left' : 'heroicon-o-no-symbol')
+            ->color(fn (AttendanceDay $record) => $record->excluded_from_calculation ? 'gray' : 'warning')
+            ->tooltip('Para marcaciones de prueba o de instalación: se conservan, pero no generan tardanza, extras ni pago')
+            ->visible(fn (AttendanceDay $record) => auth()->user()?->can('update_attendance_day') === true)
+            ->modalHeading(fn (AttendanceDay $record) => $record->excluded_from_calculation ? 'Incluir la jornada en el cálculo' : 'Excluir la jornada del cálculo')
+            ->modalDescription(fn (AttendanceDay $record) => $record->excluded_from_calculation
+                ? 'La jornada volverá a calcularse con sus marcaciones.'
+                : 'La jornada dejará de contar como presente y no generará tardanza, extras ni pendientes. Las marcaciones no se borran y se puede deshacer.')
+            ->modalSubmitActionLabel(fn (AttendanceDay $record) => $record->excluded_from_calculation ? 'Sí, incluir' : 'Sí, excluir')
+            ->form(fn (AttendanceDay $record) => $record->excluded_from_calculation ? [] : [
+                TextInput::make('reason')->label('Motivo')->placeholder('Ej: Prueba de instalación del terminal')->required()->maxLength(190),
+            ])
+            ->action(function (AttendanceDay $record, array $data) {
+                if (app(OpenShiftCloser::class)->isPayrollLocked($record)) {
+                    Notification::make()->warning()->title('No se puede cambiar')
+                        ->body('El empleado ya tiene una nómina generada que incluye esta fecha.')->send();
+
+                    return;
+                }
+
+                $exclude = ! $record->excluded_from_calculation;
+                $record->excluded_from_calculation = $exclude;
+                $record->exclusion_reason = $exclude ? ($data['reason'] ?? null) : null;
+                $record->is_calculated = false;
+                AttendanceCalculator::apply($record);
+                $record->save();
+
+                Notification::make()->success()
+                    ->title($exclude ? 'Jornada excluida del cálculo' : 'Jornada incluida en el cálculo')->send();
+            });
     }
 
     /**

@@ -266,3 +266,43 @@ it('aprobar un conflicto mobile reconstruye el evento con source mobile', functi
         ->and($result['event']->source)->toBe('mobile')
         ->and($result['event']->synced_at)->not->toBeNull();
 });
+
+it('toma como entregada una marcación repetida a pocos segundos, sin generar conflicto', function () {
+    $employee = makeMobileSyncEmployee();
+    $service = app(MobileEventSyncService::class);
+
+    $first = $service->syncBatch($employee, [[
+        'client_event_id' => (string) Str::uuid(),
+        'event_type' => 'check_in',
+        'recorded_at' => '2026-08-19 08:00:00',
+    ]]);
+    $repeat = $service->syncBatch($employee, [[
+        'client_event_id' => (string) Str::uuid(),
+        'event_type' => 'check_in',
+        'recorded_at' => '2026-08-19 08:00:20',
+    ]]);
+
+    expect($repeat[0]['status'])->toBe('duplicate')
+        ->and($repeat[0]['event_id'])->toBe($first[0]['event_id'])
+        ->and(AttendanceEvent::count())->toBe(1)
+        ->and(AttendanceMarkFailure::count())->toBe(0);
+});
+
+it('sigue marcando conflicto si la repetición del mismo tipo llega pasada la ventana', function () {
+    $employee = makeMobileSyncEmployee();
+    $service = app(MobileEventSyncService::class);
+
+    $service->syncBatch($employee, [[
+        'client_event_id' => (string) Str::uuid(),
+        'event_type' => 'check_in',
+        'recorded_at' => '2026-08-19 08:00:00',
+    ]]);
+    $late = $service->syncBatch($employee, [[
+        'client_event_id' => (string) Str::uuid(),
+        'event_type' => 'check_in',
+        'recorded_at' => '2026-08-19 08:05:00',
+    ]]);
+
+    expect($late[0]['status'])->toBe('conflict')
+        ->and(AttendanceMarkFailure::count())->toBe(1);
+});

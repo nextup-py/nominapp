@@ -176,7 +176,7 @@ Después de marcar la **salida**, el empleado puede marcar una **nueva entrada**
 Si un empleado marca **entrada** y nunca marca **salida**, la jornada queda abierta: no se calculan sus horas. Para que no pase inadvertido:
 
 - **Filtro "Sin salida registrada"** en **Asistencias** (listado de jornadas): muestra las jornadas de días anteriores a hoy cuyo último evento no es una salida (se cuentan desde el día siguiente al turno, así un turno nocturno de ayer ya terminado aparece y uno de hoy en curso no). Se combina con las pestañas, por ejemplo **Incompletos**.
-- **Aviso diario en la campanita** (08:52) para quienes pueden ver asistencias: indica cuántas jornadas quedaron sin salida y cuál es la más antigua, con un botón **Ver jornadas** que abre el listado con el filtro activo. No se repite mientras el aviso anterior siga sin leer. Se consideran los últimos 30 días.
+- **Aviso diario en la campanita** (08:52) para quienes pueden ver asistencias: indica cuántas jornadas quedaron sin salida y cuál es la más antigua, con un botón **Ver jornadas** que abre el listado con el filtro activo. No se repite mientras el aviso anterior siga sin leer. Si algunas se pueden cerrar con la hora de salida del horario, el aviso indica cuántas: es la propuesta diaria, que RR.HH. revisa y aprueba con **Cerrar jornadas sin salida** (nada se cierra solo). Se consideran los últimos 30 días.
 - **Para corregirla**, abrir la jornada y agregar la salida que falta desde sus marcaciones.
 
 **Cerrar varias jornadas a la vez:** en **Asistencias**, con el filtro *Sin salida registrada* activo, marcar las jornadas (o **Seleccionar todos**) y elegir **Cerrar con la salida esperada** en el menú de acciones masivas. La ventana de confirmación resume cuántas se cerrarán y cuántas se omitirán, y por qué. A cada jornada se le agrega como salida la **hora de fin de su horario esperado** (en un turno que cruza medianoche, del día siguiente); queda como marcación **Manual** y la jornada se recalcula. Se omiten, y quedan para corregir a mano con **Corregir marcaciones**:
@@ -184,6 +184,7 @@ Si un empleado marca **entrada** y nunca marca **salida**, la jornada queda abie
 - las que quedaron **en un descanso** (hay que decidir cómo cerrarlas),
 - las **sin horario esperado** (no hay hora de salida para proponer),
 - las cuya salida esperada es **anterior a su última marcación**,
+- las cuya **primera entrada está a más de 3 horas del inicio del horario**: suele ser la salida del turno anterior marcada como entrada, y cerrarla con la salida del horario daría una jornada de casi 24 horas,
 - las **dentro de una nómina ya generada** del empleado,
 - las con **extras o tardanza aprobadas**, ajuste manual o doble turno aceptado como jornada normal.
 
@@ -386,7 +387,12 @@ Cada fila tiene dos botones y dos menús:
 |--------|----------------|----------|
 | **Ajustar Horas Extra** | Siempre visible | Abre el formulario para ingresar horas extras manualmente |
 | **Calcular / Recalcular** | Siempre visible | Ejecuta el cálculo de horas, tardanza y extras para ese día |
+| **Excluir del cálculo** / **Incluir en el cálculo** | Requiere el permiso de edición de asistencias | Para marcaciones de prueba o de instalación: pide un motivo, deja la jornada fuera del cálculo (sin tardanza, extras, pago ni pendientes) y conserva las marcaciones. Se ve en la pestaña **Excluidos del cálculo** y se puede deshacer. No se permite si el empleado ya tiene nómina generada para esa fecha |
 | **Exportar PDF** | Siempre visible | Descarga el comprobante PDF del día de asistencia |
+
+> **Marcaciones repetidas:** si el mismo empleado marca el mismo tipo de evento con pocos segundos de diferencia (doble toque, reintento), el servidor lo toma como ya registrado y no genera un conflicto en **Fallos de Marcación**.
+
+> **Ausencias automáticas:** no se generan ausencias para empleados de una sucursal cuyos terminales aún no están vinculados (por ejemplo, el día de la instalación), salvo que el empleado tenga su celular vinculado.
 
 ### Acciones globales del encabezado
 

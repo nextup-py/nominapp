@@ -180,3 +180,22 @@ it('attendance:notify-open-shifts no avisa si no hay jornadas abiertas', functio
 
     expect($hr->unreadNotifications()->count())->toBe(0);
 });
+
+it('attendance:notify-open-shifts propone el cierre de las jornadas que se pueden cerrar con el horario', function () {
+    Carbon::setTestNow(Carbon::parse('2026-10-10 10:00:00'));
+    $employee = makeOpenShiftEmployee();
+    $closable = makeDayWithEvents($employee, '2026-10-09', [['check_in', '08:05']]);
+    $closable->update(['expected_check_in' => '08:00:00', 'expected_check_out' => '17:00:00']);
+    makeDayWithEvents($employee, '2026-10-08', [['check_in', '08:00']]); // sin horario esperado: no se propone
+
+    Permission::firstOrCreate(['name' => 'view_any_attendance_day', 'guard_name' => 'web']);
+    $hr = User::factory()->create();
+    $hr->givePermissionTo('view_any_attendance_day');
+
+    Artisan::call('attendance:notify-open-shifts');
+
+    $data = $hr->unreadNotifications()->first()->data;
+    expect($data['open_shifts_count'])->toBe(2)
+        ->and($data['closable_count'])->toBe(1)
+        ->and($data['body'])->toContain('1 se pueden cerrar');
+});

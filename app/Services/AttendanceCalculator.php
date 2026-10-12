@@ -56,6 +56,16 @@ class AttendanceCalculator
             return;
         }
 
+        // Jornada excluida por RR.HH. (marcaciones de prueba/instalación): se conservan las
+        // marcaciones, pero no cuenta como presente ni genera tardanza, extras o pago.
+        if ($day->excluded_from_calculation) {
+            $day->status = self::STATUS_ON_LEAVE;
+            self::clearAttendanceData($day);
+            self::markAsCalculated($day);
+
+            return;
+        }
+
         // Verificar si el empleado está de vacaciones o tiene permiso aprobado
         self::checkVacationStatus($day);
         self::checkLeaveStatus($day);
@@ -395,7 +405,7 @@ class AttendanceCalculator
             if ($event->event_type === self::EVENT_BREAK_START) {
                 $breakStart = $event->recorded_at;
             } elseif ($event->event_type === self::EVENT_BREAK_END && $breakStart) {
-                $totalMinutes += Carbon::parse($breakStart)->diffInMinutes($event->recorded_at);
+                $totalMinutes += (int) Carbon::parse($breakStart)->diffInMinutes($event->recorded_at);
                 $breakStart = null; // Reset para el siguiente par
             }
         }

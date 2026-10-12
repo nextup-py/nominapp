@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Database\Factories\AttendanceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AttendanceEvent extends Model
 {
+    /** Segundos dentro de los cuales una marcación del mismo tipo se toma como repetición de la anterior. */
+    public const REPEAT_WINDOW_SECONDS = 60;
+
     /** @use HasFactory<AttendanceFactory> */
     use HasFactory;
 
@@ -228,6 +232,18 @@ class AttendanceEvent extends Model
             'manual' => 'heroicon-o-pencil-square',
             default => 'heroicon-o-question-mark-circle',
         };
+    }
+
+    /**
+     * Indica si un evento entrante es una repetición de la última marcación:
+     * mismo tipo y a pocos segundos (doble toque, reintento desde otro origen).
+     * Al sincronizar se trata como entregado en vez de generar un conflicto.
+     */
+    public static function isRepeatOf(?self $last, string $eventType, CarbonInterface $recordedAt): bool
+    {
+        return $last !== null
+            && $last->event_type === $eventType
+            && abs($recordedAt->getTimestamp() - $last->recorded_at->getTimestamp()) <= self::REPEAT_WINDOW_SECONDS;
     }
 
     /**
