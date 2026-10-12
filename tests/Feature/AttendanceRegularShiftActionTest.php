@@ -10,7 +10,10 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollPeriod;
+use App\Models\Schedule;
+use App\Models\ScheduleDay;
 use App\Models\User;
+use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
 use Filament\Actions\DeleteAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -307,4 +310,89 @@ it('Aprobar HE del período aprueba lo seguro, deja auditoría y omite tope lega
     expect(AttendanceDayResource::overtimeRangeCandidates('2026-03-31', '2026-03-31'))
         ->approvable->toHaveCount(0)
         ->skipped->toBe(['limit' => 0, 'double_shift' => 0, 'payroll' => 1]);
+});
+
+// ─── Búsqueda, filtros, recálculo con horario y auditoría de estado ──────────
+
+it('el listado busca por nombre completo, por apellido y por cédula', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+
+    foreach (['Doble Turno', 'Turno', '4400001'] as $term) {
+        Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')
+            ->searchTable($term)->assertCanSeeTableRecords([$day]);
+    }
+
+    Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')
+        ->searchTable('Inexistente Persona')->assertCanNotSeeTableRecords([$day]);
+});
+
+it('el filtro de fechas incluye los extremos del rango', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+
+    Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')
+        ->filterTable('date', ['from' => '2026-03-16', 'to' => '2026-03-16'])->assertCanSeeTableRecords([$day]);
+
+    Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')
+        ->filterTable('date', ['from' => '2026-03-17', 'to' => null])->assertCanNotSeeTableRecords([$day]);
+});
+
+/** Asigna al empleado un horario 09:00-17:00 los lunes, vigente desde enero (el día de prueba fue calculado con 07:00-15:00). */
+function assignMondayNineToFive(AttendanceDay $day): void
+{
+    $schedule = Schedule::create(['name' => 'Lunes 9 a 17', 'shift_type' => 'diurno', 'description' => null]);
+    ScheduleDay::create([
+        'schedule_id' => $schedule->id, 'day_of_week' => 1, 'is_active' => true, 'start_time' => '09:00', 'end_time' => '17:00',
+    ]);
+    ScheduleAssignmentService::assign($day->employee, $schedule, Carbon::parse('2026-01-01'));
+}
+
+it('recalcular conserva las horas esperadas salvo que se pida leer el horario vigente', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+    assignMondayNineToFive($day);
+
+    $table = Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all');
+    $table->callTableAction('calculate', $day, data: ['refresh_schedule' => false]);
+    expect($day->fresh()->expected_check_in)->toBe('07:00:00');
+
+    $table->callTableAction('calculate', $day->fresh(), data: ['refresh_schedule' => true]);
+    expect($day->fresh()->expected_check_in)->toBe('09:00:00');
+});
+
+it('leer el horario vigente respeta las jornadas con aprobaciones o ajustes', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+    assignMondayNineToFive($day);
+    $day->update(['overtime_approved' => true]);
+
+    $table = Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all');
+    $table->callTableAction('calculate', $day->fresh(), data: ['refresh_schedule' => true]);
+    $table->callTableBulkAction('calculate', [$day->fresh()], data: ['refresh_schedule' => true]);
+
+    expect($day->fresh()->expected_check_in)->toBe('07:00:00')
+        ->and($day->fresh()->hasProtectedDecisions())->toBeTrue();
+});
+
+it('la acción masiva de calcular puede leer el horario vigente', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+    assignMondayNineToFive($day);
+
+    Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')
+        ->callTableBulkAction('calculate', [$day], data: ['refresh_schedule' => true]);
+
+    expect($day->fresh()->expected_check_in)->toBe('09:00:00');
+});
+
+it('un cambio manual de estado queda en el historial de la jornada', function () {
+    config(['audit.console' => true]);
+    $day = makeDoubleShiftDay();
+
+    $day->update(['status' => 'absent']);
+
+    $audit = $day->audits()->latest('id')->first();
+    expect($audit)->not->toBeNull()
+        ->and($audit->new_values)->toHaveKey('status', 'absent');
 });

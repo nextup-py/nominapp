@@ -388,7 +388,7 @@ Cada fila tiene dos botones y dos menús:
 | Acción | Cuándo aparece | Qué hace |
 |--------|----------------|----------|
 | **Ajustar Horas Extra** | Siempre visible | Abre el formulario para ingresar horas extras manualmente |
-| **Calcular / Recalcular** | Siempre visible | Ejecuta el cálculo de horas, tardanza y extras para ese día |
+| **Calcular / Recalcular** | Siempre visible | Ejecuta el cálculo de horas, tardanza y extras para ese día. En una jornada ya calculada ofrece **Volver a leer el horario vigente**: sin esa opción se conservan las horas esperadas guardadas, así que si el horario cambió hay que activarla. No se aplica a jornadas con aprobaciones, ajuste manual, doble turno aceptado o exclusión del cálculo |
 | **Excluir del cálculo** / **Incluir en el cálculo** | Requiere el permiso de edición de asistencias | Para marcaciones de prueba o de instalación: pide un motivo, deja la jornada fuera del cálculo (sin tardanza, extras, pago ni pendientes) y conserva las marcaciones. Se ve en la pestaña **Excluidos del cálculo** y se puede deshacer. No se permite si el empleado ya tiene nómina generada para esa fecha |
 | **Exportar PDF** | Siempre visible | Descarga el comprobante PDF del día de asistencia |
 
@@ -408,7 +408,7 @@ Desde el encabezado del listado de asistencias están disponibles:
 
 ### Filtros disponibles
 
-- **Empleado** — buscar por nombre, apellido o CI; selección múltiple
+- **Empleado** — buscar por nombre, apellido o CI; selección múltiple. El buscador de la tabla también encuentra por nombre completo (por ejemplo, «Gissela Piris») y por cédula
 - **Sucursal** — selección múltiple
 - **Rango de fechas** — acceso rápido (hoy, esta semana, quincena, mes) o fechas manuales
 
@@ -466,7 +466,7 @@ Clic en cualquier fila de la tabla para abrir el detalle completo del día. Desd
 | **Aprobar / Revocar Tardanza** | Igual que en la tabla; visible solo si hay tardanza |
 | **Ajustar Horas Extra** | Ingresa horas extras manualmente sin necesidad de volver al listado |
 | **Exportar PDF** | Descarga el comprobante PDF del día |
-| **Calcular / Recalcular** | Recalcula todos los totales del día a partir de las marcaciones |
+| **Calcular / Recalcular** | Recalcula todos los totales del día a partir de las marcaciones (con la opción **Volver a leer el horario vigente**, igual que en el listado) |
 
 ---
 
@@ -629,7 +629,7 @@ El cálculo del resumen diario se ejecuta automáticamente cada noche a las 23:0
 ### Recalcular múltiples registros
 
 1. Seleccionar registros en la tabla
-2. En acciones masivas → **Calcular/Recalcular**
+2. En acciones masivas → **Calcular/Recalcular** (con **Volver a leer el horario vigente** si el horario cambió; las jornadas con aprobaciones o ajustes se omiten en esa parte y la notificación indica cuántas)
 3. Confirmar
 
 ---

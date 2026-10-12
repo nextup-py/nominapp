@@ -19,6 +19,7 @@ class AttendanceDay extends Model implements Auditable
 
     /** @var array<int, string> Campos auditados en el historial de cambios. */
     protected array $auditInclude = [
+        'status',
         'overtime_approved',
         'second_shift_regular',
         'excluded_from_calculation',
@@ -575,6 +576,19 @@ class AttendanceDay extends Model implements Auditable
     }
 
     /**
+     * Indica si RR.HH. ya tomó decisiones sobre la jornada (aprobaciones, ajuste manual, doble turno aceptado
+     * o exclusión del cálculo). Los procesos masivos que reescriben horas esperadas o marcaciones la respetan.
+     */
+    public function hasProtectedDecisions(): bool
+    {
+        return $this->overtime_approved
+            || $this->tardiness_deduction_approved
+            || $this->manual_adjustment
+            || $this->second_shift_regular
+            || $this->excluded_from_calculation;
+    }
+
+    /**
      * Indica si el día tiene más de una entrada (un segundo turno después de una salida).
      */
     public function hasMultipleShifts(): bool
@@ -792,6 +806,7 @@ class AttendanceDay extends Model implements Auditable
         }
 
         $fieldLabels = [
+            'status' => 'Estado',
             'overtime_approved' => 'HE aprobadas',
             'second_shift_regular' => 'Doble turno como jornada normal',
             'excluded_from_calculation' => 'Excluida del cálculo',
@@ -824,6 +839,7 @@ class AttendanceDay extends Model implements Auditable
         return match ($key) {
             'overtime_approved', 'second_shift_regular', 'excluded_from_calculation', 'tardiness_deduction_approved', 'manual_adjustment' => $value ? 'Sí' : 'No',
             'extra_hours_diurnas', 'extra_hours_nocturnas' => number_format((float) $value, 2).' hrs',
+            'status' => self::getStatusLabel((string) $value),
             'notes' => Str::limit((string) $value, 120),
             default => (string) $value,
         };
