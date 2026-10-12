@@ -65,6 +65,81 @@ class AttendanceDayResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+    /**
+     * Indica si el usuario puede modificar jornadas (aprobar, ajustar, recalcular). Las acciones
+     * personalizadas de Filament no consultan la policy solas: sin esto cualquier usuario que
+     * pueda ver el listado podría ejecutarlas.
+     */
+    public static function canManageDays(): bool
+    {
+        return auth()->user()?->can('update_attendance_day') === true;
+    }
+
+    /**
+     * Indica si la fecha de la jornada ya está cubierta por una nómina generada del empleado y, si es
+     * así, avisa al usuario. Cambiar aprobaciones o cálculos después dejaría la nómina desfasada.
+     */
+    public static function blockedByPayroll(AttendanceDay $day, ?OpenShiftCloser $closer = null): bool
+    {
+        if (! ($closer ?? app(OpenShiftCloser::class))->isPayrollLocked($day)) {
+            return false;
+        }
+
+        Notification::make()
+            ->warning()
+            ->title('Nómina generada')
+            ->body('El empleado ya tiene una nómina generada que incluye esta fecha: la asistencia no se puede modificar.')
+            ->send();
+
+        return true;
+    }
+
+    /** Texto para las notificaciones masivas con las jornadas omitidas por tener nómina generada. */
+    private static function lockedSuffix(int $locked): string
+    {
+        return $locked > 0 ? " | Omitidas por nómina generada: {$locked}" : '';
+    }
+
+    /**
+     * Separa los días con horas extra pendientes de un rango entre los que se pueden aprobar en bloque
+     * y los que requieren revisión individual (tope legal excedido, doble turno sin decidir, nómina generada).
+     *
+     * @return array{approvable: Collection<int, AttendanceDay>, skipped: array{limit: int, double_shift: int, payroll: int}}
+     */
+    public static function overtimeRangeCandidates(string $start, string $end): array
+    {
+        $closer = app(OpenShiftCloser::class);
+        $skipped = ['limit' => 0, 'double_shift' => 0, 'payroll' => 0];
+
+        $approvable = AttendanceDay::query()
+            ->whereBetween('date', [$start, $end])
+            ->where('extra_hours', '>', 0)
+            ->where('overtime_approved', false)
+            ->get()
+            ->filter(function (AttendanceDay $day) use ($closer, &$skipped): bool {
+                if ($day->overtime_limit_exceeded) {
+                    $skipped['limit']++;
+
+                    return false;
+                }
+                if (! $day->second_shift_regular && $day->hasMultipleShifts()) {
+                    $skipped['double_shift']++;
+
+                    return false;
+                }
+                if ($closer->isPayrollLocked($day)) {
+                    $skipped['payroll']++;
+
+                    return false;
+                }
+
+                return true;
+            })
+            ->values();
+
+        return ['approvable' => $approvable, 'skipped' => $skipped];
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -369,6 +444,7 @@ class AttendanceDayResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve_overtime')
+                        ->authorize(fn (): bool => self::canManageDays())
                         ->label('Aprobar Horas Extra')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
@@ -387,9 +463,13 @@ class AttendanceDayResource extends Resource
                         ->action(function (Collection $records) {
                             $approved = 0;
                             $skipped = 0;
+                            $locked = 0;
+                            $closer = app(OpenShiftCloser::class);
 
                             foreach ($records as $day) {
-                                if ($day->extra_hours > 0 && ! $day->overtime_approved) {
+                                if ($closer->isPayrollLocked($day)) {
+                                    $locked++;
+                                } elseif ($day->extra_hours > 0 && ! $day->overtime_approved) {
                                     $day->overtime_approved = true;
                                     $day->save();
                                     $approved++;
@@ -400,12 +480,13 @@ class AttendanceDayResource extends Resource
 
                             Notification::make()
                                 ->title('Aprobación completada')
-                                ->body("Aprobadas: {$approved} | Omitidas (sin hrs extra o ya aprobadas): {$skipped}")
+                                ->body("Aprobadas: {$approved} | Omitidas (sin hrs extra o ya aprobadas): {$skipped}".self::lockedSuffix($locked))
                                 ->success()
                                 ->send();
                         }),
 
                     BulkAction::make('revoke_overtime')
+                        ->authorize(fn (): bool => self::canManageDays())
                         ->label('Revocar Horas Extra')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
@@ -422,9 +503,13 @@ class AttendanceDayResource extends Resource
                         ->action(function (Collection $records) {
                             $revoked = 0;
                             $skipped = 0;
+                            $locked = 0;
+                            $closer = app(OpenShiftCloser::class);
 
                             foreach ($records as $day) {
-                                if ($day->overtime_approved) {
+                                if ($closer->isPayrollLocked($day)) {
+                                    $locked++;
+                                } elseif ($day->overtime_approved) {
                                     $day->overtime_approved = false;
                                     $day->save();
                                     $revoked++;
@@ -435,12 +520,13 @@ class AttendanceDayResource extends Resource
 
                             Notification::make()
                                 ->title('Revocación completada')
-                                ->body("Revocadas: {$revoked} | Omitidas (ya sin aprobar): {$skipped}")
+                                ->body("Revocadas: {$revoked} | Omitidas (ya sin aprobar): {$skipped}".self::lockedSuffix($locked))
                                 ->success()
                                 ->send();
                         }),
 
                     BulkAction::make('approve_tardiness')
+                        ->authorize(fn (): bool => self::canManageDays())
                         ->label('Aprobar Descuento Tardanza')
                         ->icon('heroicon-o-check-circle')
                         ->color('warning')
@@ -457,8 +543,12 @@ class AttendanceDayResource extends Resource
                         ->action(function (Collection $records) {
                             $approved = 0;
                             $skipped = 0;
+                            $locked = 0;
+                            $closer = app(OpenShiftCloser::class);
                             foreach ($records as $day) {
-                                if ($day->late_minutes > 0 && ! $day->tardiness_deduction_approved) {
+                                if ($closer->isPayrollLocked($day)) {
+                                    $locked++;
+                                } elseif ($day->late_minutes > 0 && ! $day->tardiness_deduction_approved) {
                                     $day->tardiness_deduction_approved = true;
                                     $day->save();
                                     $approved++;
@@ -468,12 +558,13 @@ class AttendanceDayResource extends Resource
                             }
                             Notification::make()
                                 ->title('Aprobación completada')
-                                ->body("Aprobadas: {$approved} | Omitidas: {$skipped}")
+                                ->body("Aprobadas: {$approved} | Omitidas: {$skipped}".self::lockedSuffix($locked))
                                 ->success()
                                 ->send();
                         }),
 
                     BulkAction::make('revoke_tardiness')
+                        ->authorize(fn (): bool => self::canManageDays())
                         ->label('Revocar Descuento Tardanza')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
@@ -490,8 +581,12 @@ class AttendanceDayResource extends Resource
                         ->action(function (Collection $records) {
                             $revoked = 0;
                             $skipped = 0;
+                            $locked = 0;
+                            $closer = app(OpenShiftCloser::class);
                             foreach ($records as $day) {
-                                if ($day->tardiness_deduction_approved) {
+                                if ($closer->isPayrollLocked($day)) {
+                                    $locked++;
+                                } elseif ($day->tardiness_deduction_approved) {
                                     $day->tardiness_deduction_approved = false;
                                     $day->save();
                                     $revoked++;
@@ -501,7 +596,7 @@ class AttendanceDayResource extends Resource
                             }
                             Notification::make()
                                 ->title('Revocación completada')
-                                ->body("Revocadas: {$revoked} | Omitidas: {$skipped}")
+                                ->body("Revocadas: {$revoked} | Omitidas: {$skipped}".self::lockedSuffix($locked))
                                 ->success()
                                 ->send();
                         }),
@@ -511,6 +606,7 @@ class AttendanceDayResource extends Resource
                     self::getDiscardUnscheduledDaysBulkAction(),
 
                     BulkAction::make('calculate')
+                        ->authorize(fn (): bool => self::canManageDays())
                         ->label('Calcular/Recalcular')
                         ->icon('heroicon-o-calculator')
                         ->color('success')
@@ -529,9 +625,17 @@ class AttendanceDayResource extends Resource
                             $failed = 0;
                             $recalculated = 0;
                             $calculated = 0;
+                            $locked = 0;
                             $statusCounts = [];
+                            $closer = app(OpenShiftCloser::class);
 
                             foreach ($records as $day) {
+                                if ($closer->isPayrollLocked($day)) {
+                                    $locked++;
+
+                                    continue;
+                                }
+
                                 try {
                                     $wasCalculated = $day->is_calculated;
 
@@ -564,6 +668,7 @@ class AttendanceDayResource extends Resource
                             if ($failed > 0) {
                                 $summary .= "\nFallidos: {$failed}";
                             }
+                            $summary .= self::lockedSuffix($locked);
 
                             Notification::make()
                                 ->title($failed > 0 ? 'Cálculo completado con advertencias' : 'Cálculo completado')
@@ -587,6 +692,7 @@ class AttendanceDayResource extends Resource
     public static function getApproveOvertimeTableAction(): TableAction
     {
         return TableAction::make('approve_overtime')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label(fn (AttendanceDay $record) => $record->overtime_approved ? 'Revocar' : 'Aprobar')
             ->icon(fn (AttendanceDay $record) => $record->overtime_approved ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
             ->color(fn (AttendanceDay $record) => $record->overtime_approved ? 'danger' : 'success')
@@ -609,6 +715,10 @@ class AttendanceDayResource extends Resource
             )
             ->modalSubmitActionLabel(fn (AttendanceDay $record) => $record->overtime_approved ? 'Sí, revocar' : 'Sí, aprobar')
             ->action(function (AttendanceDay $record) {
+                if (self::blockedByPayroll($record)) {
+                    return;
+                }
+
                 $wasApproved = $record->overtime_approved;
                 $record->overtime_approved = ! $wasApproved;
                 $record->save();
@@ -629,6 +739,7 @@ class AttendanceDayResource extends Resource
     public static function getApproveOvertimeAction(): Action
     {
         return Action::make('approve_overtime')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label(fn (AttendanceDay $record) => $record->overtime_approved ? 'Revocar Horas Extra' : 'Aprobar Horas Extra')
             ->icon(fn (AttendanceDay $record) => $record->overtime_approved ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
             ->color(fn (AttendanceDay $record) => $record->overtime_approved ? 'danger' : 'success')
@@ -651,6 +762,10 @@ class AttendanceDayResource extends Resource
             )
             ->modalSubmitActionLabel(fn (AttendanceDay $record) => $record->overtime_approved ? 'Sí, revocar' : 'Sí, aprobar')
             ->action(function (AttendanceDay $record) {
+                if (self::blockedByPayroll($record)) {
+                    return;
+                }
+
                 $wasApproved = $record->overtime_approved;
                 $record->overtime_approved = ! $wasApproved;
                 $record->save();
@@ -720,6 +835,10 @@ class AttendanceDayResource extends Resource
      */
     private static function applyRegularShiftDecision(AttendanceDay $record, bool $accept): void
     {
+        if (self::blockedByPayroll($record)) {
+            return;
+        }
+
         $extraBefore = (float) $record->extra_hours;
 
         $record->second_shift_regular = $accept;
@@ -951,6 +1070,7 @@ class AttendanceDayResource extends Resource
     public static function getRegularShiftTableAction(): TableAction
     {
         return TableAction::make('regular_shift')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label(fn (AttendanceDay $record) => $record->second_shift_regular ? 'Volver a revisar doble turno' : 'Aceptar doble turno como jornada normal')
             ->icon('heroicon-o-clock')
             ->color(fn (AttendanceDay $record) => $record->second_shift_regular ? 'gray' : 'info')
@@ -971,6 +1091,7 @@ class AttendanceDayResource extends Resource
     public static function getRegularShiftAction(): Action
     {
         return Action::make('regular_shift')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label(fn (AttendanceDay $record) => $record->second_shift_regular ? 'Volver a revisar doble turno' : 'Aceptar doble turno como jornada normal')
             ->icon('heroicon-o-clock')
             ->color(fn (AttendanceDay $record) => $record->second_shift_regular ? 'gray' : 'info')
@@ -996,6 +1117,7 @@ class AttendanceDayResource extends Resource
     public static function getApproveTardinessTableAction(): TableAction
     {
         return TableAction::make('approve_tardiness')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label(fn (AttendanceDay $record) => $record->tardiness_deduction_approved ? 'Revocar Tardanza' : 'Aprobar Tardanza')
             ->icon(fn (AttendanceDay $record) => $record->tardiness_deduction_approved ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
             ->color(fn (AttendanceDay $record) => $record->tardiness_deduction_approved ? 'danger' : 'warning')
@@ -1012,6 +1134,10 @@ class AttendanceDayResource extends Resource
             ->modalDescription(fn (AttendanceDay $record) => self::buildTardinessModalDescription($record))
             ->modalSubmitActionLabel(fn (AttendanceDay $record) => $record->tardiness_deduction_approved ? 'Sí, revocar' : 'Sí, aprobar')
             ->action(function (AttendanceDay $record) {
+                if (self::blockedByPayroll($record)) {
+                    return;
+                }
+
                 $wasApproved = $record->tardiness_deduction_approved;
                 $record->tardiness_deduction_approved = ! $wasApproved;
                 $record->save();
@@ -1031,6 +1157,7 @@ class AttendanceDayResource extends Resource
     public static function getApproveTardinessAction(): Action
     {
         return Action::make('approve_tardiness')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label(fn (AttendanceDay $record) => $record->tardiness_deduction_approved ? 'Revocar Descuento Tardanza' : 'Aprobar Descuento Tardanza')
             ->icon(fn (AttendanceDay $record) => $record->tardiness_deduction_approved ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
             ->color(fn (AttendanceDay $record) => $record->tardiness_deduction_approved ? 'danger' : 'warning')
@@ -1043,6 +1170,10 @@ class AttendanceDayResource extends Resource
             ->modalDescription(fn (AttendanceDay $record) => self::buildTardinessModalDescription($record))
             ->modalSubmitActionLabel(fn (AttendanceDay $record) => $record->tardiness_deduction_approved ? 'Sí, revocar' : 'Sí, aprobar')
             ->action(function (AttendanceDay $record) {
+                if (self::blockedByPayroll($record)) {
+                    return;
+                }
+
                 $wasApproved = $record->tardiness_deduction_approved;
                 $record->tardiness_deduction_approved = ! $wasApproved;
                 $record->save();
@@ -1146,6 +1277,7 @@ class AttendanceDayResource extends Resource
     public static function getCalculateTableAction(): TableAction
     {
         return TableAction::make('calculate')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label(fn (AttendanceDay $record) => $record->is_calculated ? 'Recalcular' : 'Calcular')
             ->icon('heroicon-o-calculator')
             ->color(fn (AttendanceDay $record) => $record->is_calculated ? 'warning' : 'success')
@@ -1177,6 +1309,7 @@ class AttendanceDayResource extends Resource
     public static function getCalculateAction(): Action
     {
         return Action::make('calculate')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label(fn (AttendanceDay $record) => $record->is_calculated ? 'Recalcular' : 'Calcular')
             ->icon('heroicon-o-calculator')
             ->color(fn (AttendanceDay $record) => $record->is_calculated ? 'warning' : 'success')
@@ -1208,6 +1341,7 @@ class AttendanceDayResource extends Resource
     public static function getApproveOvertimeRangeAction(): Action
     {
         return Action::make('approve_overtime_range')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label('Aprobar HE del período')
             ->icon('heroicon-o-check-badge')
             ->color('warning')
@@ -1245,26 +1379,20 @@ class AttendanceDayResource extends Resource
                             return 'Selecciona ambas fechas para ver el resumen.';
                         }
 
-                        $pending = AttendanceDay::whereBetween('date', [$start, $end])
-                            ->where('extra_hours', '>', 0)
-                            ->where('overtime_approved', false)
-                            ->count();
+                        ['approvable' => $approvable, 'skipped' => $skipped] = self::overtimeRangeCandidates($start, $end);
+                        $skippedTotal = array_sum($skipped);
 
-                        $alreadyApproved = AttendanceDay::whereBetween('date', [$start, $end])
-                            ->where('extra_hours', '>', 0)
-                            ->where('overtime_approved', true)
-                            ->count();
-
-                        $totalHours = AttendanceDay::whereBetween('date', [$start, $end])
-                            ->where('extra_hours', '>', 0)
-                            ->where('overtime_approved', false)
-                            ->sum('extra_hours');
-
-                        if ($pending === 0) {
-                            return "No hay horas extra pendientes de aprobación en este período. ({$alreadyApproved} ya aprobadas)";
+                        if ($approvable->isEmpty() && $skippedTotal === 0) {
+                            return 'No hay horas extra pendientes de aprobación en este período.';
                         }
 
-                        return "Se aprobarán {$pending} registro(s) con un total de {$totalHours} hrs extra pendientes. ({$alreadyApproved} ya aprobadas)";
+                        $summary = "Se aprobarán {$approvable->count()} registro(s) con un total de {$approvable->sum('extra_hours')} hrs extra.";
+
+                        if ($skippedTotal > 0) {
+                            $summary .= " Quedan para revisión individual {$skippedTotal}: {$skipped['limit']} con tope legal excedido, {$skipped['double_shift']} con doble turno sin decidir y {$skipped['payroll']} con nómina generada.";
+                        }
+
+                        return $summary;
                     })
                     ->columnSpanFull(),
             ])
@@ -1276,18 +1404,21 @@ class AttendanceDayResource extends Resource
                 $startDate = Carbon::parse($data['start_date']);
                 $endDate = Carbon::parse($data['end_date']);
 
-                $approved = AttendanceDay::whereBetween('date', [
-                    $startDate->toDateString(),
-                    $endDate->toDateString(),
-                ])
-                    ->where('extra_hours', '>', 0)
-                    ->where('overtime_approved', false)
-                    ->update(['overtime_approved' => true]);
+                ['approvable' => $approvable, 'skipped' => $skipped] = self::overtimeRangeCandidates($startDate->toDateString(), $endDate->toDateString());
 
-                if ($approved === 0) {
+                foreach ($approvable as $day) {
+                    $day->overtime_approved = true;
+                    $day->save();
+                }
+
+                $skippedTotal = array_sum($skipped);
+
+                if ($approvable->isEmpty()) {
                     Notification::make()
                         ->title('Sin cambios')
-                        ->body('No había horas extra pendientes de aprobación en el período seleccionado.')
+                        ->body($skippedTotal > 0
+                            ? "No se aprobó nada: {$skippedTotal} registro(s) requieren revisión individual."
+                            : 'No había horas extra pendientes de aprobación en el período seleccionado.')
                         ->warning()
                         ->send();
 
@@ -1296,9 +1427,10 @@ class AttendanceDayResource extends Resource
 
                 Notification::make()
                     ->title('Horas extra aprobadas')
-                    ->body("Se aprobaron {$approved} registro(s) entre {$startDate->format('d/m/Y')} y {$endDate->format('d/m/Y')}.")
+                    ->body("Se aprobaron {$approvable->count()} registro(s) entre {$startDate->format('d/m/Y')} y {$endDate->format('d/m/Y')}."
+                        .($skippedTotal > 0 ? " Quedan {$skippedTotal} para revisión individual (tope legal: {$skipped['limit']}, doble turno: {$skipped['double_shift']}, nómina generada: {$skipped['payroll']})." : ''))
                     ->success()
-                    ->duration(6000)
+                    ->duration(8000)
                     ->send();
             });
     }
@@ -1313,6 +1445,7 @@ class AttendanceDayResource extends Resource
         $pctNocturno = (int) (($settings->overtime_multiplier_nocturno - 1) * 100);
 
         return TableAction::make('adjust_extra_hours')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label('Ajustar Horas Extra')
             ->icon('heroicon-o-clock')
             ->color('warning')
@@ -1352,6 +1485,10 @@ class AttendanceDayResource extends Resource
             ->modalHeading(fn (AttendanceDay $record) => 'Ajustar horas extras — '.$record->employee?->full_name.' — '.$record->date->format('d/m/Y'))
             ->modalSubmitActionLabel('Guardar')
             ->action(function (AttendanceDay $record, array $data) {
+                if (self::blockedByPayroll($record)) {
+                    return;
+                }
+
                 $diurnas = (float) ($data['extra_hours_diurnas'] ?? 0);
                 $nocturnas = (float) ($data['extra_hours_nocturnas'] ?? 0);
                 $total = round($diurnas + $nocturnas, 2);
@@ -1395,6 +1532,7 @@ class AttendanceDayResource extends Resource
         $pctNocturno = (int) (($settings->overtime_multiplier_nocturno - 1) * 100);
 
         return Action::make('adjust_extra_hours')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label('Ajustar Horas Extra')
             ->icon('heroicon-o-clock')
             ->color('warning')
@@ -1434,6 +1572,10 @@ class AttendanceDayResource extends Resource
             ->modalHeading(fn (AttendanceDay $record) => 'Ajustar horas extras — '.$record->employee?->full_name.' — '.$record->date->format('d/m/Y'))
             ->modalSubmitActionLabel('Guardar')
             ->action(function (AttendanceDay $record, array $data) {
+                if (self::blockedByPayroll($record)) {
+                    return;
+                }
+
                 $diurnas = (float) ($data['extra_hours_diurnas'] ?? 0);
                 $nocturnas = (float) ($data['extra_hours_nocturnas'] ?? 0);
                 $total = round($diurnas + $nocturnas, 2);
@@ -1477,6 +1619,7 @@ class AttendanceDayResource extends Resource
         $pctNocturno = (int) (($settings->overtime_multiplier_nocturno - 1) * 100);
 
         return Action::make('register_extra_hours')
+            ->authorize(fn (): bool => self::canManageDays())
             ->label('Registrar Horas Extras')
             ->icon('heroicon-o-plus-circle')
             ->color('primary')
@@ -1583,6 +1726,10 @@ class AttendanceDayResource extends Resource
                     'date' => $data['date'],
                 ]);
 
+                if (self::blockedByPayroll($day)) {
+                    return;
+                }
+
                 $day->extra_hours_diurnas = $diurnas;
                 $day->extra_hours_nocturnas = $nocturnas;
                 $day->extra_hours = $total;
@@ -1614,6 +1761,10 @@ class AttendanceDayResource extends Resource
      */
     private static function calculateAttendanceRecord(AttendanceDay $record): void
     {
+        if (self::blockedByPayroll($record)) {
+            return;
+        }
+
         try {
             $wasCalculated = $record->is_calculated;
 

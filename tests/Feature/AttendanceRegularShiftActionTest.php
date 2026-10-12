@@ -1,17 +1,23 @@
 <?php
 
 use App\Filament\Resources\AttendanceDayResource;
+use App\Filament\Resources\AttendanceDayResource\Pages\EditAttendanceDay;
 use App\Filament\Resources\AttendanceDayResource\Pages\ListAttendanceDays;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Payroll;
+use App\Models\PayrollPeriod;
 use App\Models\User;
 use Carbon\Carbon;
+use Filament\Actions\DeleteAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use PHPUnit\Framework\AssertionFailedError;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
@@ -170,4 +176,135 @@ it('exige el motivo al excluir', function () {
         ->assertHasTableActionErrors(['reason' => 'required']);
 
     expect($day->fresh()->excluded_from_calculation)->toBeFalse();
+});
+
+// ─── Permisos y nómina generada ─────────────────────────────────────────────
+
+function viewOnlyAttendanceUser(): User
+{
+    foreach (['view_any_attendance_day', 'view_attendance_day'] as $permission) {
+        Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+    }
+
+    return tap(User::factory()->create(), fn (User $user) => $user->givePermissionTo(['view_any_attendance_day', 'view_attendance_day']));
+}
+
+function lockPayrollFor(AttendanceDay $day): void
+{
+    $period = PayrollPeriod::create([
+        'name' => 'Marzo 2026', 'start_date' => '2026-03-01', 'end_date' => '2026-03-31', 'frequency' => 'monthly', 'status' => 'processing',
+    ]);
+    Payroll::create([
+        'employee_id' => $day->employee_id, 'payroll_period_id' => $period->id, 'status' => 'draft',
+        'base_salary' => 2_550_000, 'gross_salary' => 2_550_000, 'net_salary' => 2_550_000,
+        'total_deductions' => 0, 'total_perceptions' => 0, 'payment_method' => 'transfer',
+    ]);
+}
+
+it('un usuario de solo lectura no puede aprobar, ajustar ni recalcular asistencia', function () {
+    $day = makeDoubleShiftDay();
+    test()->actingAs(viewOnlyAttendanceUser());
+
+    expect(AttendanceDayResource::canManageDays())->toBeFalse();
+
+    $table = Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all');
+
+    foreach (['approve_overtime', 'regular_shift', 'adjust_extra_hours', 'calculate'] as $action) {
+        expect(fn () => $table->callTableAction($action, $day))->toThrow(AssertionFailedError::class);
+    }
+
+    expect(fn () => $table->callTableBulkAction('approve_overtime', [$day]))->toThrow(AssertionFailedError::class);
+
+    $day->refresh();
+    expect($day->overtime_approved)->toBeFalse()
+        ->and($day->manual_adjustment)->toBeFalse()
+        ->and($day->second_shift_regular)->toBeFalse();
+});
+
+it('con permiso de edición puede aprobar horas extra', function () {
+    $day = makeDoubleShiftDay();
+    Permission::firstOrCreate(['name' => 'update_attendance_day', 'guard_name' => 'web']);
+    $user = viewOnlyAttendanceUser();
+    $user->givePermissionTo('update_attendance_day');
+    test()->actingAs($user);
+
+    Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all')->callTableAction('approve_overtime', $day);
+
+    expect($day->fresh()->overtime_approved)->toBeTrue();
+});
+
+it('no modifica la asistencia de una fecha con nómina generada', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+    lockPayrollFor($day);
+
+    $table = Livewire::test(ListAttendanceDays::class)->set('activeTab', 'all');
+    $table->callTableAction('approve_overtime', $day);
+    $table->callTableAction('regular_shift', $day);
+    $table->callTableAction('adjust_extra_hours', $day, data: ['extra_hours_diurnas' => 1, 'extra_hours_nocturnas' => 0]);
+    $table->callTableBulkAction('approve_overtime', [$day]);
+
+    $day->refresh();
+    expect($day->overtime_approved)->toBeFalse()
+        ->and($day->second_shift_regular)->toBeFalse()
+        ->and($day->manual_adjustment)->toBeFalse()
+        ->and((float) $day->extra_hours)->toBe(4.0);
+});
+
+it('la edición y la eliminación de una jornada con nómina generada quedan bloqueadas', function () {
+    actingAsSuperAdmin();
+    $day = makeDoubleShiftDay();
+    lockPayrollFor($day);
+
+    Livewire::test(EditAttendanceDay::class, ['record' => $day->id])
+        ->fillForm(['notes' => 'cambio'])
+        ->call('save');
+
+    Livewire::test(EditAttendanceDay::class, ['record' => $day->id])
+        ->callAction(DeleteAction::class);
+
+    $day = AttendanceDay::find($day->id);
+    expect($day)->not->toBeNull()
+        ->and($day->notes)->not->toBe('cambio');
+});
+
+it('Aprobar HE del período aprueba lo seguro, deja auditoría y omite tope legal, doble turno y nómina', function () {
+    config(['audit.console' => true]);
+    actingAsSuperAdmin();
+    $doubleShift = makeDoubleShiftDay();
+    $make = fn (string $date, array $extra = []) => AttendanceDay::create([
+        'employee_id' => $doubleShift->employee_id, 'date' => $date, 'status' => 'present',
+        'expected_hours' => 8, 'extra_hours' => 2, 'is_calculated' => true,
+        'on_vacation' => false, 'justified_absence' => false, 'overtime_approved' => false,
+        ...$extra,
+    ]);
+    $safe = $make('2026-03-17');
+    $overLimit = $make('2026-03-18', ['overtime_limit_exceeded' => true]);
+    $twoShifts = $make('2026-03-26');
+    foreach ([['check_in', '07:00'], ['check_out', '12:00'], ['check_in', '13:00'], ['check_out', '18:00']] as [$type, $time]) {
+        AttendanceEvent::create([
+            'attendance_day_id' => $twoShifts->id, 'employee_id' => $twoShifts->employee_id, 'event_type' => $type,
+            'recorded_at' => Carbon::parse("2026-03-26 {$time}"),
+        ]);
+    }
+
+    Livewire::test(ListAttendanceDays::class)
+        ->callAction('approve_overtime_range', data: ['start_date' => '2026-03-16', 'end_date' => '2026-03-26']);
+
+    expect($safe->fresh()->overtime_approved)->toBeTrue()
+        ->and($safe->audits()->count())->toBeGreaterThan(0)
+        ->and($overLimit->fresh()->overtime_approved)->toBeFalse()
+        ->and($doubleShift->fresh()->overtime_approved)->toBeFalse()
+        ->and($twoShifts->fresh()->overtime_approved)->toBeFalse();
+
+    ['approvable' => $left, 'skipped' => $skipped] = AttendanceDayResource::overtimeRangeCandidates('2026-03-16', '2026-03-26');
+    expect($left)->toHaveCount(0)
+        ->and($skipped)->toBe(['limit' => 2, 'double_shift' => 1, 'payroll' => 0]);
+
+    $lockedDay = $make('2026-03-31');
+    lockPayrollFor($lockedDay);
+
+    expect(AttendanceDayResource::overtimeRangeCandidates('2026-03-31', '2026-03-31'))
+        ->approvable->toHaveCount(0)
+        ->skipped->toBe(['limit' => 0, 'double_shift' => 0, 'payroll' => 1]);
 });

@@ -403,7 +403,7 @@ Desde el encabezado del listado de asistencias están disponibles:
 | Acción | Descripción |
 |--------|-------------|
 | **Exportar** | Descarga el listado visible en Excel según los filtros activos |
-| **Aprobar HE del período** | Aprueba masivamente todas las horas extras pendientes en un rango de fechas |
+| **Aprobar HE del período** | Aprueba masivamente las horas extras pendientes de un rango de fechas, salvo las que requieren revisión individual (ver más abajo) |
 | **Registrar Horas Extras** | Registra horas extras para empleados que no marcaron ese día (ver sección más abajo) |
 
 ### Filtros disponibles
@@ -569,8 +569,12 @@ Para aprobar todas las horas extras pendientes de un rango de fechas en un solo 
 
 1. Desde **Asistencias → Asistencias**, clic en **Aprobar HE del período** (encabezado)
 2. Seleccionar la **fecha de inicio** y **fecha de fin**
-3. El formulario muestra una vista previa: cuántos registros tienen HE pendientes y cuántas horas en total
+3. El formulario muestra una vista previa: cuántos registros se aprobarán, cuántas horas en total y cuántos quedan para revisión individual
 4. Clic en **Sí, aprobar todo**
+
+> Quedan **sin aprobar** y deben revisarse uno por uno los días con el tope legal de horas extra excedido, los dobles turnos sin decidir (ver **Aceptar doble turno como jornada normal**) y los días cuyo período ya tiene nómina generada. Cada aprobación queda en el historial de la jornada.
+
+> **Permisos y nómina:** aprobar, revocar, ajustar horas extra, recalcular y registrar horas extras exigen el permiso de edición de asistencias (`update_attendance_day`); un usuario con solo lectura no ve estas acciones. Si el empleado ya tiene nómina generada que incluye la fecha, la jornada no se puede modificar (ni desde el listado, ni masivamente, ni desde la edición); las acciones masivas la omiten e indican cuántas.
 
 ### Aprobación masiva por selección
 
