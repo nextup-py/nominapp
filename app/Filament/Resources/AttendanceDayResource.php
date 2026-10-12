@@ -12,6 +12,7 @@ use App\Models\Employee;
 use App\Services\AttendanceCalculator;
 use App\Services\AttendanceEventCorrectionService;
 use App\Services\OpenShiftCloser;
+use App\Services\UnscheduledDayDiscarder;
 use App\Settings\PayrollSettings;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -506,6 +507,8 @@ class AttendanceDayResource extends Resource
 
                     self::getCloseOpenShiftsBulkAction(),
 
+                    self::getDiscardUnscheduledDaysBulkAction(),
+
                     BulkAction::make('calculate')
                         ->label('Calcular/Recalcular')
                         ->icon('heroicon-o-calculator')
@@ -774,6 +777,61 @@ class AttendanceDayResource extends Resource
                 }
 
                 Notification::make()->title('Jornadas cerradas')->body($body)->color($closed > 0 ? 'success' : 'warning')->send();
+            });
+    }
+
+    /**
+     * Acción masiva que elimina jornadas sin horario esperado (típicamente marcaciones de prueba de la instalación
+     * de un terminal). Elimina la jornada y sus marcaciones; omite las de nóminas generadas o con ajustes de RR.HH.
+     */
+    public static function getDiscardUnscheduledDaysBulkAction(): BulkAction
+    {
+        return BulkAction::make('discard_unscheduled_days')
+            ->label('Descartar jornadas sin horario')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->visible(fn () => auth()->user()?->can('delete_attendance_day') ?? false)
+            ->requiresConfirmation()
+            ->modalHeading('Descartar jornadas sin horario esperado')
+            ->modalDescription(function (Collection $records): string {
+                $discarder = app(UnscheduledDayDiscarder::class);
+                $skips = [];
+                $removable = 0;
+
+                foreach ($records as $day) {
+                    $skip = $discarder->skipReason($day);
+                    $skip === null ? $removable++ : $skips[$skip] = ($skips[$skip] ?? 0) + 1;
+                }
+
+                $text = "Se eliminarán {$removable} de {$records->count()} jornada(s) seleccionada(s) junto con sus marcaciones. Usar solo con marcaciones de prueba: no se puede deshacer.";
+
+                if ($skips !== []) {
+                    $labels = UnscheduledDayDiscarder::getSkipLabels();
+                    $text .= ' Se omitirán: '.collect($skips)->map(fn (int $count, string $reason) => ($labels[$reason] ?? $reason).": {$count}")->implode('; ').'.';
+                }
+
+                return $text;
+            })
+            ->modalSubmitActionLabel('Sí, descartar')
+            ->deselectRecordsAfterCompletion()
+            ->action(function (Collection $records): void {
+                $discarder = app(UnscheduledDayDiscarder::class);
+                $discarded = 0;
+                $skips = [];
+
+                foreach ($records as $day) {
+                    $skip = $discarder->discard($day);
+                    $skip === null ? $discarded++ : $skips[$skip] = ($skips[$skip] ?? 0) + 1;
+                }
+
+                $body = "Descartadas: {$discarded}.";
+
+                if ($skips !== []) {
+                    $labels = UnscheduledDayDiscarder::getSkipLabels();
+                    $body .= ' Omitidas: '.collect($skips)->map(fn (int $count, string $reason) => ($labels[$reason] ?? $reason).": {$count}")->implode('; ').'.';
+                }
+
+                Notification::make()->title('Jornadas descartadas')->body($body)->color($discarded > 0 ? 'success' : 'warning')->send();
             });
     }
 

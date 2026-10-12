@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Aviso por la campanita sobre un cambio de salud de un terminal (ver
- * `TerminalHealthService`): `offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty` o `clock_skew`.
+ * `TerminalHealthService`): `offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty`, `clock_skew` o `app_outdated`.
  */
 class TerminalHealthNotification extends Notification
 {
@@ -85,6 +85,11 @@ class TerminalHealthNotification extends Notification
                 ->title('Reloj del terminal desajustado')
                 ->body("El reloj del terminal {$name} difiere del servidor en ".($this->terminal->reportedClockSkewSeconds() ?? 0).' segundos. Revisar la fecha y hora del dispositivo (activar la hora automática).')
                 ->icon('heroicon-o-clock')
+                ->warning(),
+            'app_outdated' => $notification
+                ->title('Terminal con la app desactualizada')
+                ->body("El terminal {$name} sigue con una versión anterior de la app. Enviar el comando remoto Recargar app para actualizarlo.")
+                ->icon('heroicon-o-arrow-path')
                 ->warning(),
             default => $notification->title('Aviso de terminal')->body("Cambió el estado del terminal {$name}.")->icon('heroicon-o-computer-desktop'),
         };

@@ -197,3 +197,49 @@ it('la acción masiva de monitoreo no se ofrece sin el permiso de terminales', f
 
     expect(TerminalMonitoringActions::canManage())->toBeFalse();
 });
+
+it('avisa una sola vez cuando la app sigue desactualizada pasado el tiempo de gracia y registra cuando se actualiza', function () {
+    $terminal = monitoringTerminal();
+    monitoringEmployee($terminal);
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => Terminal::currentAppVersion()]);
+    monitoringEvaluate($terminal);
+
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => 'viejaversion']);
+    expect(monitoringEvaluate($terminal))->toBe([]);
+
+    Carbon::setTestNow(now()->addMinutes(TerminalHealthService::APP_OUTDATED_ALERT_MINUTES - 1));
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => 'viejaversion']);
+    expect(monitoringEvaluate($terminal))->toBe([]);
+
+    Carbon::setTestNow(now()->addMinutes(2));
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => 'viejaversion']);
+    expect(monitoringEvaluate($terminal))->toBe(['app_outdated']);
+
+    Carbon::setTestNow(now()->addMinutes(30));
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => 'viejaversion']);
+    expect(monitoringEvaluate($terminal))->toBe([]);
+
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => Terminal::currentAppVersion()]);
+    expect(monitoringEvaluate($terminal))->toBe([])
+        ->and(TerminalEvent::where('terminal_id', $terminal->id)->where('type', 'health_app_outdated')->count())->toBe(1)
+        ->and(TerminalEvent::where('terminal_id', $terminal->id)->where('type', 'health_app_ok')->exists())->toBeTrue();
+});
+
+it('reinicia la espera si la app se actualiza antes del aviso', function () {
+    $terminal = monitoringTerminal();
+    monitoringEmployee($terminal);
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => Terminal::currentAppVersion()]);
+    monitoringEvaluate($terminal);
+
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => 'viejaversion']);
+    monitoringEvaluate($terminal);
+
+    Carbon::setTestNow(now()->addMinutes(100));
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => Terminal::currentAppVersion()]);
+    monitoringEvaluate($terminal);
+
+    Carbon::setTestNow(now()->addMinutes(100));
+    monitoringReport($terminal, ['cached_employees' => 1, 'app_version' => 'viejaversion']);
+
+    expect(monitoringEvaluate($terminal))->toBe([]);
+});
