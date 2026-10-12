@@ -86,4 +86,10 @@ describe('collectDeviceReport', () => {
         expect(report).not.toHaveProperty('cached_employees');
         expect(report).not.toHaveProperty('clock_skew_seconds');
     });
+
+    it('informa si la pantalla se mantiene encendida (Wake Lock) solo cuando se sabe', async () => {
+        expect((await collectDeviceReport({ nav: {}, win: win(false), wakeLock: true })).wake_lock).toBe(true);
+        expect((await collectDeviceReport({ nav: {}, win: win(false), wakeLock: false })).wake_lock).toBe(false);
+        expect(await collectDeviceReport({ nav: {}, win: win(false), wakeLock: null })).not.toHaveProperty('wake_lock');
+    });
 });

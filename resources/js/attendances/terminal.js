@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         successEventType:     document.getElementById('successEventType'),
         successTime:          document.getElementById('successTime'),
         successQueuedNotice:  document.getElementById('successQueuedNotice'),
+        successExitReminder:  document.getElementById('successExitReminder'),
         countdownEl:          document.getElementById('countdown'),
         countdownFill:        document.getElementById('countdownFill'),
     };

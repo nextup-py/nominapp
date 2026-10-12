@@ -18,9 +18,10 @@
  */
 
 import * as camera from './camera.js';
-import { acquireWakeLock } from './idle-detection.js';
+import { acquireWakeLock, hasWakeLock } from './idle-detection.js';
 import { migrateTokenFromLocalStorage, getMeta, clearTerminalState } from '../terminal-offline/db.js';
-import { heartbeat, syncEmployees, rebuildEmployeeCache, setCommandHandler, queueCommandAck, TerminalAuthError } from '../terminal-offline/sync.js';
+import { heartbeat, syncEmployees, rebuildEmployeeCache, setCommandHandler, setAppVersionHandler, setWakeLockProbe, queueCommandAck, TerminalAuthError } from '../terminal-offline/sync.js';
+import { reloadIfOutdated } from '../terminal-offline/auto-reload.js';
 import { runRemoteCommands } from '../terminal-offline/remote-commands.js';
 import { flushQueue } from '../terminal-offline/queue.js';
 import { updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './sync-status-ui.js';
@@ -210,6 +211,13 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
 
     // Antes del primer heartbeat: si ya trae comandos pendientes, que no se pierdan.
     setCommandHandler(handleRemoteCommands);
+    setWakeLockProbe(hasWakeLock);
+    setAppVersionHandler((serverVersion) => reloadIfOutdated({
+        currentVersion: window.terminalData?.app_version,
+        serverVersion,
+        waitForIdle,
+        reload: () => window.location.reload(),
+    }));
 
     try {
         updateIdleSyncStatus('Sincronizando...');

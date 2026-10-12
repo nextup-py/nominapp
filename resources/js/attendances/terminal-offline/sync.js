@@ -108,6 +108,29 @@ export function setCommandHandler(handler) {
     commandHandler = handler;
 }
 
+/** @type {((serverVersion: string) => unknown)|null} */
+let appVersionHandler = null;
+
+/** @type {(() => boolean)|null} */
+let wakeLockProbe = null;
+
+/**
+ * Registra el manejador que recibe la versión vigente de la app informada por el servidor en cada heartbeat
+ * (para recargar el terminal cuando queda con una versión vieja).
+ * @param {((serverVersion: string) => unknown)|null} handler
+ */
+export function setAppVersionHandler(handler) {
+    appVersionHandler = handler;
+}
+
+/**
+ * Registra cómo saber si la pantalla se mantiene encendida (Wake Lock), para incluirlo en el reporte del dispositivo.
+ * @param {(() => boolean)|null} probe
+ */
+export function setWakeLockProbe(probe) {
+    wakeLockProbe = probe;
+}
+
 /**
  * Encola la confirmación de un comando para el próximo heartbeat.
  * @param {{id: number, status: 'done'|'failed', message?: string}} ack
@@ -127,6 +150,7 @@ async function buildDeviceReport() {
             appVersion: globalThis.window?.terminalData?.app_version ?? null,
             cachedEmployees: await countCachedEmployees(),
             clockOffsetMs: (await getMeta('server_clock_offset_ms')) ?? null,
+            wakeLock: wakeLockProbe ? Boolean(wakeLockProbe()) : null,
         });
     } catch {
         return {};
@@ -163,10 +187,17 @@ export async function heartbeat() {
 
         await setMeta('face_threshold', data.config.face_threshold);
         await setMeta('face_min_confidence_gap', data.config.face_min_confidence_gap);
+        if (Number.isFinite(data.config.overnight_max_hours)) {
+            await setMeta('overnight_max_hours', data.config.overnight_max_hours);
+        }
         await setMeta('server_clock_offset_ms', new Date(data.server_time).getTime() - Date.now());
         await setMeta('last_heartbeat_at', Date.now());
 
         await logSync('heartbeat', true);
+
+        if (data.app_version && appVersionHandler) {
+            Promise.resolve(appVersionHandler(data.app_version)).catch((error) => console.warn('Recarga por nueva versión falló:', error.message));
+        }
 
         if (Array.isArray(data.commands) && data.commands.length > 0 && commandHandler) {
             Promise.resolve(commandHandler(data.commands)).catch((error) => console.warn('Comandos remotos fallaron:', error.message));

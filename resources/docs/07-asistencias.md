@@ -170,6 +170,8 @@ Después de marcar la **salida**, el empleado puede marcar una **nueva entrada**
 - Entre la salida y la nueva entrada debe pasar un **mínimo** (5 minutos por defecto, configurable en **Configuración → Configuración General → Configuración Laboral**). Antes de ese tiempo el terminal no ofrece la entrada, para evitar reentradas por error.
 - Después de la **entrada** también debe pasar un mínimo antes de poder marcar la **salida** (2 minutos por defecto): una salida segundos después de entrar no se acepta. Y una jornada abierta de ayer con la última marcación de hace más de 16 horas (límite configurable) ya no recibe la salida; queda para corregir desde **Sin salida registrada**.
 - En el **terminal**, tras una salida la nueva entrada **nunca se registra sola**: el empleado debe tocar **Entrada** en la pantalla. En el celular hay que tocar **Marcar**.
+- Tras marcar la **entrada**, la pantalla de confirmación del terminal recuerda la hora de fin del turno (*Tu turno termina a las HH:MM. No olvides marcar la salida.*) cuando el empleado tiene horario ese día y el terminal lo pudo consultar.
+- Si el terminal estuvo **sin conexión** y recuerda una jornada abierta con más horas que el **límite de jornada nocturna abierta** (por defecto 16 h), la ignora y ofrece solo **Entrada**, igual que hace el servidor. Así una salida olvidada hace días no bloquea la marcación del empleado.
 
 ### Jornadas sin salida
 

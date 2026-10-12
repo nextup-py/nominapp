@@ -3,18 +3,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../terminal-offline/queue.js', () => ({
     enqueueMark: vi.fn(),
     flushQueue: vi.fn(),
+    getExpectedCheckOut: vi.fn(),
 }));
 vi.mock('./sync-status-ui.js', () => ({
     refreshIdleSyncStatus: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { enqueueMark, flushQueue } from '../terminal-offline/queue.js';
+import { enqueueMark, flushQueue, getExpectedCheckOut } from '../terminal-offline/queue.js';
 import { registerMark, showTypeSelectionForEmployee, getPendingEmployee, clearPendingEmployee } from './mark-registration.js';
 
 describe('registerMark', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         enqueueMark.mockResolvedValue({ client_event_id: 'abc-123', recorded_at: '2026-09-11T10:00:00Z' });
+        getExpectedCheckOut.mockResolvedValue(null);
+    });
+
+    it('tras una entrada pasa la salida esperada para el recordatorio; con otro tipo de marcación no', async () => {
+        flushQueue.mockResolvedValue({ results: [{ client_event_id: 'abc-123', status: 'synced' }] });
+        getExpectedCheckOut.mockResolvedValue('17:30');
+        const onSuccess = vi.fn();
+
+        await registerMark({ id: 1 }, 'check_in', { onStatusUpdate: vi.fn(), onSuccess, onError: vi.fn() }, { onLine: true });
+        await registerMark({ id: 1 }, 'check_out', { onStatusUpdate: vi.fn(), onSuccess, onError: vi.fn() }, { onLine: true });
+
+        expect(onSuccess).toHaveBeenNthCalledWith(1, { id: 1 }, { recorded_at: '2026-09-11T10:00:00Z' }, 'check_in', { queued: false, expectedCheckOut: '17:30' });
+        expect(onSuccess).toHaveBeenNthCalledWith(2, { id: 1 }, { recorded_at: '2026-09-11T10:00:00Z' }, 'check_out', { queued: false });
     });
 
     it('sin conexión: muestra éxito encolado sin intentar flushQueue', async () => {
