@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { showScreen, startCountdown, startDayCompleteCountdown, stopCountdown, resetTerminal } from './screen-state.js';
+
+vi.mock('../../shared/audio-feedback.js', () => ({ playBeep: vi.fn() }));
+
+import { showScreen, startCountdown, startDayCompleteCountdown, stopCountdown, resetTerminal, showSuccessScreen } from './screen-state.js';
 
 function fakeScreenEl() {
     const classes = new Set();
@@ -119,5 +122,40 @@ describe('resetTerminal', () => {
         expect(btn2.disabled).toBe(false);
         expect(screenTitleEl.textContent).toBe('Marcación');
         expect(onReset).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('showSuccessScreen — recordatorio de salida', () => {
+    function successDom() {
+        const el = () => ({ textContent: '', style: {}, src: '', alt: '' });
+        return {
+            successEmployeePhoto: el(), successEmployeeName: el(), successEmployeeCI: el(), successEventType: el(),
+            successTime: el(), successQueuedNotice: el(), successExitReminder: el(), countdownEl: el(), countdownFill: el(),
+        };
+    }
+    const screens = { success: fakeScreenEl() };
+    const employee = { first_name: 'Ana', last_name: 'Gómez', ci: '123' };
+
+    afterEach(() => stopCountdown());
+
+    it('tras una entrada con salida esperada muestra el recordatorio con la hora del turno', () => {
+        const dom = successDom();
+
+        showSuccessScreen(screens, dom, employee, {}, 'check_in', { queued: false, expectedCheckOut: '17:30' }, vi.fn());
+
+        expect(dom.successExitReminder.textContent).toBe('Tu turno termina a las 17:30. No olvides marcar la salida.');
+        expect(dom.successExitReminder.style.display).toBe('');
+    });
+
+    it.each([
+        ['una entrada sin salida esperada', 'check_in', {}],
+        ['una salida', 'check_out', { expectedCheckOut: '17:30' }],
+    ])('no muestra el recordatorio en %s', (_name, eventType, opts) => {
+        const dom = successDom();
+
+        showSuccessScreen(screens, dom, employee, {}, eventType, opts, vi.fn());
+
+        expect(dom.successExitReminder.style.display).toBe('none');
+        expect(dom.successExitReminder.textContent).toBe('');
     });
 });

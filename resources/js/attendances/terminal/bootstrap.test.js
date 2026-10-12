@@ -15,7 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('./camera.js', () => ({ loadModels: vi.fn() }));
-vi.mock('./idle-detection.js', () => ({ acquireWakeLock: vi.fn() }));
+vi.mock('./idle-detection.js', () => ({ acquireWakeLock: vi.fn(), hasWakeLock: vi.fn() }));
 vi.mock('../terminal-offline/db.js', () => ({
     migrateTokenFromLocalStorage: vi.fn(),
     getMeta: vi.fn(),
@@ -29,6 +29,8 @@ vi.mock('../terminal-offline/sync.js', () => ({
     syncEmployees: vi.fn(),
     rebuildEmployeeCache: vi.fn(),
     setCommandHandler: vi.fn(),
+    setAppVersionHandler: vi.fn(),
+    setWakeLockProbe: vi.fn(),
     queueCommandAck: vi.fn(),
     TerminalAuthError: TerminalAuthErrorImpl,
 }));

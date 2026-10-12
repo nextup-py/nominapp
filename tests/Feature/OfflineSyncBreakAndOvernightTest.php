@@ -183,3 +183,31 @@ it('el heartbeat móvil marca has_scheduled_break en false sin horario asignado'
     $response->assertOk();
     expect($response->json('employee.has_scheduled_break'))->toBeFalse();
 });
+
+it('status() informa la hora de la última marcación y la salida esperada del turno para el recordatorio', function () {
+    $employee = makeOfflineTestEmployee();
+    assignBreakScheduleToEmployee($employee);
+    $terminal = Terminal::create(['name' => 'Terminal Status Test 3', 'branch_id' => $employee->branch_id]);
+    Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
+
+    Carbon::setTestNow(Carbon::parse('2026-08-27 07:05:00'));
+    expect(markAttendanceEvent($employee, 'check_in')['ok'])->toBeTrue();
+
+    $response = $this->getJson("/api/v1/terminal/employees/{$employee->id}/status");
+
+    $response->assertOk();
+    expect($response->json('expected_check_out'))->toBe('22:00')
+        ->and(Carbon::parse($response->json('last_event_at'))->format('H:i'))->toBe('07:05');
+});
+
+it('status() devuelve expected_check_out nulo si el empleado no tiene horario ese día', function () {
+    $employee = makeOfflineTestEmployee();
+    $terminal = Terminal::create(['name' => 'Terminal Status Test 4', 'branch_id' => $employee->branch_id]);
+    Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
+
+    $response = $this->getJson("/api/v1/terminal/employees/{$employee->id}/status");
+
+    $response->assertOk();
+    expect($response->json('expected_check_out'))->toBeNull()
+        ->and($response->json('last_event_at'))->toBeNull();
+});

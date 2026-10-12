@@ -134,6 +134,18 @@ it('el heartbeat de la API actualiza last_seen_at y last_heartbeat_at', function
         ->and($terminal->last_seen_at)->not->toBeNull();
 });
 
+it('el heartbeat informa la versión vigente de la app y el límite de jornada nocturna para el cliente', function () {
+    $terminal = makeConnectivityTerminal();
+    Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
+
+    $response = $this->postJson('/api/v1/terminal/heartbeat', ['device' => ['wake_lock' => false]]);
+
+    $response->assertOk();
+    expect($response->json('app_version'))->toBe(Terminal::currentAppVersion())
+        ->and($response->json('config.overnight_max_hours'))->toBe(16)
+        ->and($terminal->fresh()->device_report['wake_lock'])->toBeFalse();
+});
+
 it('el sync de empleados actualiza last_employee_sync_at', function () {
     $terminal = makeConnectivityTerminal();
     Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);

@@ -388,6 +388,11 @@ class TerminalResource extends Resource
                                 ->getStateUsing(fn (Terminal $record) => static::describeClockSkew($record))
                                 ->placeholder('Sin dato'),
 
+                            TextEntry::make('_wake_lock')
+                                ->label('Pantalla encendida')
+                                ->getStateUsing(fn (Terminal $record) => static::describeWakeLock($record))
+                                ->placeholder('Sin dato'),
+
                             TextEntry::make('_storage')
                                 ->label('Almacenamiento')
                                 ->getStateUsing(fn (Terminal $record) => static::describeStorage($record))
@@ -805,6 +810,16 @@ class TerminalResource extends Resource
             'denied' => 'Bloqueada: el terminal no puede identificar',
             'prompt' => 'Sin decidir: falta aceptar el permiso',
             'unavailable' => 'No disponible en este navegador',
+            default => null,
+        };
+    }
+
+    /** Si el terminal logró mantener la pantalla encendida (Wake Lock): sin eso la tablet puede dormirse y dejar de reportar. */
+    public static function describeWakeLock(Terminal $record): ?string
+    {
+        return match ($record->device_report['wake_lock'] ?? null) {
+            true => 'Activa',
+            false => 'Inactiva: la tablet puede dormirse y dejar de marcar',
             default => null,
         };
     }

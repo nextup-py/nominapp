@@ -47,7 +47,7 @@ export function showScreen(screens, screenName) {
 
 /**
  * @param {Record<string, HTMLElement|null>} screens
- * @param {{successEmployeePhoto?, successEmployeeName, successEmployeeCI, successEventType, successTime, successQueuedNotice?}} dom
+ * @param {{successEmployeePhoto?, successEmployeeName, successEmployeeCI, successEventType, successTime, successQueuedNotice?, successExitReminder?}} dom
  * @param {{first_name?: string, last_name?: string, ci?: string, photo_url?: string}} employee
  * @param {{recorded_at?: string}} markData
  * @param {string} eventType
@@ -55,7 +55,7 @@ export function showScreen(screens, screenName) {
  *        todavía no se confirmó con el servidor — se avisa sin asustar al empleado.
  * @param {() => void} onCountdownComplete
  */
-export function showSuccessScreen(screens, dom, employee, markData, eventType, { queued = false } = {}, onCountdownComplete) {
+export function showSuccessScreen(screens, dom, employee, markData, eventType, { queued = false, expectedCheckOut = null } = {}, onCountdownComplete) {
     const eventTypeNames = { check_in: 'Entrada', break_start: 'Inicio descanso', break_end: 'Fin descanso', check_out: 'Salida' };
     const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
 
@@ -72,6 +72,12 @@ export function showSuccessScreen(screens, dom, employee, markData, eventType, {
 
     if (dom.successQueuedNotice) {
         dom.successQueuedNotice.style.display = queued ? '' : 'none';
+    }
+
+    if (dom.successExitReminder) {
+        const showReminder = eventType === 'check_in' && Boolean(expectedCheckOut);
+        dom.successExitReminder.textContent = showReminder ? `Tu turno termina a las ${expectedCheckOut}. No olvides marcar la salida.` : '';
+        dom.successExitReminder.style.display = showReminder ? '' : 'none';
     }
 
     playBeep('success');

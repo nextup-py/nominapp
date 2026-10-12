@@ -17,7 +17,7 @@
  */
 
 import { showScreen } from './screen-state.js';
-import { enqueueMark, flushQueue } from '../terminal-offline/queue.js';
+import { enqueueMark, flushQueue, getExpectedCheckOut } from '../terminal-offline/queue.js';
 import { refreshIdleSyncStatus } from './sync-status-ui.js';
 
 const eventTypeNames = { check_in: 'Entrada', break_start: 'Inicio descanso', break_end: 'Fin descanso', check_out: 'Salida' };
@@ -95,8 +95,12 @@ export async function registerMark(employee, eventType, { onStatusUpdate, onSucc
 
     const { client_event_id: clientEventId, recorded_at: recordedAt } = await enqueueMark(employee.id, eventType);
 
+    // Recordatorio de salida: solo al entrar y solo si el servidor informó el fin del turno.
+    const expectedCheckOut = eventType === 'check_in' ? await getExpectedCheckOut(employee.id) : null;
+    const reminder = expectedCheckOut ? { expectedCheckOut } : {};
+
     if (!nav.onLine) {
-        onSuccess(employee, { recorded_at: recordedAt }, eventType, { queued: true });
+        onSuccess(employee, { recorded_at: recordedAt }, eventType, { queued: true, ...reminder });
         await refreshIdleSyncStatus();
         return;
     }
@@ -108,11 +112,11 @@ export async function registerMark(employee, eventType, { onStatusUpdate, onSucc
         if (ownResult && ownResult.status !== 'synced' && ownResult.status !== 'duplicate') {
             onError(ownResult.message || 'La marcación fue rechazada por el servidor.');
         } else {
-            onSuccess(employee, { recorded_at: recordedAt }, eventType, { queued: !ownResult });
+            onSuccess(employee, { recorded_at: recordedAt }, eventType, { queued: !ownResult, ...reminder });
         }
     } catch (error) {
         console.error('Error al sincronizar la cola:', error);
-        onSuccess(employee, { recorded_at: recordedAt }, eventType, { queued: true });
+        onSuccess(employee, { recorded_at: recordedAt }, eventType, { queued: true, ...reminder });
     }
 
     await refreshIdleSyncStatus();

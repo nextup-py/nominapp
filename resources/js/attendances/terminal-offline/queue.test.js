@@ -32,7 +32,7 @@ import {
     countPendingEvents, getEmployeeStatusCache, setEmployeeStatusCache,
 } from './db.js';
 import { submitEvents, fetchEmployeeStatus, TerminalAuthError } from './sync.js';
-import { allowedNextEventTypes, resolveEmployeeStatus, getEmployeeStatus, enqueueMark, flushQueue } from './queue.js';
+import { allowedNextEventTypes, resolveEmployeeStatus, getEmployeeStatus, enqueueMark, flushQueue, isOpenStateStale, getExpectedCheckOut } from './queue.js';
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -105,6 +105,67 @@ describe('resolveEmployeeStatus', () => {
     });
 });
 
+describe('isOpenStateStale', () => {
+    const now = new Date('2026-10-08T22:08:00Z').getTime();
+
+    it('una jornada abierta cuya última marcación pasó el límite es vieja', () => {
+        expect(isOpenStateStale({ last_event: 'check_in', last_event_at: '2026-10-06T20:56:00Z' }, now, 16)).toBe(true);
+    });
+
+    it('una jornada abierta reciente (turno nocturno en curso) no es vieja', () => {
+        expect(isOpenStateStale({ last_event: 'check_in', last_event_at: '2026-10-08T14:00:00Z' }, now, 16)).toBe(false);
+    });
+
+    it.each([
+        ['salida ya marcada', { last_event: 'check_out', last_event_at: '2026-10-01T10:00:00Z' }, 16],
+        ['sin fecha de la marcación (cache anterior)', { last_event: 'check_in' }, 16],
+        ['sin límite configurado (0)', { last_event: 'check_in', last_event_at: '2026-10-01T10:00:00Z' }, 0],
+        ['límite todavía desconocido', { last_event: 'check_in', last_event_at: '2026-10-01T10:00:00Z' }, null],
+    ])('no es vieja: %s', (_name, cached, maxHours) => {
+        expect(isOpenStateStale(cached, now, maxHours)).toBe(false);
+    });
+});
+
+describe('resolveEmployeeStatus con estado cacheado viejo', () => {
+    it('ignora una entrada de hace días y ofrece solo Entrada (caso: el jueves del martes sin salida)', async () => {
+        vi.useFakeTimers().setSystemTime(new Date('2026-10-08T22:08:00Z'));
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'overnight_max_hours' ? 16 : 0));
+        getEmployeeStatusCache.mockResolvedValue({ last_event: 'check_in', last_event_time: '17:56', last_event_at: '2026-10-06T20:56:00Z' });
+        getEventsForEmployeeOnDate.mockResolvedValue([]);
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        const result = await resolveEmployeeStatus(1);
+
+        expect(result.last_event).toBeNull();
+        expect(result.allowed_events).toEqual(['check_in']);
+        vi.useRealTimers();
+    });
+
+    it('mantiene una jornada nocturna reciente', async () => {
+        vi.useFakeTimers().setSystemTime(new Date('2026-10-08T06:00:00Z'));
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'overnight_max_hours' ? 16 : 0));
+        getEmployeeStatusCache.mockResolvedValue({ last_event: 'check_in', last_event_time: '22:00', last_event_at: '2026-10-07T22:00:00Z' });
+        getEventsForEmployeeOnDate.mockResolvedValue([]);
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        const result = await resolveEmployeeStatus(1);
+
+        expect(result.last_event).toBe('check_in');
+        expect(result.allowed_events).toContain('check_out');
+        vi.useRealTimers();
+    });
+});
+
+describe('getExpectedCheckOut', () => {
+    it('devuelve la salida esperada cacheada con el estado del empleado, o null', async () => {
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_out: '17:30' });
+        expect(await getExpectedCheckOut(1)).toBe('17:30');
+
+        getEmployeeStatusCache.mockResolvedValueOnce(undefined);
+        expect(await getExpectedCheckOut(1)).toBeNull();
+    });
+});
+
 describe('getEmployeeStatus', () => {
     it('consulta en línea, cachea y retorna el resultado', async () => {
         fetchEmployeeStatus.mockResolvedValue({ last_event: 'check_in', last_event_time: '08:00', allowed_events: ['check_out'] });
@@ -138,6 +199,15 @@ describe('enqueueMark', () => {
         expect(setEmployeeStatusCache).toHaveBeenCalledWith(1, expect.objectContaining({ last_event: 'check_in', allowed_events: ['break_start', 'check_out'] }));
         expect(result).toHaveProperty('client_event_id');
         expect(result).toHaveProperty('recorded_at');
+    });
+
+    it('guarda la fecha de la marcación y conserva la salida esperada ya informada por el servidor', async () => {
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+        getEmployeeStatusCache.mockResolvedValue({ last_event: null, expected_check_out: '17:30' });
+
+        const result = await enqueueMark(1, 'check_in');
+
+        expect(setEmployeeStatusCache).toHaveBeenCalledWith(1, expect.objectContaining({ last_event_at: result.recorded_at, expected_check_out: '17:30' }));
     });
 });
 

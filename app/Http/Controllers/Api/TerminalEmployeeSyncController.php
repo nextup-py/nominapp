@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AttendanceDay;
 use App\Models\Employee;
 use App\Models\Terminal;
+use App\Services\AttendanceCalculator;
 use App\Services\EmployeeDescriptorSyncService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -85,7 +86,19 @@ class TerminalEmployeeSyncController extends Controller
             'ok' => true,
             'last_event' => $state['last']?->event_type,
             'last_event_time' => $state['last']?->recorded_at?->format('H:i'),
+            'last_event_at' => $state['last']?->recorded_at?->toIso8601String(),
+            'expected_check_out' => $this->expectedCheckOut($employee, $now),
             'allowed_events' => $state['allowed'],
         ]);
+    }
+
+    /**
+     * Hora de fin del turno de hoy ("HH:MM") para el recordatorio de salida del terminal; null si no tiene horario ese día.
+     */
+    private function expectedCheckOut(Employee $employee, Carbon $now): ?string
+    {
+        $checkOut = AttendanceCalculator::resolveShiftDataFor($employee, $now->copy()->startOfDay())['check_out'] ?? null;
+
+        return $checkOut ? substr((string) $checkOut, 0, 5) : null;
     }
 }

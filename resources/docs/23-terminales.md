@@ -218,11 +218,12 @@ El detalle incluye la sección **Estado del dispositivo** con lo que el terminal
 
 | Dato | Qué indica |
 |------|------------|
-| **Versión de la app** | Si el terminal corre la versión actual (*al día*) o una vieja (*desactualizada, recargar el terminal*) |
+| **Versión de la app** | Si el terminal corre la versión actual (*al día*) o una vieja (*desactualizada, recargar el terminal*). Con una versión vieja, el terminal en línea se recarga solo en cuanto queda en reposo (sin marcaciones en curso), sin esperar el comando **Recargar app** |
 | **Modo** | Si está **instalado como app** o abierto en una pestaña del navegador, y si el service worker está activo (sin él no funciona sin conexión) |
 | **Batería** | Nivel y si está cargando. Solo la informan algunos navegadores (Chrome en Android, por ejemplo); iPhone y iPad no |
 | **Cámara** | **Permitida**, **Bloqueada** (el terminal no puede identificar) o **Sin decidir** (falta aceptar el permiso) |
 | **Empleados en caché** | Cuántos rostros tiene descargados para identificar sin conexión |
+| **Pantalla encendida** | **Activa** si el terminal logró mantener la pantalla encendida; **Inactiva** si no (la tablet puede dormirse y dejar de marcar: revisar el ahorro de batería y la configuración de pantalla del dispositivo). Algunos navegadores no lo permiten |
 | **Desfase de reloj** | Diferencia entre el reloj del dispositivo y el del servidor; se advierte si pasa de un minuto |
 | **Almacenamiento** | Espacio usado del navegador en el dispositivo |
 
@@ -390,7 +391,8 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 | Aviso de **Terminal sin empleados enrolados** | Ningún empleado activo de la sucursal del terminal tiene rostro registrado (o los empleados figuran en otra sucursal) | Enrolar a los empleados o corregir su sucursal en su ficha |
 | Aviso de **Terminal sin empleados en caché** | El terminal en línea descargó 0 empleados aunque la sucursal tiene enrolados | Enviar **Limpiar caché** y, si sigue igual, **Recargar app** |
 | El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |
-| El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Recargar la página del terminal dos veces |
+| El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Si está en línea se recarga solo al quedar en reposo (una vez por versión). Si no, recargar la página del terminal dos veces o enviar **Recargar app** |
+| El estado dice **Pantalla encendida: Inactiva** | El navegador no concedió mantener la pantalla encendida, o la tablet entró en ahorro de batería | Dejar la tablet cargando, desactivar el ahorro de batería y la suspensión de pantalla, y recargar el terminal |
 | Un comando remoto figura **Vencido** | El terminal no se conectó en 15 minutos (apagado, sin internet) o corre una versión vieja de la aplicación que no entiende comandos | Verificar que esté encendido y con internet, recargar su página dos veces y volver a enviar el comando |
 | Un comando remoto figura **Falló** con el detalle *El terminal estuvo ocupado* | Había una marcación en curso y no llegó al reposo a tiempo | Volver a enviar el comando cuando el terminal esté en reposo |
 | **Limpiar caché** falló con un error de red | El terminal no pudo descargar los empleados | Verificar su conexión y reenviar el comando. La caché que tenía se conserva y no se pierde ninguna marcación |

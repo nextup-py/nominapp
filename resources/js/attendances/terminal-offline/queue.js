@@ -67,6 +67,24 @@ export function allowedNextEventTypes(lastEventType, hasScheduledBreak = true) {
 }
 
 /**
+ * Indica si un estado cacheado de "jornada abierta" ya es demasiado viejo para seguir creyéndolo: pasadas
+ * `maxHours` horas desde la última marcación, un turno no puede seguir en curso y lo más probable es que
+ * se haya olvidado la salida. Mismo criterio que `AttendanceDay::isWithinOvernightLimit()` en el servidor
+ * (`attendance_overnight_max_hours`, 0 = sin límite). Sin fecha de la marcación no se puede saber: se conserva.
+ * @param {{last_event?: string|null, last_event_at?: string|null}|undefined} cached
+ * @param {number} nowMs
+ * @param {number|null|undefined} maxHours
+ * @returns {boolean}
+ */
+export function isOpenStateStale(cached, nowMs, maxHours) {
+    if (!cached?.last_event || cached.last_event === 'check_out' || !cached.last_event_at) return false;
+    if (!Number.isFinite(maxHours) || maxHours <= 0) return false;
+
+    const lastMs = new Date(cached.last_event_at).getTime();
+    return Number.isFinite(lastMs) && nowMs - lastMs > maxHours * 60 * 60 * 1000;
+}
+
+/**
  * Hora actual corregida con el offset de reloj del último heartbeat exitoso
  * (`server_clock_offset_ms`, ver sync.js) — un terminal sin NTP configurado
  * puede tener el reloj local desviado, lo que arrastraría el error a cada
@@ -120,6 +138,11 @@ export async function resolveEmployeeStatus(employeeId) {
 
     let lastEvent = cached?.last_event ?? null;
     let lastEventTime = cached?.last_event_time ?? null;
+
+    if (todayEvents.length === 0 && isOpenStateStale(cached, now.getTime(), await getMeta('overnight_max_hours'))) {
+        lastEvent = null;
+        lastEventTime = null;
+    }
 
     if (todayEvents.length > 0) {
         for (const event of todayEvents) {
@@ -197,13 +220,27 @@ export async function enqueueMark(employeeId, eventType) {
     // último estado confirmado ANTES de esta marcación) y vuelve a ofrecer
     // los mismos eventos permitidos que antes de marcar.
     const employee = await getCachedEmployee(employeeId);
+    const previous = await getEmployeeStatusCache(employeeId);
     await setEmployeeStatusCache(employeeId, {
         last_event: eventType,
         last_event_time: recordedAt.toTimeString().slice(0, 5),
+        last_event_at: recordedAt.toISOString(),
+        expected_check_out: previous?.expected_check_out ?? null,
         allowed_events: allowedNextEventTypes(eventType, employee?.has_scheduled_break ?? true),
     });
 
     return { client_event_id: clientEventId, recorded_at: recordedAt.toISOString() };
+}
+
+/**
+ * Hora de fin del turno de hoy ("HH:MM") que el servidor informó con el último estado del empleado, para el
+ * recordatorio de salida. null si no hay horario ese día o si todavía no se consultó en línea.
+ * @param {number} employeeId
+ * @returns {Promise<string|null>}
+ */
+export async function getExpectedCheckOut(employeeId) {
+    const cached = await getEmployeeStatusCache(employeeId);
+    return cached?.expected_check_out ?? null;
 }
 
 /**

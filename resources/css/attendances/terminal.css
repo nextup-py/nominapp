@@ -994,6 +994,14 @@ body {
     margin-bottom: var(--sp-4);
 }
 
+/* Recordatorio de la hora de salida del turno, tras marcar la entrada */
+.success-exit-reminder {
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--c-primary);
+    margin-bottom: var(--sp-4);
+}
+
 .error-message {
     font-size: clamp(.875rem, 2vw, 1.0625rem);
     color: var(--c-muted); line-height: 1.6;

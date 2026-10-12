@@ -75,6 +75,7 @@ async function readStorage(nav) {
  * @param {string|null} [options.appVersion] - versión/build de la app que corre (la inyecta el servidor).
  * @param {number|null} [options.cachedEmployees] - empleados en la caché local.
  * @param {number|null} [options.clockOffsetMs] - diferencia servidor − dispositivo del último heartbeat.
+ * @param {boolean|null} [options.wakeLock] - si el terminal logró mantener la pantalla encendida (Wake Lock); null si no se sabe.
  * @returns {Promise<Record<string, string|number|boolean>>}
  */
 export async function collectDeviceReport({
@@ -83,6 +84,7 @@ export async function collectDeviceReport({
     appVersion = null,
     cachedEmployees = null,
     clockOffsetMs = null,
+    wakeLock = null,
 } = {}) {
     const report = {};
 
@@ -99,6 +101,7 @@ export async function collectDeviceReport({
 
     if (Number.isFinite(cachedEmployees)) report.cached_employees = cachedEmployees;
     if (Number.isFinite(clockOffsetMs)) report.clock_skew_seconds = Math.round(clockOffsetMs / 1000);
+    if (typeof wakeLock === 'boolean') report.wake_lock = wakeLock;
 
     const [battery, camera, storage] = await Promise.all([readBattery(nav), readCameraState(nav), readStorage(nav)]);
     Object.assign(report, battery, storage);

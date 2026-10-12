@@ -34,6 +34,9 @@
                 Guardado en el dispositivo — se sincronizará cuando haya conexión.
             </p>
 
+            {{-- Recordatorio de salida: solo tras una entrada, con la hora de fin del turno informada por el servidor --}}
+            <p class="success-exit-reminder" id="successExitReminder" style="display:none" role="status"></p>
+
             <div class="countdown-bar" aria-hidden="true">
                 <div class="countdown-fill" id="countdownFill"></div>
             </div>

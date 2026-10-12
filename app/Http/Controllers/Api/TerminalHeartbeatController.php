@@ -46,7 +46,7 @@ class TerminalHeartbeatController extends Controller
      */
     private const DEVICE_REPORT_KEYS = [
         'app_version', 'standalone', 'sw_active', 'battery_level', 'battery_charging',
-        'camera', 'cached_employees', 'clock_skew_seconds', 'storage_used_mb', 'storage_quota_mb',
+        'camera', 'cached_employees', 'clock_skew_seconds', 'storage_used_mb', 'storage_quota_mb', 'wake_lock',
     ];
 
     public function store(Request $request, GeneralSettings $settings): JsonResponse
@@ -67,6 +67,7 @@ class TerminalHeartbeatController extends Controller
             'device.camera' => ['nullable', 'string', 'in:granted,denied,prompt,unavailable'],
             'device.cached_employees' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'device.clock_skew_seconds' => ['nullable', 'integer', 'between:-31536000,31536000'],
+            'device.wake_lock' => ['nullable', 'boolean'],
             'device.storage_used_mb' => ['nullable', 'integer', 'min:0'],
             'device.storage_quota_mb' => ['nullable', 'integer', 'min:0'],
         ]);
@@ -91,7 +92,9 @@ class TerminalHeartbeatController extends Controller
             'ok' => true,
             'commands' => $supportsCommands ? $terminal->deliverPendingCommands() : [],
             'server_time' => now()->toIso8601String(),
+            'app_version' => Terminal::currentAppVersion(),
             'config' => [
+                'overnight_max_hours' => (int) $settings->attendance_overnight_max_hours,
                 'face_threshold' => (float) $settings->face_threshold,
                 'face_min_confidence_gap' => (float) $settings->face_min_confidence_gap,
             ],
