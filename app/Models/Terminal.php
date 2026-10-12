@@ -514,7 +514,7 @@ class Terminal extends Model implements AuthenticatableContract
                 'command' => $command,
                 'status' => 'pending',
                 'requested_by_id' => $by?->id,
-                'expires_at' => now()->addMinutes(TerminalCommand::TTL_MINUTES),
+                'expires_at' => now()->addMinutes(TerminalCommand::deliveryWindowMinutes($command)),
             ]);
             TerminalEvent::record($this, 'command_sent', ['command' => $command], $by?->id);
 
@@ -535,7 +535,12 @@ class Terminal extends Model implements AuthenticatableContract
             $pending = $this->commands()->where('status', 'pending')->orderBy('id')->lockForUpdate()->get();
 
             foreach ($pending as $command) {
-                $command->update(['status' => 'delivered', 'delivered_at' => now()]);
+                $command->update([
+                    'status' => 'delivered',
+                    'delivered_at' => now(),
+                    // Un comando diferible espera horas la entrega, pero una vez entregado tiene el plazo normal para confirmarse.
+                    'expires_at' => TerminalCommand::isDeferrable($command->command) ? now()->addMinutes(TerminalCommand::TTL_MINUTES) : $command->expires_at,
+                ]);
             }
 
             return $pending->map(fn (TerminalCommand $c) => ['id' => $c->id, 'command' => $c->command])->all();

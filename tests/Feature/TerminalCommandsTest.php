@@ -8,6 +8,7 @@ use App\Models\Terminal;
 use App\Models\TerminalCommand;
 use App\Models\TerminalEvent;
 use App\Models\User;
+use App\Notifications\TerminalCommandExpiredNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
@@ -236,4 +237,90 @@ it('la acción masiva envía el comando a los terminales vinculados y omite los 
         ->assertNotified();
 
     expect($linked->commands()->count())->toBe(1)->and($unlinked->commands()->count())->toBe(0);
+});
+
+// ─── Recarga diferida ───────────────────────────────────────────────────────
+
+it('la recarga espera 24 horas al terminal y los demás comandos 15 minutos', function () {
+    $terminal = makeCommandTerminal();
+
+    $reload = $terminal->sendCommand(TerminalCommand::RELOAD);
+    $report = $terminal->sendCommand(TerminalCommand::REPORT);
+
+    expect($reload->expires_at->between(now()->addHours(23)->addMinutes(59), now()->addHours(24)->addSecond()))->toBeTrue()
+        ->and($report->expires_at->between(now()->addMinutes(14), now()->addMinutes(15)->addSecond()))->toBeTrue();
+});
+
+it('una recarga pendiente se entrega aunque el terminal vuelva horas después, con plazo normal para confirmarse', function () {
+    $terminal = makeCommandTerminal();
+    $command = $terminal->sendCommand(TerminalCommand::RELOAD);
+
+    $this->travel(6)->hours();
+    heartbeatAs($terminal, ['command_acks' => []])->assertOk()->assertJsonPath('commands.0.command', 'reload');
+
+    $command->refresh();
+    expect($command->status)->toBe('delivered')
+        ->and($command->expires_at->between(now()->addMinutes(14), now()->addMinutes(15)->addSecond()))->toBeTrue();
+
+    $this->travel(16)->minutes();
+    $this->artisan('terminals:expire-commands')->assertSuccessful();
+    expect($command->fresh()->status)->toBe('failed');
+});
+
+it('otros comandos siguen venciendo a los 15 minutos si el terminal no vuelve', function () {
+    $terminal = makeCommandTerminal();
+    $command = $terminal->sendCommand(TerminalCommand::REPORT);
+
+    $this->travel(16)->minutes();
+    heartbeatAs($terminal, ['command_acks' => []])->assertOk()->assertJsonCount(0, 'commands');
+
+    expect($command->fresh()->status)->toBe('expired');
+});
+
+it('una recarga que vence sin entregarse avisa a quien la envió', function () {
+    $terminal = makeCommandTerminal();
+    $admin = commandManager();
+    $terminal->sendCommand(TerminalCommand::RELOAD, $admin);
+
+    $this->travel(25)->hours();
+    $this->artisan('terminals:expire-commands')->assertSuccessful();
+
+    Notification::assertSentTo($admin, TerminalCommandExpiredNotification::class);
+    expect($terminal->commands()->first()->status)->toBe('expired');
+});
+
+it('un comando no diferible vencido no genera aviso', function () {
+    $terminal = makeCommandTerminal();
+    $admin = commandManager();
+    $terminal->sendCommand(TerminalCommand::REPORT, $admin);
+
+    $this->travel(20)->minutes();
+    $this->artisan('terminals:expire-commands')->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
+it('enviar otra recarga con una esperando no duplica y lo avisa', function () {
+    $terminal = makeCommandTerminal();
+    $this->actingAs(commandManager());
+    $terminal->sendCommand(TerminalCommand::RELOAD);
+
+    Livewire::test(ViewTerminal::class, ['record' => $terminal->getRouteKey()])
+        ->callAction('send_command_reload')
+        ->assertNotified('Ya hay un comando igual esperando');
+
+    expect($terminal->commands()->where('command', 'reload')->count())->toBe(1);
+});
+
+it('la acción masiva cuenta aparte los terminales que ya tenían el comando esperando', function () {
+    $waiting = makeCommandTerminal();
+    $fresh = makeCommandTerminal();
+    $waiting->sendCommand(TerminalCommand::RELOAD);
+    $this->actingAs(commandManager());
+
+    Livewire::test(ListTerminals::class)
+        ->callTableBulkAction('send_command_bulk', [$waiting, $fresh], ['command' => 'reload'])
+        ->assertNotified('Comando enviado a 1 terminal(es)');
+
+    expect($waiting->commands()->count())->toBe(1)->and($fresh->commands()->count())->toBe(1);
 });
