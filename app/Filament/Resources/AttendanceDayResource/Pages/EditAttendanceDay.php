@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttendanceDayResource\Pages;
 
 use App\Filament\Resources\AttendanceDayResource;
+use App\Services\OpenShiftCloser;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
@@ -41,9 +42,22 @@ class EditAttendanceDay extends EditRecord
                 ->modalHeading('¿Eliminar registro de asistencia?')
                 ->modalDescription('¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.')
                 ->modalSubmitActionLabel('Sí, eliminar')
+                ->before(function (DeleteAction $action) {
+                    if (AttendanceDayResource::blockedByPayroll($this->record)) {
+                        $action->halt();
+                    }
+                })
                 ->successNotificationTitle('Registro eliminado')
                 ->successRedirectUrl($this->getResource()::getUrl('index')),
         ];
+    }
+
+    /** Impide guardar cambios si la fecha ya está cubierta por una nómina generada. */
+    protected function beforeSave(): void
+    {
+        if (AttendanceDayResource::blockedByPayroll($this->record, app(OpenShiftCloser::class))) {
+            $this->halt();
+        }
     }
 
     /**
