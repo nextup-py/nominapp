@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Notifications\TerminalCommandExpiredNotification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Comando remoto enviado a un terminal. Ciclo: `pending` (en espera del próximo heartbeat)
@@ -25,6 +27,12 @@ class TerminalCommand extends Model
     /** Minutos que un comando espera ser entregado (y luego confirmado) antes de vencer. */
     public const TTL_MINUTES = 15;
 
+    /** Horas que un comando diferible espera a que el terminal vuelva a conectarse antes de vencer. */
+    public const DEFERRED_TTL_HOURS = 24;
+
+    /** Comandos inofensivos si llegan tarde: esperan al terminal hasta `DEFERRED_TTL_HOURS` en vez de `TTL_MINUTES`. */
+    public const DEFERRABLE = [self::RELOAD];
+
     protected $fillable = [
         'terminal_id', 'command', 'status', 'requested_by_id', 'expires_at',
         'delivered_at', 'completed_at', 'result_message',
@@ -38,6 +46,18 @@ class TerminalCommand extends Model
             'delivered_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
+    }
+
+    /** Indica si el comando puede esperar horas a que el terminal vuelva a conectarse. */
+    public static function isDeferrable(string $command): bool
+    {
+        return in_array($command, self::DEFERRABLE, true);
+    }
+
+    /** Minutos que el comando espera ser entregado: largos para los diferibles, `TTL_MINUTES` para el resto. */
+    public static function deliveryWindowMinutes(string $command): int
+    {
+        return self::isDeferrable($command) ? self::DEFERRED_TTL_HOURS * 60 : self::TTL_MINUTES;
     }
 
     /** Terminal destinatario. */
@@ -139,8 +159,31 @@ class TerminalCommand extends Model
                 'command' => $command->command,
                 'message' => $command->result_message,
             ]);
+
+            if (! $wasDelivered && static::isDeferrable($command->command)) {
+                $command->notifyDeferredExpiry();
+            }
         }
 
         return $stale;
+    }
+
+    /**
+     * Avisa por la campanita a quien envió un comando diferible que venció sin que el terminal volviera a
+     * conectarse. Es best-effort: un fallo del aviso no debe deshacer el vencimiento ya persistido.
+     */
+    private function notifyDeferredExpiry(): void
+    {
+        $sender = $this->requested_by_id ? User::find($this->requested_by_id) : null;
+
+        if (! $sender || ! $this->terminal) {
+            return;
+        }
+
+        try {
+            $sender->notify(new TerminalCommandExpiredNotification($this->terminal, $this));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo avisar el vencimiento de un comando remoto', ['command_id' => $this->id, 'error' => $e->getMessage()]);
+        }
     }
 }

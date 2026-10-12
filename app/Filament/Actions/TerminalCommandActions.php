@@ -61,7 +61,7 @@ class TerminalCommandActions
                 ->visible(fn ($record = null, $livewire = null) => static::canManage() && static::canReceive(static::terminal($record, $livewire)))
                 ->requiresConfirmation()
                 ->modalHeading($label)
-                ->modalDescription(fn ($record = null, $livewire = null) => static::terminal($record, $livewire)->name.': '.TerminalCommand::getCommandDescriptions()[$command].' Se entrega en el próximo contacto del terminal (hasta ~90 segundos) y vence a los '.TerminalCommand::TTL_MINUTES.' minutos si no se conecta.')
+                ->modalDescription(fn ($record = null, $livewire = null) => static::terminal($record, $livewire)->name.': '.TerminalCommand::getCommandDescriptions()[$command].' '.static::deliveryNote($command))
                 ->modalSubmitActionLabel('Sí, enviar')
                 ->action(function ($record = null, $livewire = null) use ($command) {
                     abort_unless(static::canManage(), 403);
@@ -96,6 +96,7 @@ class TerminalCommandActions
 
                 $sent = 0;
                 $skipped = 0;
+                $alreadyWaiting = 0;
 
                 foreach ($records as $terminal) {
                     if (! static::canReceive($terminal)) {
@@ -104,25 +105,51 @@ class TerminalCommandActions
                         continue;
                     }
 
-                    $terminal->sendCommand($data['command'], Auth::user());
-                    $sent++;
+                    $command = $terminal->sendCommand($data['command'], Auth::user());
+                    $command->wasRecentlyCreated ? $sent++ : $alreadyWaiting++;
                 }
+
+                $notes = array_filter([
+                    $alreadyWaiting > 0 ? "{$alreadyWaiting} terminal(es) ya tenían ese comando esperando." : null,
+                    $skipped > 0 ? "{$skipped} terminal(es) omitido(s) por estar inactivos o sin vincular." : null,
+                    $sent > 0 ? static::deliveryNote($data['command']) : null,
+                ]);
 
                 Notification::make()
                     ->{$sent > 0 ? 'success' : 'warning'}()
                     ->title($sent > 0 ? "Comando enviado a {$sent} terminal(es)" : 'No se envió ningún comando')
-                    ->body($skipped > 0 ? "{$skipped} terminal(es) omitido(s) por estar inactivos o sin vincular." : null)
+                    ->body($notes === [] ? null : implode(' ', $notes))
                     ->send();
             });
+    }
+
+    /** Texto que explica cuándo llega el comando y cuándo vence, según sea diferible o no. */
+    private static function deliveryNote(string $command): string
+    {
+        if (TerminalCommand::isDeferrable($command)) {
+            return 'Si el terminal está apagado o sin conexión, queda esperando hasta '.TerminalCommand::DEFERRED_TTL_HOURS.' horas y se aplica apenas vuelva a conectarse (se avisa si vence).';
+        }
+
+        return 'Se entrega en el próximo contacto del terminal (hasta ~90 segundos) y vence a los '.TerminalCommand::TTL_MINUTES.' minutos si no se conecta.';
     }
 
     /** Encola el comando y avisa al usuario; cualquier error de reglas se informa sin romper la acción. */
     private static function send(Terminal $terminal, string $command): void
     {
         try {
-            $terminal->sendCommand($command, Auth::user());
+            $sent = $terminal->sendCommand($command, Auth::user());
         } catch (\DomainException $e) {
             Notification::make()->danger()->title('No se pudo enviar el comando')->body($e->getMessage())->send();
+
+            return;
+        }
+
+        if (! $sent->wasRecentlyCreated) {
+            Notification::make()
+                ->warning()
+                ->title('Ya hay un comando igual esperando')
+                ->body('Este terminal ya tiene ese comando pendiente o sin confirmar; no se envió otro. El resultado queda en la pestaña "Comandos".')
+                ->send();
 
             return;
         }
@@ -130,7 +157,7 @@ class TerminalCommandActions
         Notification::make()
             ->success()
             ->title('Comando enviado')
-            ->body('El terminal lo recibirá en su próximo contacto (hasta ~90 segundos). El resultado queda en la pestaña "Comandos".')
+            ->body(static::deliveryNote($command).' El resultado queda en la pestaña "Comandos".')
             ->send();
     }
 }
