@@ -122,6 +122,12 @@ class BranchResource extends Resource
                 ->columns(2)
                 ->collapsible(),
 
+            Section::make('Horario de atención')
+                ->description('Días y horas en que la sucursal trabaja. Los terminales sin horario de vigilancia propio usan este horario: fuera de él no se avisa que están desconectados (por ejemplo, el aviso de las 06:00 de un terminal apagado de noche).')
+                ->schema(TerminalResource::watchWindowFields(forBranch: true))
+                ->columns(2)
+                ->collapsible(),
+
             Section::make('Ubicación')
                 ->description('Dirección y coordenadas GPS de la sucursal.')
                 ->schema([
@@ -242,6 +248,18 @@ class BranchResource extends Resource
                     TextEntry::make('company.trade_name')
                         ->label('Nombre comercial')
                         ->placeholder('Sin nombre comercial'),
+                ])
+                ->collapsible(),
+
+            InfoSection::make('Horario de atención')
+                ->schema([
+                    TextEntry::make('_watch_schedule')
+                        ->hiddenLabel()
+                        ->getStateUsing(fn (Branch $record) => $record->watchScheduleLabel())
+                        ->icon('heroicon-o-clock')
+                        ->badge()
+                        ->color(fn (Branch $record) => $record->hasWatchSchedule() ? 'info' : 'gray')
+                        ->helperText('Los terminales sin horario de vigilancia propio usan este horario.'),
                 ])
                 ->collapsible(),
 

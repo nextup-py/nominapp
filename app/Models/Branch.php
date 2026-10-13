@@ -25,6 +25,9 @@ class Branch extends Model implements Auditable
         'city',
         'coordinates',
         'is_active',
+        'watch_days',
+        'watch_from',
+        'watch_to',
     ];
 
     protected $fillable = [
@@ -36,6 +39,9 @@ class Branch extends Model implements Auditable
         'city',
         'coordinates',
         'is_active',
+        'watch_days',
+        'watch_from',
+        'watch_to',
     ];
 
     /** @var array<string, mixed> Las sucursales nuevas nacen activas (igual que el default de la base). */
@@ -46,6 +52,7 @@ class Branch extends Model implements Auditable
     protected $casts = [
         'coordinates' => 'array',
         'is_active' => 'boolean',
+        'watch_days' => 'array',
     ];
 
     /** Red de seguridad: ninguna ruta puede borrar una sucursal con empleados, terminales o fallas de marcación asociadas. */
@@ -55,6 +62,13 @@ class Branch extends Model implements Auditable
             if ($branch->deletionBlockers() !== []) {
                 throw new \DomainException("No se puede eliminar la sucursal: tiene {$branch->deletionBlockersSummary()}. Reasígnelos antes de eliminarla.");
             }
+        });
+
+        static::saving(function (Branch $branch): void {
+            $days = collect($branch->watch_days ?? [])->map(fn ($d) => (int) $d)->unique()->sort()->values()->all();
+            $branch->watch_days = $days === [] ? null : $days;
+            $branch->watch_from = filled($branch->watch_from) ? $branch->watch_from : null;
+            $branch->watch_to = filled($branch->watch_to) ? $branch->watch_to : null;
         });
 
         static::updating(function (Branch $branch): void {
@@ -153,6 +167,9 @@ class Branch extends Model implements Auditable
             'city' => 'Ciudad',
             'coordinates' => 'Coordenadas',
             'is_active' => 'Estado',
+            'watch_days' => 'Días de atención',
+            'watch_from' => 'Atiende desde',
+            'watch_to' => 'Atiende hasta',
         ];
 
         $html = '<ul class="space-y-0.5 text-sm">';
@@ -182,6 +199,16 @@ class Branch extends Model implements Auditable
 
         if ($key === 'is_active') {
             return $value ? 'Activa' : 'Inactiva';
+        }
+
+        if ($key === 'watch_days') {
+            $days = is_string($value) ? json_decode($value, true) : $value;
+
+            return collect($days)->map(fn ($d) => Terminal::WATCH_DAY_OPTIONS[(int) $d] ?? $d)->implode(', ');
+        }
+
+        if (in_array($key, ['watch_from', 'watch_to'], true)) {
+            return substr((string) $value, 0, 5);
         }
 
         if ($key === 'company_id') {
@@ -320,5 +347,22 @@ class Branch extends Model implements Auditable
         }
 
         return $warnings;
+    }
+
+    /** Indica si la sucursal tiene días u horas de atención configurados. */
+    public function hasWatchSchedule(): bool
+    {
+        return ! empty($this->watch_days) || filled($this->watch_from) || filled($this->watch_to);
+    }
+
+    /**
+     * Texto legible del horario de atención (ej. "Lun, Mar · 06:00–23:00") o "Sin horario definido"
+     * cuando no tiene: en ese caso sus terminales se vigilan 24/7 salvo que tengan horario propio.
+     */
+    public function watchScheduleLabel(): string
+    {
+        return $this->hasWatchSchedule()
+            ? Terminal::windowLabel($this->watch_days ?? [], $this->watch_from, $this->watch_to)
+            : 'Sin horario definido';
     }
 }

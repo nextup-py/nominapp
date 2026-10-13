@@ -360,16 +360,55 @@ class Terminal extends Model implements AuthenticatableContract
     }
 
     /**
-     * Indica si `$at` cae dentro del horario de vigilancia del terminal. Sin días ni
-     * horas configurados se vigila siempre (24/7). Un rango que cruza medianoche
-     * (ej. 22:00–06:00) pertenece al día en que empieza: a las 02:00 del martes
-     * cuenta como el turno del lunes.
+     * Horario de vigilancia efectivo del terminal: el propio si tiene alguno configurado y, si no,
+     * el de su sucursal (`Branch::watch_*`); sin ninguno de los dos se vigila siempre (24/7).
+     *
+     * @return array{days: array<int, int>, from: ?string, to: ?string, source: string} `source` = terminal|branch|none
+     */
+    public function watchConfig(): array
+    {
+        if ($this->hasOwnWatchSchedule()) {
+            return ['days' => array_map('intval', $this->watch_days ?? []), 'from' => $this->watch_from, 'to' => $this->watch_to, 'source' => 'terminal'];
+        }
+
+        $branch = $this->branch;
+
+        if ($branch && $branch->hasWatchSchedule()) {
+            return ['days' => array_map('intval', $branch->watch_days ?? []), 'from' => $branch->watch_from, 'to' => $branch->watch_to, 'source' => 'branch'];
+        }
+
+        return ['days' => [], 'from' => null, 'to' => null, 'source' => 'none'];
+    }
+
+    /** Indica si el terminal tiene días u horas de vigilancia propios (los tiene prioridad sobre los de la sucursal). */
+    public function hasOwnWatchSchedule(): bool
+    {
+        return ! empty($this->watch_days) || filled($this->watch_from) || filled($this->watch_to);
+    }
+
+    /**
+     * Indica si `$at` cae dentro del horario de vigilancia efectivo del terminal
+     * (ver {@see self::watchConfig()}). Sin días ni horas se vigila siempre (24/7).
      */
     public function isWithinWatchWindow(?CarbonInterface $at = null): bool
     {
-        $days = array_map('intval', $this->watch_days ?? []);
-        $from = $this->watch_from ? Carbon::createFromTimeString($this->watch_from) : null;
-        $to = $this->watch_to ? Carbon::createFromTimeString($this->watch_to) : null;
+        $config = $this->watchConfig();
+
+        return static::windowContains($config['days'], $config['from'], $config['to'], $at);
+    }
+
+    /**
+     * Indica si `$at` cae dentro de un horario de vigilancia. Un rango que cruza medianoche
+     * (ej. 22:00–06:00) pertenece al día en que empieza: a las 02:00 del martes cuenta como el
+     * turno del lunes. Compartido por terminales y sucursales.
+     *
+     * @param  array<int, int|string>  $days  Días ISO 1–7; vacío = todos.
+     */
+    public static function windowContains(array $days, ?string $from, ?string $to, ?CarbonInterface $at = null): bool
+    {
+        $days = array_map('intval', $days);
+        $from = $from ? Carbon::createFromTimeString($from) : null;
+        $to = $to ? Carbon::createFromTimeString($to) : null;
 
         if ($days === [] && ! $from && ! $to) {
             return true;
@@ -397,12 +436,25 @@ class Terminal extends Model implements AuthenticatableContract
         return $withinHours && ($days === [] || in_array($dayOfWindow, $days, true));
     }
 
-    /** Texto legible del horario de vigilancia (ej. "Lun a Vie · 08:00–20:00" o "Siempre (24/7)"). */
+    /** Texto legible del horario de vigilancia efectivo; si lo hereda de la sucursal lo aclara. */
     public function watchScheduleLabel(): string
     {
-        $days = collect($this->watch_days ?? [])->map(fn ($d) => (int) $d)->sort()->values();
-        $hours = $this->watch_from && $this->watch_to
-            ? Carbon::createFromTimeString($this->watch_from)->format('H:i').'–'.Carbon::createFromTimeString($this->watch_to)->format('H:i')
+        $config = $this->watchConfig();
+        $label = static::windowLabel($config['days'], $config['from'], $config['to']);
+
+        return $config['source'] === 'branch' ? "{$label} (de la sucursal)" : $label;
+    }
+
+    /**
+     * Texto legible de un horario de vigilancia (ej. "Lun a Vie · 08:00–20:00" o "Siempre (24/7)").
+     *
+     * @param  array<int, int|string>  $days
+     */
+    public static function windowLabel(array $days, ?string $from, ?string $to): string
+    {
+        $days = collect($days)->map(fn ($d) => (int) $d)->sort()->values();
+        $hours = $from && $to
+            ? Carbon::createFromTimeString($from)->format('H:i').'–'.Carbon::createFromTimeString($to)->format('H:i')
             : null;
 
         if ($days->isEmpty() && ! $hours) {
@@ -443,15 +495,18 @@ class Terminal extends Model implements AuthenticatableContract
 
     /**
      * IDs de los terminales que ahora mismo están fuera de su horario de vigilancia.
-     * Se evalúa en PHP (días + rangos que cruzan medianoche): son pocos terminales.
+     * Se evalúa en PHP (días + rangos que cruzan medianoche): son pocos terminales. Incluye los que heredan el horario de su sucursal.
      *
      * @return array<int, int>
      */
     public static function idsOutsideWatchWindow(): array
     {
         return static::query()
-            ->where(fn (Builder $q) => $q->whereNotNull('watch_days')->orWhereNotNull('watch_from')->orWhereNotNull('watch_to'))
-            ->get(['id', 'watch_days', 'watch_from', 'watch_to'])
+            ->with('branch')
+            ->where(fn (Builder $q) => $q
+                ->whereNotNull('watch_days')->orWhereNotNull('watch_from')->orWhereNotNull('watch_to')
+                ->orWhereHas('branch', fn (Builder $b) => $b->whereNotNull('watch_days')->orWhereNotNull('watch_from')->orWhereNotNull('watch_to')))
+            ->get()
             ->reject(fn (Terminal $terminal) => $terminal->isWithinWatchWindow())
             ->pluck('id')
             ->all();
