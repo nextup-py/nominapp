@@ -273,7 +273,8 @@ body.modal-open { overflow: hidden; }
 }
 .menu-sheet-item--danger:hover { background: var(--c-danger-bg); }
 
-.menu-sheet-item--theme { cursor: default; }
+.menu-sheet-item--theme { cursor: pointer; }
+.menu-sheet-item--theme:hover { background: var(--c-bg); }
 .menu-sheet-item--theme .theme-toggle { width: 32px; height: 32px; }
 .menu-sheet-item-label { font-size: .9375rem; font-weight: 500; color: var(--c-text); }
 
