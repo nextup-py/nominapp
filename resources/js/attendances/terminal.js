@@ -5,6 +5,7 @@ import * as markRegistration from './terminal/mark-registration.js';
 import * as identificationFlow from './terminal/identification-flow.js';
 import * as bootstrap from './terminal/bootstrap.js';
 import * as pairingFlow from './terminal/pairing-flow.js';
+import { createEmptyStateController, HR_NOTICE } from './terminal/empty-state.js';
 import { updateClock, updateIdleDate } from './terminal/ui-feedback.js';
 import { setOffline, updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './terminal/sync-status-ui.js';
 import { initManualSearch } from './terminal/manual-search.js';
@@ -12,6 +13,7 @@ import { initThemeToggle } from '../shared/theme-toggle.js';
 import { createMenuSheet } from '../shared/menu-sheet.js';
 import { heartbeat, syncEmployees, TerminalAuthError } from './terminal-offline/sync.js';
 import { flushQueue } from './terminal-offline/queue.js';
+import { getMeta, countCachedEmployees } from './terminal-offline/db.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // ============================================================================
@@ -28,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         error:           document.getElementById('errorScreen'),
         legacyMigration: document.getElementById('legacyMigrationScreen'),
         unlinked:        document.getElementById('unlinkedScreen'),
+        empty:           document.getElementById('emptyScreen'),
     };
 
     const loadingDom = {
@@ -253,6 +256,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ============================================================================
+    // SIN EMPLEADOS — cámara apagada + pantalla que explica la causa (ver terminal/empty-state.js)
+    // ============================================================================
+    const emptyState = createEmptyStateController({
+        isSuspended: () => identificationFlow.isIdentificationBlocked(),
+        getInputs: async () => ({
+            cachedCount: await countCachedEmployees(),
+            syncedAt: await getMeta('employees_synced_at'),
+            online: navigator.onLine,
+            roster: await getMeta('branch_roster'),
+        }),
+        onBlock: (state) => {
+            idleDetection.clearIdleTimer();
+            idleDetection.stopPresenceCheck();
+            identificationFlow.stopAutoIdentification(video);
+            screenState.stopCountdown();
+            markRegistration.clearPendingEmployee();
+            isIdle = false;
+            if (terminalHeader) terminalHeader.classList.remove('terminal-header--idle');
+            renderEmptyState(state);
+            screenState.showScreen(screens, 'empty');
+        },
+        onUpdate: (state) => renderEmptyState(state),
+        onResume: () => identificationFlow.startIdentificationFlow(identificationRefs, { onIdleTimeout: enterIdle }),
+        sync: async () => {
+            try {
+                await heartbeat();
+                await syncEmployees();
+            } catch (error) {
+                if (error instanceof TerminalAuthError) showUnlinked('revoked');
+                throw error;
+            }
+        },
+        onTick: (secondsLeft, syncing) => {
+            const el = document.getElementById('emptyRetry');
+            if (el) el.textContent = syncing ? 'Sincronizando…' : `Se vuelve a intentar en ${secondsLeft} s`;
+            const btn = document.getElementById('btnEmptySync');
+            if (btn) btn.disabled = syncing;
+        },
+    });
+    identificationFlow.setStartGuard(() => emptyState.isBlocked());
+
+    /** Completa la pantalla "sin empleados" con los textos de la causa. */
+    function renderEmptyState(state) {
+        const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+        set('emptyHeadline', state.headline);
+        set('emptyMessage', state.message);
+        set('emptyDetailText', state.detail);
+        set('emptyTerminalCode', terminalData?.code ?? '—');
+        set('emptyBranchName', terminalData?.branch_name ?? '—');
+        const hr = document.getElementById('emptyHrNotice');
+        if (hr) {
+            hr.textContent = HR_NOTICE;
+            hr.classList.toggle('hidden', !state.notifiesHr);
+        }
+    }
+
+    document.getElementById('btnEmptySync')?.addEventListener('click', () => emptyState.retryNow());
+
     function resetTerminal() {
         identificationFlow.stopAutoIdentification(video);
         markRegistration.clearPendingEmployee();
@@ -344,6 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await syncEmployees();
                 await flushQueue();
                 await refreshIdleSyncStatus();
+                await emptyState.refresh();
             } catch (error) {
                 if (error instanceof TerminalAuthError) {
                     updateIdleSyncStatus('Terminal sin configurar');
@@ -390,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await syncEmployees();
                 await flushQueue();
                 await refreshIdleSyncStatus();
+                await emptyState.refresh();
             } catch (error) {
                 if (error instanceof TerminalAuthError) showUnlinked('revoked');
                 await refreshLastSyncLabel();
@@ -425,7 +489,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const startSystem = () => {
             screenState.showScreen(screens, 'loading');
             bootstrap.initializeSystem(loadingDom, {
-                onReady: enterIdle,
+                onReady: async () => {
+                    await emptyState.refresh();
+                    if (!emptyState.isBlocked()) enterIdle();
+                },
                 onError: (message) => screenState.showError(screens, errorMessageEl, message),
                 onUnlinked: showUnlinked,
             });

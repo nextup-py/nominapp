@@ -2,6 +2,7 @@
 
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Models\Terminal;
 use App\Settings\GeneralSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -144,6 +145,22 @@ it('el heartbeat informa la versión vigente de la app y el límite de jornada n
     expect($response->json('app_version'))->toBe(Terminal::currentAppVersion())
         ->and($response->json('config.overnight_max_hours'))->toBe(16)
         ->and($terminal->fresh()->device_report['wake_lock'])->toBeFalse();
+});
+
+it('el heartbeat informa cuántos empleados activos y con rostro tiene la sucursal', function () {
+    $terminal = makeConnectivityTerminal();
+    Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
+
+    Employee::factory()->create(['branch_id' => $terminal->branch_id, 'status' => 'active', 'face_descriptor' => null]);
+    Employee::factory()->create(['branch_id' => $terminal->branch_id, 'status' => 'active', 'face_descriptor' => array_fill(0, 128, 0.1)]);
+    Employee::factory()->create(['branch_id' => $terminal->branch_id, 'status' => 'inactive', 'face_descriptor' => array_fill(0, 128, 0.1)]);
+    $otherBranch = Branch::create(['name' => 'Otra sucursal', 'company_id' => $terminal->branch->company_id]);
+    Employee::factory()->create(['branch_id' => $otherBranch->id, 'status' => 'active', 'face_descriptor' => array_fill(0, 128, 0.1)]);
+
+    $this->postJson('/api/v1/terminal/heartbeat')
+        ->assertOk()
+        ->assertJsonPath('roster.active_employees', 2)
+        ->assertJsonPath('roster.enrolled_employees', 1);
 });
 
 it('el sync de empleados actualiza last_employee_sync_at', function () {

@@ -314,6 +314,30 @@ describe('terminal sin vincular — bloqueo de la identificación', () => {
         expect(cam.startCamera).not.toHaveBeenCalled();
     });
 
+    it('con el guard de "sin empleados" activo, startIdentificationFlow muestra la pantalla empty y no arranca la cámara', async () => {
+        const { flow, screens, cam } = await loadFresh();
+        const refs = makeRefs();
+        flow.setStartGuard(() => true);
+
+        flow.startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+
+        expect(screens.showScreen).toHaveBeenCalledWith(refs.screens, 'empty');
+        expect(screens.showScreen).not.toHaveBeenCalledWith(refs.screens, 'identification');
+        expect(cam.stopCamera).toHaveBeenCalled();
+        expect(cam.startCamera).not.toHaveBeenCalled();
+    });
+
+    it('al soltar el guard vuelve a arrancar la identificación normal', async () => {
+        const { flow, screens } = await loadFresh();
+        const refs = makeRefs();
+        flow.setStartGuard(() => true);
+        flow.setStartGuard(() => false);
+
+        flow.startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+
+        expect(screens.showScreen).toHaveBeenCalledWith(refs.screens, 'identification');
+    });
+
     it('needsProvisioning durante la identificación: bloquea y avisa vía onUnlinked (sin showError)', async () => {
         const { flow, sync, screens, cam } = await loadFresh();
         let capturedInterval = null;

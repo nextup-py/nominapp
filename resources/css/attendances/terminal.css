@@ -1170,3 +1170,16 @@ body {
         transition-duration: .01ms !important;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Pantalla "sin empleados" (terminal sin nadie en su caché)
+   --------------------------------------------------------------------------- */
+.empty-message { font-size: 1.125rem; line-height: 1.5; color: var(--c-text); text-align: center; margin: var(--sp-2) 0 var(--sp-3); }
+.empty-details { width: 100%; margin-bottom: var(--sp-3); }
+.empty-details summary {
+    cursor: pointer; text-align: center; font-size: .875rem; font-weight: 600;
+    color: var(--c-muted); padding: var(--sp-2); border-radius: var(--r-md, 8px);
+}
+.empty-details summary:hover { background: var(--c-bg); }
+.empty-detail-text { font-size: .875rem; line-height: 1.5; color: var(--c-muted); text-align: center; margin: var(--sp-2) 0 0; }
+.empty-retry { font-size: .8125rem; color: var(--c-subtle); text-align: center; min-height: 1.25rem; margin: 0 0 var(--sp-3); }

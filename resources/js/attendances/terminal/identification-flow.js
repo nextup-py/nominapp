@@ -55,6 +55,18 @@ export function blockIdentification(videoEl) {
     closeManualSearch();
 }
 
+/** @type {(() => boolean)|null} */
+let startGuard = null;
+
+/**
+ * Registra una condición que impide arrancar la identificación (ej. terminal sin empleados). Si devuelve true,
+ * `startIdentificationFlow()` deja la pantalla `empty` en vez de encender la cámara.
+ * @param {(() => boolean)|null} guard
+ */
+export function setStartGuard(guard) {
+    startGuard = guard;
+}
+
 /** @returns {boolean} true mientras se procesa una identificación (un rostro ya detectado que se está reconociendo o registrando). */
 export function isIdentificationBusy() {
     return isProcessing;
@@ -172,6 +184,12 @@ function updateStatus(identificationStatusEl, text) {
 export function startIdentificationFlow(refs, { onIdleTimeout }) {
     if (blocked) {
         showScreen(refs.screens, 'unlinked');
+        return;
+    }
+
+    if (startGuard?.()) {
+        stopAutoIdentification(refs.video);
+        showScreen(refs.screens, 'empty');
         return;
     }
 
