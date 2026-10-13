@@ -190,6 +190,9 @@ export async function heartbeat() {
         if (Number.isFinite(data.config.overnight_max_hours)) {
             await setMeta('overnight_max_hours', data.config.overnight_max_hours);
         }
+        if (Number.isFinite(data.config.camera_resume_minutes)) {
+            await setMeta('camera_resume_minutes', data.config.camera_resume_minutes);
+        }
         if (data.roster) {
             await setMeta('branch_roster', { ...data.roster, at: Date.now() });
         }

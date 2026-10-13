@@ -22,6 +22,7 @@
  */
 
 import { captureFaceSamples } from '../../shared/face-capture-core.js';
+import { openCameraStream } from './camera-prefs.js';
 
 const MODELS_URI = '/models';
 const MIN_FACE_SIZE = 100;
@@ -99,7 +100,7 @@ export function adoptStream(adoptedStream) {
 export async function startCamera(videoEl, overlayEl) {
     if (stream) return { ok: true };
     try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        stream = await openCameraStream();
         videoEl.srcObject = stream;
         await new Promise((resolve) => { videoEl.onloadedmetadata = resolve; });
         overlayEl.width = videoEl.videoWidth;

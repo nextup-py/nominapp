@@ -67,6 +67,19 @@ export function setStartGuard(guard) {
     startGuard = guard;
 }
 
+/** @type {(() => boolean)|null} */
+let cameraPausedProbe = null;
+
+/**
+ * Registra la consulta "¿la cámara está apagada a mano?". Con la cámara apagada
+ * `startAutoIdentification()` deja la pantalla de identificación con el aviso
+ * en vez de encender la cámara.
+ * @param {(() => boolean)|null} probe
+ */
+export function setCameraPausedProbe(probe) {
+    cameraPausedProbe = probe;
+}
+
 /** @returns {boolean} true mientras se procesa una identificación (un rostro ya detectado que se está reconociendo o registrando). */
 export function isIdentificationBusy() {
     return isProcessing;
@@ -209,6 +222,11 @@ export function startIdentificationFlow(refs, { onIdleTimeout }) {
  * @param {{screens, video: HTMLVideoElement, overlay: HTMLCanvasElement, ctx: CanvasRenderingContext2D, identificationStatus, successDom, errorMessageEl, dayCompleteDom, typeSelectionDom, onUnlinked?: (reason: string) => void}} refs
  */
 export async function startAutoIdentification(refs) {
+    if (cameraPausedProbe?.()) {
+        updateStatus(refs.identificationStatus, 'Cámara apagada');
+        return;
+    }
+
     const modelsResult = await camera.loadModels();
     if (!modelsResult.ok) {
         showError(refs.screens, refs.errorMessageEl, modelsResult.message);

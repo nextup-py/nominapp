@@ -144,6 +144,7 @@ it('el heartbeat informa la versión vigente de la app y el límite de jornada n
     $response->assertOk();
     expect($response->json('app_version'))->toBe(Terminal::currentAppVersion())
         ->and($response->json('config.overnight_max_hours'))->toBe(16)
+        ->and($response->json('config.camera_resume_minutes'))->toBe(2)
         ->and($terminal->fresh()->device_report['wake_lock'])->toBeFalse();
 });
 

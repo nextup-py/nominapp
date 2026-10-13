@@ -209,6 +209,17 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('segundos')
                             ->helperText('Se avisa cuando el reloj de un terminal difiere del servidor por más de este valor en varios reportes seguidos. Las marcaciones ya se corrigen con ese desfase; avisar sirve para que alguien revise la fecha y hora del dispositivo'),
 
+                        TextInput::make('terminal_camera_resume_minutes')
+                            ->label('Reencendido de la cámara apagada')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(240)
+                            ->default(2)
+                            ->suffix('minutos')
+                            ->helperText('Si alguien apaga la cámara a mano desde el menú del terminal, se vuelve a encender sola pasado este tiempo, para no dejar el terminal inutilizado por olvido. 0 = queda apagada hasta que se encienda a mano'),
+
                         TextInput::make('terminal_events_retention_days')
                             ->label('Retención de la bitácora de terminales')
                             ->numeric()
