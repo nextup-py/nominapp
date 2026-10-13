@@ -10,15 +10,20 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class BranchesExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class BranchesExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMapping, WithStyles
 {
-    public function __construct(private ?int $companyId = null) {}
+    /**
+     * @param  int|null  $companyId  Limita a una empresa (y oculta la columna Empresa).
+     * @param  array<int, int>|null  $ids  Limita a estas sucursales (las del listado filtrado); null = todas.
+     */
+    public function __construct(private ?int $companyId = null, private ?array $ids = null) {}
 
     public function query()
     {
         return Branch::withCount('activeEmployees')
             ->with('company')
-            ->when($this->companyId, fn($q) => $q->where('company_id', $this->companyId))
+            ->when($this->companyId, fn ($q) => $q->where('company_id', $this->companyId))
+            ->when($this->ids !== null, fn ($q) => $q->whereIn('branches.id', $this->ids))
             ->orderBy('name');
     }
 
