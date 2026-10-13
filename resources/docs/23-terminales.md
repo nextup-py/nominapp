@@ -370,6 +370,7 @@ Si aun así el terminal se apaga de noche o fuera de horario, definir el **horar
 | **Comenzar** | Al abrir la URL. Hay que tocar el botón: el navegador lo exige para activar cámara y sonido |
 | **Terminal sin vincular** | No hay acceso vigente. Muestra el código para aprobar en el panel |
 | **Terminal fuera de servicio** | El terminal está desactivado |
+| **Terminal sin empleados** | El terminal no tiene a nadie en su caché, así que la cámara se mantiene **apagada**. Muestra un mensaje simple y, en **Ver detalle**, la causa: *sincronizando por primera vez*, *sin conexión y sin empleados descargados*, *la sucursal no tiene empleados activos*, *tiene N empleados activos pero ninguno con rostro registrado* o *tiene N con rostro pero este terminal no los descargó*. Reintenta la sincronización cada 30 segundos (o con **Sincronizar ahora**) y vuelve solo a identificación apenas llegan empleados |
 | **Reposo** | Terminal listo; se activa al detectar a una persona o al tocar la pantalla |
 | **Sin conexión** | Aviso en la parte superior. Se sigue marcando: las marcaciones se guardan y se envían al volver internet |
 
@@ -391,6 +392,7 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 | El terminal figura **Desconectado** | Dispositivo apagado, sin internet o con la página cerrada | Encenderlo, verificar internet y abrir la URL del terminal |
 | Recibo avisos de desconexión de noche o los fines de semana | El local está cerrado y el terminal se apaga | Definir el **horario de atención** de la sucursal (o el **horario de vigilancia** del terminal en su sección **Monitoreo**) |
 | Aviso de **Terminal sin empleados enrolados** | Ningún empleado activo de la sucursal del terminal tiene rostro registrado (o los empleados figuran en otra sucursal) | Enrolar a los empleados o corregir su sucursal en su ficha |
+| La pantalla dice **Terminal sin empleados** | Mirar **Ver detalle**: sin empleados activos o sin rostros registrados en la sucursal (enrolar a los empleados), o sin conexión / sin descargar (revisar internet y **Sincronizar ahora**) | La pantalla se cierra sola al llegar empleados; no hace falta recargar |
 | Aviso de **Terminal sin empleados en caché** | El terminal en línea descargó 0 empleados aunque la sucursal tiene enrolados | Enviar **Limpiar caché** y, si sigue igual, **Recargar app** |
 | El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |
 | El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Si está en línea se recarga solo en cuanto nadie esté marcando (una vez por versión). Si no, recargar la página del terminal o enviar **Recargar app** (la página se pide siempre al servidor y solo se usa la copia guardada si no hay internet o tarda más de unos 4 segundos) |

@@ -273,7 +273,7 @@ export function setBusyProbe(probe) {
 }
 
 /**
- * Se puede recargar sin interrumpir a nadie: en reposo, o en la pantalla de identificación esperando un rostro
+ * Se puede recargar sin interrumpir a nadie: en reposo, en la pantalla de "sin empleados", o en la pantalla de identificación esperando un rostro
  * (sin identificación en proceso ni empleado eligiendo el tipo). Éxito, error, jornada completa y selección de
  * tipo terminan solas en segundos y vuelven a identificación. La cola de marcaciones vive en IndexedDB, así que
  * recargar nunca pierde una marcación ya registrada.
@@ -281,7 +281,7 @@ export function setBusyProbe(probe) {
 function isTerminalIdle() {
     const visible = (id) => document.getElementById(id) && !document.getElementById(id).classList.contains('hidden');
 
-    return visible('idleScreen') || (visible('identificationScreen') && !busyProbe());
+    return visible('idleScreen') || visible('emptyScreen') || (visible('identificationScreen') && !busyProbe());
 }
 
 /**

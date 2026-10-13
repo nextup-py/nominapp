@@ -227,7 +227,7 @@ describe('recarga por versión nueva — cuándo es seguro interrumpir', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.useFakeTimers();
-        hidden = { idleScreen: true, identificationScreen: true, successScreen: true, typeSelectionScreen: true };
+        hidden = { idleScreen: true, identificationScreen: true, successScreen: true, typeSelectionScreen: true, emptyScreen: true };
         vi.stubGlobal('document', {
             getElementById: (id) => (id in hidden ? { classList: { contains: () => hidden[id] } } : null),
         });
@@ -271,6 +271,16 @@ describe('recarga por versión nueva — cuándo es seguro interrumpir', () => {
         const mod = await bootWithVersionHandler();
         showOnly('identificationScreen');
         mod.setBusyProbe(() => false);
+
+        await mod.versionHandler('nueva');
+
+        expect(window.location.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('en la pantalla de "sin empleados" también recarga (no hay nadie a quien interrumpir)', async () => {
+        const mod = await bootWithVersionHandler();
+        showOnly('emptyScreen');
+        mod.setBusyProbe(() => true);
 
         await mod.versionHandler('nueva');
 
