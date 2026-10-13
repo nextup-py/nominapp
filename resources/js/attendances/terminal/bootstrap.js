@@ -217,13 +217,16 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
     setCommandHandler(handleRemoteCommands);
     setWakeLockProbe(hasWakeLock);
     setAppVersionHandler(async (serverVersion) => {
-        await settlePendingReload({
+        const settled = await settlePendingReload({
             getMeta,
             setMeta,
             ack: queueCommandAck,
             currentVersion: window.terminalData?.app_version,
             serverVersion,
         });
+
+        // Sin esperar al próximo ciclo de 90 s: el pendiente ya se limpió, así que este latido no vuelve a entrar aquí.
+        if (settled) heartbeat().catch((error) => console.warn('No se pudo enviar la confirmación de recarga:', error.message));
 
         return reloadIfOutdated({
             currentVersion: window.terminalData?.app_version,

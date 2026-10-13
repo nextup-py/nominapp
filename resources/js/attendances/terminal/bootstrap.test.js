@@ -249,6 +249,43 @@ describe('initializeOfflineSync — confirmación antes de limpiar el estado de 
         expect(result).toEqual({ linked: true });
     });
 
+    it('con una recarga pendiente: el primer latido la confirma y envía otro de inmediato', async () => {
+        const { initializeOfflineSync, getMeta, setMeta, setAppVersionHandler, queueCommandAck, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        stubWindow({ confirmReturns: true });
+        window.terminalData.app_version = 'nueva';
+        getMeta.mockImplementation((key) => Promise.resolve(
+            key === 'api_token' ? 'un-token' : key === 'pending_reload_command' ? { id: 7, at: Date.now() } : null,
+        ));
+        heartbeat.mockResolvedValue(undefined);
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+
+        await initializeOfflineSync();
+        const versionHandler = setAppVersionHandler.mock.calls[0][0];
+        heartbeat.mockClear();
+        await versionHandler('nueva');
+
+        expect(queueCommandAck).toHaveBeenCalledWith({ id: 7, status: 'done' });
+        expect(setMeta).toHaveBeenCalledWith('pending_reload_command', null);
+        expect(heartbeat).toHaveBeenCalledTimes(1);
+    });
+
+    it('sin recarga pendiente: el manejador de versión no dispara un latido extra', async () => {
+        const { initializeOfflineSync, getMeta, setAppVersionHandler, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        stubWindow({ confirmReturns: true });
+        window.terminalData.app_version = 'nueva';
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'api_token' ? 'un-token' : null));
+        heartbeat.mockResolvedValue(undefined);
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+
+        await initializeOfflineSync();
+        heartbeat.mockClear();
+        await setAppVersionHandler.mock.calls[0][0]('nueva');
+
+        expect(heartbeat).not.toHaveBeenCalled();
+    });
+
     it('sin token: retorna linked:false (no_token), no sincroniza ni arranca el sync en segundo plano', async () => {
         const { initializeOfflineSync, getMeta, heartbeat, syncEmployees, flushQueue, updateIdleSyncStatus } = await loadFreshBootstrap();
         stubWindow({ confirmReturns: true });
