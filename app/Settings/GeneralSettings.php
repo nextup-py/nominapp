@@ -38,6 +38,9 @@ class GeneralSettings extends Settings
     /** Segundos de desfase del reloj de un terminal (respecto del servidor) a partir de los cuales se avisa. */
     public int $terminal_clock_skew_max_seconds;
 
+    /** Minutos tras los que la cámara apagada a mano en un terminal se reenciende sola; 0 = nunca. */
+    public int $terminal_camera_resume_minutes;
+
     /** Días de retención de la bitácora de terminales; 0 = conservar siempre. */
     public int $terminal_events_retention_days;
 

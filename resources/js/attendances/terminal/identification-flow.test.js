@@ -66,6 +66,7 @@ import {
     startIdentificationFlow,
     stopAutoIdentification,
     getConsecutiveFailures,
+    setCameraPausedProbe,
 } from './identification-flow.js';
 
 describe('identifyEmployeeFromDescriptor', () => {
@@ -360,5 +361,35 @@ describe('terminal sin vincular — bloqueo de la identificación', () => {
         expect(screens.showError).not.toHaveBeenCalled();
         expect(flow.isIdentificationBlocked()).toBe(true);
         expect(cam.stopCamera).toHaveBeenCalled();
+    });
+});
+
+describe('cámara apagada a mano', () => {
+    const statusEl = { querySelector: () => ({ textContent: '' }) };
+    const refs = { screens: {}, video: {}, overlay: {}, ctx: {}, identificationStatus: statusEl, errorMessageEl: {} };
+
+    afterEach(() => {
+        setCameraPausedProbe(null);
+        stopAutoIdentification(refs.video);
+    });
+
+    it('no enciende la cámara ni arranca el loop mientras está apagada', async () => {
+        vi.clearAllMocks();
+        setCameraPausedProbe(() => true);
+
+        startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+        await Promise.resolve();
+
+        expect(camera.startCamera).not.toHaveBeenCalled();
+        expect(camera.startDrawLoop).not.toHaveBeenCalled();
+    });
+
+    it('la enciende cuando ya no está apagada', async () => {
+        vi.clearAllMocks();
+        setCameraPausedProbe(() => false);
+
+        startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+
+        await vi.waitFor(() => expect(camera.startCamera).toHaveBeenCalled());
     });
 });

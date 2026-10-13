@@ -9,6 +9,8 @@ import { createEmptyStateController, HR_NOTICE } from './terminal/empty-state.js
 import { updateClock, updateIdleDate } from './terminal/ui-feedback.js';
 import { setOffline, updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './terminal/sync-status-ui.js';
 import { initManualSearch } from './terminal/manual-search.js';
+import { createCameraControl } from './terminal/camera-control.js';
+import { getCameraPrefs, setCameraPrefs, listVideoInputs } from './terminal/camera-prefs.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
 import { createMenuSheet } from '../shared/menu-sheet.js';
 import { heartbeat, syncEmployees, TerminalAuthError } from './terminal-offline/sync.js';
@@ -163,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isIdle = true;
         updateIdleDate();
         screenState.showScreen(screens, 'idle');
-        idleDetection.startPresenceCheck(video, exitIdle);
+        if (!cameraControl.isPaused()) idleDetection.startPresenceCheck(video, exitIdle);
         if (terminalHeader) terminalHeader.classList.add('terminal-header--idle');
     }
 
@@ -314,6 +316,89 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('btnEmptySync')?.addEventListener('click', () => emptyState.retryNow());
+
+    // ============================================================================
+    // CÁMARA — apagado manual, selector y espejo (menú ⋮)
+    // ============================================================================
+    const cameraNotice = document.getElementById('cameraOffNotice');
+    const cameraResumeEl = document.getElementById('cameraOffResume');
+    const btnMenuCamera = document.getElementById('btnMenuCamera');
+    const cameraSub = document.getElementById('btnMenuCameraSub');
+    const videoWrap = document.getElementById('terminalVideoWrap');
+
+    /** Texto "Se enciende sola a las HH:MM" (vacío si no hay reencendido automático). */
+    const resumeText = (resumeAt) => resumeAt
+        ? `Se enciende sola a las ${new Date(resumeAt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}`
+        : '';
+
+    const cameraControl = createCameraControl({
+        getResumeMinutes: async () => (await getMeta('camera_resume_minutes')) ?? 2,
+        onChange: ({ paused, resumeAt }) => {
+            const text = resumeText(resumeAt);
+            cameraNotice?.classList.toggle('hidden', !paused);
+            if (cameraResumeEl) cameraResumeEl.textContent = text;
+            btnMenuCamera?.setAttribute('aria-pressed', String(paused));
+            const label = document.getElementById('btnMenuCameraLabel');
+            if (label) label.textContent = paused ? 'Encender cámara' : 'Apagar cámara';
+            if (cameraSub) {
+                cameraSub.textContent = text;
+                cameraSub.classList.toggle('hidden', !text);
+            }
+
+            if (paused) {
+                identificationFlow.stopAutoIdentification(video);
+                idleDetection.stopPresenceCheck();
+                const statusTextEl = identificationStatus?.querySelector('.id-status-text');
+                if (statusTextEl) statusTextEl.textContent = 'Cámara apagada';
+            } else if (isIdle) {
+                idleDetection.startPresenceCheck(video, exitIdle);
+            } else if (!screens.identification?.classList.contains('hidden')) {
+                identificationFlow.startAutoIdentification(identificationRefs);
+            }
+        },
+    });
+    identificationFlow.setCameraPausedProbe(() => cameraControl.isPaused());
+
+    btnMenuCamera?.addEventListener('click', () => cameraControl.toggle());
+    document.getElementById('btnCameraOn')?.addEventListener('click', () => cameraControl.resume());
+
+    const mirrorCheck = document.getElementById('cameraMirror');
+    const applyMirror = (mirror) => videoWrap?.classList.toggle('video-wrapper--mirror', mirror);
+    applyMirror(getCameraPrefs().mirror);
+    if (mirrorCheck) {
+        mirrorCheck.checked = getCameraPrefs().mirror;
+        mirrorCheck.addEventListener('change', () => {
+            setCameraPrefs({ mirror: mirrorCheck.checked });
+            applyMirror(mirrorCheck.checked);
+        });
+    }
+
+    /** Completa el selector de cámara al abrir el menú; se oculta si hay una sola. */
+    async function refreshCameraSelect() {
+        const select = document.getElementById('cameraSelect');
+        const row = document.getElementById('cameraSelectRow');
+        if (!select || !row) return;
+        const inputs = await listVideoInputs();
+        row.classList.toggle('hidden', inputs.length < 2);
+        const current = getCameraPrefs().deviceId;
+        select.innerHTML = '';
+        inputs.forEach((input) => {
+            const option = document.createElement('option');
+            option.value = input.id;
+            option.textContent = input.label;
+            option.selected = input.id === current;
+            select.appendChild(option);
+        });
+    }
+    document.getElementById('btnTerminalMenu')?.addEventListener('click', refreshCameraSelect);
+    document.getElementById('cameraSelect')?.addEventListener('change', (event) => {
+        setCameraPrefs({ deviceId: event.target.value || null });
+        // Si la cámara estaba en uso, se reabre con la elegida; apagada o en reposo, se usa en el próximo arranque.
+        if (!cameraControl.isPaused() && !isIdle && !screens.identification?.classList.contains('hidden')) {
+            identificationFlow.stopAutoIdentification(video);
+            identificationFlow.startAutoIdentification(identificationRefs);
+        }
+    });
 
     function resetTerminal() {
         identificationFlow.stopAutoIdentification(video);

@@ -378,6 +378,16 @@ Si aun así el terminal se apaga de noche o fuera de horario, definir el **horar
 
 Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la hora de la última sincronización (**Últ. sync**).
 
+### Controles de la cámara
+
+El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: se recuerdan en ese navegador y no cambian lo que ven otros terminales.
+
+| Control | Qué hace |
+|---------|----------|
+| **Apagar cámara** / **Encender cámara** | Apaga la cámara a mano (por ejemplo, para limpiar la pantalla o cuando nadie debe marcar). Mientras está apagada nadie se identifica y la pantalla muestra **Cámara apagada** con el botón **Encender cámara**. Se enciende sola pasado el tiempo definido en **Configuración → General → Terminales de Marcación → Reencendido de la cámara apagada** (2 minutos por defecto; **0** = queda apagada hasta encenderla a mano) |
+| **Cámara a usar** | Elegir otra cámara del dispositivo (frontal, trasera, externa). Solo aparece si el dispositivo tiene más de una. Si la elegida deja de estar disponible, el terminal vuelve a la frontal |
+| **Ver imagen en espejo** | Voltea la vista previa como un espejo. No afecta el reconocimiento |
+
 ---
 
 ## Problemas frecuentes

@@ -104,6 +104,7 @@ class TerminalHeartbeatController extends Controller
             ],
             'config' => [
                 'overnight_max_hours' => (int) $settings->attendance_overnight_max_hours,
+                'camera_resume_minutes' => (int) $settings->terminal_camera_resume_minutes,
                 'face_threshold' => (float) $settings->face_threshold,
                 'face_min_confidence_gap' => (float) $settings->face_min_confidence_gap,
             ],

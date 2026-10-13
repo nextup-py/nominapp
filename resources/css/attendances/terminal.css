@@ -1183,3 +1183,40 @@ body {
 .empty-details summary:hover { background: var(--c-bg); }
 .empty-detail-text { font-size: .875rem; line-height: 1.5; color: var(--c-muted); text-align: center; margin: var(--sp-2) 0 0; }
 .empty-retry { font-size: .8125rem; color: var(--c-subtle); text-align: center; min-height: 1.25rem; margin: 0 0 var(--sp-3); }
+
+
+/* ── Cámara: apagado manual, selector y espejo (ver terminal/camera-control.js) ── */
+.camera-off-notice {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: 1rem;
+    text-align: center;
+    background: var(--c-surface);
+    color: var(--c-text);
+}
+.camera-off-notice.hidden { display: none; }
+.camera-off-icon { width: 48px; height: 48px; color: var(--c-muted); }
+.camera-off-title { font-size: 1.25rem; font-weight: 600; margin: 0; }
+.camera-off-resume { font-size: .875rem; color: var(--c-muted); margin: 0 0 .5rem; }
+.camera-off-resume:empty { display: none; }
+
+.video-wrapper--mirror video,
+.video-wrapper--mirror canvas { transform: scaleX(-1); }
+
+.menu-sheet-item--field { justify-content: space-between; gap: 1rem; cursor: pointer; }
+.menu-sheet-select {
+    max-width: 55%;
+    padding: .375rem .5rem;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md, 8px);
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-size: .875rem;
+}
+.menu-sheet-check { width: 20px; height: 20px; accent-color: var(--c-primary); cursor: pointer; }

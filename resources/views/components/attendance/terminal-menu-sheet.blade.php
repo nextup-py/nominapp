@@ -48,6 +48,28 @@
             </span>
         </button>
 
+        <button type="button" id="btnMenuCamera" class="menu-sheet-item" aria-pressed="false">
+            <svg class="menu-sheet-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span class="menu-sheet-item-label-group">
+                <span id="btnMenuCameraLabel" class="menu-sheet-item-label">Apagar cámara</span>
+                <span id="btnMenuCameraSub" class="menu-sheet-item-sublabel hidden"></span>
+            </span>
+        </button>
+
+        {{-- Solo aparece si el dispositivo tiene más de una cámara (se completa al abrir el menú) --}}
+        <label id="cameraSelectRow" class="menu-sheet-item menu-sheet-item--field hidden" for="cameraSelect">
+            <span class="menu-sheet-item-label">Cámara a usar</span>
+            <select id="cameraSelect" class="menu-sheet-select"></select>
+        </label>
+
+        <label class="menu-sheet-item menu-sheet-item--field" for="cameraMirror">
+            <span class="menu-sheet-item-label">Ver imagen en espejo</span>
+            <input type="checkbox" id="cameraMirror" class="menu-sheet-check">
+        </label>
+
         <div class="menu-sheet-item menu-sheet-item--theme">
             <x-theme-toggle-button />
             <span class="menu-sheet-item-label">Tema claro/oscuro</span>

@@ -17,6 +17,7 @@
  */
 
 import { hasStream, adoptStream } from './camera.js';
+import { openCameraStream } from './camera-prefs.js';
 
 const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -70,7 +71,7 @@ export async function startPresenceCheck(videoEl, onPresenceDetected) {
 
     if (!hasStream()) {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+            const stream = await openCameraStream();
             adoptStream(stream);
             videoEl.srcObject = stream;
             await new Promise((resolve) => { videoEl.onloadedmetadata = resolve; });
