@@ -6,8 +6,10 @@ use App\Models\Terminal;
 use App\Models\TerminalEvent;
 use App\Models\User;
 use App\Notifications\TerminalHealthNotification;
+use App\Notifications\TerminalOfflineGroupNotification;
 use App\Settings\GeneralSettings;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -34,6 +36,14 @@ class TerminalHealthService
 
     /** Reportes seguidos con el reloj desfasado antes de avisar (evita avisar por un reporte suelto). */
     private const CLOCK_SKEW_CONSECUTIVE_REPORTS = 3;
+
+    /**
+     * Terminales que pasaron a Desconectado durante la corrida de `evaluateAll()`: se avisan juntos al final
+     * (null = fuera de una corrida, el aviso sale al instante).
+     *
+     * @var Collection<int, Terminal>|null
+     */
+    private ?Collection $pendingOffline = null;
 
     public function __construct(private readonly GeneralSettings $settings) {}
 
@@ -103,12 +113,38 @@ class TerminalHealthService
     public function evaluateAll(): int
     {
         $alerts = 0;
+        $this->pendingOffline = collect();
 
-        Terminal::query()->withSyncTokenFlag()->with('branch')->each(function (Terminal $terminal) use (&$alerts) {
-            $alerts += count($this->evaluate($terminal));
-        });
+        try {
+            Terminal::query()->withSyncTokenFlag()->with('branch')->each(function (Terminal $terminal) use (&$alerts) {
+                $alerts += count($this->evaluate($terminal));
+            });
+
+            $this->notifyOffline($this->pendingOffline);
+        } finally {
+            $this->pendingOffline = null;
+        }
 
         return $alerts;
+    }
+
+    /**
+     * Avisa las desconexiones de una corrida: uno solo si fue un terminal, un único resumen si fueron varios
+     * (típico al abrir el horario de vigilancia, cuando varios equipos dormidos vencen juntos).
+     *
+     * @param  Collection<int, Terminal>  $terminals
+     */
+    private function notifyOffline(Collection $terminals): void
+    {
+        if ($terminals->isEmpty()) {
+            return;
+        }
+
+        $notification = $terminals->count() === 1
+            ? new TerminalHealthNotification($terminals->first(), 'offline')
+            : new TerminalOfflineGroupNotification($terminals);
+
+        $this->notifyManagers($notification, 'offline', $terminals->first());
     }
 
     /**
@@ -129,6 +165,7 @@ class TerminalHealthService
             $alerts[] = $this->raise($terminal, 'offline', 'health_offline', [
                 'stale_after_minutes' => $terminal->effectiveStaleMinutes(),
                 'last_heartbeat_at' => $terminal->last_heartbeat_at?->toIso8601String(),
+                'hints' => $terminal->offlineHints(),
             ]);
         } elseif ($connectivity === 'online' && $snapshot['offline_alerted']) {
             $snapshot['offline_alerted'] = false;
@@ -361,15 +398,27 @@ class TerminalHealthService
     {
         $this->record($terminal, $eventType, $payload);
 
+        if ($alert === 'offline' && $this->pendingOffline !== null) {
+            $this->pendingOffline->push($terminal);
+
+            return $alert;
+        }
+
+        $this->notifyManagers(new TerminalHealthNotification($terminal, $alert), $alert, $terminal);
+
+        return $alert;
+    }
+
+    /** Envía la notificación a quienes gestionan terminales; un fallo del canal nunca interrumpe la evaluación. */
+    private function notifyManagers(object $notification, string $alert, Terminal $terminal): void
+    {
         try {
-            Terminal::managers()->each(fn (User $user) => $user->notify(new TerminalHealthNotification($terminal, $alert)));
+            Terminal::managers()->each(fn (User $user) => $user->notify($notification));
         } catch (\Throwable $e) {
             Log::warning("No se pudo avisar el estado '{$alert}' del terminal '{$terminal->code}': {$e->getMessage()}", [
                 'terminal_id' => $terminal->id,
             ]);
         }
-
-        return $alert;
     }
 
     /**

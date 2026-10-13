@@ -48,7 +48,7 @@ class TerminalHealthNotification extends Notification
         match ($this->alert) {
             'offline' => $notification
                 ->title('Terminal sin conexión')
-                ->body("El terminal {$name} no reporta hace más de {$this->terminal->effectiveStaleMinutes()} minutos.")
+                ->body("El terminal {$name} no reporta hace más de {$this->terminal->effectiveStaleMinutes()} minutos. Causa probable: ".implode(' ', $this->terminal->offlineHints()))
                 ->icon('heroicon-o-signal-slash')
                 ->danger(),
             'recovered' => $notification

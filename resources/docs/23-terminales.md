@@ -272,7 +272,8 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 
 | Aviso | Cuándo |
 |-------|--------|
-| **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia) |
+| **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia). El aviso incluye la **causa probable** según el último reporte del dispositivo (pantalla que no se mantenía encendida, abierto en el navegador, sin cargador, reloj desajustado, app vieja); también queda en la bitácora |
+| **N terminales sin conexión** | Si varios terminales pasan a Desconectado en la misma revisión (por ejemplo al abrir el horario de vigilancia) llega **un solo aviso** con la lista y la causa probable más frecuente, en vez de uno por terminal |
 | **Terminal reconectado** | Volvió a reportar después de haber avisado la desconexión |
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
 | **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones **pendientes** no se envían hace más del tiempo configurado. Las marcaciones **en conflicto** no cuentan: el servidor ya las rechazó y quedan en **Fallos de Marcación** para revisar |
@@ -303,7 +304,7 @@ Permiten pedirle al dispositivo, sin ir hasta el local, que haga algo. Requieren
 | Comando | Qué hace el terminal |
 |---------|----------------------|
 | **Forzar sincronización** | Sincroniza los empleados y vacía su cola de marcaciones |
-| **Recargar app** | Recarga la aplicación (útil después de una actualización; ver la versión en **Estado del dispositivo**) |
+| **Recargar app** | Recarga la aplicación (útil después de una actualización; ver la versión en **Estado del dispositivo**). Queda **Hecho** solo si, tras recargar, el terminal ya corre la versión vigente; si recargó pero sigue con la anterior figura **Falló** (*Recargó pero sigue con la versión anterior de la app*) |
 | **Limpiar caché** | Borra la caché de la app y de empleados, la reconstruye desde el servidor y recarga |
 | **Reenviar reporte** | Envía de inmediato un reporte completo de su estado |
 
@@ -355,7 +356,7 @@ Un terminal que figura **Desconectado** a media mañana casi siempre es una tabl
 
 1. **Pantalla siempre encendida mientras carga:** en los ajustes de pantalla del equipo, desactivar el apagado automático (en Android, *Opciones de desarrollador → Mantener activo*, o *Pantalla → Tiempo de espera* al máximo).
 2. **Dejarlo enchufado:** el estado del dispositivo informa la batería y avisa cuando baja del umbral sin cargador.
-3. **Instalarlo como app** (menú del navegador → *Instalar aplicación* o *Añadir a pantalla de inicio*): el detalle del terminal muestra el **Modo** (instalado o en pestaña del navegador) y un terminal instalado se suspende menos.
+3. **Instalarlo como app** (menú del navegador → *Instalar aplicación* o *Añadir a pantalla de inicio*): el detalle del terminal muestra el **Modo** (instalado o en pestaña del navegador) y un terminal instalado se suspende menos, pero instalarlo **no impide** que el equipo apague la pantalla: los puntos 1 y 4 siguen siendo necesarios. Cuando el equipo despierta, el terminal vuelve a reportar de inmediato sin esperar al siguiente ciclo.
 4. **Sin ahorro de energía para el navegador:** quitar el navegador o la app instalada de la lista de optimización de batería.
 5. **Fecha y hora automáticas:** si el reloj se desajusta, el panel avisa (**Reloj del terminal desajustado**). Las marcaciones se corrigen con el desfase detectado, pero conviene dejar la hora automática.
 6. **Permiso de cámara concedido** y la página del terminal abierta (sin cerrar la pestaña).
@@ -392,7 +393,7 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 | Aviso de **Terminal sin empleados enrolados** | Ningún empleado activo de la sucursal del terminal tiene rostro registrado (o los empleados figuran en otra sucursal) | Enrolar a los empleados o corregir su sucursal en su ficha |
 | Aviso de **Terminal sin empleados en caché** | El terminal en línea descargó 0 empleados aunque la sucursal tiene enrolados | Enviar **Limpiar caché** y, si sigue igual, **Recargar app** |
 | El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |
-| El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Si está en línea se recarga solo al quedar en reposo (una vez por versión). Si no, recargar la página del terminal dos veces o enviar **Recargar app** |
+| El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Si está en línea se recarga solo al quedar en reposo (una vez por versión). Si no, recargar la página del terminal o enviar **Recargar app** (la página se pide siempre al servidor y solo se usa la copia guardada si no hay internet o tarda más de unos 4 segundos) |
 | El estado dice **Pantalla encendida: Inactiva** | El navegador no concedió mantener la pantalla encendida, o la tablet entró en ahorro de batería | Dejar la tablet cargando, desactivar el ahorro de batería y la suspensión de pantalla, y recargar el terminal |
 | Un comando remoto figura **Vencido** | El terminal no se conectó a tiempo (15 minutos; 24 horas en **Recargar app**) o corre una versión vieja de la aplicación que no entiende comandos | Verificar que esté encendido y con internet, recargar su página dos veces y volver a enviar el comando |
 | Un comando remoto figura **Falló** con el detalle *El terminal estuvo ocupado* | Había una marcación en curso y no llegó al reposo a tiempo | Volver a enviar el comando cuando el terminal esté en reposo |

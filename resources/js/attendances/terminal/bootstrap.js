@@ -19,15 +19,19 @@
 
 import * as camera from './camera.js';
 import { acquireWakeLock, hasWakeLock } from './idle-detection.js';
-import { migrateTokenFromLocalStorage, getMeta, clearTerminalState } from '../terminal-offline/db.js';
+import { migrateTokenFromLocalStorage, getMeta, setMeta, clearTerminalState } from '../terminal-offline/db.js';
 import { heartbeat, syncEmployees, rebuildEmployeeCache, setCommandHandler, setAppVersionHandler, setWakeLockProbe, queueCommandAck, TerminalAuthError } from '../terminal-offline/sync.js';
 import { reloadIfOutdated } from '../terminal-offline/auto-reload.js';
+import { markPendingReload, settlePendingReload } from '../terminal-offline/pending-reload.js';
 import { runRemoteCommands } from '../terminal-offline/remote-commands.js';
 import { flushQueue } from '../terminal-offline/queue.js';
 import { updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './sync-status-ui.js';
 import { markUserInteracted } from '../../shared/audio-feedback.js';
 
 let backgroundSyncStarted = false;
+
+/** Separación mínima entre dos sincronizaciones disparadas por el despertar del equipo (evita ráfagas focus + visibilitychange). */
+const WAKE_SYNC_MIN_GAP_MS = 15 * 1000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -212,12 +216,22 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
     // Antes del primer heartbeat: si ya trae comandos pendientes, que no se pierdan.
     setCommandHandler(handleRemoteCommands);
     setWakeLockProbe(hasWakeLock);
-    setAppVersionHandler((serverVersion) => reloadIfOutdated({
-        currentVersion: window.terminalData?.app_version,
-        serverVersion,
-        waitForIdle,
-        reload: () => window.location.reload(),
-    }));
+    setAppVersionHandler(async (serverVersion) => {
+        await settlePendingReload({
+            getMeta,
+            setMeta,
+            ack: queueCommandAck,
+            currentVersion: window.terminalData?.app_version,
+            serverVersion,
+        });
+
+        return reloadIfOutdated({
+            currentVersion: window.terminalData?.app_version,
+            serverVersion,
+            waitForIdle,
+            reload: () => window.location.reload(),
+        });
+    });
 
     try {
         updateIdleSyncStatus('Sincronizando...');
@@ -288,6 +302,7 @@ async function handleRemoteCommands(commands) {
             waitForIdle,
             ack: queueCommandAck,
             flushAcks: heartbeat,
+            deferReloadAck: (id) => markPendingReload(setMeta, id),
             reload: () => window.location.reload(),
         });
     } finally {
@@ -354,6 +369,20 @@ export function startBackgroundSync({ onUnlinked } = {}) {
         runEmployeeSync();
         runQueueFlush();
     });
+
+    // Un equipo que se suspende congela los setInterval: al despertar, no esperar al próximo ciclo.
+    let lastWakeSyncAt = 0;
+    const syncOnWake = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+        const now = Date.now();
+        if (now - lastWakeSyncAt < WAKE_SYNC_MIN_GAP_MS) return;
+        lastWakeSyncAt = now;
+        runHeartbeat();
+        runQueueFlush();
+    };
+    window.addEventListener('visibilitychange', syncOnWake);
+    window.addEventListener('pageshow', syncOnWake);
+    window.addEventListener('focus', syncOnWake);
 }
 
 /**

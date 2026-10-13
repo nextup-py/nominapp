@@ -42,7 +42,7 @@ const NETWORK_FIRST_PATTERNS = [
     /^\/icons\//, // favicon + set de íconos PWA — deben seguir disponibles offline en el launcher
 ];
 
-/** Shell HTML del terminal y del dispositivo — stale-while-revalidate para que un reload offline funcione. */
+/** Shell HTML del terminal y del dispositivo — red primero con caché de respaldo: un reload trae la versión nueva y, sin red, sigue funcionando. */
 const SHELL_PATTERNS = [
     /^\/terminal\/?$/,
     /^\/terminal\/[a-z0-9]+\/?$/,
@@ -91,25 +91,35 @@ async function networkFirst(request) {
     }
 }
 
-async function staleWhileRevalidate(request) {
+/** Espera máxima de la red para el shell antes de usar la copia guardada (una Wi-Fi lenta no debe dejar el terminal en blanco). */
+const SHELL_NETWORK_TIMEOUT_MS = 4000;
+
+/**
+ * Red primero con tiempo límite: devuelve la respuesta del servidor si llega a tiempo y es válida; si no,
+ * la copia guardada. La red sigue actualizando la caché aunque se haya usado la copia. Sin copia, espera a la red.
+ */
+async function networkFirstWithTimeout(request, timeoutMs) {
     const cache = await caches.open(CACHE_VERSION);
-    const cached = await cache.match(request);
 
-    const networkUpdate = fetch(request)
-        .then((response) => {
-            if (response.ok) cache.put(request, response.clone());
-            return response;
-        })
-        .catch(() => null);
+    const network = fetch(request).then((response) => {
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+    });
+    network.catch(() => {});
 
-    if (cached) {
-        // Responder al instante con la copia cacheada; la red se actualiza en segundo plano.
-        networkUpdate.catch(() => {});
-        return cached;
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs));
+
+    try {
+        const first = await Promise.race([network, timeout]);
+        if (first && first.ok) return first;
+    } catch (error) {
+        // sin red: se usa la copia guardada
     }
 
-    const fresh = await networkUpdate;
-    return fresh || Response.error();
+    const cached = await cache.match(request);
+    if (cached) return cached;
+
+    return network.catch(() => Response.error());
 }
 
 self.addEventListener('fetch', (event) => {
@@ -134,7 +144,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     if (matchesAny(pathname, SHELL_PATTERNS)) {
-        event.respondWith(staleWhileRevalidate(request));
+        event.respondWith(networkFirstWithTimeout(request, SHELL_NETWORK_TIMEOUT_MS));
         return;
     }
 

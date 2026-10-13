@@ -695,6 +695,51 @@ class Terminal extends Model implements AuthenticatableContract
             && $this->device_report_at->gte(now()->subMinutes($this->effectiveStaleMinutes()));
     }
 
+    /**
+     * Causas probables de que el terminal haya dejado de reportar, según su último reporte del dispositivo.
+     * Son pistas para quien recibe el aviso de desconexión, no un diagnóstico: el reporte es de antes del corte.
+     *
+     * @return array<int, string>
+     */
+    public function offlineHints(): array
+    {
+        $report = $this->device_report ?? [];
+
+        if ($report === []) {
+            return ['Nunca informó el estado del dispositivo.'];
+        }
+
+        $hints = [];
+
+        if (array_key_exists('wake_lock', $report) && $report['wake_lock'] === false) {
+            $hints[] = 'No lograba mantener la pantalla encendida: probablemente el equipo se suspendió.';
+        }
+
+        if (($report['standalone'] ?? null) === false) {
+            $hints[] = 'Estaba abierto en una pestaña del navegador, sin instalar como app.';
+        }
+
+        $level = $this->reportedBatteryLevel();
+        if ($this->reportedCharging() === false) {
+            $hints[] = 'Funcionaba sin cargador'.($level !== null ? " (batería al {$level}%)." : '.');
+        }
+
+        $skew = $this->reportedClockSkewSeconds();
+        if ($skew !== null && abs($skew) > app(GeneralSettings::class)->terminal_clock_skew_max_seconds) {
+            $hints[] = 'El reloj del dispositivo estaba desajustado ('.$skew.' s).';
+        }
+
+        if ($this->isAppOutdated()) {
+            $hints[] = 'Tenía una versión anterior de la app.';
+        }
+
+        if ($hints === []) {
+            $hints[] = 'Su último reporte era normal: lo más probable es que el equipo se suspendió o perdió la red. Revisar el ahorro de energía y el Wi-Fi.';
+        }
+
+        return $hints;
+    }
+
     /** Indica si el último reporte dice que el dispositivo está enchufado (null si no se sabe). */
     public function reportedCharging(): ?bool
     {
