@@ -1241,3 +1241,131 @@ body {
 .idle-sync-status[data-tone="warn"],
 .menu-sheet-item-sublabel[data-tone="warn"] { color: var(--c-warning); opacity: 1; }
 .idle-sync-btn.hidden, .menu-sheet-item.hidden { display: none; }
+
+/* ============================================================
+   PANTALLA GRANDE — aprovechar el espacio y leer desde lejos (etapa 4)
+   Va al final a propósito: pisa las reglas fijas de 540 px / 320 px de arriba.
+   ============================================================ */
+
+/* Identificación: la cámara ocupa casi toda la pantalla y el estado va encima, abajo. */
+#identificationScreen .screen-body {
+    padding: var(--sp-3);
+    gap: var(--sp-3);
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 0;
+}
+.identification-layout {
+    width: 100%;
+    max-width: 1100px;
+    margin-inline: auto;
+    flex: 1;
+    min-height: 0;
+}
+.identification-frame {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-width: 4px;
+}
+.video-wrapper {
+    flex: 1;
+    min-height: 0;
+    aspect-ratio: auto;
+}
+.identification-status {
+    position: absolute;
+    left: var(--sp-4);
+    right: var(--sp-4);
+    bottom: var(--sp-4);
+    z-index: 5;
+    border: 2px solid var(--c-border);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-lg);
+    padding: var(--sp-4) var(--sp-5);
+}
+.identification-status .status-text,
+.identification-status .id-status-text {
+    font-size: clamp(1.125rem, 2.6vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.3;
+}
+.id-status-dot { width: 14px; height: 14px; }
+/* Los puntos de progreso de captura suben para no quedar tapados por el estado. */
+.capture-progress { bottom: calc(var(--sp-4) + 6rem); }
+
+/* El óvalo guía, el difuminado y las esquinas dependen de la altura de la cámara (no de un 4:3 fijo). */
+@supports (width: 1cqw) {
+    .video-wrapper { container-type: size; }
+    .terminal-face-guide,
+    .terminal-blur-overlay,
+    .terminal-scan-corner { --oval-h: min(66cqh, 106cqw); }
+    .terminal-face-oval { width: auto; height: var(--oval-h); aspect-ratio: 3 / 4; }
+    .terminal-blur-overlay {
+        mask-image: radial-gradient(ellipse calc(var(--oval-h) * .375) calc(var(--oval-h) * .5) at 50% 50%, transparent 70%, black 100%);
+        -webkit-mask-image: radial-gradient(ellipse calc(var(--oval-h) * .375) calc(var(--oval-h) * .5) at 50% 50%, transparent 70%, black 100%);
+    }
+    .terminal-scan-corner--tl, .terminal-scan-corner--tr { top: calc(50% - var(--oval-h) * .5); }
+    .terminal-scan-corner--bl, .terminal-scan-corner--br { top: auto; bottom: calc(50% - var(--oval-h) * .5); }
+    .terminal-scan-corner--tl, .terminal-scan-corner--bl { left: calc(50% - var(--oval-h) * .375); }
+    .terminal-scan-corner--tr, .terminal-scan-corner--br { right: calc(50% - var(--oval-h) * .375); }
+}
+
+/* Reposo: el reloj se lee desde lejos (limitado por el ancho y por el alto). */
+.idle-clock { font-size: clamp(4rem, min(20vw, 26vh), 16rem); }
+.idle-date { font-size: clamp(1.125rem, min(3.6vw, 4vh), 2.25rem); }
+.idle-company-logo { max-height: clamp(56px, 9vh, 120px); max-width: min(60vw, 320px); }
+
+/* Selección de tipo: botones grandes para tocar con el dedo. */
+.type-grid { width: min(100%, 900px); gap: clamp(var(--sp-3), 2vw, var(--sp-6)); }
+.terminal-type-btn {
+    min-height: clamp(130px, 24vh, 280px);
+    padding: clamp(var(--sp-4), 2.5vw, var(--sp-8));
+    justify-content: center;
+}
+.btn-text { font-size: clamp(1.125rem, min(3.2vw, 3.6vh), 2rem); }
+.type-icon { width: clamp(52px, 8vh, 84px); height: clamp(52px, 8vh, 84px); }
+.type-icon svg { width: clamp(28px, 4.5vh, 44px); height: clamp(28px, 4.5vh, 44px); }
+
+/* Confirmación: quién marcó y qué, de un vistazo. */
+.result-card { width: min(94%, 760px); }
+.employee-photo { width: clamp(96px, 20vh, 220px); height: clamp(96px, 20vh, 220px); border-width: 4px; }
+.employee-name { font-size: clamp(1.75rem, min(6vw, 6vh), 3.5rem); line-height: 1.1; }
+.employee-detail { font-size: clamp(1rem, 2.4vw, 1.375rem); }
+.result-headline { font-size: clamp(1.75rem, min(6vw, 5.5vh), 3rem); }
+.result-icon { width: clamp(68px, 10vh, 104px); height: clamp(68px, 10vh, 104px); }
+.result-icon svg { width: 50%; height: 50%; }
+.mark-stat-label { font-size: clamp(.75rem, 1.6vw, .9375rem); }
+.mark-stat-value { font-size: clamp(1.5rem, min(5vw, 5vh), 2.75rem); }
+.mark-stat-time { font-size: clamp(1.75rem, min(6vw, 6vh), 3.5rem); }
+.success-exit-reminder { font-size: clamp(1rem, 2.4vw, 1.375rem); }
+.success-queued-notice { font-size: clamp(.875rem, 2vw, 1.125rem); }
+
+/* Contraste: el fondo de toda la pantalla confirma el resultado. */
+#successScreen { background: var(--c-success-bg); }
+#errorScreen   { background: var(--c-danger-bg); }
+#dayCompleteScreen { background: var(--c-info-bg); }
+.identification-frame:has(.video-wrapper--success) .identification-status,
+.identification-frame:has(.video-wrapper--error) .identification-status { border-width: 3px; }
+
+/* Celular en vertical: la cámara usa todo el ancho. */
+@media (max-width: 640px) {
+    .identification-layout { width: 100%; }
+    .identification-frame { max-width: none; border-width: 3px; }
+    .identification-status { left: var(--sp-2); right: var(--sp-2); bottom: var(--sp-2); padding: var(--sp-3) var(--sp-4); }
+    .capture-progress { bottom: calc(var(--sp-2) + 5rem); }
+}
+
+/* Horizontal con poca altura: el estado ocupa menos para dejar ver la cámara. */
+@media (orientation: landscape) and (max-height: 560px) {
+    .identification-status { padding: var(--sp-2) var(--sp-4); }
+    .identification-status .status-text,
+    .identification-status .id-status-text { font-size: 1rem; }
+    .capture-progress { bottom: calc(var(--sp-4) + 3.5rem); }
+    .employee-photo { width: 72px; height: 72px; }
+}
