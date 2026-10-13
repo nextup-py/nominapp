@@ -85,7 +85,7 @@ class TerminalResource extends Resource
 
                         Select::make('branch_id')
                             ->label('Sucursal')
-                            // Excluye sucursales de empresas inactivas de las opciones — pero
+                            // Excluye sucursales inactivas y de empresas inactivas de las opciones — pero
                             // nunca de la sucursal YA asignada al editar: modifyQueryUsing()
                             // también filtra la query que resuelve la etiqueta del valor
                             // actual (Select::getSelectedRecordUsing()), así que sin el OR con
@@ -93,7 +93,8 @@ class TerminalResource extends Resource
                             // desactivó después dejaría el campo en blanco.
                             ->relationship('branch', 'name', modifyQueryUsing: fn (Builder $query, ?Terminal $record) => $query
                                 ->where(function (Builder $query) use ($record) {
-                                    $query->whereHas('company', fn (Builder $query) => $query->active());
+                                    $query->where('is_active', true)
+                                        ->whereHas('company', fn (Builder $query) => $query->active());
 
                                     if ($record?->branch_id) {
                                         $query->orWhere('id', $record->branch_id);

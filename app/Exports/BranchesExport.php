@@ -30,8 +30,8 @@ class BranchesExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMap
     public function headings(): array
     {
         return $this->companyId
-            ? ['Nombre', 'Ciudad', 'Dirección', 'Teléfono', 'Correo', 'Empleados Activos']
-            : ['Empresa', 'Nombre', 'Ciudad', 'Dirección', 'Teléfono', 'Correo', 'Empleados Activos'];
+            ? ['Nombre', 'Ciudad', 'Dirección', 'Teléfono', 'Correo', 'Empleados Activos', 'Estado']
+            : ['Empresa', 'Nombre', 'Ciudad', 'Dirección', 'Teléfono', 'Correo', 'Empleados Activos', 'Estado'];
     }
 
     public function map($branch): array
@@ -45,6 +45,7 @@ class BranchesExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMap
             $branch->phone ?? '—',
             $branch->email ?? '—',
             $branch->active_employees_count,
+            $branch->is_active ? 'Activa' : 'Inactiva',
         ]);
     }
 
