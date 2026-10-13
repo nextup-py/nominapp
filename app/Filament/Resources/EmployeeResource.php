@@ -246,8 +246,10 @@ class EmployeeResource extends Resource
                             ->label('Sucursal')
                             ->options(function (callable $get) {
                                 $companyId = $get('company_id');
+                                $currentId = $get('branch_id');
 
                                 return Branch::when($companyId, fn ($q) => $q->where('company_id', $companyId))
+                                    ->where(fn ($q) => $q->where('is_active', true)->when($currentId, fn ($q) => $q->orWhere('id', $currentId)))
                                     ->orderBy('name')
                                     ->pluck('name', 'id');
                             })
@@ -256,7 +258,7 @@ class EmployeeResource extends Resource
                             ->required()
                             ->default(function (callable $get) {
                                 $companyId = $get('company_id');
-                                $query = Branch::when($companyId, fn ($q) => $q->where('company_id', $companyId));
+                                $query = Branch::active()->when($companyId, fn ($q) => $q->where('company_id', $companyId));
 
                                 return $query->count() === 1 ? $query->value('id') : null;
                             })

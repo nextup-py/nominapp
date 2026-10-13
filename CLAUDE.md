@@ -372,6 +372,10 @@ Salario del mes 13, pagadero en diciembre. Se gestiona por `AguinaldoPeriod` (un
 - **Eliminación masiva:** `BranchResource::deleteBulkAction()` no usa el borrado por defecto (el hook `deleting` lanza `DomainException` con `Branch::deletionBlockers()`): borra las vacías, omite las bloqueadas o sin permiso `delete_branch` y lo informa en la notificación.
 - **Export:** `BranchesExport($companyId, $ids)`; el listado le pasa los ids de `getFilteredTableQuery()` (pestaña, filtros y búsqueda), igual que `CompaniesExport`.
 - **Correo único:** se mantiene la regla `unique` del formulario (decisión explícita: no se permite repetir el correo entre sucursales).
+- **Estado activa/inactiva (`branches.is_active`, default `true`):** `Branch::scopeActive()` se usa donde se **asigna** una sucursal (select de `EmployeeResource` y de `TerminalResource`, siempre con el OR del valor ya asignado para que el select no quede vacío al editar —ver "`Select::relationship()` con `modifyQueryUsing`"—) y en el widget `BranchAttendanceToday`; los reportes y filtros históricos siguen mostrándolas. `Branch::deactivationBlockers()` (empleados activos) lo aplican `BranchStatusAction` (listado y detalle, exige `update_branch` porque las acciones personalizadas no consultan la policy), el toggle del formulario (deshabilitado con helper text) y, como red de seguridad, el hook `updating` del modelo (`DomainException`). Los terminales no se tocan al desactivar.
+- **Datos pendientes:** definidos **una sola vez** en `Branch::pendingDataExpressions()`/`pendingDataLabels()` (sin ubicación, sin ciudad, sin teléfono, con empleados activos sin terminal activo, empleados activos sin contrato); solo cuentan en sucursales activas. `scopeWithPendingData()` agrega `missing_*` y `pending_data_count`, `scopeHavingPendingData()` filtra la pestaña, `missingDataWarnings()` alimenta la alerta del detalle. Mismo patrón y misma advertencia que `Company`: para obtener ids con esos scopes usar `->select('branches.id')->pluck('id')`. Los conteos de las pestañas salen de una sola query (`ListBranches::getBranchCounts()`).
+- **Ciudad:** `Select` del catálogo `py_cities` con departamento virtual (`Company::citiesOptions()`/`departmentIdForCity()`), igual que Empresas; el `Map` ya no mapea `city` en `reverseGeocode` (solo `address`), así que la regla "city readOnly + reverseGeocode" de "Coordenadas GPS (sucursales)" ya no aplica a las sucursales.
+- **Empresa en el listado:** la columna y el filtro de empresa solo se muestran con más de una empresa activa (`Company::active()->count() > 1`).
 
 ### Módulo de Roles y Permisos
 
@@ -746,7 +750,7 @@ La guía que ven los usuarios en **Ayuda → Guía de Usuario** (`UserGuide`, `E
       ->reverseGeocode(['address' => '%n %S', 'city' => '%L'])
       ->geolocate()->height('400px')
   ```
-- El campo `city` debe ser `->readOnly()` — se completa automáticamente via `reverseGeocode`
+- En las sucursales el `reverseGeocode` solo completa `address`; la ciudad se elige del catálogo `py_cities` (ver "Módulo de Sucursales"). En otros modelos con `Map`, `city` debe ser `->readOnly()` y completarse via `reverseGeocode`
 - Para mostrar en Google Maps desde una action: `sprintf('https://www.google.com/maps?q=%s,%s', $record->coordinates['lat'], $record->coordinates['lng'])` con `->visible(fn($r) => isset($r->coordinates['lat'], $r->coordinates['lng']))`
 
 ### Colores semánticos en Filament

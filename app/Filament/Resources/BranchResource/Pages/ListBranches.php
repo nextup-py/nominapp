@@ -13,26 +13,37 @@ use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Facades\Excel;
 
-/** Página de listado de sucursales con pestañas y exportación a Excel. */
+/** Página de listado de sucursales con pestañas por estado y exportación a Excel. */
 class ListBranches extends ListRecords
 {
     protected static string $resource = BranchResource::class;
 
-    /** @var array<string, int>|null Caché de conteos por pestaña para evitar N+1. */
+    /** @var array<string, int>|null Conteos de las pestañas, calculados una sola vez por ciclo. */
     protected ?array $branchCounts = null;
 
     /**
-     * Calcula y cachea los conteos de sucursales por pestaña.
+     * Cuenta sucursales por pestaña en una sola query.
      *
-     * @return array<string, int>
+     * @return array{all: int, active: int, inactive: int, pending: int}
      */
     protected function getBranchCounts(): array
     {
         if ($this->branchCounts === null) {
+            $pending = implode(' + ', Branch::pendingDataExpressions());
+
+            $row = Branch::query()
+                ->selectRaw('COUNT(*) AS total')
+                ->selectRaw('COALESCE(SUM(branches.is_active = 1), 0) AS active')
+                ->selectRaw('COALESCE(SUM(branches.is_active = 0), 0) AS inactive')
+                ->selectRaw("COALESCE(SUM(({$pending}) > 0), 0) AS pending")
+                ->toBase()
+                ->first();
+
             $this->branchCounts = [
-                'all' => Branch::count(),
-                'with_employees' => Branch::has('employees')->count(),
-                'without_employees' => Branch::doesntHave('employees')->count(),
+                'all' => (int) $row->total,
+                'active' => (int) $row->active,
+                'inactive' => (int) $row->inactive,
+                'pending' => (int) $row->pending,
             ];
         }
 
@@ -77,7 +88,7 @@ class ListBranches extends ListRecords
     }
 
     /**
-     * Retorna las pestañas de filtrado: todas, con empleados y sin empleados.
+     * Retorna las pestañas del listado: todas, activas, inactivas y con datos pendientes.
      *
      * @return array<string, Tab>
      */
@@ -89,17 +100,23 @@ class ListBranches extends ListRecords
             'all' => Tab::make('Todas')
                 ->badge($counts['all'])
                 ->badgeColor('gray')
-                ->icon('heroicon-o-building-office-2'),
+                ->icon('heroicon-o-building-storefront'),
 
-            'with_employees' => Tab::make('Con empleados')
-                ->modifyQueryUsing(fn (Builder $query) => $query->has('employees'))
-                ->badge($counts['with_employees'])
+            'active' => Tab::make('Activas')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('branches.is_active', true))
+                ->badge($counts['active'])
                 ->badgeColor('success')
-                ->icon('heroicon-o-users'),
+                ->icon('heroicon-o-check-circle'),
 
-            'without_employees' => Tab::make('Sin empleados')
-                ->modifyQueryUsing(fn (Builder $query) => $query->doesntHave('employees'))
-                ->badge($counts['without_employees'])
+            'inactive' => Tab::make('Inactivas')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('branches.is_active', false))
+                ->badge($counts['inactive'])
+                ->badgeColor('danger')
+                ->icon('heroicon-o-no-symbol'),
+
+            'pending' => Tab::make('Con datos pendientes')
+                ->modifyQueryUsing(fn (Builder $query) => $query->havingPendingData())
+                ->badge($counts['pending'])
                 ->badgeColor('warning')
                 ->icon('heroicon-o-exclamation-triangle'),
         ];

@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\BranchResource\Pages;
 
+use App\Filament\Actions\BranchStatusAction;
 use App\Filament\Resources\BranchResource;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -14,11 +16,13 @@ class ViewBranch extends ViewRecord
     /**
      * Retorna las acciones del encabezado: acceso a edición.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
         return [
+            BranchStatusAction::make(Action::class),
+
             EditAction::make()
                 ->label('Editar')
                 ->icon('heroicon-o-pencil-square')

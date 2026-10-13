@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,6 +24,7 @@ class Branch extends Model implements Auditable
         'address',
         'city',
         'coordinates',
+        'is_active',
     ];
 
     protected $fillable = [
@@ -33,10 +35,17 @@ class Branch extends Model implements Auditable
         'address',
         'city',
         'coordinates',
+        'is_active',
+    ];
+
+    /** @var array<string, mixed> Las sucursales nuevas nacen activas (igual que el default de la base). */
+    protected $attributes = [
+        'is_active' => true,
     ];
 
     protected $casts = [
         'coordinates' => 'array',
+        'is_active' => 'boolean',
     ];
 
     /** Red de seguridad: ninguna ruta puede borrar una sucursal con empleados, terminales o fallas de marcación asociadas. */
@@ -47,6 +56,18 @@ class Branch extends Model implements Auditable
                 throw new \DomainException("No se puede eliminar la sucursal: tiene {$branch->deletionBlockersSummary()}. Reasígnelos antes de eliminarla.");
             }
         });
+
+        static::updating(function (Branch $branch): void {
+            if ($branch->isDirty('is_active') && ! $branch->is_active && $branch->activeEmployeesCount() > 0) {
+                throw new \DomainException("No se puede desactivar la sucursal: tiene {$branch->activeEmployeesCount()} empleados activos. Reasígnelos primero.");
+            }
+        });
+    }
+
+    /** Limita a las sucursales activas (las inactivas no se ofrecen al asignar empleados o terminales). */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('branches.is_active', true);
     }
 
     /**
@@ -131,6 +152,7 @@ class Branch extends Model implements Auditable
             'address' => 'Dirección',
             'city' => 'Ciudad',
             'coordinates' => 'Coordenadas',
+            'is_active' => 'Estado',
         ];
 
         $html = '<ul class="space-y-0.5 text-sm">';
@@ -158,10 +180,145 @@ class Branch extends Model implements Auditable
                 : '—';
         }
 
+        if ($key === 'is_active') {
+            return $value ? 'Activa' : 'Inactiva';
+        }
+
         if ($key === 'company_id') {
             return Company::find($value)?->display_name ?? "Empresa #{$value}";
         }
 
         return (string) $value;
+    }
+
+    /** Cantidad de empleados activos de la sucursal: mientras haya alguno, la sucursal no se puede desactivar. */
+    public function activeEmployeesCount(): int
+    {
+        return $this->employees()->where('status', 'active')->count();
+    }
+
+    /**
+     * Motivos que impiden desactivar la sucursal, por tipo. Vacío si se puede desactivar.
+     *
+     * @return array<string, int>
+     */
+    public function deactivationBlockers(): array
+    {
+        return array_filter(['empleados activos' => $this->activeEmployeesCount()]);
+    }
+
+    /** Terminales activos de la sucursal (no se modifican al desactivarla; solo se informan). */
+    public function activeTerminalsCount(): int
+    {
+        return $this->terminals()->where('status', 'active')->count();
+    }
+
+    /** Empleados activos de la sucursal sin contrato vigente (activo o suspendido). */
+    public function activeEmployeesWithoutContractCount(): int
+    {
+        return $this->employees()->where('status', 'active')->whereDoesntHave('activeContract')->count();
+    }
+
+    /**
+     * Expresiones SQL (0/1) de cada dato pendiente, por alias, sobre la tabla `branches`.
+     *
+     * Solo cuentan en sucursales activas (una sucursal cerrada no tiene nada pendiente): sin ubicación
+     * en el mapa, sin ciudad, sin teléfono, con empleados activos pero sin terminal activo y con
+     * empleados activos sin contrato vigente.
+     *
+     * @return array<string, string>
+     */
+    public static function pendingDataExpressions(): array
+    {
+        $activeEmployees = "EXISTS (SELECT 1 FROM employees e WHERE e.branch_id = branches.id AND e.status = 'active')";
+
+        return [
+            'missing_coordinates' => "(CASE WHEN branches.is_active = 1 AND (branches.coordinates IS NULL OR JSON_EXTRACT(branches.coordinates, '$.lat') IS NULL) THEN 1 ELSE 0 END)",
+            'missing_city' => "(CASE WHEN branches.is_active = 1 AND (branches.city IS NULL OR branches.city = '') THEN 1 ELSE 0 END)",
+            'missing_phone' => "(CASE WHEN branches.is_active = 1 AND (branches.phone IS NULL OR branches.phone = '') THEN 1 ELSE 0 END)",
+            'missing_terminal' => "(CASE WHEN branches.is_active = 1 AND {$activeEmployees} AND NOT EXISTS (SELECT 1 FROM terminals t WHERE t.branch_id = branches.id AND t.status = 'active') THEN 1 ELSE 0 END)",
+            'missing_contracts' => "(CASE WHEN branches.is_active = 1 AND EXISTS (SELECT 1 FROM employees e WHERE e.branch_id = branches.id AND e.status = 'active' AND NOT EXISTS (SELECT 1 FROM contracts c WHERE c.employee_id = e.id AND c.status IN ('active', 'suspended'))) THEN 1 ELSE 0 END)",
+        ];
+    }
+
+    /**
+     * Etiquetas de cada dato pendiente (mismas claves que {@see self::pendingDataExpressions()}).
+     *
+     * @return array<string, string>
+     */
+    public static function pendingDataLabels(): array
+    {
+        return [
+            'missing_coordinates' => 'Sin ubicación en el mapa',
+            'missing_city' => 'Sin ciudad',
+            'missing_phone' => 'Sin teléfono',
+            'missing_terminal' => 'Con empleados pero sin terminal activo',
+            'missing_contracts' => 'Empleados activos sin contrato',
+        ];
+    }
+
+    /** Agrega a la consulta una columna 0/1 por cada dato pendiente (`missing_*`) y el total `pending_data_count`. */
+    public function scopeWithPendingData(Builder $query): Builder
+    {
+        $total = implode(' + ', self::pendingDataExpressions());
+
+        $query->addSelect('branches.*');
+
+        foreach (self::pendingDataExpressions() as $alias => $sql) {
+            $query->selectRaw("{$sql} AS {$alias}");
+        }
+
+        return $query->selectRaw("({$total}) AS pending_data_count");
+    }
+
+    /** Limita a las sucursales activas con al menos un dato pendiente. */
+    public function scopeHavingPendingData(Builder $query): Builder
+    {
+        return $query->whereRaw('('.implode(' + ', self::pendingDataExpressions()).') > 0');
+    }
+
+    /**
+     * Etiquetas de los datos pendientes de una sucursal cargada con {@see self::scopeWithPendingData()}.
+     *
+     * @return array<int, string>
+     */
+    public function pendingDataList(): array
+    {
+        return collect(self::pendingDataLabels())
+            ->filter(fn (string $label, string $key) => (int) $this->getAttribute($key) === 1)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Avisos de lo que falta cargar en la sucursal, para la alerta del detalle.
+     *
+     * @return array<int, string>
+     */
+    public function missingDataWarnings(): array
+    {
+        if (! $this->is_active) {
+            return [];
+        }
+
+        $warnings = [];
+
+        if (! isset($this->coordinates['lat'], $this->coordinates['lng'])) {
+            $warnings[] = 'Falta ubicarla en el mapa.';
+        }
+        if (blank($this->city)) {
+            $warnings[] = 'Falta la ciudad.';
+        }
+        if (blank($this->phone)) {
+            $warnings[] = 'Falta el teléfono de contacto.';
+        }
+        if ($this->activeEmployeesCount() > 0 && $this->activeTerminalsCount() === 0) {
+            $warnings[] = 'Tiene empleados activos pero ningún terminal activo para marcar asistencia.';
+        }
+        if (($withoutContract = $this->activeEmployeesWithoutContractCount()) > 0) {
+            $warnings[] = "Tiene {$withoutContract} empleados activos sin contrato vigente.";
+        }
+
+        return $warnings;
     }
 }

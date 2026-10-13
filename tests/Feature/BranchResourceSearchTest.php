@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\BranchResource\Pages\CreateBranch;
 use App\Filament\Resources\BranchResource\Pages\ListBranches;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -32,6 +33,9 @@ it('busca la empresa por nombre o nombre comercial en el form de sucursales', fu
 
 it('busca la empresa por nombre o nombre comercial en el filtro de tabla de sucursales', function () {
     $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+
+    // El filtro de empresa solo aparece cuando hay más de una empresa activa.
+    Company::factory()->count(2)->create();
 
     $filter = Livewire::test(ListBranches::class)
         ->instance()

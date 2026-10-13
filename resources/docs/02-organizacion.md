@@ -68,7 +68,11 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una sucursal específica.
 
-**Campos:** nombre, dirección, ciudad, teléfono, email, y coordenadas GPS (mapa interactivo).
+**Campos:** nombre, dirección, ciudad, teléfono, email, estado (activa o inactiva) y coordenadas GPS (mapa interactivo). La **ciudad** se elige del catálogo oficial: primero, opcionalmente, el **Departamento** (solo filtra las ciudades y no se guarda) y luego la **Ciudad**; el mapa completa la dirección, pero ya no la ciudad.
+
+**Listado:** las pestañas **Todas / Activas / Inactivas / Con datos pendientes** muestran cuántas sucursales hay de cada tipo. La columna **Datos** indica si la sucursal está completa o cuántas cosas le faltan (al pasar el cursor se ve el detalle): sin ubicación en el mapa, sin ciudad, sin teléfono, con empleados activos pero sin terminal activo, o con empleados activos sin contrato vigente. La columna y el filtro **Empresa** solo aparecen si hay más de una empresa activa. El menú de cada fila (⋮) permite abrir la sucursal en el mapa y **Activar** o **Desactivar**.
+
+**Vista de la sucursal:** el detalle avisa en **Datos pendientes** lo que falta cargar y muestra empleados activos, activos sin contrato, terminales activos y el estado.
 
 **Cómo crear una sucursal:**
 
@@ -79,6 +83,8 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 5. Guardar
 
 > Las coordenadas GPS se usan para vincular marcaciones de asistencia a la ubicación de la sucursal.
+
+**Desactivar una sucursal:** para dejar de usar una sucursal sin borrarla (conserva su historial), usar la acción **Desactivar** del listado o del detalle, o desmarcar **Activa** en la edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una sucursal con empleados activos**: hay que reasignarlos a otra sucursal primero y el sistema avisa cuántos son. Una sucursal inactiva deja de ofrecerse al asignar empleados o terminales y de contarse en la tarjeta de asistencia del Escritorio, pero sus terminales no se modifican y las ya asignadas se siguen viendo en los registros existentes. Los reportes siguen mostrándola.
 
 **Eliminar una sucursal:** solo es posible si no tiene empleados, terminales ni fallas de marcación asociadas. Si los tiene, el sistema bloquea la eliminación y avisa cuántos hay de cada uno; hay que reasignarlos primero.
 

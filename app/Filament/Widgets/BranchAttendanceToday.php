@@ -30,7 +30,7 @@ class BranchAttendanceToday extends ChartWidget
     {
         $today = now()->toDateString();
 
-        $branches = Branch::withCount(['employees' => fn ($q) => $q->where('status', 'active')])
+        $branches = Branch::active()->withCount(['employees' => fn ($q) => $q->where('status', 'active')])
             ->having('employees_count', '>', 0)
             ->get();
 
