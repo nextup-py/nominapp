@@ -29,6 +29,9 @@ import { markUserInteracted } from '../../shared/audio-feedback.js';
 
 let backgroundSyncStarted = false;
 
+/** Separación mínima entre dos sincronizaciones disparadas por el despertar del equipo (evita ráfagas focus + visibilitychange). */
+const WAKE_SYNC_MIN_GAP_MS = 15 * 1000;
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -354,6 +357,20 @@ export function startBackgroundSync({ onUnlinked } = {}) {
         runEmployeeSync();
         runQueueFlush();
     });
+
+    // Un equipo que se suspende congela los setInterval: al despertar, no esperar al próximo ciclo.
+    let lastWakeSyncAt = 0;
+    const syncOnWake = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+        const now = Date.now();
+        if (now - lastWakeSyncAt < WAKE_SYNC_MIN_GAP_MS) return;
+        lastWakeSyncAt = now;
+        runHeartbeat();
+        runQueueFlush();
+    };
+    window.addEventListener('visibilitychange', syncOnWake);
+    window.addEventListener('pageshow', syncOnWake);
+    window.addEventListener('focus', syncOnWake);
 }
 
 /**

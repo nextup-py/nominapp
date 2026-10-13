@@ -146,6 +146,75 @@ describe('startBackgroundSync — reporte de TerminalAuthError', () => {
     });
 });
 
+describe('startBackgroundSync — sincronización al despertar el equipo', () => {
+    let listeners;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+        listeners = {};
+        vi.stubGlobal('window', { addEventListener: vi.fn((name, cb) => { listeners[name] = cb; }) });
+        vi.stubGlobal('navigator', { onLine: true });
+        vi.stubGlobal('document', { visibilityState: 'visible' });
+    });
+
+    afterEach(() => {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+    });
+
+    it('al volver a estar visible envía el latido y vacía la cola sin esperar al ciclo', async () => {
+        const { startBackgroundSync, heartbeat, flushQueue } = await loadFreshBootstrap();
+        heartbeat.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+
+        startBackgroundSync();
+        listeners.visibilitychange();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(heartbeat).toHaveBeenCalledTimes(1);
+        expect(flushQueue).toHaveBeenCalledTimes(1);
+    });
+
+    it('no sincroniza si la pestaña pasa a segundo plano', async () => {
+        const { startBackgroundSync, heartbeat } = await loadFreshBootstrap();
+        heartbeat.mockResolvedValue(undefined);
+        document.visibilityState = 'hidden';
+
+        startBackgroundSync();
+        listeners.visibilitychange();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(heartbeat).not.toHaveBeenCalled();
+    });
+
+    it('varios eventos seguidos (focus + visibilitychange) generan un solo latido', async () => {
+        const { startBackgroundSync, heartbeat, flushQueue } = await loadFreshBootstrap();
+        heartbeat.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+
+        startBackgroundSync();
+        listeners.visibilitychange();
+        listeners.focus();
+        listeners.pageshow();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(heartbeat).toHaveBeenCalledTimes(1);
+    });
+
+    it('sin conexión no intenta sincronizar', async () => {
+        const { startBackgroundSync, heartbeat } = await loadFreshBootstrap();
+        vi.stubGlobal('navigator', { onLine: false });
+
+        startBackgroundSync();
+        listeners.visibilitychange();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(heartbeat).not.toHaveBeenCalled();
+    });
+});
+
 describe('initializeOfflineSync — confirmación antes de limpiar el estado de otro terminal', () => {
     beforeEach(() => {
         vi.clearAllMocks();

@@ -355,7 +355,7 @@ Un terminal que figura **Desconectado** a media mañana casi siempre es una tabl
 
 1. **Pantalla siempre encendida mientras carga:** en los ajustes de pantalla del equipo, desactivar el apagado automático (en Android, *Opciones de desarrollador → Mantener activo*, o *Pantalla → Tiempo de espera* al máximo).
 2. **Dejarlo enchufado:** el estado del dispositivo informa la batería y avisa cuando baja del umbral sin cargador.
-3. **Instalarlo como app** (menú del navegador → *Instalar aplicación* o *Añadir a pantalla de inicio*): el detalle del terminal muestra el **Modo** (instalado o en pestaña del navegador) y un terminal instalado se suspende menos.
+3. **Instalarlo como app** (menú del navegador → *Instalar aplicación* o *Añadir a pantalla de inicio*): el detalle del terminal muestra el **Modo** (instalado o en pestaña del navegador) y un terminal instalado se suspende menos, pero instalarlo **no impide** que el equipo apague la pantalla: los puntos 1 y 4 siguen siendo necesarios. Cuando el equipo despierta, el terminal vuelve a reportar de inmediato sin esperar al siguiente ciclo.
 4. **Sin ahorro de energía para el navegador:** quitar el navegador o la app instalada de la lista de optimización de batería.
 5. **Fecha y hora automáticas:** si el reloj se desajusta, el panel avisa (**Reloj del terminal desajustado**). Las marcaciones se corrigen con el desfase detectado, pero conviene dejar la hora automática.
 6. **Permiso de cámara concedido** y la página del terminal abierta (sin cerrar la pestaña).
