@@ -43,6 +43,19 @@ export function setOffline(isOffline) {
     if (connectivityLabelSr) connectivityLabelSr.textContent = label;
 }
 
+/** @type {(() => Promise<void>)|null} */
+let refreshHook = null;
+
+/**
+ * Registra quién pinta el estado de sincronización (`sync-control.js`). Con un hook
+ * registrado, `refreshIdleSyncStatus()` y `refreshLastSyncLabel()` solo le piden que
+ * recalcule, para que todos los lugares muestren el mismo texto.
+ * @param {(() => Promise<void>)|null} hook
+ */
+export function setSyncRefreshHook(hook) {
+    refreshHook = hook;
+}
+
 /** @param {string} text */
 export function updateIdleSyncStatus(text) {
     const idleSyncStatus = document.getElementById("idleSyncStatus");
@@ -57,6 +70,11 @@ export function updateIdleSyncStatus(text) {
  * @returns {Promise<void>}
  */
 export async function refreshIdleSyncStatus() {
+    if (refreshHook) {
+        await refreshHook();
+        return;
+    }
+
     // Prioridad más alta: sin empleados cacheados el terminal no puede identificar
     // a NADIE — más grave que marcaciones pendientes/en conflicto, que sí sabe
     // resolver localmente. Antes esto solo se notaba al fallar un intento real de
@@ -89,6 +107,11 @@ export async function refreshIdleSyncStatus() {
  * @returns {Promise<void>}
  */
 export async function refreshLastSyncLabel() {
+    if (refreshHook) {
+        await refreshHook();
+        return;
+    }
+
     const terminalHeaderLastSync = document.getElementById("terminalHeaderLastSync");
     if (!terminalHeaderLastSync) return;
     const lastHeartbeatAt = await getMeta("last_heartbeat_at");

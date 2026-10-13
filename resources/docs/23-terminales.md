@@ -376,7 +376,21 @@ Si aun así el terminal se apaga de noche o fuera de horario, definir el **horar
 
 ![Pantalla de terminal sin empleados](/docs-images/23-terminal-sin-empleados.png)
 
-Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la hora de la última sincronización (**Últ. sync**).
+### Sincronizar
+
+El terminal se sincroniza solo, pero también se puede forzar desde tres lugares, que hacen lo mismo y muestran el mismo resultado: el ícono de flechas del encabezado, **Sincronizar ahora** en el menú **⋮** y el botón **Sincronizar** de la pantalla de reposo.
+
+| Resultado | Qué significa |
+|-----------|---------------|
+| **Sincronizando…** | Hay una sincronización en curso; los botones quedan deshabilitados |
+| **Al día · hace N min** | Todo enviado; indica hace cuánto fue el último contacto con el servidor |
+| **N pendientes de enviar** | Hay marcaciones guardadas en el dispositivo que todavía no llegaron al servidor (punto ámbar en el ícono). Se envían solas al volver la conexión |
+| **N marcaciones requieren revisión** | Hubo conflictos que RR.HH. debe resolver en **Fallos de marcación** (punto rojo) |
+| **No se pudo sincronizar: …** | Indica el motivo: *sin conexión*, *el servidor no respondió* o *el terminal ya no está vinculado* (punto rojo). El aviso se limpia solo cuando vuelve a haber contacto con el servidor |
+
+En el menú **⋮**, debajo del resultado, se ve cuántos empleados tiene descargados el terminal y cuántas marcaciones están pendientes de enviar.
+
+Cuando hay una versión nueva de la app aparece **Actualizar app** (en el menú **⋮** y en la pantalla de reposo): recarga el terminal sin perder las marcaciones pendientes. Si nadie lo toca, el terminal se actualiza solo al quedar en reposo.
 
 ### Controles de la cámara
 

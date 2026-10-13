@@ -1220,3 +1220,24 @@ body {
     font-size: .875rem;
 }
 .menu-sheet-check { width: 20px; height: 20px; accent-color: var(--c-primary); cursor: pointer; }
+
+
+/* ── Sincronizar: botón del encabezado, punto de estado y resultado (ver terminal/sync-control.js) ── */
+.sync-trigger { position: relative; }
+.sync-trigger svg { width: 18px; height: 18px; }
+.sync-trigger.is-syncing svg { animation: spin .7s linear infinite; }
+.sync-trigger-badge {
+    display: none;
+    position: absolute; top: 2px; right: 2px;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--c-surface);
+    background: var(--c-warning);
+}
+.sync-trigger[data-badge="pending"] .sync-trigger-badge { display: block; background: var(--c-warning); }
+.sync-trigger[data-badge="error"] .sync-trigger-badge { display: block; background: var(--c-danger); }
+.idle-sync-status[data-tone="error"],
+.menu-sheet-item-sublabel[data-tone="error"] { color: var(--c-danger); opacity: 1; }
+.idle-sync-status[data-tone="warn"],
+.menu-sheet-item-sublabel[data-tone="warn"] { color: var(--c-warning); opacity: 1; }
+.idle-sync-btn.hidden, .menu-sheet-item.hidden { display: none; }

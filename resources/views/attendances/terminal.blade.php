@@ -35,6 +35,14 @@
                 sheet (aria-hidden mientras está cerrado), así que ninguno de los dos anuncia
                 cambios a lectores de pantalla — este span espejo sí lo hace. --}}
                 <span id="connectivityLabelSr" class="sr-only" aria-live="polite"></span>
+                {{-- Sincronizar siempre a mano: el punto indica pendientes (ámbar) o un error (rojo). Ver terminal/sync-control.js --}}
+                <button type="button" id="btnHeaderSync" class="menu-trigger sync-trigger" aria-label="Sincronizar ahora" title="Sincronizar ahora">
+                    <svg id="btnHeaderSyncIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                    <span class="sync-trigger-badge" aria-hidden="true"></span>
+                </button>
                 <button type="button" id="btnTerminalMenu" class="menu-trigger" aria-haspopup="dialog"
                     aria-expanded="false" aria-controls="terminalMenuSheet" aria-label="Más opciones">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
