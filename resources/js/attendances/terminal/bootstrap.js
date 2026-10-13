@@ -19,9 +19,10 @@
 
 import * as camera from './camera.js';
 import { acquireWakeLock, hasWakeLock } from './idle-detection.js';
-import { migrateTokenFromLocalStorage, getMeta, clearTerminalState } from '../terminal-offline/db.js';
+import { migrateTokenFromLocalStorage, getMeta, setMeta, clearTerminalState } from '../terminal-offline/db.js';
 import { heartbeat, syncEmployees, rebuildEmployeeCache, setCommandHandler, setAppVersionHandler, setWakeLockProbe, queueCommandAck, TerminalAuthError } from '../terminal-offline/sync.js';
 import { reloadIfOutdated } from '../terminal-offline/auto-reload.js';
+import { markPendingReload, settlePendingReload } from '../terminal-offline/pending-reload.js';
 import { runRemoteCommands } from '../terminal-offline/remote-commands.js';
 import { flushQueue } from '../terminal-offline/queue.js';
 import { updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './sync-status-ui.js';
@@ -215,12 +216,22 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
     // Antes del primer heartbeat: si ya trae comandos pendientes, que no se pierdan.
     setCommandHandler(handleRemoteCommands);
     setWakeLockProbe(hasWakeLock);
-    setAppVersionHandler((serverVersion) => reloadIfOutdated({
-        currentVersion: window.terminalData?.app_version,
-        serverVersion,
-        waitForIdle,
-        reload: () => window.location.reload(),
-    }));
+    setAppVersionHandler(async (serverVersion) => {
+        await settlePendingReload({
+            getMeta,
+            setMeta,
+            ack: queueCommandAck,
+            currentVersion: window.terminalData?.app_version,
+            serverVersion,
+        });
+
+        return reloadIfOutdated({
+            currentVersion: window.terminalData?.app_version,
+            serverVersion,
+            waitForIdle,
+            reload: () => window.location.reload(),
+        });
+    });
 
     try {
         updateIdleSyncStatus('Sincronizando...');
@@ -291,6 +302,7 @@ async function handleRemoteCommands(commands) {
             waitForIdle,
             ack: queueCommandAck,
             flushAcks: heartbeat,
+            deferReloadAck: (id) => markPendingReload(setMeta, id),
             reload: () => window.location.reload(),
         });
     } finally {

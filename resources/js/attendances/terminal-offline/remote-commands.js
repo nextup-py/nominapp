@@ -27,7 +27,8 @@ export const SUPPORTED_COMMANDS = ['force_sync', 'reload', 'clear_cache', 'repor
  *   ack: (ack: {id: number, status: 'done'|'failed', message?: string}) => void,
  *   flushAcks: () => Promise<void>,
  *   reload: () => void,
- * }} deps
+ *   deferReloadAck?: (id: number) => Promise<void>,
+ * }} deps  `deferReloadAck` guarda el comando `reload` para confirmarlo tras recargar (ver pending-reload.js); sin él se confirma antes de recargar.
  * @returns {Promise<void>}
  */
 export async function runRemoteCommands(commands, deps) {
@@ -50,6 +51,8 @@ export async function runRemoteCommands(commands, deps) {
                 }
                 if (command === 'clear_cache') await deps.clearCache();
                 needsReload = true;
+
+                if (command === 'reload' && deps.deferReloadAck && (await deferred(deps, id))) continue;
             }
 
             deps.ack({ id, status: 'done' });
@@ -68,4 +71,18 @@ export async function runRemoteCommands(commands, deps) {
     }
 
     if (needsReload) deps.reload();
+}
+
+/**
+ * Guarda la confirmación de `reload` para después de recargar.
+ * @returns {Promise<boolean>} false si no se pudo guardar (se confirma antes de recargar, como siempre).
+ */
+async function deferred(deps, id) {
+    try {
+        await deps.deferReloadAck(id);
+
+        return true;
+    } catch {
+        return false;
+    }
 }

@@ -19,6 +19,7 @@ vi.mock('./idle-detection.js', () => ({ acquireWakeLock: vi.fn(), hasWakeLock: v
 vi.mock('../terminal-offline/db.js', () => ({
     migrateTokenFromLocalStorage: vi.fn(),
     getMeta: vi.fn(),
+    setMeta: vi.fn(),
     clearTerminalState: vi.fn(),
 }));
 vi.mock('../../shared/audio-feedback.js', () => ({ markUserInteracted: vi.fn() }));

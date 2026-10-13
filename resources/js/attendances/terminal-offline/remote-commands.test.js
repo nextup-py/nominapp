@@ -48,6 +48,39 @@ describe('runRemoteCommands', () => {
         expect(order).toEqual(['ack', 'flush', 'reload']);
     });
 
+    it('reload con confirmación diferida: guarda el comando, no confirma ni vacía acks y recarga', async () => {
+        const order = [];
+        const deps = makeDeps({
+            deferReloadAck: vi.fn(async () => { order.push('defer'); }),
+            ack: vi.fn(() => order.push('ack')),
+            reload: vi.fn(() => order.push('reload')),
+        });
+
+        await runRemoteCommands([{ id: 3, command: 'reload' }], deps);
+
+        expect(deps.deferReloadAck).toHaveBeenCalledWith(3);
+        expect(deps.ack).not.toHaveBeenCalled();
+        expect(order).toEqual(['defer', 'reload']);
+    });
+
+    it('reload: si no se puede guardar la confirmación diferida, confirma antes de recargar como siempre', async () => {
+        const deps = makeDeps({ deferReloadAck: vi.fn().mockRejectedValue(new Error('IndexedDB')) });
+
+        await runRemoteCommands([{ id: 3, command: 'reload' }], deps);
+
+        expect(deps.ack).toHaveBeenCalledWith({ id: 3, status: 'done' });
+        expect(deps.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('clear_cache no difiere su confirmación', async () => {
+        const deps = makeDeps({ deferReloadAck: vi.fn() });
+
+        await runRemoteCommands([{ id: 4, command: 'clear_cache' }], deps);
+
+        expect(deps.deferReloadAck).not.toHaveBeenCalled();
+        expect(deps.ack).toHaveBeenCalledWith({ id: 4, status: 'done' });
+    });
+
     it('clear_cache limpia, confirma y recarga', async () => {
         const deps = makeDeps();
 

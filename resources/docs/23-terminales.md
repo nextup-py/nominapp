@@ -304,7 +304,7 @@ Permiten pedirle al dispositivo, sin ir hasta el local, que haga algo. Requieren
 | Comando | Qué hace el terminal |
 |---------|----------------------|
 | **Forzar sincronización** | Sincroniza los empleados y vacía su cola de marcaciones |
-| **Recargar app** | Recarga la aplicación (útil después de una actualización; ver la versión en **Estado del dispositivo**) |
+| **Recargar app** | Recarga la aplicación (útil después de una actualización; ver la versión en **Estado del dispositivo**). Queda **Hecho** solo si, tras recargar, el terminal ya corre la versión vigente; si recargó pero sigue con la anterior figura **Falló** (*Recargó pero sigue con la versión anterior de la app*) |
 | **Limpiar caché** | Borra la caché de la app y de empleados, la reconstruye desde el servidor y recarga |
 | **Reenviar reporte** | Envía de inmediato un reporte completo de su estado |
 
@@ -393,7 +393,7 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 | Aviso de **Terminal sin empleados enrolados** | Ningún empleado activo de la sucursal del terminal tiene rostro registrado (o los empleados figuran en otra sucursal) | Enrolar a los empleados o corregir su sucursal en su ficha |
 | Aviso de **Terminal sin empleados en caché** | El terminal en línea descargó 0 empleados aunque la sucursal tiene enrolados | Enviar **Limpiar caché** y, si sigue igual, **Recargar app** |
 | El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |
-| El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Si está en línea se recarga solo al quedar en reposo (una vez por versión). Si no, recargar la página del terminal dos veces o enviar **Recargar app** |
+| El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Si está en línea se recarga solo al quedar en reposo (una vez por versión). Si no, recargar la página del terminal o enviar **Recargar app** (la página se pide siempre al servidor y solo se usa la copia guardada si no hay internet o tarda más de unos 4 segundos) |
 | El estado dice **Pantalla encendida: Inactiva** | El navegador no concedió mantener la pantalla encendida, o la tablet entró en ahorro de batería | Dejar la tablet cargando, desactivar el ahorro de batería y la suspensión de pantalla, y recargar el terminal |
 | Un comando remoto figura **Vencido** | El terminal no se conectó a tiempo (15 minutos; 24 horas en **Recargar app**) o corre una versión vieja de la aplicación que no entiende comandos | Verificar que esté encendido y con internet, recargar su página dos veces y volver a enviar el comando |
 | Un comando remoto figura **Falló** con el detalle *El terminal estuvo ocupado* | Había una marcación en curso y no llegó al reposo a tiempo | Volver a enviar el comando cuando el terminal esté en reposo |
