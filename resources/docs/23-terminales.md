@@ -374,6 +374,8 @@ Si aun así el terminal se apaga de noche o fuera de horario, definir el **horar
 | **Reposo** | Terminal listo; se activa al detectar a una persona o al tocar la pantalla |
 | **Sin conexión** | Aviso en la parte superior. Se sigue marcando: las marcaciones se guardan y se envían al volver internet |
 
+![Pantalla de terminal sin empleados](/docs-images/23-terminal-sin-empleados.png)
+
 Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la hora de la última sincronización (**Últ. sync**).
 
 ---
