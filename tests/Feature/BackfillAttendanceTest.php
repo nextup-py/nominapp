@@ -38,6 +38,18 @@ function plannedShiftOn(Employee $employee, Carbon $date): void
     ShiftOverride::create(['employee_id' => $employee->id, 'override_date' => $date->toDateString(), 'shift_id' => $shift->id, 'reason_type' => 'cambio_turno']);
 }
 
+/** Fecha de hace `$daysAgo` días o más; los domingos quedan como `weekend` y no generan ausencia, así que se retrocede. */
+function backfillWorkday(int $daysAgo): Carbon
+{
+    $date = Carbon::today()->subDays($daysAgo);
+
+    while ($date->isSunday()) {
+        $date->subDay();
+    }
+
+    return $date;
+}
+
 beforeEach(function () {
     app(GeneralSettings::class)->absence_threshold_minutes = 15;
     app(GeneralSettings::class)->save();
@@ -58,7 +70,7 @@ it('con --dry-run informa las ausencias y jornadas pendientes sin guardar nada',
 
 it('crea la ausencia pendiente de un día planificado sin marcación', function () {
     $employee = backfillEmployee();
-    $date = Carbon::today()->subDays(3);
+    $date = backfillWorkday(3);
     plannedShiftOn($employee, $date);
 
     $this->artisan('attendance:backfill', ['--from' => $date->toDateString()])->assertSuccessful();
@@ -71,7 +83,7 @@ it('crea la ausencia pendiente de un día planificado sin marcación', function 
 
 it('no duplica ausencias al correrlo dos veces ni crea ausencias de hoy', function () {
     $employee = backfillEmployee();
-    $past = Carbon::today()->subDays(2);
+    $past = backfillWorkday(2);
     plannedShiftOn($employee, $past);
     plannedShiftOn($employee, Carbon::today());
 
