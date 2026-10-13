@@ -7,14 +7,15 @@ import * as bootstrap from './terminal/bootstrap.js';
 import * as pairingFlow from './terminal/pairing-flow.js';
 import { createEmptyStateController, HR_NOTICE } from './terminal/empty-state.js';
 import { updateClock, updateIdleDate } from './terminal/ui-feedback.js';
-import { setOffline, updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './terminal/sync-status-ui.js';
+import { setOffline, updateIdleSyncStatus, setSyncRefreshHook } from './terminal/sync-status-ui.js';
+import { createSyncControl } from './terminal/sync-control.js';
 import { initManualSearch } from './terminal/manual-search.js';
 import { createCameraControl } from './terminal/camera-control.js';
 import { getCameraPrefs, setCameraPrefs, listVideoInputs } from './terminal/camera-prefs.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
 import { createMenuSheet } from '../shared/menu-sheet.js';
 import { heartbeat, syncEmployees, TerminalAuthError } from './terminal-offline/sync.js';
-import { flushQueue } from './terminal-offline/queue.js';
+import { flushQueue, countPendingEvents, countConflictEvents } from './terminal-offline/queue.js';
 import { getMeta, countCachedEmployees } from './terminal-offline/db.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -481,29 +482,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
     bootstrap.initInteractionTracking();
 
-    if (btnForceSync) {
-        btnForceSync.addEventListener('click', async (event) => {
-            event.stopPropagation();
-            btnForceSync.disabled = true;
-            updateIdleSyncStatus('Sincronizando...');
-            try {
-                await heartbeat();
-                await syncEmployees();
-                await flushQueue();
-                await refreshIdleSyncStatus();
-                await emptyState.refresh();
-            } catch (error) {
-                if (error instanceof TerminalAuthError) {
-                    updateIdleSyncStatus('Terminal sin configurar');
-                    showUnlinked('revoked');
-                } else {
-                    updateIdleSyncStatus('Error al sincronizar');
-                }
-            } finally {
-                btnForceSync.disabled = false;
-            }
-        });
+    // ============================================================================
+    // SINCRONIZAR — un solo control con resultado claro (ver terminal/sync-control.js)
+    // ============================================================================
+    const headerSyncBtn = document.getElementById('btnHeaderSync');
+    const menuSyncBtn = document.getElementById('btnMenuSync');
+    const menuSyncIcon = document.getElementById('btnMenuSyncIcon');
+    const menuSyncResult = document.getElementById('terminalHeaderLastSync');
+    const menuSyncDetail = document.getElementById('terminalSyncDetail');
+    const updateAppButtons = [document.getElementById('btnMenuUpdateApp'), document.getElementById('btnIdleUpdateApp')];
+
+    /** Pinta el resumen de sincronización en todos los lugares donde se muestra. */
+    function renderSync(summary) {
+        const busy = summary.tone === 'busy';
+        updateIdleSyncStatus(summary.headline);
+        document.getElementById('idleSyncStatus')?.setAttribute('data-tone', summary.tone);
+
+        [btnForceSync, menuSyncBtn, headerSyncBtn].forEach((btn) => { if (btn) btn.disabled = busy; });
+        menuSyncIcon?.classList.toggle('is-syncing', busy);
+        headerSyncBtn?.classList.toggle('is-syncing', busy);
+        if (headerSyncBtn) {
+            if (summary.badge) headerSyncBtn.setAttribute('data-badge', summary.badge);
+            else headerSyncBtn.removeAttribute('data-badge');
+            headerSyncBtn.title = summary.headline;
+        }
+
+        if (menuSyncResult) {
+            menuSyncResult.textContent = summary.headline;
+            menuSyncResult.setAttribute('data-tone', summary.tone);
+            menuSyncResult.classList.remove('hidden');
+        }
+        if (menuSyncDetail) {
+            menuSyncDetail.textContent = summary.detail;
+            menuSyncDetail.classList.remove('hidden');
+        }
+        updateAppButtons.forEach((btn) => btn?.classList.toggle('hidden', !summary.appOutdated));
     }
+
+    const syncControl = createSyncControl({
+        run: async () => {
+            await heartbeat();
+            await syncEmployees();
+            await flushQueue();
+            await emptyState.refresh();
+        },
+        getCounts: async () => ({
+            pending: await countPendingEvents(),
+            conflicts: await countConflictEvents(),
+            employees: await countCachedEmployees(),
+            lastSyncAt: await getMeta('last_heartbeat_at'),
+            serverVersion: await getMeta('server_app_version'),
+        }),
+        onChange: renderSync,
+        isAuthError: (error) => error instanceof TerminalAuthError,
+        onAuthError: () => showUnlinked('revoked'),
+        currentVersion: window.terminalData?.app_version ?? null,
+    });
+    setSyncRefreshHook(() => syncControl.refresh());
+
+    [btnForceSync, menuSyncBtn, headerSyncBtn].forEach((btn) => {
+        btn?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            syncControl.sync();
+        });
+    });
+    // Recargar es seguro: la cola de marcaciones vive en IndexedDB.
+    updateAppButtons.forEach((btn) => btn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        window.location.reload();
+    }));
+    syncControl.refresh();
 
     // ============================================================================
     // TEMA CLARO / OSCURO
@@ -522,32 +570,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         createMenuSheet({ sheet, backdrop, panel, trigger });
     })();
-
-    // Botón "Sincronizar ahora" del menú ⋮ — misma acción que #btnForceSync
-    // (pantalla idle), pero accesible desde cualquier pantalla del terminal,
-    // no solo en reposo.
-    const btnMenuSync = document.getElementById('btnMenuSync');
-    const btnMenuSyncIcon = document.getElementById('btnMenuSyncIcon');
-    if (btnMenuSync) {
-        btnMenuSync.addEventListener('click', async (event) => {
-            event.stopPropagation();
-            btnMenuSync.disabled = true;
-            btnMenuSyncIcon?.classList.add('is-syncing');
-            try {
-                await heartbeat();
-                await syncEmployees();
-                await flushQueue();
-                await refreshIdleSyncStatus();
-                await emptyState.refresh();
-            } catch (error) {
-                if (error instanceof TerminalAuthError) showUnlinked('revoked');
-                await refreshLastSyncLabel();
-            } finally {
-                btnMenuSync.disabled = false;
-                btnMenuSyncIcon?.classList.remove('is-syncing');
-            }
-        });
-    }
 
     // ============================================================================
     // INICIALIZACIÓN

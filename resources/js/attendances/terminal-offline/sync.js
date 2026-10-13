@@ -201,6 +201,7 @@ export async function heartbeat() {
 
         await logSync('heartbeat', true);
 
+        if (data.app_version) await setMeta('server_app_version', data.app_version);
         if (data.app_version && appVersionHandler) {
             Promise.resolve(appVersionHandler(data.app_version)).catch((error) => console.warn('Recarga por nueva versión falló:', error.message));
         }

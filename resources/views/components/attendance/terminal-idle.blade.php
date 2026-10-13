@@ -26,6 +26,9 @@
                     </svg>
                     Sincronizar
                 </button>
+                <button type="button" id="btnIdleUpdateApp" class="idle-sync-btn hidden" aria-label="Actualizar la app a la versión nueva">
+                    Actualizar app
+                </button>
             </div>
         </div>
         <div class="idle-hint">
