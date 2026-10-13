@@ -272,7 +272,8 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 
 | Aviso | Cuándo |
 |-------|--------|
-| **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia) |
+| **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia). El aviso incluye la **causa probable** según el último reporte del dispositivo (pantalla que no se mantenía encendida, abierto en el navegador, sin cargador, reloj desajustado, app vieja); también queda en la bitácora |
+| **N terminales sin conexión** | Si varios terminales pasan a Desconectado en la misma revisión (por ejemplo al abrir el horario de vigilancia) llega **un solo aviso** con la lista y la causa probable más frecuente, en vez de uno por terminal |
 | **Terminal reconectado** | Volvió a reportar después de haber avisado la desconexión |
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
 | **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones **pendientes** no se envían hace más del tiempo configurado. Las marcaciones **en conflicto** no cuentan: el servidor ya las rechazó y quedan en **Fallos de Marcación** para revisar |

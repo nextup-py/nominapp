@@ -10,6 +10,7 @@ use App\Models\Terminal;
 use App\Models\TerminalEvent;
 use App\Models\User;
 use App\Notifications\TerminalHealthNotification;
+use App\Notifications\TerminalOfflineGroupNotification;
 use App\Services\TerminalHealthService;
 use App\Settings\GeneralSettings;
 use Illuminate\Console\Scheduling\Schedule;
@@ -660,4 +661,73 @@ it('Configuración General trae los umbrales de alertas y retención con sus val
     expect($settings->terminal_queue_stuck_minutes)->toBe(15)
         ->and($settings->terminal_low_battery_percent)->toBe(20)
         ->and($settings->terminal_events_retention_days)->toBe(90);
+});
+
+// ─── Diagnóstico y resumen de desconexiones ─────────────────────────────────
+
+it('las pistas de desconexión salen del último reporte del dispositivo', function () {
+    $terminal = makeHealthTerminal(['device_report' => [
+        'wake_lock' => false, 'standalone' => false, 'battery_level' => 40, 'battery_charging' => false, 'clock_skew_seconds' => 900,
+    ]]);
+
+    $hints = implode(' ', $terminal->offlineHints());
+
+    expect($hints)->toContain('mantener la pantalla encendida')
+        ->toContain('pestaña del navegador')
+        ->toContain('sin cargador (batería al 40%)')
+        ->toContain('reloj');
+});
+
+it('sin pistas específicas sugiere suspensión o red, y sin reporte lo dice', function () {
+    $normal = makeHealthTerminal(['device_report' => ['wake_lock' => true, 'standalone' => true, 'battery_charging' => true, 'clock_skew_seconds' => 1]]);
+    $none = makeHealthTerminal();
+
+    expect($normal->offlineHints())->toHaveCount(1)
+        ->and($normal->offlineHints()[0])->toContain('se suspendió o perdió la red')
+        ->and($none->offlineHints())->toBe(['Nunca informó el estado del dispositivo.']);
+});
+
+it('el aviso de desconexión incluye la causa probable y la bitácora guarda las pistas', function () {
+    $terminal = makeHealthTerminal(['stale_after_minutes' => 10, 'device_report' => ['wake_lock' => false], 'last_heartbeat_at' => now()->subMinute()]);
+    evaluateHealth($terminal);
+
+    $terminal->update(['last_heartbeat_at' => now()->subMinutes(20)]);
+    evaluateHealth($terminal);
+
+    $body = (new TerminalHealthNotification($terminal->fresh(), 'offline'))->toDatabase(healthManager())['body'];
+
+    expect($body)->toContain('Causa probable')->toContain('mantener la pantalla encendida')
+        ->and($terminal->events()->where('type', 'health_offline')->first()->payload['hints'])->toBeArray()->not->toBeEmpty();
+});
+
+it('evaluateAll junta en un solo resumen los terminales que se desconectan en la misma corrida', function () {
+    $manager = healthManager();
+    $terminals = collect(range(1, 3))->map(fn () => makeHealthTerminal(['stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subMinute()]));
+
+    app(TerminalHealthService::class)->evaluateAll(); // línea de base
+
+    $terminals->each->update(['last_heartbeat_at' => now()->subMinutes(20)]);
+    expect(app(TerminalHealthService::class)->evaluateAll())->toBe(3);
+
+    Notification::assertSentToTimes($manager, TerminalOfflineGroupNotification::class, 1);
+    Notification::assertNotSentTo($manager, TerminalHealthNotification::class);
+    Notification::assertSentTo($manager, TerminalOfflineGroupNotification::class, function ($notification) use ($manager) {
+        $data = $notification->toDatabase($manager);
+
+        return $data['title'] === '3 terminales sin conexión' && count($data['terminal_ids']) === 3 && $data['format'] === 'filament';
+    });
+    $terminals->each(fn (Terminal $t) => expect($t->events()->where('type', 'health_offline')->count())->toBe(1));
+});
+
+it('evaluateAll con una sola desconexión envía el aviso individual de siempre', function () {
+    $manager = healthManager();
+    $terminal = makeHealthTerminal(['stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subMinute()]);
+    makeHealthTerminal(['stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subMinute()]);
+
+    app(TerminalHealthService::class)->evaluateAll();
+    $terminal->update(['last_heartbeat_at' => now()->subMinutes(20)]);
+    app(TerminalHealthService::class)->evaluateAll();
+
+    Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 1);
+    Notification::assertNotSentTo($manager, TerminalOfflineGroupNotification::class);
 });
