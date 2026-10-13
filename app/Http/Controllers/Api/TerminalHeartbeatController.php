@@ -33,6 +33,9 @@ use Illuminate\Http\Request;
  * muestra en el detalle del terminal y alimenta las alertas (ver
  * `terminals:evaluate-health`).
  *
+ * Devuelve además `roster` (empleados activos y con rostro de la sucursal) para que la pantalla de
+ * "sin empleados" del terminal explique la causa.
+ *
  * Canal de comandos remotos (Fase 3): el cliente envía `command_acks` (confirmaciones de
  * comandos ejecutados) y recibe `commands` (los pendientes, ver `TerminalCommand`).
  */
@@ -93,6 +96,12 @@ class TerminalHeartbeatController extends Controller
             'commands' => $supportsCommands ? $terminal->deliverPendingCommands() : [],
             'server_time' => now()->toIso8601String(),
             'app_version' => Terminal::currentAppVersion(),
+            // Cuántos empleados activos tiene la sucursal y cuántos pueden identificarse (con rostro): el terminal lo
+            // usa para explicar por qué no tiene a nadie en caché (ver terminal/empty-state.js).
+            'roster' => [
+                'active_employees' => $terminal->activeEmployeesCount(),
+                'enrolled_employees' => $terminal->enrolledEmployeesCount(),
+            ],
             'config' => [
                 'overnight_max_hours' => (int) $settings->attendance_overnight_max_hours,
                 'face_threshold' => (float) $settings->face_threshold,

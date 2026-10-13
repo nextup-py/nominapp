@@ -190,6 +190,9 @@ export async function heartbeat() {
         if (Number.isFinite(data.config.overnight_max_hours)) {
             await setMeta('overnight_max_hours', data.config.overnight_max_hours);
         }
+        if (data.roster) {
+            await setMeta('branch_roster', { ...data.roster, at: Date.now() });
+        }
         await setMeta('server_clock_offset_ms', new Date(data.server_time).getTime() - Date.now());
         await setMeta('last_heartbeat_at', Date.now());
 
