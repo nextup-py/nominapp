@@ -9,7 +9,7 @@
 
 /**
  * Aplica el tema guardado (o prefers-color-scheme si no hay nada guardado)
- * y engancha el click del botón de toggle para alternar y persistir.
+ * y engancha el click del botón de toggle (o de su fila del menú, si está en uno) para alternar y persistir.
  * @param {string} storageKey - clave de localStorage propia de esta vista (ej. 'mark-theme')
  * @param {Document} [doc] - inyectable para tests; document en producción
  * @param {Window} [win] - inyectable para tests; window en producción
@@ -24,7 +24,11 @@ export function initThemeToggle(storageKey, doc = document, win = window, storag
     const btn = doc.getElementById('btnThemeToggle');
     if (!btn) return;
 
-    btn.addEventListener('click', () => {
+    // La fila completa del menú alterna el tema (como el resto de las opciones), no solo el ícono: el click del
+    // botón burbujea hasta la fila, así que un único listener en la fila cubre ambos y no se dispara dos veces.
+    const target = btn.closest?.('.menu-sheet-item--theme') ?? btn;
+
+    target.addEventListener('click', () => {
         const currentlyDark = doc.documentElement.getAttribute('data-theme') === 'dark';
         const next = currentlyDark ? 'light' : 'dark';
         doc.documentElement.setAttribute('data-theme', next);

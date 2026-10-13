@@ -67,6 +67,11 @@ export function setStartGuard(guard) {
     startGuard = guard;
 }
 
+/** @returns {boolean} true mientras se procesa una identificación (un rostro ya detectado que se está reconociendo o registrando). */
+export function isIdentificationBusy() {
+    return isProcessing;
+}
+
 /** @returns {boolean} */
 export function isIdentificationBlocked() {
     return blocked;

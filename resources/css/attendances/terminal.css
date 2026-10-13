@@ -261,7 +261,9 @@ body {
     padding: var(--sp-3) var(--sp-2);
     border-top: 1px solid var(--c-border);
     margin-top: var(--sp-1);
+    cursor: pointer;
 }
+.menu-sheet-item--theme:hover { background: var(--c-bg); }
 .menu-sheet-item--theme .theme-toggle { width: 32px; height: 32px; }
 .clock-time {
     font-size: clamp(1.25rem, 3.5vw, 1.75rem);

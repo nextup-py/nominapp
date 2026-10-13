@@ -48,9 +48,9 @@ async function loadFreshBootstrap() {
     const queueMod = await import('../terminal-offline/queue.js');
     const statusMod = await import('./sync-status-ui.js');
     const dbMod = await import('../terminal-offline/db.js');
-    const { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration } = await import('./bootstrap.js');
+    const { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe } = await import('./bootstrap.js');
     const cameraMod = await import('./camera.js');
-    return { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, ...cameraMod, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
+    return { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe, ...cameraMod, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
 }
 
 describe('startBackgroundSync — reporte de TerminalAuthError', () => {
@@ -213,6 +213,96 @@ describe('startBackgroundSync — sincronización al despertar el equipo', () =>
         await vi.advanceTimersByTimeAsync(0);
 
         expect(heartbeat).not.toHaveBeenCalled();
+    });
+});
+
+describe('recarga por versión nueva — cuándo es seguro interrumpir', () => {
+    let hidden;
+
+    /** Deja visible solo la pantalla indicada (las demás con la clase `hidden`). */
+    const showOnly = (name) => {
+        Object.keys(hidden).forEach((id) => { hidden[id] = id !== name; });
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+        hidden = { idleScreen: true, identificationScreen: true, successScreen: true, typeSelectionScreen: true };
+        vi.stubGlobal('document', {
+            getElementById: (id) => (id in hidden ? { classList: { contains: () => hidden[id] } } : null),
+        });
+        vi.stubGlobal('window', {
+            addEventListener: vi.fn(),
+            confirm: vi.fn(),
+            location: { reload: vi.fn() },
+            terminalData: { id: 1, code: 'x', app_version: 'vieja' },
+        });
+        vi.stubGlobal('navigator', { onLine: true, storage: undefined });
+        vi.stubGlobal('sessionStorage', { getItem: vi.fn().mockReturnValue(null), setItem: vi.fn() });
+    });
+
+    afterEach(() => {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+    });
+
+    async function bootWithVersionHandler() {
+        const mod = await loadFreshBootstrap();
+        mod.getMeta.mockImplementation((key) => Promise.resolve(key === 'api_token' ? 'un-token' : null));
+        mod.heartbeat.mockResolvedValue(undefined);
+        mod.syncEmployees.mockResolvedValue(undefined);
+        mod.flushQueue.mockResolvedValue({ results: [] });
+        await mod.initializeOfflineSync();
+
+        return { ...mod, versionHandler: mod.setAppVersionHandler.mock.calls[0][0] };
+    }
+
+    it('en reposo recarga de inmediato', async () => {
+        const mod = await bootWithVersionHandler();
+        showOnly('idleScreen');
+
+        await mod.versionHandler('nueva');
+
+        expect(window.location.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('en identificación esperando un rostro (nadie siendo atendido) también recarga', async () => {
+        const mod = await bootWithVersionHandler();
+        showOnly('identificationScreen');
+        mod.setBusyProbe(() => false);
+
+        await mod.versionHandler('nueva');
+
+        expect(window.location.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('con una identificación en curso espera y recarga cuando termina', async () => {
+        const mod = await bootWithVersionHandler();
+        showOnly('identificationScreen');
+        let busy = true;
+        mod.setBusyProbe(() => busy);
+
+        const pending = mod.versionHandler('nueva');
+        await vi.advanceTimersByTimeAsync(10000);
+        expect(window.location.reload).not.toHaveBeenCalled();
+
+        busy = false;
+        await vi.advanceTimersByTimeAsync(5000);
+        await pending;
+
+        expect(window.location.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['typeSelectionScreen', 'successScreen'])('durante %s no recarga (espera hasta agotar el tiempo)', async (screen) => {
+        const mod = await bootWithVersionHandler();
+        showOnly(screen);
+
+        const pending = mod.versionHandler('nueva');
+        await vi.advanceTimersByTimeAsync(7 * 60 * 1000);
+        await pending;
+
+        expect(window.location.reload).not.toHaveBeenCalled();
     });
 });
 

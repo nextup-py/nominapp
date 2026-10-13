@@ -63,4 +63,19 @@ describe('initThemeToggle', () => {
         initThemeToggle('mark-theme', doc, fakeWin(false), storage);
         expect(doc.documentElement.getAttribute('data-theme')).toBe('light');
     });
+
+    it('si el botón está en una fila del menú, el click en la fila alterna el tema (no solo el ícono)', () => {
+        const doc = fakeDoc();
+        const row = { listeners: {}, addEventListener(evt, fn) { this.listeners[evt] = fn; } };
+        doc._btn.closest = (selector) => (selector === '.menu-sheet-item--theme' ? row : null);
+        const storage = fakeStorage();
+        initThemeToggle('terminal-theme', doc, fakeWin(false), storage);
+
+        expect(doc._btn.listeners.click).toBeUndefined();
+        row.listeners.click();
+        expect(doc.documentElement.getAttribute('data-theme')).toBe('dark');
+        row.listeners.click();
+        expect(doc.documentElement.getAttribute('data-theme')).toBe('light');
+        expect(storage._data['terminal-theme']).toBe('light');
+    });
 });

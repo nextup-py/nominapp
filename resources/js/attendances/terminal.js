@@ -129,6 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isIdle = false;
 
     /** Bundle de refs pasado a identification-flow.js — un único objeto reutilizado en cada llamada. */
+    bootstrap.setBusyProbe(() => identificationFlow.isIdentificationBusy() || Boolean(markRegistration.getPendingEmployee()));
+
     const identificationRefs = {
         screens, video, overlay, ctx, identificationStatus,
         successDom, errorMessageEl, dayCompleteDom, typeSelectionDom,
