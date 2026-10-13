@@ -18,16 +18,16 @@ describe('pending-reload', () => {
     it('guarda el comando pendiente con su hora', async () => {
         const store = makeStore();
 
-        await markPendingReload(store.setMeta, 7);
+        await markPendingReload(store.setMeta, 7, 'pagina-1');
 
-        expect(store.data[PENDING_RELOAD_KEY]).toEqual({ id: 7, at: Date.now() });
+        expect(store.data[PENDING_RELOAD_KEY]).toEqual({ id: 7, at: Date.now(), pageId: 'pagina-1' });
     });
 
     it('confirma hecho cuando la versión que corre coincide con la del servidor y limpia lo pendiente', async () => {
-        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now() } });
+        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now(), pageId: 'pagina-1' } });
         const ack = vi.fn();
 
-        const result = await settlePendingReload({ ...store, ack, currentVersion: 'abc', serverVersion: 'abc' });
+        const result = await settlePendingReload({ ...store, ack, pageId: 'pagina-2', currentVersion: 'abc', serverVersion: 'abc' });
 
         expect(result).toBe('done');
         expect(ack).toHaveBeenCalledWith({ id: 7, status: 'done' });
@@ -35,36 +35,47 @@ describe('pending-reload', () => {
     });
 
     it('confirma fallo cuando recargó pero sigue con la versión anterior', async () => {
-        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now() } });
+        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now(), pageId: 'pagina-1' } });
         const ack = vi.fn();
 
-        const result = await settlePendingReload({ ...store, ack, currentVersion: 'old', serverVersion: 'new' });
+        const result = await settlePendingReload({ ...store, ack, pageId: 'pagina-2', currentVersion: 'old', serverVersion: 'new' });
 
         expect(result).toBe('failed');
         expect(ack).toHaveBeenCalledWith(expect.objectContaining({ id: 7, status: 'failed' }));
     });
 
     it('sin versión comparable (dev) confirma hecho', async () => {
-        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now() } });
+        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now(), pageId: 'pagina-1' } });
         const ack = vi.fn();
 
-        expect(await settlePendingReload({ ...store, ack, currentVersion: 'dev', serverVersion: 'abc' })).toBe('done');
+        expect(await settlePendingReload({ ...store, ack, pageId: 'pagina-2', currentVersion: 'dev', serverVersion: 'abc' })).toBe('done');
     });
 
     it('no hace nada si no hay comando pendiente', async () => {
         const store = makeStore();
         const ack = vi.fn();
 
-        expect(await settlePendingReload({ ...store, ack, currentVersion: 'a', serverVersion: 'a' })).toBeNull();
+        expect(await settlePendingReload({ ...store, ack, pageId: 'pagina-2', currentVersion: 'a', serverVersion: 'a' })).toBeNull();
         expect(ack).not.toHaveBeenCalled();
     });
 
     it('descarta sin confirmar un pendiente demasiado viejo', async () => {
-        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now() - PENDING_RELOAD_MAX_AGE_MS - 1000 } });
+        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now() - PENDING_RELOAD_MAX_AGE_MS - 1000, pageId: 'pagina-1' } });
         const ack = vi.fn();
 
-        expect(await settlePendingReload({ ...store, ack, currentVersion: 'a', serverVersion: 'a' })).toBeNull();
+        expect(await settlePendingReload({ ...store, ack, pageId: 'pagina-2', currentVersion: 'a', serverVersion: 'a' })).toBeNull();
         expect(ack).not.toHaveBeenCalled();
         expect(store.data[PENDING_RELOAD_KEY]).toBeNull();
+    });
+
+    it('la misma página que guardó el pendiente no lo resuelve (el latido previo a recargar no debe consumirlo)', async () => {
+        const store = makeStore({ [PENDING_RELOAD_KEY]: { id: 7, at: Date.now(), pageId: 'pagina-1' } });
+        const ack = vi.fn();
+
+        const result = await settlePendingReload({ ...store, ack, pageId: 'pagina-1', currentVersion: 'a', serverVersion: 'a' });
+
+        expect(result).toBeNull();
+        expect(ack).not.toHaveBeenCalled();
+        expect(store.data[PENDING_RELOAD_KEY]).toEqual(expect.objectContaining({ id: 7 }));
     });
 });

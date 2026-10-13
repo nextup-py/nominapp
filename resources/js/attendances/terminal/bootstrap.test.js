@@ -254,7 +254,7 @@ describe('initializeOfflineSync — confirmación antes de limpiar el estado de 
         stubWindow({ confirmReturns: true });
         window.terminalData.app_version = 'nueva';
         getMeta.mockImplementation((key) => Promise.resolve(
-            key === 'api_token' ? 'un-token' : key === 'pending_reload_command' ? { id: 7, at: Date.now() } : null,
+            key === 'api_token' ? 'un-token' : key === 'pending_reload_command' ? { id: 7, at: Date.now(), pageId: 'pagina-anterior' } : null,
         ));
         heartbeat.mockResolvedValue(undefined);
         syncEmployees.mockResolvedValue(undefined);
