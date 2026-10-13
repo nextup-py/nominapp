@@ -372,6 +372,9 @@ Si aun así el terminal se apaga de noche o fuera de horario, definir el **horar
 | **Terminal fuera de servicio** | El terminal está desactivado |
 | **Terminal sin empleados** | El terminal no tiene a nadie en su caché, así que la cámara se mantiene **apagada**. Muestra un mensaje simple y, en **Ver detalle**, la causa: *sincronizando por primera vez*, *sin conexión y sin empleados descargados*, *la sucursal no tiene empleados activos*, *tiene N empleados activos pero ninguno con rostro registrado* o *tiene N con rostro pero este terminal no los descargó*. Reintenta la sincronización cada 30 segundos (o con **Sincronizar ahora**) y vuelve solo a identificación apenas llegan empleados |
 | **Reposo** | Terminal listo; se activa al detectar a una persona o al tocar la pantalla |
+| **Identificación** | La cámara ocupa casi toda la pantalla (en tablet vertical, horizontal, celular y monitor) con el óvalo guía; el estado ("Posicione su rostro dentro del óvalo…", "Acérquese un poco más…") aparece superpuesto abajo y el borde cambia de color según el resultado |
+| **Selección de tipo** | Botones grandes de **Entrada**, **Inicio descanso**, **Fin descanso** y **Salida**, pensados para tocar con el dedo |
+| **Marcación registrada** | Fondo verde con la foto, el nombre, el tipo y la hora en tamaño grande, para confirmar de un vistazo quién marcó. Un error se muestra con fondo rojo |
 | **Sin conexión** | Aviso en la parte superior. Se sigue marcando: las marcaciones se guardan y se envían al volver internet |
 
 ![Pantalla de terminal sin empleados](/docs-images/23-terminal-sin-empleados.png)
