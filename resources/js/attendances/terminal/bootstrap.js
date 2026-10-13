@@ -252,7 +252,7 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
     return { linked: true };
 }
 
-/** Máximo que un comando de recarga/limpieza espera a que el terminal quede en reposo (un poco más que el timer de inactividad de 5 min). */
+/** Máximo que un comando de recarga/limpieza espera a que el terminal pueda recargarse sin interrumpir a nadie. */
 const IDLE_WAIT_MS = 6 * 60 * 1000;
 
 /** Evita ejecutar dos tandas de comandos a la vez (el heartbeat de confirmación podría traer más): las que llegan mientras se ejecuta quedan en cola. */
@@ -261,13 +261,31 @@ let executingCommands = false;
 /** @type {Array<{id: number, command: string}>} */
 let queuedCommands = [];
 
-/** El terminal está en reposo si la pantalla idle es la visible (nadie identificándose ni marcando). */
-function isTerminalIdle() {
-    return !document.getElementById('idleScreen')?.classList.contains('hidden');
+/** @type {() => boolean} Indica si hay una marcación en curso (rostro en proceso o empleado eligiendo el tipo); lo registra terminal.js. */
+let busyProbe = () => false;
+
+/**
+ * Registra cómo saber si el terminal está atendiendo a alguien.
+ * @param {() => boolean} probe
+ */
+export function setBusyProbe(probe) {
+    busyProbe = probe;
 }
 
 /**
- * Espera a que el terminal esté en reposo, hasta `IDLE_WAIT_MS`.
+ * Se puede recargar sin interrumpir a nadie: en reposo, o en la pantalla de identificación esperando un rostro
+ * (sin identificación en proceso ni empleado eligiendo el tipo). Éxito, error, jornada completa y selección de
+ * tipo terminan solas en segundos y vuelven a identificación. La cola de marcaciones vive en IndexedDB, así que
+ * recargar nunca pierde una marcación ya registrada.
+ */
+function isTerminalIdle() {
+    const visible = (id) => document.getElementById(id) && !document.getElementById(id).classList.contains('hidden');
+
+    return visible('idleScreen') || (visible('identificationScreen') && !busyProbe());
+}
+
+/**
+ * Espera a que el terminal pueda recargarse sin interrumpir a nadie (ver `isTerminalIdle()`), hasta `IDLE_WAIT_MS`.
  * @returns {Promise<boolean>} false si venció el tiempo sin llegar al reposo
  */
 async function waitForIdle() {
