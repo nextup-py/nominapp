@@ -82,6 +82,12 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 
 **Eliminar una sucursal:** solo es posible si no tiene empleados, terminales ni fallas de marcación asociadas. Si los tiene, el sistema bloquea la eliminación y avisa cuántos hay de cada uno; hay que reasignarlos primero.
 
+**Eliminar varias a la vez:** en el listado, seleccionar las sucursales y usar **Eliminar seleccionadas**. Se borran solo las que están vacías; las que tienen empleados, terminales o fallas de marcación se omiten y la notificación indica cuáles y por qué.
+
+**Historial de cambios:** la pestaña **Historial de cambios** de la sucursal muestra quién modificó la empresa, el nombre, el contacto, la dirección, la ciudad o las coordenadas, y cuándo, con el valor anterior y el nuevo.
+
+**Exportar:** el botón **Exportar** del listado descarga a Excel solo las sucursales que se están viendo (según pestaña, filtros y búsqueda).
+
 ---
 
 ## Departamentos

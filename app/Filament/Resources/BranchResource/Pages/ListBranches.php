@@ -30,8 +30,8 @@ class ListBranches extends ListRecords
     {
         if ($this->branchCounts === null) {
             $this->branchCounts = [
-                'all'              => Branch::count(),
-                'with_employees'   => Branch::has('employees')->count(),
+                'all' => Branch::count(),
+                'with_employees' => Branch::has('employees')->count(),
                 'without_employees' => Branch::doesntHave('employees')->count(),
             ];
         }
@@ -42,7 +42,7 @@ class ListBranches extends ListRecords
     /**
      * Retorna las acciones del encabezado: exportar a Excel y crear sucursal.
      *
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
@@ -53,9 +53,11 @@ class ListBranches extends ListRecords
                 ->color('gray')
                 ->requiresConfirmation()
                 ->modalHeading('¿Exportar Sucursales a Excel?')
-                ->modalDescription('Se incluirán todas las sucursales en un archivo Excel descargable.')
+                ->modalDescription(fn () => 'Se exportarán las '.$this->getFilteredTableQuery()->count().' sucursales del listado actual (según pestaña, filtros y búsqueda).')
                 ->modalSubmitActionLabel('Sí, exportar')
                 ->action(function () {
+                    $ids = $this->getFilteredTableQuery()->reorder()->select('branches.id')->pluck('id')->all();
+
                     Notification::make()
                         ->success()
                         ->title('Exportación lista')
@@ -63,8 +65,8 @@ class ListBranches extends ListRecords
                         ->send();
 
                     return Excel::download(
-                        new BranchesExport(),
-                        'sucursales_' . now()->format('Y_m_d_H_i_s') . '.xlsx'
+                        new BranchesExport(null, $ids),
+                        'sucursales_'.now()->format('Y_m_d_H_i_s').'.xlsx'
                     );
                 }),
 
@@ -77,7 +79,7 @@ class ListBranches extends ListRecords
     /**
      * Retorna las pestañas de filtrado: todas, con empleados y sin empleados.
      *
-     * @return array<string, \Filament\Resources\Components\Tab>
+     * @return array<string, Tab>
      */
     public function getTabs(): array
     {
@@ -90,13 +92,13 @@ class ListBranches extends ListRecords
                 ->icon('heroicon-o-building-office-2'),
 
             'with_employees' => Tab::make('Con empleados')
-                ->modifyQueryUsing(fn(Builder $query) => $query->has('employees'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->has('employees'))
                 ->badge($counts['with_employees'])
                 ->badgeColor('success')
                 ->icon('heroicon-o-users'),
 
             'without_employees' => Tab::make('Sin empleados')
-                ->modifyQueryUsing(fn(Builder $query) => $query->doesntHave('employees'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->doesntHave('employees'))
                 ->badge($counts['without_employees'])
                 ->badgeColor('warning')
                 ->icon('heroicon-o-exclamation-triangle'),
@@ -105,10 +107,8 @@ class ListBranches extends ListRecords
 
     /**
      * Pestaña activa por defecto al entrar al listado.
-     *
-     * @return string|int|null
      */
-    public function getDefaultActiveTab(): string | int | null
+    public function getDefaultActiveTab(): string|int|null
     {
         return 'all';
     }

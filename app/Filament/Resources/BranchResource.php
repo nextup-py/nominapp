@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BranchResource\Pages;
+use App\Filament\Resources\BranchResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\BranchResource\RelationManagers\EmployeesRelationManager;
 use App\Filament\Resources\BranchResource\RelationManagers\TerminalsRelationManager;
 use App\Models\Branch;
@@ -16,6 +17,7 @@ use Filament\Forms\Get;
 use Filament\Infolists\Components\Section as InfoSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Resources\Resource;
@@ -25,6 +27,7 @@ use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\Rules\Unique;
 
 /** Recurso Filament para la gestión de sucursales. */
@@ -301,16 +304,62 @@ class BranchResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->label('Eliminar seleccionadas')
-                        ->modalHeading('Eliminar sucursales')
-                        ->modalDescription('¿Estás seguro de que deseas eliminar estas sucursales? Los empleados asignados quedarán sin sucursal.'),
+                    self::deleteBulkAction(),
                 ]),
             ])
             ->defaultSort('name')
             ->emptyStateHeading('No hay sucursales registradas')
             ->emptyStateDescription('Comienza agregando la primera sucursal.')
             ->emptyStateIcon('heroicon-o-building-storefront');
+    }
+
+    /**
+     * Eliminación masiva que respeta {@see Branch::deletionBlockers()}: borra solo las sucursales
+     * vacías y avisa cuáles se omitieron y por qué (el hook `deleting` del modelo lanzaría una excepción).
+     */
+    public static function deleteBulkAction(): DeleteBulkAction
+    {
+        return DeleteBulkAction::make()
+            ->label('Eliminar seleccionadas')
+            ->modalHeading('Eliminar sucursales')
+            ->modalDescription('Se eliminarán solo las sucursales sin empleados, terminales ni fallas de marcación. Las demás se omiten y se avisa el motivo.')
+            ->modalSubmitActionLabel('Sí, eliminar')
+            ->action(function (Collection $records): void {
+                $deleted = 0;
+                $skipped = [];
+                $user = auth()->user();
+
+                foreach ($records as $record) {
+                    if (! $user?->can('delete', $record)) {
+                        $skipped[] = "{$record->name} (sin permiso)";
+
+                        continue;
+                    }
+
+                    if ($record->deletionBlockers() !== []) {
+                        $skipped[] = "{$record->name} ({$record->deletionBlockersSummary()})";
+
+                        continue;
+                    }
+
+                    $record->delete();
+                    $deleted++;
+                }
+
+                $notification = Notification::make()
+                    ->title($deleted > 0 ? "{$deleted} sucursal(es) eliminada(s)" : 'No se eliminó ninguna sucursal');
+
+                if ($skipped !== []) {
+                    $notification
+                        ->body('Omitidas: '.implode('; ', $skipped).'. Reasígnelos antes de eliminarlas.')
+                        ->color($deleted > 0 ? 'warning' : 'danger')
+                        ->icon($deleted > 0 ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-x-circle');
+                } else {
+                    $notification->success();
+                }
+
+                $notification->send();
+            });
     }
 
     /**
@@ -323,6 +372,7 @@ class BranchResource extends Resource
         return [
             EmployeesRelationManager::class,
             TerminalsRelationManager::class,
+            AuditsRelationManager::class,
         ];
     }
 
