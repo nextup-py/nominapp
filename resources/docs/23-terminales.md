@@ -196,7 +196,7 @@ Al crear o editar un terminal, la sección **Monitoreo** permite ajustar cuándo
 
 ![Sección Monitoreo del formulario de un terminal](/docs-images/23-terminal-monitoreo.png)
 
-Sin nada configurado, el terminal se vigila las 24 horas, todos los días. El detalle muestra el **Umbral de desconexión** y el **Horario de vigilancia** vigentes.
+Sin horario propio, el terminal usa el **horario de atención de su sucursal** (se define en **Organización → Sucursales**, sección **Horario de atención**): así se configura una sola vez para todos los terminales del local. El horario propio del terminal, si lo tiene, tiene prioridad. Sin ninguno de los dos, el terminal se vigila las 24 horas, todos los días. El detalle muestra el **Umbral de desconexión** y el **Horario de vigilancia** vigentes; si lo hereda de la sucursal lo aclara con *(de la sucursal)*.
 
 Para no cargarlo terminal por terminal, en el listado se seleccionan varios y se usa la acción masiva **Configurar monitoreo**: se elige el umbral y el horario (los mismos campos de arriba) y se aplican a todos los seleccionados, reemplazando los que tenían. Con **Quitar el umbral y el horario propios** vuelven a vigilarse las 24 horas con el umbral general. Cada cambio queda en la **Bitácora** de cada terminal (**Monitoreo configurado**). Requiere el permiso **Editar Terminal**.
 
@@ -360,7 +360,7 @@ Un terminal que figura **Desconectado** a media mañana casi siempre es una tabl
 5. **Fecha y hora automáticas:** si el reloj se desajusta, el panel avisa (**Reloj del terminal desajustado**). Las marcaciones se corrigen con el desfase detectado, pero conviene dejar la hora automática.
 6. **Permiso de cámara concedido** y la página del terminal abierta (sin cerrar la pestaña).
 
-Si aun así el terminal se apaga de noche o fuera de horario, definir su **horario de vigilancia** (ver **Monitoreo del terminal**) para que no se avise de desconexiones esperadas.
+Si aun así el terminal se apaga de noche o fuera de horario, definir el **horario de atención** de la sucursal o el **horario de vigilancia** del terminal (ver **Monitoreo del terminal**) para que no se avise de desconexiones esperadas.
 
 ## Qué se ve en el dispositivo
 
@@ -388,7 +388,7 @@ Desde el menú **⋮** del dispositivo se puede **Sincronizar ahora** y ver la h
 | Aparece un aviso de que el navegador pertenece a **otro terminal** | Ese navegador ya estaba vinculado a un terminal distinto | Cancelar el aviso y abrir la URL correcta. Aceptar borra los datos locales del terminal anterior, **incluidas sus marcaciones pendientes de enviar**. Usar un navegador o perfil exclusivo para cada terminal |
 | Dice **Sin empleados sincronizados** | El terminal todavía no descargó rostros | Verificar conexión y tocar **Sincronizar ahora**. Solo se descargan los empleados **activos** de la **sucursal del terminal** que tengan su **registro facial** completo |
 | El terminal figura **Desconectado** | Dispositivo apagado, sin internet o con la página cerrada | Encenderlo, verificar internet y abrir la URL del terminal |
-| Recibo avisos de desconexión de noche o los fines de semana | El local está cerrado y el terminal se apaga | Definir su **horario de vigilancia** en la sección **Monitoreo** del terminal |
+| Recibo avisos de desconexión de noche o los fines de semana | El local está cerrado y el terminal se apaga | Definir el **horario de atención** de la sucursal (o el **horario de vigilancia** del terminal en su sección **Monitoreo**) |
 | Aviso de **Terminal sin empleados enrolados** | Ningún empleado activo de la sucursal del terminal tiene rostro registrado (o los empleados figuran en otra sucursal) | Enrolar a los empleados o corregir su sucursal en su ficha |
 | Aviso de **Terminal sin empleados en caché** | El terminal en línea descargó 0 empleados aunque la sucursal tiene enrolados | Enviar **Limpiar caché** y, si sigue igual, **Recargar app** |
 | El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |

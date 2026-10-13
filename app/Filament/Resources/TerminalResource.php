@@ -151,7 +151,7 @@ class TerminalResource extends Resource
                     ->columns(2),
 
                 Section::make('Monitoreo')
-                    ->description('Cuándo se considera desconectado este terminal y en qué horario se vigila. Todo es opcional.')
+                    ->description('Cuándo se considera desconectado este terminal y en qué horario se vigila. Todo es opcional: sin horario propio, usa el horario de atención de su sucursal.')
                     ->icon('heroicon-o-wifi')
                     ->compact()
                     ->schema(static::monitoringFields())
@@ -488,7 +488,7 @@ class TerminalResource extends Resource
      */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->withSyncTokenFlag();
+        return parent::getEloquentQuery()->withSyncTokenFlag()->with('branch');
     }
 
     public static function table(Table $table): Table
@@ -745,23 +745,39 @@ class TerminalResource extends Resource
                 ->helperText('Mínimo '.Terminal::MIN_STALE_MINUTES.' minutos (el terminal reporta cada ~90 s). Vacío = umbral general de Configuración General.')
                 ->columnSpanFull(),
 
+            ...static::watchWindowFields(),
+        ];
+    }
+
+    /**
+     * Campos del horario de vigilancia (días y rango de horas), compartidos por el formulario del
+     * terminal, la acción masiva **Configurar monitoreo** y el horario de atención de la sucursal.
+     *
+     * @param  bool  $forBranch  Etiquetas del horario de atención de la sucursal en vez de las del terminal.
+     * @return array<int, Component>
+     */
+    public static function watchWindowFields(bool $forBranch = false): array
+    {
+        return [
             CheckboxList::make('watch_days')
-                ->label('Días que se vigila')
+                ->label($forBranch ? 'Días de atención' : 'Días que se vigila')
                 ->options(Terminal::WATCH_DAY_OPTIONS)
                 ->columns(7)
                 ->bulkToggleable()
-                ->helperText('Ninguno marcado = todos los días. Fuera de estos días no se avisa que está desconectado.')
+                ->helperText($forBranch
+                    ? 'Ninguno marcado = todos los días. Los terminales de la sucursal sin horario propio no avisan que están desconectados fuera de estos días.'
+                    : 'Ninguno marcado = todos los días (o los de la sucursal, si tiene horario de atención). Fuera de estos días no se avisa que está desconectado.')
                 ->columnSpanFull(),
 
             TimePicker::make('watch_from')
-                ->label('Vigilar desde')
+                ->label($forBranch ? 'Atiende desde' : 'Vigilar desde')
                 ->seconds(false)
                 ->native(false)
                 ->requiredWith('watch_to')
                 ->helperText('Hora de Asunción. Vacío = todo el día.'),
 
             TimePicker::make('watch_to')
-                ->label('Vigilar hasta')
+                ->label($forBranch ? 'Atiende hasta' : 'Vigilar hasta')
                 ->seconds(false)
                 ->native(false)
                 ->requiredWith('watch_from')

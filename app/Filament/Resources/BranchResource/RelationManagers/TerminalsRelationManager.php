@@ -27,7 +27,7 @@ class TerminalsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->withSyncTokenFlag())
+            ->modifyQueryUsing(fn ($query) => $query->withSyncTokenFlag()->with('branch'))
             ->recordUrl(fn (Terminal $record) => TerminalResource::getUrl('view', ['record' => $record]))
             ->columns([
                 TextColumn::make('name')

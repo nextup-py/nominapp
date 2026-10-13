@@ -104,7 +104,7 @@ class TerminalHealthService
     {
         $alerts = 0;
 
-        Terminal::query()->withSyncTokenFlag()->each(function (Terminal $terminal) use (&$alerts) {
+        Terminal::query()->withSyncTokenFlag()->with('branch')->each(function (Terminal $terminal) use (&$alerts) {
             $alerts += count($this->evaluate($terminal));
         });
 

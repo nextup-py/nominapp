@@ -72,7 +72,9 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 
 **Listado:** las pestañas **Todas / Activas / Inactivas / Con datos pendientes** muestran cuántas sucursales hay de cada tipo. La columna **Datos** indica si la sucursal está completa o cuántas cosas le faltan (al pasar el cursor se ve el detalle): sin ubicación en el mapa, sin ciudad, sin teléfono, con empleados activos pero sin terminal activo, o con empleados activos sin contrato vigente. La columna y el filtro **Empresa** solo aparecen si hay más de una empresa activa. El menú de cada fila (⋮) permite abrir la sucursal en el mapa y **Activar** o **Desactivar**.
 
-**Vista de la sucursal:** el detalle avisa en **Datos pendientes** lo que falta cargar y muestra empleados activos, activos sin contrato, terminales activos y el estado.
+**Horario de atención:** en la edición, la sección **Horario de atención** define los días y las horas en que la sucursal trabaja (por ejemplo, lunes a sábado de 06:00 a 23:00). Los terminales de la sucursal que no tienen horario de vigilancia propio usan este horario: fuera de él no se avisa que están desconectados (**Fuera de horario**), con lo que se evitan, por ejemplo, las alertas de las 06:00 de un terminal apagado de noche. Ninguno marcado = todos los días; se completan **las dos** horas o ninguna.
+
+**Vista de la sucursal:** el detalle avisa en **Datos pendientes** lo que falta cargar y muestra empleados activos, activos sin contrato, terminales activos, el estado y el horario de atención.
 
 **Cómo crear una sucursal:**
 
