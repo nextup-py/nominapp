@@ -593,6 +593,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Sin esperar el toque: el terminal recargado vuelve a hablar con el servidor y confirma comandos (ver bootstrap.js).
+        bootstrap.startOfflineSyncEarly({ onUnlinked: showUnlinked });
+
         const startSystem = () => {
             screenState.showScreen(screens, 'loading');
             bootstrap.initializeSystem(loadingDom, {

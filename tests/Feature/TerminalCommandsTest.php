@@ -141,6 +141,38 @@ it('un terminal no puede confirmar comandos de otro terminal ni comandos que no 
         ->and($notDelivered->fresh()->status)->not->toBe('done');
 });
 
+it('una confirmación tardía de "hecho" corrige un comando que se marcó como no confirmado', function () {
+    $terminal = makeCommandTerminal();
+    $command = $terminal->sendCommand(TerminalCommand::RELOAD);
+    $command->update(['status' => 'delivered', 'delivered_at' => now()->subMinutes(20), 'expires_at' => now()->subMinutes(5)]);
+    TerminalCommand::expireStale($terminal);
+    expect($command->fresh()->status)->toBe('failed');
+
+    heartbeatAs($terminal, ['command_acks' => [['id' => $command->id, 'status' => 'done']]])->assertOk();
+
+    $fresh = $command->fresh();
+    expect($fresh->status)->toBe('done')
+        ->and($fresh->result_message)->toBeNull()
+        ->and($terminal->events()->where('type', 'command_done')->latest('id')->first()->payload['late'])->toBeTrue();
+});
+
+it('una confirmación tardía de "falló", o de un comando que ya falló por otro motivo, no cambia nada', function () {
+    $terminal = makeCommandTerminal();
+    $notConfirmed = $terminal->sendCommand(TerminalCommand::RELOAD);
+    $notConfirmed->update(['status' => 'failed', 'result_message' => TerminalCommand::MESSAGE_NOT_CONFIRMED]);
+    $realFailure = $terminal->sendCommand(TerminalCommand::CLEAR_CACHE);
+    $realFailure->update(['status' => 'failed', 'result_message' => 'Sin red']);
+
+    heartbeatAs($terminal, ['command_acks' => [
+        ['id' => $notConfirmed->id, 'status' => 'failed', 'message' => 'x'],
+        ['id' => $realFailure->id, 'status' => 'done'],
+    ]])->assertOk();
+
+    expect($notConfirmed->fresh()->result_message)->toBe(TerminalCommand::MESSAGE_NOT_CONFIRMED)
+        ->and($realFailure->fresh()->status)->toBe('failed')
+        ->and($realFailure->fresh()->result_message)->toBe('Sin red');
+});
+
 it('valida el formato de las confirmaciones', function () {
     $terminal = makeCommandTerminal();
 

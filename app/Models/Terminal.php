@@ -611,15 +611,27 @@ class Terminal extends Model implements AuthenticatableContract
     public function acknowledgeCommands(array $acks): void
     {
         foreach ($acks as $ack) {
-            $command = $this->commands()->where('status', 'delivered')->find($ack['id']);
+            $command = $this->commands()->whereIn('status', ['delivered', 'failed'])->find($ack['id']);
             if (! $command) {
                 continue;
             }
 
             $ok = $ack['status'] === 'done';
+
+            // Un teléfono suspendido puede confirmar después de que el plazo venció: si el comando quedó en "no confirmó"
+            // y ahora informa "hecho", sí se ejecutó. Cualquier otro comando ya cerrado no se reabre.
+            $late = $command->status === 'failed';
+            if ($late && (! $ok || $command->result_message !== TerminalCommand::MESSAGE_NOT_CONFIRMED)) {
+                continue;
+            }
+
             $message = isset($ack['message']) ? mb_substr((string) $ack['message'], 0, 255) : null;
             $command->update(['status' => $ok ? 'done' : 'failed', 'completed_at' => now(), 'result_message' => $message]);
-            TerminalEvent::record($this, $ok ? 'command_done' : 'command_failed', ['command' => $command->command, 'message' => $message]);
+            TerminalEvent::record($this, $ok ? 'command_done' : 'command_failed', array_filter([
+                'command' => $command->command,
+                'message' => $message,
+                'late' => $late ?: null,
+            ], fn ($value) => $value !== null));
         }
     }
 

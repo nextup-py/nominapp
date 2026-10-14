@@ -116,7 +116,9 @@ export async function initializeSystem(loadingDom, { onReady, onError, onUnlinke
         await sleep(500);
 
         await acquireWakeLock();
-        const sync = await initializeOfflineSync({ onUnlinked });
+        // Si el arranque temprano ya dejó el terminal sincronizando, no se repite (ver `startOfflineSyncEarly()`).
+        const early = earlySync ? await earlySync : null;
+        const sync = early?.linked ? early : await initializeOfflineSync({ onUnlinked });
 
         if (!sync.linked) {
             console.warn(`Terminal sin vincular (${sync.reason}) — marcación bloqueada.`);
@@ -172,10 +174,10 @@ export async function requestPersistentStorage() {
  * confirmación cancelada, `linked: false` — el caller bloquea la marcación en
  * vez de dejar arrancar la cámara hacia un terminal que no puede identificar
  * ni sincronizar a nadie.
- * @param {{onUnlinked?: (reason: string, storedCode?: string|null) => void}} [callbacks] - se propaga al sync en segundo plano para avisar de una revocación en caliente
+ * @param {{onUnlinked?: (reason: string, storedCode?: string|null) => void, confirmSwitch?: boolean}} [callbacks] - `onUnlinked` se propaga al sync en segundo plano para avisar de una revocación en caliente; con `confirmSwitch: false` un navegador de otro terminal no se limpia ni se pregunta (arranque sin toque)
  * @returns {Promise<{linked: boolean, reason?: 'no_token'|'other_terminal', storedCode?: string|null}>}
  */
-export async function initializeOfflineSync({ onUnlinked } = {}) {
+export async function initializeOfflineSync({ onUnlinked, confirmSwitch = true } = {}) {
     await migrateTokenFromLocalStorage();
 
     const storedId = await getMeta('terminal_id');
@@ -188,6 +190,9 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
         : (storedCode != null && currentCode != null && storedCode !== currentCode);
 
     if (belongsToOtherTerminal) {
+        // Sin toque del usuario no se pregunta ni se borra nada: lo resuelve el arranque normal tras "Comenzar".
+        if (!confirmSwitch) return { linked: false, reason: 'other_terminal', storedCode: storedCode ?? null };
+
         const confirmed = window.confirm(
             `Este dispositivo ya está configurado como el terminal "${storedCode ?? storedId}". `
             + `¿Querés cambiarlo a este terminal ("${currentCode ?? currentId}")? `
@@ -252,6 +257,27 @@ export async function initializeOfflineSync({ onUnlinked } = {}) {
     return { linked: true };
 }
 
+/** @type {Promise<{linked: boolean, reason?: string, storedCode?: string|null}>|null} Arranque temprano en curso (una sola vez por carga de página). */
+let earlySync = null;
+
+/**
+ * Arranca la sincronización (heartbeat, empleados, cola y comandos remotos) apenas carga la página, sin esperar el
+ * toque de "Comenzar". Ese toque solo existe para que el navegador permita el sonido y la cámara; antes, un terminal
+ * recién recargado (comando "Recargar app", corte de luz, reinicio) no hablaba con el servidor hasta que alguien lo
+ * tocaba: el panel lo veía desconectado y la confirmación del comando llegaba tarde. Si el terminal no está vinculado
+ * o el navegador era de otro terminal, no hace nada: lo resuelve el arranque normal.
+ * @param {{onUnlinked?: (reason: string) => void}} [callbacks]
+ * @returns {Promise<{linked: boolean, reason?: string}>}
+ */
+export function startOfflineSyncEarly(callbacks = {}) {
+    earlySync ??= initializeOfflineSync({ ...callbacks, confirmSwitch: false }).catch((error) => {
+        console.warn('Arranque temprano de la sincronización falló:', error.message);
+        return { linked: false, reason: 'error' };
+    });
+
+    return earlySync;
+}
+
 /** Máximo que un comando de recarga/limpieza espera a que el terminal pueda recargarse sin interrumpir a nadie. */
 const IDLE_WAIT_MS = 6 * 60 * 1000;
 
@@ -273,7 +299,7 @@ export function setBusyProbe(probe) {
 }
 
 /**
- * Se puede recargar sin interrumpir a nadie: en reposo, en la pantalla de "sin empleados", o en la pantalla de identificación esperando un rostro
+ * Se puede recargar sin interrumpir a nadie: en "Toque para comenzar" (nadie está marcando), en reposo, en la pantalla de "sin empleados", o en la pantalla de identificación esperando un rostro
  * (sin identificación en proceso ni empleado eligiendo el tipo). Éxito, error, jornada completa y selección de
  * tipo terminan solas en segundos y vuelven a identificación. La cola de marcaciones vive en IndexedDB, así que
  * recargar nunca pierde una marcación ya registrada.
@@ -281,7 +307,7 @@ export function setBusyProbe(probe) {
 function isTerminalIdle() {
     const visible = (id) => document.getElementById(id) && !document.getElementById(id).classList.contains('hidden');
 
-    return visible('idleScreen') || visible('emptyScreen') || (visible('identificationScreen') && !busyProbe());
+    return visible('startGateScreen') || visible('idleScreen') || visible('emptyScreen') || (visible('identificationScreen') && !busyProbe());
 }
 
 /**
