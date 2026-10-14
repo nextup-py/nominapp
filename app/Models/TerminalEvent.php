@@ -153,6 +153,9 @@ class TerminalEvent extends Model
         if (isset($payload['reason'])) {
             $parts[] = 'Motivo: '.(['manual' => 'cerrada a mano', 'auto_approved' => 'la aprovechó un dispositivo', 'claimed' => 'se entregó el acceso', 'expired' => 'venció sin usarse'][$payload['reason']] ?? $payload['reason']);
         }
+        if (! empty($payload['late'])) {
+            $parts[] = 'Confirmado con retraso';
+        }
         if (! empty($payload['replaces_active_device'])) {
             $parts[] = 'Reemplaza al dispositivo actual';
         }

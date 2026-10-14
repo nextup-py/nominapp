@@ -27,6 +27,9 @@ class TerminalCommand extends Model
     /** Minutos que un comando espera ser entregado (y luego confirmado) antes de vencer. */
     public const TTL_MINUTES = 15;
 
+    /** Mensaje de un comando entregado que nunca se confirmó; una confirmación tardía de "hecho" lo corrige. */
+    public const MESSAGE_NOT_CONFIRMED = 'El terminal no confirmó la ejecución.';
+
     /** Horas que un comando diferible espera a que el terminal vuelva a conectarse antes de vencer. */
     public const DEFERRED_TTL_HOURS = 24;
 
@@ -152,7 +155,7 @@ class TerminalCommand extends Model
             $command->update([
                 'status' => $wasDelivered ? 'failed' : 'expired',
                 'completed_at' => now(),
-                'result_message' => $wasDelivered ? 'El terminal no confirmó la ejecución.' : 'El terminal no se conectó a tiempo.',
+                'result_message' => $wasDelivered ? self::MESSAGE_NOT_CONFIRMED : 'El terminal no se conectó a tiempo.',
             ]);
 
             TerminalEvent::record($command->terminal, $wasDelivered ? 'command_failed' : 'command_expired', [

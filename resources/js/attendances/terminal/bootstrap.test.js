@@ -48,9 +48,9 @@ async function loadFreshBootstrap() {
     const queueMod = await import('../terminal-offline/queue.js');
     const statusMod = await import('./sync-status-ui.js');
     const dbMod = await import('../terminal-offline/db.js');
-    const { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe } = await import('./bootstrap.js');
+    const { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe, startOfflineSyncEarly } = await import('./bootstrap.js');
     const cameraMod = await import('./camera.js');
-    return { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe, ...cameraMod, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
+    return { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe, startOfflineSyncEarly, ...cameraMod, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
 }
 
 describe('startBackgroundSync — reporte de TerminalAuthError', () => {
@@ -227,7 +227,7 @@ describe('recarga por versión nueva — cuándo es seguro interrumpir', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.useFakeTimers();
-        hidden = { idleScreen: true, identificationScreen: true, successScreen: true, typeSelectionScreen: true, emptyScreen: true };
+        hidden = { startGateScreen: true, idleScreen: true, identificationScreen: true, successScreen: true, typeSelectionScreen: true, emptyScreen: true };
         vi.stubGlobal('document', {
             getElementById: (id) => (id in hidden ? { classList: { contains: () => hidden[id] } } : null),
         });
@@ -271,6 +271,15 @@ describe('recarga por versión nueva — cuándo es seguro interrumpir', () => {
         const mod = await bootWithVersionHandler();
         showOnly('identificationScreen');
         mod.setBusyProbe(() => false);
+
+        await mod.versionHandler('nueva');
+
+        expect(window.location.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('en "Toque para comenzar" también recarga (nadie está marcando)', async () => {
+        const mod = await bootWithVersionHandler();
+        showOnly('startGateScreen');
 
         await mod.versionHandler('nueva');
 
@@ -540,5 +549,86 @@ describe('checkLegacyTerminalMigration', () => {
         const result = await checkLegacyTerminalMigration();
 
         expect(result).toEqual({ needsMigration: false });
+    });
+});
+
+describe('startOfflineSyncEarly — sincronizar sin esperar el toque de "Comenzar"', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+        vi.stubGlobal('window', { addEventListener: vi.fn(), confirm: vi.fn(), terminalData: { id: 1, code: 'abc' } });
+        vi.stubGlobal('navigator', { onLine: true, storage: undefined, mediaDevices: { getUserMedia: vi.fn() } });
+    });
+
+    afterEach(() => {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+    });
+
+    it('con token y sin tocar nada: hace el latido, sincroniza y vacía la cola', async () => {
+        const { startOfflineSyncEarly, getMeta, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'api_token' ? 'un-token' : null));
+        heartbeat.mockResolvedValue(undefined);
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+
+        const result = await startOfflineSyncEarly();
+
+        expect(result.linked).toBe(true);
+        expect(heartbeat).toHaveBeenCalledTimes(1);
+        expect(syncEmployees).toHaveBeenCalledTimes(1);
+    });
+
+    it('se ejecuta una sola vez por carga aunque se llame de nuevo', async () => {
+        const { startOfflineSyncEarly, getMeta, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'api_token' ? 'un-token' : null));
+        heartbeat.mockResolvedValue(undefined);
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+
+        await Promise.all([startOfflineSyncEarly(), startOfflineSyncEarly()]);
+
+        expect(heartbeat).toHaveBeenCalledTimes(1);
+    });
+
+    it('un navegador de otro terminal: no pregunta ni borra nada ni sincroniza', async () => {
+        const { startOfflineSyncEarly, getMeta, clearTerminalState, heartbeat } = await loadFreshBootstrap();
+        getMeta.mockImplementation((key) => Promise.resolve({ terminal_id: 99, terminal_code: 'otro', api_token: 'x' }[key] ?? null));
+
+        const result = await startOfflineSyncEarly();
+
+        expect(result).toMatchObject({ linked: false, reason: 'other_terminal' });
+        expect(window.confirm).not.toHaveBeenCalled();
+        expect(clearTerminalState).not.toHaveBeenCalled();
+        expect(heartbeat).not.toHaveBeenCalled();
+    });
+
+    it('sin token: no sincroniza', async () => {
+        const { startOfflineSyncEarly, getMeta, heartbeat } = await loadFreshBootstrap();
+        getMeta.mockResolvedValue(null);
+
+        const result = await startOfflineSyncEarly();
+
+        expect(result).toMatchObject({ linked: false, reason: 'no_token' });
+        expect(heartbeat).not.toHaveBeenCalled();
+    });
+
+    it('al tocar Comenzar no repite la sincronización que ya hizo el arranque temprano', async () => {
+        const { startOfflineSyncEarly, initializeSystem, loadModels, getMeta, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
+        loadModels.mockResolvedValue({ ok: true });
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'api_token' ? 'un-token' : null));
+        heartbeat.mockResolvedValue(undefined);
+        syncEmployees.mockResolvedValue(undefined);
+        flushQueue.mockResolvedValue({ results: [] });
+        await startOfflineSyncEarly();
+        const callbacks = { onReady: vi.fn(), onError: vi.fn(), onUnlinked: vi.fn() };
+
+        const done = initializeSystem({}, callbacks);
+        await vi.advanceTimersByTimeAsync(5000);
+        await done;
+
+        expect(callbacks.onReady).toHaveBeenCalledTimes(1);
+        expect(heartbeat).toHaveBeenCalledTimes(1);
     });
 });

@@ -367,7 +367,7 @@ Si aun así el terminal se apaga de noche o fuera de horario, definir el **horar
 
 | Pantalla | Cuándo aparece |
 |----------|----------------|
-| **Comenzar** | Al abrir la URL. Hay que tocar el botón: el navegador lo exige para activar cámara y sonido |
+| **Toque para comenzar** | Al abrir la URL. El toque activa el sonido y la cámara (el navegador lo exige), pero **no hace falta para sincronizar**: desde que carga la página el terminal ya se conecta con el servidor, descarga empleados, envía marcaciones pendientes y recibe comandos remotos. Un terminal recién recargado o reiniciado aparece **En línea** en el panel aunque nadie lo haya tocado todavía; para marcar sí hay que tocar **Comenzar** |
 | **Terminal sin vincular** | No hay acceso vigente. Muestra el código para aprobar en el panel |
 | **Terminal fuera de servicio** | El terminal está desactivado |
 | **Terminal sin empleados** | El terminal no tiene a nadie en su caché, así que la cámara se mantiene **apagada**. Muestra un mensaje simple y, en **Ver detalle**, la causa: *sincronizando por primera vez*, *sin conexión y sin empleados descargados*, *la sucursal no tiene empleados activos*, *tiene N empleados activos pero ninguno con rostro registrado* o *tiene N con rostro pero este terminal no los descargó*. Reintenta la sincronización cada 30 segundos (o con **Sincronizar ahora**) y vuelve solo a identificación apenas llegan empleados |
@@ -429,7 +429,7 @@ El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: 
 | Un comando remoto figura **Vencido** | El terminal no se conectó a tiempo (15 minutos; 24 horas en **Recargar app**) o corre una versión vieja de la aplicación que no entiende comandos | Verificar que esté encendido y con internet, recargar su página dos veces y volver a enviar el comando |
 | Un comando remoto figura **Falló** con el detalle *El terminal estuvo ocupado* | Había una marcación en curso durante todo ese tiempo | Volver a enviar el comando cuando el terminal esté en reposo |
 | **Limpiar caché** falló con un error de red | El terminal no pudo descargar los empleados | Verificar su conexión y reenviar el comando. La caché que tenía se conserva y no se pierde ninguna marcación |
-| Un comando figura **Entregado** y no cambia | El terminal lo recibió pero no confirmó (por ejemplo, se apagó) | Pasados los 15 minutos pasa solo a **Falló**; reenviarlo cuando el terminal vuelva |
+| Un comando figura **Entregado** y no cambia | El terminal lo recibió pero no confirmó (por ejemplo, se apagó o la pantalla se suspendió) | Pasados los 15 minutos pasa solo a **Falló**. Si el terminal confirma después de ese plazo, el comando se corrige a **Ejecutado** y la bitácora indica *Confirmado con retraso*; si no, reenviarlo cuando el terminal vuelva |
 
 ---
 
