@@ -23,8 +23,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
+
+/** Admin con acceso a dispositivos de empleados: los avisos de vinculación solo llegan a quien puede verlos. */
+function deviceAdmin(string $email, string $name = 'Admin'): User
+{
+    $user = User::create(['name' => $name, 'email' => $email, 'password' => bcrypt('secret')]);
+    $user->givePermissionTo(Permission::firstOrCreate(['name' => 'view_any_employee_device', 'guard_name' => 'web']));
+
+    return $user;
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -392,7 +402,7 @@ it('un token de terminal no puede usar el endpoint de unlink móvil (ability dis
 
 it('notifica a los admins (sin advertencia) en la primera vinculación', function () {
     Notification::fake();
-    $admin = User::create(['name' => 'Admin', 'email' => 'admin-first@test.com', 'password' => bcrypt('secret')]);
+    $admin = deviceAdmin('admin-first@test.com', 'Admin');
 
     $employee = makeLinkableEmployee();
 
@@ -411,8 +421,8 @@ it('notifica a los admins (sin advertencia) en la primera vinculación', functio
 
 it('notifica a todos los admins cuando un dispositivo ya vinculado se re-vincula', function () {
     $employee = makeLinkableEmployee();
-    $admin1 = User::create(['name' => 'Admin 1', 'email' => 'admin-relink1@test.com', 'password' => bcrypt('secret')]);
-    $admin2 = User::create(['name' => 'Admin 2', 'email' => 'admin-relink2@test.com', 'password' => bcrypt('secret')]);
+    $admin1 = deviceAdmin('admin-relink1@test.com', 'Admin 1');
+    $admin2 = deviceAdmin('admin-relink2@test.com', 'Admin 2');
 
     // Primera vinculación — sin notificación (no hay nada previo que "reemplazar").
     $this->postJson('/vincular-dispositivo', ['ci' => $employee->ci, 'birth_date' => '1990-05-15'])->assertOk();
@@ -439,7 +449,7 @@ it('notifica a todos los admins cuando un dispositivo ya vinculado se re-vincula
  */
 it('vincula el dispositivo aunque falle el envío de la notificación por email', function () {
     config(['mail.default' => 'resend', 'services.resend.key' => null]);
-    User::create(['name' => 'Admin', 'email' => 'admin-mailfail@test.com', 'password' => bcrypt('secret')]);
+    deviceAdmin('admin-mailfail@test.com', 'Admin');
 
     $employee = makeLinkableEmployee();
 
@@ -555,7 +565,7 @@ it('el throttle de terminal.setup y el de face-enrollment ya no comparten bucket
  */
 it('el límite diario notifica a los admins con la IP y el CI intentado, una sola vez por día', function () {
     Notification::fake();
-    User::factory()->create();
+    deviceAdmin('admin-throttle@test.com');
 
     $request = Request::create('/vincular-dispositivo', 'POST', ['ci' => '4445556']);
     $request->server->set('REMOTE_ADDR', '203.0.113.20');
@@ -585,7 +595,7 @@ it('el límite diario notifica a los admins con la IP y el CI intentado, una sol
 
 it('el límite por minuto (distinto de 15) no notifica a los admins', function () {
     Notification::fake();
-    User::factory()->create();
+    deviceAdmin('admin-minute@test.com');
 
     $request = Request::create('/vincular-dispositivo', 'POST', ['ci' => '1112223']);
     $request->server->set('REMOTE_ADDR', '203.0.113.10');

@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Contract;
+use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -11,6 +12,7 @@ use Illuminate\Notifications\Notification;
 /** Notificación de alerta por contrato próximo a vencer o ya vencido. */
 class ContractAlertNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     /** @param  'expiring'|'expired'  $alertType */
@@ -18,14 +20,6 @@ class ContractAlertNotification extends Notification
         public readonly Contract $contract,
         public readonly string $alertType,
     ) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * Se arma con el builder de `Filament\Notifications\Notification` (no un
@@ -66,5 +60,11 @@ class ContractAlertNotification extends Notification
             'contract_id' => $this->contract->id,
             'alert_type' => $this->alertType,
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'contract.alert';
     }
 }

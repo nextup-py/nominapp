@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
+use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -16,20 +17,13 @@ use Illuminate\Support\Collection;
  */
 class TerminalOfflineGroupNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     /**
      * @param  Collection<int, Terminal>  $terminals  Terminales con la sucursal cargada.
      */
     public function __construct(public readonly Collection $terminals) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * Se arma con el builder de Filament para que la campanita lo muestre (ver `TerminalProvisionedNotification`).
@@ -63,5 +57,11 @@ class TerminalOfflineGroupNotification extends Notification
             'terminal_ids' => $this->terminals->pluck('id')->all(),
             'alert' => 'offline_group',
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'terminal.offline';
     }
 }

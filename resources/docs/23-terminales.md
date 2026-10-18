@@ -268,13 +268,13 @@ No se registra un evento por cada latido: solo los cambios. Los eventos se elimi
 
 ### Avisos automáticos
 
-Cada minuto el sistema revisa los terminales activos y avisa por la **campanita** a los usuarios con el permiso **Editar Terminal**. **Solo avisa cuando algo cambia**: nunca repite un aviso mientras la situación siga igual.
+Cada minuto el sistema revisa los terminales activos y avisa por la **campanita** a los usuarios con el permiso **Editar Terminal**. **Solo avisa cuando algo cambia**: nunca repite un aviso mientras la situación siga igual. Cada usuario puede apagar los avisos que no le sirven, elegir el correo o recibirlos en un resumen diario desde **Mis notificaciones** (ver el capítulo del mismo nombre).
 
 | Aviso | Cuándo |
 |-------|--------|
 | **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia). El aviso incluye la **causa probable** según el último reporte del dispositivo (pantalla que no se mantenía encendida, abierto en el navegador, sin cargador, reloj desajustado, app vieja); también queda en la bitácora |
 | **N terminales sin conexión** | Si varios terminales pasan a Desconectado en la misma revisión (por ejemplo al abrir el horario de vigilancia) llega **un solo aviso** con la lista y la causa probable más frecuente, en vez de uno por terminal |
-| **Terminal reconectado** | Volvió a reportar después de haber avisado la desconexión |
+| **Terminal reconectado** | Volvió a reportar después de haber avisado la desconexión. **Desactivado por defecto**: la reconexión queda en la bitácora y el aviso de desconexión de ese terminal se marca como leído solo |
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
 | **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones **pendientes** no se envían hace más del tiempo configurado. Las marcaciones **en conflicto** no cuentan: el servidor ya las rechazó y quedan en **Fallos de Marcación** para revisar |
 | **Batería baja en terminal** | El nivel bajó del porcentaje configurado y no está cargando (solo si el navegador informa la batería) |

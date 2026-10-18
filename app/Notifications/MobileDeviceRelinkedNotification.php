@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Employee;
+use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -23,20 +24,13 @@ use Illuminate\Notifications\Notification;
  */
 class MobileDeviceRelinkedNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     public function __construct(
         public readonly Employee $employee,
         public readonly ?string $userAgent = null,
     ) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database', 'mail'];
-    }
 
     /**
      * Envía por email a los admins además de la campanita — una
@@ -86,5 +80,11 @@ class MobileDeviceRelinkedNotification extends Notification
                 ->getDatabaseMessage(),
             'employee_id' => $this->employee->id,
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'device.mobile_relinked';
     }
 }

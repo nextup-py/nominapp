@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\ContractAlertNotification;
 use App\Settings\GeneralSettings;
 use Illuminate\Console\Command;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -29,7 +30,7 @@ class NotifyExpiringContracts extends Command
         }
 
         // IDs de contratos que ya tienen notificación no leída en al menos un usuario
-        $alreadyNotified = $this->getAlreadyNotifiedContractIds($users->first());
+        $alreadyNotified = $this->getAlreadyNotifiedContractIds();
 
         $expiring = Contract::expiringSoon($alertDays)
             ->with('employee')
@@ -46,6 +47,7 @@ class NotifyExpiringContracts extends Command
 
         if ($total === 0) {
             $this->info('Sin contratos nuevos para notificar.');
+
             return self::SUCCESS;
         }
 
@@ -65,17 +67,19 @@ class NotifyExpiringContracts extends Command
     }
 
     /**
-     * Retorna los contract_ids que ya tienen notificación no leída de tipo contrato,
-     * para evitar duplicar alertas del mismo contrato.
+     * Retorna los contract_ids que ya tienen notificación no leída de tipo contrato en **cualquier**
+     * usuario, para evitar duplicar alertas del mismo contrato. No alcanza con mirar a un solo
+     * usuario: el aviso solo le llega a quien tiene el permiso y no lo apagó en «Mis notificaciones».
      *
      * @return array<int, int>
      */
-    private function getAlreadyNotifiedContractIds(User $anyUser): array
+    private function getAlreadyNotifiedContractIds(): array
     {
-        return $anyUser->unreadNotifications()
+        return DatabaseNotification::query()
+            ->whereNull('read_at')
             ->where('type', ContractAlertNotification::class)
-            ->pluck('data->contract_id')
-            ->map(fn ($id) => (int) $id)
+            ->get()
+            ->map(fn (DatabaseNotification $notification) => (int) ($notification->data['contract_id'] ?? 0))
             ->filter()
             ->unique()
             ->values()

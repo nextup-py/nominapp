@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\MyNotifications;
 use App\Http\Middleware\EnsureSetupIsComplete;
 use App\Support\ThemeResolver;
 use EightyNine\FilamentDocs\FilamentDocsPlugin;
@@ -10,6 +11,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\MenuItem;
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -66,6 +68,12 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Ayuda')
                     ->icon('heroicon-o-book-open')
                     ->collapsed(),
+            ])
+            ->userMenuItems([
+                MenuItem::make()
+                    ->label('Mis notificaciones')
+                    ->icon('heroicon-o-bell')
+                    ->url(fn (): string => MyNotifications::getUrl()),
             ])
             ->databaseNotifications()
             ->plugin(FilamentDocsPlugin::make())

@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Filament\Resources\AttendanceDayResource;
+use App\Notifications\Concerns\HonorsPreferences;
 use Carbon\Carbon;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
@@ -16,6 +17,7 @@ use Illuminate\Notifications\Notification;
  */
 class OpenShiftsPendingNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     public function __construct(
@@ -23,14 +25,6 @@ class OpenShiftsPendingNotification extends Notification
         public readonly Carbon $oldestDate,
         public readonly int $closable = 0,
     ) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * Se arma con el builder de `Filament\Notifications\Notification` para que la campanita del
@@ -62,5 +56,11 @@ class OpenShiftsPendingNotification extends Notification
             'open_shifts_count' => $this->count,
             'closable_count' => $this->closable,
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'attendance.open_shifts';
     }
 }

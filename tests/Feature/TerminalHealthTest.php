@@ -314,7 +314,8 @@ it('avisa una sola vez cuando pasa a desconectado y otra cuando se recupera', fu
     expect(evaluateHealth($terminal))->toBe(['recovered'])
         ->and(evaluateHealth($terminal))->toBe([]);
 
-    Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 2);
+    // «Reconectado» ya no llega a la campanita por defecto (queda en la bitácora).
+    Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 1);
     expect($terminal->events()->whereIn('type', ['health_offline', 'health_recovered'])->orderBy('id')->pluck('type')->all())
         ->toBe(['health_offline', 'health_recovered']);
 });

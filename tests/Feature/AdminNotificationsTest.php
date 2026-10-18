@@ -23,6 +23,7 @@ use App\Notifications\TerminalProvisionedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
 
@@ -53,11 +54,20 @@ function makeNotifiableEmployee(): Employee
     return $employee->fresh();
 }
 
+/** Usuario del panel con el permiso del módulo: los avisos solo llegan a quien puede gestionarlo. */
+function adminWithPermission(string $email, string $permission): User
+{
+    $user = User::create(['name' => 'Admin', 'email' => $email, 'password' => bcrypt('secret')]);
+    $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']));
+
+    return $user;
+}
+
 // ─── Terminal provisionado ──────────────────────────────────────────────────
 
 it('notifica a los admins cuando un terminal completa su provisión', function () {
     $employee = makeNotifiableEmployee();
-    $admin = User::create(['name' => 'Admin', 'email' => 'admin-term@test.com', 'password' => bcrypt('secret')]);
+    $admin = adminWithPermission('admin-term@test.com', 'update_terminal');
     $terminal = Terminal::create(['name' => 'Terminal Test', 'branch_id' => $employee->branch_id]);
 
     Notification::fake();
@@ -86,7 +96,9 @@ it('la notificación de terminal provisionado también se envía por email', fun
 
     $notification = new TerminalProvisionedNotification($terminal);
 
-    expect($notification->via(new User))->toBe(['database', 'mail']);
+    $admin = adminWithPermission('admin-via@test.com', 'update_terminal');
+
+    expect($notification->via($admin))->toBe(['database', 'mail']);
 
     $mail = $notification->toMail(new User);
 
@@ -98,7 +110,7 @@ it('la notificación de terminal provisionado también se envía por email', fun
 
 it('notifica a los admins cuando un empleado completa el autoenrolamiento facial', function () {
     $employee = makeNotifiableEmployee();
-    $admin = User::create(['name' => 'Admin', 'email' => 'admin-enroll@test.com', 'password' => bcrypt('secret')]);
+    $admin = adminWithPermission('admin-enroll@test.com', 'update_face_enrollment');
 
     $enrollment = FaceEnrollment::create([
         'employee_id' => $employee->id,
@@ -124,7 +136,7 @@ it('notifica a los admins cuando un empleado completa el autoenrolamiento facial
 
 it('notifica a los admins cuando se registra un conflicto de sincronización', function () {
     $employee = makeNotifiableEmployee();
-    $admin = User::create(['name' => 'Admin', 'email' => 'admin-conflict@test.com', 'password' => bcrypt('secret')]);
+    $admin = adminWithPermission('admin-conflict@test.com', 'update_attendance_mark_failure');
 
     Notification::fake();
 
@@ -145,7 +157,7 @@ it('notifica a los admins cuando se registra un conflicto de sincronización', f
 });
 
 it('no notifica a los admins por fallos que no son conflictos de sincronización', function () {
-    User::create(['name' => 'Admin', 'email' => 'admin-noconflict@test.com', 'password' => bcrypt('secret')]);
+    adminWithPermission('admin-noconflict@test.com', 'update_attendance_mark_failure');
 
     Notification::fake();
 
@@ -195,8 +207,10 @@ it('la notificación de re-vinculación también se envía por email, la de prim
     $linked = new MobileDeviceLinkedNotification($employee);
     $relinked = new MobileDeviceRelinkedNotification($employee, 'Mozilla/5.0 Test');
 
-    expect($linked->via(new User))->toBe(['database'])
-        ->and($relinked->via(new User))->toBe(['database', 'mail']);
+    $admin = adminWithPermission('admin-devices@test.com', 'view_any_employee_device');
+
+    expect($linked->via($admin))->toBe(['database'])
+        ->and($relinked->via($admin))->toBe(['database', 'mail']);
 
     $mail = $relinked->toMail(new User);
 

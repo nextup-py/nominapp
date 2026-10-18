@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
+use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -16,19 +17,12 @@ use Illuminate\Notifications\Notification;
  */
 class TerminalLinkWindowExpiredNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     public function __construct(
         public readonly Terminal $terminal,
     ) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * Se arma con el builder de Filament para que la campanita lo muestre (ver
@@ -50,5 +44,11 @@ class TerminalLinkWindowExpiredNotification extends Notification
                 ->getDatabaseMessage(),
             'terminal_id' => $this->terminal->id,
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'terminal.link_window_expired';
     }
 }

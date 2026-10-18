@@ -69,7 +69,7 @@ A diferencia de la terminal compartida, el dispositivo personal (celular o table
 Cada empleado puede tener **un único dispositivo activo**. Si vincula uno nuevo (por ejemplo, cambió de celular), el sistema:
 
 - Revoca automáticamente el acceso del dispositivo anterior
-- Notifica a todos los administradores del sistema (campanita + email)
+- Notifica a los administradores con acceso a dispositivos de empleados (campanita + email; cada usuario puede ajustarlo en **Mis notificaciones**)
 
 ### Ver el historial de dispositivos
 

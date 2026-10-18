@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\TerminalHealthNotification;
 use App\Notifications\TerminalOfflineGroupNotification;
 use App\Settings\GeneralSettings;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -170,6 +171,7 @@ class TerminalHealthService
         } elseif ($connectivity === 'online' && $snapshot['offline_alerted']) {
             $snapshot['offline_alerted'] = false;
             $alerts[] = $this->raise($terminal, 'recovered', 'health_recovered');
+            $this->markOfflineAlertsRead($terminal);
         } elseif (in_array($connectivity, ['unlinked', 'never_connected'], true)) {
             $snapshot['offline_alerted'] = false;
         }
@@ -407,6 +409,21 @@ class TerminalHealthService
         $this->notifyManagers(new TerminalHealthNotification($terminal, $alert), $alert, $terminal);
 
         return $alert;
+    }
+
+    /**
+     * Al reconectarse, el aviso de «sin conexión» de ese terminal deja de ser noticia: se marca
+     * como leído para que la campanita muestre solo lo que sigue caído (y no hace falta avisar
+     * la reconexión). El detalle queda en la bitácora del terminal.
+     */
+    private function markOfflineAlertsRead(Terminal $terminal): void
+    {
+        DatabaseNotification::query()
+            ->whereNull('read_at')
+            ->where('type', TerminalHealthNotification::class)
+            ->where('data->alert', 'offline')
+            ->where('data->terminal_id', $terminal->id)
+            ->update(['read_at' => now()]);
     }
 
     /** Envía la notificación a quienes gestionan terminales; un fallo del canal nunca interrumpe la evaluación. */

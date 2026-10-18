@@ -1099,6 +1099,9 @@ class Terminal extends Model implements AuthenticatableContract
 
         $this->forceFill($attributes)->save();
 
+        // Quién dejó listo este vínculo se calcula antes de cerrar la ventana (que borra su autor).
+        $preparedById = $this->linkPreparedById();
+
         // El primer claim cierra la ventana de vinculación, si había una abierta.
         $this->closeLinkWindow(null, 'claimed');
 
@@ -1108,7 +1111,9 @@ class Terminal extends Model implements AuthenticatableContract
         // TerminalSetupController, que retornaría "Server Error" con el setup_token ya
         // invalidado, sin forma de reintentar sin generar un enlace nuevo).
         try {
-            User::all()->each(fn (User $user) => $user->notify(new TerminalProvisionedNotification($this)));
+            User::all()
+                ->reject(fn (User $user) => $user->id === $preparedById)
+                ->each(fn (User $user) => $user->notify(new TerminalProvisionedNotification($this)));
         } catch (\Throwable $e) {
             Log::warning("No se pudo notificar la provisión del terminal '{$this->code}': {$e->getMessage()}", [
                 'terminal_id' => $this->id,
@@ -1131,6 +1136,28 @@ class Terminal extends Model implements AuthenticatableContract
         if ($revoked > 0) {
             TerminalEvent::record($this, 'revoked', ['tokens' => $revoked], Auth::id());
         }
+    }
+
+    /**
+     * Usuario que dejó listo el vínculo de este terminal: quien abrió la ventana de vinculación
+     * vigente o, si no la hay, quien generó el enlace de configuración o aprobó la solicitud en
+     * las últimas 24 h. Se usa para no avisarle de una acción que él mismo hizo.
+     */
+    public function linkPreparedById(): ?int
+    {
+        if ($this->link_window_opened_by_id) {
+            return (int) $this->link_window_opened_by_id;
+        }
+
+        $actorId = TerminalEvent::query()
+            ->where('terminal_id', $this->id)
+            ->whereIn('type', ['setup_link_generated', 'pairing_approved'])
+            ->whereNotNull('actor_id')
+            ->where('created_at', '>=', now()->subDay())
+            ->latest('id')
+            ->value('actor_id');
+
+        return $actorId ? (int) $actorId : null;
     }
 
     /**
