@@ -223,7 +223,7 @@ El detalle incluye la sección **Estado del dispositivo** con lo que el terminal
 | **Batería** | Nivel y si está cargando. Solo la informan algunos navegadores (Chrome en Android, por ejemplo); iPhone y iPad no |
 | **Cámara** | **Permitida**, **Bloqueada** (el terminal no puede identificar) o **Sin decidir** (falta aceptar el permiso) |
 | **Empleados en caché** | Cuántos rostros tiene descargados para identificar sin conexión |
-| **Pantalla encendida** | **Activa** si el terminal logró mantener la pantalla encendida; **Inactiva** si no (la tablet puede dormirse y dejar de marcar: revisar el ahorro de batería y la configuración de pantalla del dispositivo). Algunos navegadores no lo permiten |
+| **Pantalla encendida** | **Activa** si el terminal logró mantener la pantalla encendida; **Inactiva** si no (el equipo puede dormirse y dejar de marcar: revisar el ahorro de batería y el plan de energía). Cuando está inactiva se indica el **motivo** que informó el navegador: *no lo concedió* (ahorro de energía, pestaña oculta o falta una interacción), *no lo permite* (navegador sin soporte) o *lo interrumpió*. El terminal lo reintenta solo cada minuto |
 | **Desfase de reloj** | Diferencia entre el reloj del dispositivo y el del servidor; se advierte si pasa de un minuto |
 | **Almacenamiento** | Espacio usado del navegador en el dispositivo |
 
@@ -352,7 +352,7 @@ Si la URL fue compartida por error, usar **Cambiar URL del terminal** (menú **M
 
 ## Configurar el dispositivo para que no se duerma
 
-Un terminal que figura **Desconectado** a media mañana casi siempre es una tablet que apagó la pantalla o suspendió la pestaña. Al instalar el dispositivo conviene:
+Un terminal que figura **Desconectado** a media mañana casi siempre es un equipo (una tablet o una PC) que apagó la pantalla o se suspendió: mientras duerme no reporta, y recién vuelve a hacerlo cuando alguien lo toca para marcar. El terminal pide al navegador mantener el equipo despierto apenas carga la página, vuelve a pedirlo cada minuto si lo pierde (por ejemplo al despertar de una suspensión) y también al tocar la pantalla, sin esperar a **Comenzar**; pero no todos los navegadores lo conceden, así que el equipo también debe quedar configurado para no dormirse. Al instalar el dispositivo conviene:
 
 1. **Pantalla siempre encendida mientras carga:** en los ajustes de pantalla del equipo, desactivar el apagado automático (en Android, *Opciones de desarrollador → Mantener activo*, o *Pantalla → Tiempo de espera* al máximo).
 2. **Dejarlo enchufado:** el estado del dispositivo informa la batería y avisa cuando baja del umbral sin cargador.
@@ -360,6 +360,18 @@ Un terminal que figura **Desconectado** a media mañana casi siempre es una tabl
 4. **Sin ahorro de energía para el navegador:** quitar el navegador o la app instalada de la lista de optimización de batería.
 5. **Fecha y hora automáticas:** si el reloj se desajusta, el panel avisa (**Reloj del terminal desajustado**). Las marcaciones se corrigen con el desfase detectado, pero conviene dejar la hora automática.
 6. **Permiso de cámara concedido** y la página del terminal abierta (sin cerrar la pestaña).
+
+### PC con Windows
+
+En las PCs de escritorio el ajuste que más pesa es el **plan de energía**:
+
+1. Abrir **Configuración → Sistema → Inicio/apagado y suspensión** (en Windows 10: *Energía y suspensión*).
+2. En **Cuando está enchufado, suspender después de**, elegir **Nunca**. El apagado de la pantalla puede quedar en unos minutos: lo importante es que el equipo no se suspenda.
+3. Desactivar la **hibernación** y el **inicio rápido** si el equipo se queda dormido igual (Panel de control → Opciones de energía → *Elegir el comportamiento de los botones de inicio/apagado*).
+4. Dejar el navegador del terminal **abierto y visible** (no minimizado): con la pestaña oculta el navegador suelta el bloqueo de pantalla.
+5. Verificar en el panel: el detalle del terminal debe mostrar **Pantalla encendida: Activa** y el estado **En línea** durante todo el horario de atención.
+
+> Si la PC se apaga por completo al cerrar el local, es esperado: definir el **horario de vigilancia** para que no avise (ver más abajo). Lo que no debe pasar es que se suspenda **en medio de la jornada**.
 
 Si aun así el terminal se apaga de noche o fuera de horario, definir el **horario de atención** de la sucursal o el **horario de vigilancia** del terminal (ver **Monitoreo del terminal**) para que no se avise de desconexiones esperadas.
 
@@ -425,7 +437,7 @@ El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: 
 | Aviso de **Terminal sin empleados en caché** | El terminal en línea descargó 0 empleados aunque la sucursal tiene enrolados | Enviar **Limpiar caché** y, si sigue igual, **Recargar app** |
 | El estado dice **Cámara: Bloqueada** o **Sin decidir** | El navegador no tiene permiso para usar la cámara | Permitir la cámara para el sitio en la configuración del navegador y recargar el terminal |
 | El estado dice **Versión: desactualizada** | El terminal sigue con código viejo en caché | Si está en línea se recarga solo en cuanto nadie esté marcando (una vez por versión). Si no, recargar la página del terminal o enviar **Recargar app** (la página se pide siempre al servidor y solo se usa la copia guardada si no hay internet o tarda más de unos 4 segundos) |
-| El estado dice **Pantalla encendida: Inactiva** | El navegador no concedió mantener la pantalla encendida, o la tablet entró en ahorro de batería | Dejar la tablet cargando, desactivar el ahorro de batería y la suspensión de pantalla, y recargar el terminal |
+| El estado dice **Pantalla encendida: Inactiva** | El navegador no concedió mantener la pantalla encendida (ahorro de energía, pestaña oculta o minimizada, navegador sin soporte) o el equipo entró en ahorro de batería | Dejar el equipo enchufado, con el navegador visible y sin suspensión (ver **PC con Windows**), y recargar el terminal. El motivo figura en el mismo estado y el terminal reintenta solo cada minuto |
 | Un comando remoto figura **Vencido** | El terminal no se conectó a tiempo (15 minutos; 24 horas en **Recargar app**) o corre una versión vieja de la aplicación que no entiende comandos | Verificar que esté encendido y con internet, recargar su página dos veces y volver a enviar el comando |
 | Un comando remoto figura **Falló** con el detalle *El terminal estuvo ocupado* | Había una marcación en curso durante todo ese tiempo | Volver a enviar el comando cuando el terminal esté en reposo |
 | **Limpiar caché** falló con un error de red | El terminal no pudo descargar los empleados | Verificar su conexión y reenviar el comando. La caché que tenía se conserva y no se pierde ninguna marcación |

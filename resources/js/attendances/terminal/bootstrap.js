@@ -18,7 +18,7 @@
  */
 
 import * as camera from './camera.js';
-import { acquireWakeLock, hasWakeLock } from './idle-detection.js';
+import { acquireWakeLock, hasWakeLock, getWakeLockError } from './idle-detection.js';
 import { migrateTokenFromLocalStorage, getMeta, setMeta, clearTerminalState } from '../terminal-offline/db.js';
 import { heartbeat, syncEmployees, rebuildEmployeeCache, setCommandHandler, setAppVersionHandler, setWakeLockProbe, queueCommandAck, TerminalAuthError } from '../terminal-offline/sync.js';
 import { reloadIfOutdated } from '../terminal-offline/auto-reload.js';
@@ -220,7 +220,7 @@ export async function initializeOfflineSync({ onUnlinked, confirmSwitch = true }
 
     // Antes del primer heartbeat: si ya trae comandos pendientes, que no se pierdan.
     setCommandHandler(handleRemoteCommands);
-    setWakeLockProbe(hasWakeLock);
+    setWakeLockProbe(hasWakeLock, getWakeLockError);
     setAppVersionHandler(async (serverVersion) => {
         const settled = await settlePendingReload({
             getMeta,

@@ -76,6 +76,7 @@ async function readStorage(nav) {
  * @param {number|null} [options.cachedEmployees] - empleados en la caché local.
  * @param {number|null} [options.clockOffsetMs] - diferencia servidor − dispositivo del último heartbeat.
  * @param {boolean|null} [options.wakeLock] - si el terminal logró mantener la pantalla encendida (Wake Lock); null si no se sabe.
+ * @param {string|null} [options.wakeLockError] - motivo del último intento fallido de Wake Lock; solo viaja si `wakeLock` es false.
  * @returns {Promise<Record<string, string|number|boolean>>}
  */
 export async function collectDeviceReport({
@@ -85,6 +86,7 @@ export async function collectDeviceReport({
     cachedEmployees = null,
     clockOffsetMs = null,
     wakeLock = null,
+    wakeLockError = null,
 } = {}) {
     const report = {};
 
@@ -102,6 +104,7 @@ export async function collectDeviceReport({
     if (Number.isFinite(cachedEmployees)) report.cached_employees = cachedEmployees;
     if (Number.isFinite(clockOffsetMs)) report.clock_skew_seconds = Math.round(clockOffsetMs / 1000);
     if (typeof wakeLock === 'boolean') report.wake_lock = wakeLock;
+    if (wakeLock === false && wakeLockError) report.wake_lock_error = String(wakeLockError).slice(0, 40);
 
     const [battery, camera, storage] = await Promise.all([readBattery(nav), readCameraState(nav), readStorage(nav)]);
     Object.assign(report, battery, storage);

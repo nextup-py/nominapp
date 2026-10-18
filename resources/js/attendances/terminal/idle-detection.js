@@ -39,6 +39,15 @@ let idleTimer = null;
 let presenceCheckActive = false;
 let presenceCheckTimer = null;
 let wakeLock = null;
+/** Motivo del último intento fallido de mantener la pantalla encendida (`unsupported` o el `name` del error del navegador). */
+let wakeLockError = null;
+/** Solicitud en curso, para no pedir dos veces el bloqueo a la vez. */
+let wakeLockRequest = null;
+/** Detiene el vigía del bloqueo si está activo. */
+let stopWakeLockKeeper = null;
+
+/** Cada cuánto se reintenta el bloqueo mientras no se tenga (un equipo que se despierta de la suspensión lo pierde). */
+export const WAKE_LOCK_RETRY_MS = 60 * 1000;
 
 /**
  * @param {() => void} onIdle
@@ -114,22 +123,83 @@ export function stopPresenceCheck() {
 }
 
 /**
- * Solicita mantener la pantalla encendida — best-effort, no todos los
- * navegadores lo soportan.
+ * Solicita mantener la pantalla encendida (y con ella el equipo despierto) — best-effort, no todos los
+ * navegadores lo soportan. Es idempotente: si ya se tiene o hay una solicitud en curso no pide otra.
+ * Ante un fallo guarda el motivo (`getWakeLockError()`) para informarlo en el reporte del dispositivo.
  * @param {Navigator} [nav] - inyectable para tests; navigator en producción
+ * @returns {Promise<boolean>} true si el bloqueo está activo.
  */
 export async function acquireWakeLock(nav = navigator) {
-    if (!('wakeLock' in nav)) return;
-    try {
-        wakeLock = await nav.wakeLock.request('screen');
-        wakeLock.addEventListener('release', () => { wakeLock = null; });
-        console.log('Wake lock adquirido');
-    } catch (err) {
-        console.warn('Wake lock no disponible:', err.message);
+    if (!('wakeLock' in nav)) {
+        wakeLockError = 'unsupported';
+        return false;
     }
+    if (wakeLock) return true;
+    if (wakeLockRequest) return wakeLockRequest;
+
+    wakeLockRequest = (async () => {
+        try {
+            const lock = await nav.wakeLock.request('screen');
+            wakeLock = lock;
+            wakeLockError = null;
+            lock.addEventListener('release', () => {
+                if (wakeLock === lock) wakeLock = null;
+            });
+            console.log('Wake lock adquirido');
+            return true;
+        } catch (err) {
+            wakeLockError = String(err?.name || 'error').replace(/[^A-Za-z0-9_.-]/g, '').slice(0, 40) || 'error';
+            console.warn('Wake lock no disponible:', err?.message);
+            return false;
+        } finally {
+            wakeLockRequest = null;
+        }
+    })();
+
+    return wakeLockRequest;
 }
 
 /** @returns {boolean} true si el wake lock está activo actualmente. */
 export function hasWakeLock() {
     return wakeLock !== null;
+}
+
+/** @returns {string|null} motivo del último intento fallido (`unsupported` o el nombre del error), null si no hay fallo. */
+export function getWakeLockError() {
+    return wakeLockError;
+}
+
+/**
+ * Mantiene el bloqueo de pantalla: lo pide ya, lo reintenta cada `intervalMs` mientras no lo tenga, cuando la
+ * pestaña vuelve a estar visible y en la primera interacción (algunos navegadores lo exigen). Sin esto un
+ * equipo que se suspendió —o un terminal que se recargó y espera el toque de «Comenzar»— quedaba sin bloqueo
+ * hasta que alguien recargaba, y volvía a dormirse. Es idempotente: una segunda llamada devuelve la misma función.
+ * @param {object} [options]
+ * @param {Navigator} [options.nav] - inyectable para tests.
+ * @param {Document} [options.doc] - inyectable para tests.
+ * @param {number} [options.intervalMs]
+ * @returns {() => void} detiene el vigía.
+ */
+export function startWakeLockKeeper({ nav = navigator, doc = document, intervalMs = WAKE_LOCK_RETRY_MS } = {}) {
+    if (stopWakeLockKeeper) return stopWakeLockKeeper;
+
+    const tryAcquire = () => {
+        if (!wakeLock && doc.visibilityState !== 'hidden') acquireWakeLock(nav);
+    };
+
+    tryAcquire();
+    const timer = setInterval(tryAcquire, intervalMs);
+    doc.addEventListener('visibilitychange', tryAcquire);
+    doc.addEventListener('pointerdown', tryAcquire);
+    doc.addEventListener('keydown', tryAcquire);
+
+    stopWakeLockKeeper = () => {
+        clearInterval(timer);
+        doc.removeEventListener('visibilitychange', tryAcquire);
+        doc.removeEventListener('pointerdown', tryAcquire);
+        doc.removeEventListener('keydown', tryAcquire);
+        stopWakeLockKeeper = null;
+    };
+
+    return stopWakeLockKeeper;
 }

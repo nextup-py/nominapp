@@ -142,13 +142,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ============================================================================
-    // WAKE LOCK — re-adquirir si el tab vuelve al foco
+    // WAKE LOCK — pedirlo al cargar (sin esperar el toque de «Comenzar») y mantenerlo:
+    // el vigía reintenta cada minuto, al volver la pestaña y en la primera interacción
     // ============================================================================
-    document.addEventListener('visibilitychange', async () => {
-        if (document.visibilityState === 'visible' && !idleDetection.hasWakeLock()) {
-            await idleDetection.acquireWakeLock();
-        }
-    });
+    idleDetection.startWakeLockKeeper();
 
     // ============================================================================
     // RELOJ EN TIEMPO REAL

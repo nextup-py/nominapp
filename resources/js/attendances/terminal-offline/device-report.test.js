@@ -92,4 +92,15 @@ describe('collectDeviceReport', () => {
         expect((await collectDeviceReport({ nav: {}, win: win(false), wakeLock: false })).wake_lock).toBe(false);
         expect(await collectDeviceReport({ nav: {}, win: win(false), wakeLock: null })).not.toHaveProperty('wake_lock');
     });
+
+    it('informa el motivo del fallo del Wake Lock solo cuando no se logró', async () => {
+        const fallo = await collectDeviceReport({ nav: {}, win: win(false), wakeLock: false, wakeLockError: 'NotAllowedError' });
+        expect(fallo.wake_lock_error).toBe('NotAllowedError');
+
+        const ok = await collectDeviceReport({ nav: {}, win: win(false), wakeLock: true, wakeLockError: 'NotAllowedError' });
+        expect(ok).not.toHaveProperty('wake_lock_error');
+
+        const sinMotivo = await collectDeviceReport({ nav: {}, win: win(false), wakeLock: false });
+        expect(sinMotivo).not.toHaveProperty('wake_lock_error');
+    });
 });

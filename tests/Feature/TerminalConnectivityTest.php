@@ -148,6 +148,17 @@ it('el heartbeat informa la versión vigente de la app y el límite de jornada n
         ->and($terminal->fresh()->device_report['wake_lock'])->toBeFalse();
 });
 
+it('el heartbeat guarda el motivo del fallo del Wake Lock y rechaza valores con caracteres raros', function () {
+    $terminal = makeConnectivityTerminal();
+    Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
+
+    $this->postJson('/api/v1/terminal/heartbeat', ['device' => ['wake_lock' => false, 'wake_lock_error' => 'NotAllowedError']])->assertOk();
+    expect($terminal->fresh()->device_report)->toMatchArray(['wake_lock' => false, 'wake_lock_error' => 'NotAllowedError']);
+
+    $this->postJson('/api/v1/terminal/heartbeat', ['device' => ['wake_lock_error' => '<script>alert(1)</script>']])->assertUnprocessable();
+    $this->postJson('/api/v1/terminal/heartbeat', ['device' => ['wake_lock_error' => str_repeat('a', 41)]])->assertUnprocessable();
+});
+
 it('el heartbeat informa cuántos empleados activos y con rostro tiene la sucursal', function () {
     $terminal = makeConnectivityTerminal();
     Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);

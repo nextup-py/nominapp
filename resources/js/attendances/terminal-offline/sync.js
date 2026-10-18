@@ -114,6 +114,9 @@ let appVersionHandler = null;
 /** @type {(() => boolean)|null} */
 let wakeLockProbe = null;
 
+/** @type {(() => string|null)|null} */
+let wakeLockErrorProbe = null;
+
 /**
  * Registra el manejador que recibe la versión vigente de la app informada por el servidor en cada heartbeat
  * (para recargar el terminal cuando queda con una versión vieja).
@@ -124,11 +127,14 @@ export function setAppVersionHandler(handler) {
 }
 
 /**
- * Registra cómo saber si la pantalla se mantiene encendida (Wake Lock), para incluirlo en el reporte del dispositivo.
+ * Registra cómo saber si la pantalla se mantiene encendida (Wake Lock) y, si no, por qué, para incluirlo en el
+ * reporte del dispositivo.
  * @param {(() => boolean)|null} probe
+ * @param {(() => string|null)|null} [errorProbe] - motivo del último intento fallido.
  */
-export function setWakeLockProbe(probe) {
+export function setWakeLockProbe(probe, errorProbe = null) {
     wakeLockProbe = probe;
+    wakeLockErrorProbe = errorProbe;
 }
 
 /**
@@ -151,6 +157,7 @@ async function buildDeviceReport() {
             cachedEmployees: await countCachedEmployees(),
             clockOffsetMs: (await getMeta('server_clock_offset_ms')) ?? null,
             wakeLock: wakeLockProbe ? Boolean(wakeLockProbe()) : null,
+            wakeLockError: wakeLockErrorProbe ? wakeLockErrorProbe() : null,
         });
     } catch {
         return {};

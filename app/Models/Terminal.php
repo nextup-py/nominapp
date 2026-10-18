@@ -714,6 +714,34 @@ class Terminal extends Model implements AuthenticatableContract
     }
 
     /**
+     * Motivos conocidos por los que el navegador no concede el bloqueo de pantalla (Wake Lock), según el
+     * `wake_lock_error` del reporte del dispositivo (`unsupported` o el nombre del error del navegador).
+     *
+     * @return array<string, string>
+     */
+    public static function getWakeLockErrorLabels(): array
+    {
+        return [
+            'unsupported' => 'este navegador no permite mantener la pantalla encendida',
+            'NotAllowedError' => 'el navegador no lo concedió (ahorro de energía, pestaña oculta o falta una interacción)',
+            'AbortError' => 'el navegador interrumpió la solicitud',
+            'NotSupportedError' => 'el dispositivo no lo admite',
+        ];
+    }
+
+    /** Motivo legible por el que el terminal no logra mantener la pantalla encendida, o null si no se informó. */
+    public function wakeLockErrorLabel(): ?string
+    {
+        $error = $this->device_report['wake_lock_error'] ?? null;
+
+        if (! is_string($error) || $error === '') {
+            return null;
+        }
+
+        return self::getWakeLockErrorLabels()[$error] ?? "el navegador informó «{$error}»";
+    }
+
+    /**
      * Causas probables de que el terminal haya dejado de reportar, según su último reporte del dispositivo.
      * Son pistas para quien recibe el aviso de desconexión, no un diagnóstico: el reporte es de antes del corte.
      *
@@ -730,7 +758,7 @@ class Terminal extends Model implements AuthenticatableContract
         $hints = [];
 
         if (array_key_exists('wake_lock', $report) && $report['wake_lock'] === false) {
-            $hints[] = 'No lograba mantener la pantalla encendida: probablemente el equipo se suspendió.';
+            $hints[] = 'No lograba mantener la pantalla encendida: probablemente el equipo se suspendió.'.($this->wakeLockErrorLabel() ? ' Motivo: '.$this->wakeLockErrorLabel().'.' : '');
         }
 
         if (($report['standalone'] ?? null) === false) {
