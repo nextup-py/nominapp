@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Filament\Resources\AttendanceMarkFailureResource;
 use App\Models\AttendanceMarkFailure;
+use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -20,19 +21,12 @@ use Illuminate\Notifications\Notification;
  */
 class SyncConflictPendingNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     public function __construct(
         public readonly AttendanceMarkFailure $failure,
     ) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * Se arma con el builder de `Filament\Notifications\Notification` (no un
@@ -60,5 +54,11 @@ class SyncConflictPendingNotification extends Notification
                 ->getDatabaseMessage(),
             'failure_id' => $this->failure->id,
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'attendance.sync_conflict';
     }
 }

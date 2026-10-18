@@ -121,6 +121,14 @@ Schedule::command('attendance:notify-no-schedule')
     ->withoutOverlapping();
 
 /**
+ * Resumen diario de avisos: entrega a cada usuario, a la hora que eligió en «Mis notificaciones»,
+ * lo que dejó para el resumen. Corre cada hora y solo procesa a quienes les toca esa hora.
+ */
+Schedule::command('notifications:send-digests')
+    ->hourly()
+    ->withoutOverlapping();
+
+/**
  * Expirar enrollments faciales vencidos
  * Se ejecuta cada hora para marcar como 'expired' los registros
  * en estado pending_capture cuyo expires_at ya pasó

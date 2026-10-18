@@ -140,7 +140,7 @@ Al crear o editar un contrato, se puede agregar una sección de **Cláusulas Adi
 
 - **Badge en el menú lateral** — muestra en naranja la cantidad de contratos por vencer según los días configurados en Ajustes Generales
 - **Tab "Por vencer"** en la lista — filtra automáticamente los contratos próximos a vencer
-- **Notificación diaria en campanita** — a las 08:00 el sistema notifica sobre contratos vencidos o próximos a vencer; cada contrato se notifica una sola vez hasta que la notificación sea leída
+- **Notificación diaria en campanita** — a las 08:00 el sistema notifica sobre contratos vencidos o próximos a vencer; cada contrato se notifica una sola vez hasta que la notificación sea leída. Se puede apagar o pasar al correo desde **Mis notificaciones**
 - **Alerta al generar nómina** — si hay contratos por vencer al momento de generar recibos, aparece un aviso con link al reporte
 
 ---

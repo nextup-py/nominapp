@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Filament\Pages\TerminalPairingInbox;
 use App\Models\TerminalPairingRequest;
+use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -18,19 +19,12 @@ use Illuminate\Notifications\Notification;
  */
 class TerminalPairingRequestedNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     public function __construct(
         public readonly TerminalPairingRequest $request,
     ) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * Se arma con el builder de Filament para que la campanita lo muestre (ver
@@ -60,5 +54,11 @@ class TerminalPairingRequestedNotification extends Notification
             'terminal_id' => $terminal->id,
             'pairing_request_id' => $this->request->id,
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'terminal.pairing_requested';
     }
 }

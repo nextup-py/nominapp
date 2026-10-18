@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Filament\Resources\EmployeeResource;
+use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -16,17 +17,10 @@ use Illuminate\Notifications\Notification;
  */
 class EmployeesWithoutScheduleNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     public function __construct(public readonly int $count) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * Se arma con el builder de `Filament\Notifications\Notification` para que la campanita del
@@ -54,5 +48,11 @@ class EmployeesWithoutScheduleNotification extends Notification
                 ->getDatabaseMessage(),
             'employees_without_schedule_count' => $this->count,
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'attendance.no_schedule';
     }
 }

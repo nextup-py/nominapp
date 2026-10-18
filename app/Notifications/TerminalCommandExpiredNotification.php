@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
 use App\Models\TerminalCommand;
+use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -16,20 +17,13 @@ use Illuminate\Notifications\Notification;
  */
 class TerminalCommandExpiredNotification extends Notification
 {
+    use HonorsPreferences;
     use Queueable;
 
     public function __construct(
         public readonly Terminal $terminal,
         public readonly TerminalCommand $command,
     ) {}
-
-    /**
-     * @return array<int, string>
-     */
-    public function via(object $notifiable): array
-    {
-        return ['database'];
-    }
 
     /**
      * Se arma con el builder de Filament para que la campanita lo muestre.
@@ -54,5 +48,11 @@ class TerminalCommandExpiredNotification extends Notification
             'terminal_id' => $this->terminal->id,
             'command_id' => $this->command->id,
         ];
+    }
+
+    /** Clave de este aviso en `NotificationCatalog`. */
+    public function preferenceKey(): string
+    {
+        return 'terminal.command_expired';
     }
 }

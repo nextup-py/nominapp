@@ -39,6 +39,8 @@ Además, los módulos con flujo de aprobación (Préstamos, Adelantos, Retiros d
 
 > **Terminales:** vincular terminales no tiene un permiso propio. Aprobar o rechazar solicitudes de vinculación, abrir o cerrar la ventana de vinculación, generar enlaces de configuración, enviar **comandos remotos** (forzar sincronización, recargar, limpiar caché, reenviar reporte), revocar el acceso de un terminal, activarlo o desactivarlo y editar su **Monitoreo** requieren el permiso **Editar Terminal** — el mismo que ya protege la gestión de terminales. Ver el detalle, la **Bitácora**, los **Comandos** enviados y imprimir la **hoja de instalación** requiere **Ver Terminal**. Los avisos de la campanita (solicitudes de vinculación, ventanas vencidas y alertas de salud) llegan solo a quienes tienen **Editar Terminal**. Con ese permiso (y el módulo de Marcación biométrica activo) aparece **Asistencias → Solicitudes de vinculación** y llegan las notificaciones de nuevas solicitudes. Ver el capítulo **Terminales de Marcación**.
 
+> **Notificaciones:** los avisos de la campanita y el correo solo llegan a quien tiene el permiso del módulo (por ejemplo **Editar Terminal** para los de terminales). Cada usuario ajusta cuáles recibe, por qué canal y con qué frecuencia desde su menú de usuario → **Mis notificaciones**, sin necesidad de un permiso extra (ver el capítulo **Mis notificaciones**).
+
 ---
 
 ![Edición de permisos de un rol](/docs-images/22-rol-editar.png)
