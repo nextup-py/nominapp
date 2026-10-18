@@ -6,6 +6,8 @@ El sistema avisa de lo que necesita atención (un terminal sin conexión, jornad
 
 Clic en el nombre de usuario (esquina superior derecha) → **Mis notificaciones**. No requiere permisos especiales: cada persona edita solo las suyas.
 
+![Pantalla Mis notificaciones](/docs-images/24-notificaciones.png)
+
 La pantalla muestra únicamente los avisos de los módulos a los que el usuario tiene acceso. Por ejemplo, los avisos de terminales aparecen solo para quien tiene el permiso **Editar Terminal**, y los de contratos para quien puede ver contratos. Un usuario cuyo rol no recibe avisos configurables ve un mensaje que lo indica.
 
 ## Qué se puede elegir por aviso
@@ -15,6 +17,8 @@ La pantalla muestra únicamente los avisos de los módulos a los que el usuario 
 | **Interruptor** | Activa o desactiva el aviso. Desactivado, no llega por ningún canal |
 | **Canal** | **Campanita**, **Correo** o ambos. Con el aviso activo hay que elegir al menos uno |
 | **Frecuencia** | **Al instante** (llega cuando ocurre) o **En el resumen diario** (se junta con los demás y llega una vez al día) |
+
+Los avisos que ya llegan **una vez al día por sí mismos** (**Jornadas sin salida**, **Empleados sin horario** y **Contratos por vencer o vencidos**) solo se envían al instante: la frecuencia aparece bloqueada con la indicación *Ya llega una vez al día*.
 
 Los cambios aplican **desde el próximo aviso**; lo que ya llegó no se modifica.
 

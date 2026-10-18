@@ -3,11 +3,16 @@
 use App\Filament\Pages\MyNotifications;
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\Contract;
+use App\Models\Department;
+use App\Models\Employee;
 use App\Models\NotificationDigestItem;
 use App\Models\NotificationPreference;
+use App\Models\Position;
 use App\Models\Terminal;
 use App\Models\TerminalEvent;
 use App\Models\User;
+use App\Notifications\ContractAlertNotification;
 use App\Notifications\NotificationDigestNotification;
 use App\Notifications\TerminalHealthNotification;
 use App\Services\NotificationPreferenceService;
@@ -411,4 +416,56 @@ it('quien generó el enlace de configuración tampoco recibe el aviso', function
 
     expect($author->notifications()->count())->toBe(0)
         ->and($colleague->notifications()->count())->toBe(1);
+});
+
+// ─── Avisos que ya llegan una vez al día ────────────────────────────────────
+
+it('los avisos que ya son un resumen diario no se pueden diferir al resumen', function () {
+    $user = prefsUser('view_any_attendance_day');
+    $service = app(NotificationPreferenceService::class);
+
+    expect(NotificationCatalog::get('attendance.open_shifts')['digestable'])->toBeFalse();
+
+    $service->store($user, 'attendance.open_shifts', true, ['database'], 'digest');
+
+    expect($service->resolve($user, 'attendance.open_shifts')['frequency'])->toBe('instant')
+        ->and(NotificationPreference::where('user_id', $user->id)->count())->toBe(0);
+});
+
+it('la pantalla bloquea la frecuencia de los avisos que ya llegan una vez al día', function () {
+    $user = prefsUser('view_any_contract');
+
+    Livewire::actingAs($user)->test(MyNotifications::class)
+        ->assertSee('Ya llega una vez al día.');
+});
+
+// ─── Aviso diario de contratos por vencer ───────────────────────────────────
+
+it('el aviso de contratos no se duplica aunque el primer usuario no lo reciba', function () {
+    Carbon::setTestNow(Carbon::parse('2026-10-12 09:00:00', config('app.timezone')));
+
+    // El primer usuario (el que antes servía de referencia) no tiene permiso sobre contratos.
+    $withoutAccess = prefsUser();
+    $withAccess = prefsUser('view_any_contract');
+    expect($withoutAccess->id)->toBeLessThan($withAccess->id);
+
+    $company = Company::create(['name' => 'Empresa Contratos', 'ruc' => '8800100-1', 'employer_number' => 8800100]);
+    $branch = Branch::create(['name' => 'Sucursal Contratos', 'company_id' => $company->id]);
+    $department = Department::create(['name' => 'Depto Contratos', 'company_id' => $company->id]);
+    $position = Position::create(['name' => 'Cargo Contratos', 'department_id' => $department->id]);
+    $employee = Employee::create([
+        'first_name' => 'Notif', 'last_name' => 'Contrato', 'ci' => '8800100', 'birth_date' => '1990-05-15',
+        'email' => 'contrato@test.com', 'branch_id' => $branch->id, 'status' => 'active',
+    ]);
+    Contract::create([
+        'employee_id' => $employee->id, 'type' => 'plazo_fijo', 'start_date' => now()->subMonths(6),
+        'end_date' => now()->addDays(10), 'salary_type' => 'mensual', 'salary' => 2_550_000,
+        'position_id' => $position->id, 'department_id' => $department->id, 'status' => 'active',
+    ]);
+
+    $this->artisan('contracts:notify-expiring')->assertSuccessful();
+    $this->artisan('contracts:notify-expiring')->assertSuccessful();
+
+    expect($withAccess->notifications()->where('type', ContractAlertNotification::class)->count())->toBe(1)
+        ->and($withoutAccess->notifications()->count())->toBe(0);
 });

@@ -130,20 +130,21 @@ class MyNotifications extends Page implements HasForms
                 ->disabled($mandatory)
                 ->dehydrated()
                 ->live()
-                ->columnSpan(['lg' => 6]),
+                ->columnSpan(['lg' => 5]),
             CheckboxList::make("{$path}.channels")
                 ->label('Canal')
                 ->options(NotificationCatalog::channelOptions())
                 ->columns(2)
                 ->required(fn (Get $get) => (bool) $get("{$path}.enabled"))
                 ->validationMessages(['required' => 'Elegí al menos un canal.'])
-                ->columnSpan(['lg' => 3]),
+                ->columnSpan(['lg' => 4]),
             Select::make("{$path}.frequency")
                 ->label('Frecuencia')
                 ->options(NotificationCatalog::frequencyOptions())
                 ->native(false)
                 ->selectablePlaceholder(false)
-                ->disabled($mandatory)
+                ->disabled($mandatory || ! $entry['digestable'])
+                ->helperText($entry['digestable'] ? null : 'Ya llega una vez al día.')
                 ->dehydrated()
                 ->columnSpan(['lg' => 3]),
         ]);

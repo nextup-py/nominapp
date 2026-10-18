@@ -11,7 +11,7 @@ use App\Models\User;
  * entrada acá y la clave en su clase de notificación (un test exige que coincidan).
  *
  * Cada entrada: `label`, `description`, `category`, `permission` (null = cualquier usuario),
- * `mandatory` (no se puede apagar ni diferir), `enabled`, `channels` y `frequency` por defecto.
+ * `mandatory` (no se puede apagar ni diferir), `digestable` (false = ya llega una vez al día por sí mismo, solo se envía al instante), `enabled`, `channels` y `frequency` por defecto.
  */
 class NotificationCatalog
 {
@@ -66,7 +66,7 @@ class NotificationCatalog
     /**
      * Todas las entradas por clave.
      *
-     * @return array<string, array{label: string, description: string, category: string, permission: string|null, mandatory: bool, enabled: bool, channels: array<int, string>, frequency: string}>
+     * @return array<string, array{label: string, description: string, category: string, permission: string|null, mandatory: bool, digestable: bool, enabled: bool, channels: array<int, string>, frequency: string}>
      */
     public static function all(): array
     {
@@ -86,12 +86,12 @@ class NotificationCatalog
             'terminal.link_window_expired' => ['Ventana de vinculación vencida', 'La ventana que abriste venció sin que ningún dispositivo la usara.', 'terminal_linking', 'update_terminal'],
             'terminal.command_expired' => ['Comando remoto vencido', 'Un comando que enviaste a un terminal venció sin aplicarse.', 'terminal_linking', 'update_terminal'],
 
-            'attendance.open_shifts' => ['Jornadas sin salida', 'Resumen diario de jornadas con entrada y sin salida registrada.', 'attendance', 'view_any_attendance_day'],
-            'attendance.no_schedule' => ['Empleados sin horario', 'Resumen diario de empleados activos sin horario asignado.', 'attendance', 'update_schedule'],
+            'attendance.open_shifts' => ['Jornadas sin salida', 'Resumen diario de jornadas con entrada y sin salida registrada.', 'attendance', 'view_any_attendance_day', ['digestable' => false]],
+            'attendance.no_schedule' => ['Empleados sin horario', 'Resumen diario de empleados activos sin horario asignado.', 'attendance', 'update_schedule', ['digestable' => false]],
             'attendance.sync_conflict' => ['Conflicto de sincronización', 'Una marcación hecha sin conexión no pudo registrarse y necesita revisión.', 'attendance', 'update_attendance_mark_failure'],
             'attendance.face_enrollment' => ['Autoenrolamiento facial pendiente', 'Un empleado completó su registro facial y espera aprobación.', 'attendance', 'update_face_enrollment'],
 
-            'contract.alert' => ['Contratos por vencer o vencidos', 'Contratos que se acercan a su fecha de fin o ya vencieron.', 'contracts_devices', 'view_any_contract'],
+            'contract.alert' => ['Contratos por vencer o vencidos', 'Contratos que se acercan a su fecha de fin o ya vencieron.', 'contracts_devices', 'view_any_contract', ['digestable' => false]],
             'device.mobile_linked' => ['Celular vinculado', 'Un empleado vinculó su celular para marcar asistencia.', 'contracts_devices', 'view_any_employee_device'],
             'device.mobile_relinked' => ['Celular re-vinculado', 'Un empleado vinculó un celular nuevo y se revocó el anterior.', 'contracts_devices', 'view_any_employee_device', ['mandatory' => true, 'channels' => ['database', 'mail']]],
             'device.link_throttled' => ['Límite de vinculación agotado', 'Se agotaron los intentos diarios de vinculación de celular desde una IP.', 'contracts_devices', 'view_any_employee_device'],
@@ -109,6 +109,7 @@ class NotificationCatalog
                 'category' => $category,
                 'permission' => $permission,
                 'mandatory' => $overrides['mandatory'] ?? false,
+                'digestable' => $overrides['digestable'] ?? true,
                 'enabled' => $overrides['enabled'] ?? true,
                 'channels' => $overrides['channels'] ?? [self::CHANNEL_DATABASE],
                 'frequency' => self::FREQUENCY_INSTANT,
@@ -121,7 +122,7 @@ class NotificationCatalog
     /**
      * Entrada de una clave, o null si no existe.
      *
-     * @return array{label: string, description: string, category: string, permission: string|null, mandatory: bool, enabled: bool, channels: array<int, string>, frequency: string}|null
+     * @return array{label: string, description: string, category: string, permission: string|null, mandatory: bool, digestable: bool, enabled: bool, channels: array<int, string>, frequency: string}|null
      */
     public static function get(string $key): ?array
     {

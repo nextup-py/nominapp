@@ -39,6 +39,9 @@ class NotificationPreferenceService
 
         if ($entry['mandatory']) {
             $enabled = true;
+        }
+
+        if ($entry['mandatory'] || ! $entry['digestable']) {
             $frequency = NotificationCatalog::FREQUENCY_INSTANT;
         }
 
@@ -95,6 +98,9 @@ class NotificationPreferenceService
 
         if ($entry['mandatory']) {
             $enabled = true;
+        }
+
+        if ($entry['mandatory'] || ! $entry['digestable']) {
             $frequency = NotificationCatalog::FREQUENCY_INSTANT;
         }
 
