@@ -16,8 +16,7 @@
  * como callbacks.
  */
 
-import { hasStream, adoptStream } from './camera.js';
-import { openCameraStream } from './camera-prefs.js';
+import { ensureLiveStream } from './camera.js';
 
 const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -67,10 +66,9 @@ export function clearIdleTimer() {
 }
 
 /**
- * Detección de presencia en modo reposo — reutiliza el stream de cámara si
- * camera.js ya tiene uno abierto (hasStream()), o abre uno propio y se lo
- * entrega a camera.js (adoptStream()) para que startCamera() no vuelva a
- * pedir permiso al salir del reposo.
+ * Detección de presencia en modo reposo — reutiliza el stream de cámara de
+ * camera.js si sigue vivo, o lo reabre (ensureLiveStream()); también si la
+ * cámara se cortó en pleno reposo, p. ej. tras suspenderse el equipo.
  * @param {HTMLVideoElement} videoEl
  * @param {() => void} onPresenceDetected
  */
@@ -78,17 +76,8 @@ export async function startPresenceCheck(videoEl, onPresenceDetected) {
     stopPresenceCheck();
     presenceCheckActive = true;
 
-    if (!hasStream()) {
-        try {
-            const stream = await openCameraStream();
-            adoptStream(stream);
-            videoEl.srcObject = stream;
-            await new Promise((resolve) => { videoEl.onloadedmetadata = resolve; });
-        } catch (e) {
-            console.warn('Cámara no disponible para detección de presencia:', e);
-            presenceCheckActive = false;
-            return;
-        }
+    if (!(await ensureLiveStream(videoEl))) {
+        console.warn('Cámara no disponible para detección de presencia; se reintenta en el siguiente ciclo.');
     }
 
     presenceCheckTick(videoEl, onPresenceDetected);
@@ -98,7 +87,7 @@ async function presenceCheckTick(videoEl, onPresenceDetected) {
     if (!presenceCheckActive) return;
 
     try {
-        if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
+        if (await ensureLiveStream(videoEl) && videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
             const detection = await faceapi.detectSingleFace(videoEl, getLightOptions());
             if (detection && presenceCheckActive) {
                 stopPresenceCheck();
