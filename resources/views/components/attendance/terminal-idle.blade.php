@@ -43,6 +43,10 @@
             <span class="idle-hint-dot" aria-hidden="true"></span>
             <span>Acérquese para registrar asistencia</span>
         </div>
+        {{-- Aviso de privacidad de la empresa; solo si cargó uno (ver terminal/privacy-notice.js) --}}
+        <button type="button" id="privacyFooter" class="privacy-footer hidden" aria-haspopup="dialog" aria-controls="privacyModal">
+            Aviso de privacidad
+        </button>
         <x-branding-footer />
     </div>
 </section>

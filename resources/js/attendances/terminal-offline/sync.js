@@ -210,6 +210,9 @@ export async function heartbeat() {
         if (Number.isFinite(data.config.camera_resume_minutes)) {
             await setMeta('camera_resume_minutes', data.config.camera_resume_minutes);
         }
+        if ('privacy' in data.config) {
+            await setMeta('privacy_notice', data.config.privacy ?? null);
+        }
         if (data.roster) {
             await setMeta('branch_roster', { ...data.roster, at: Date.now() });
         }

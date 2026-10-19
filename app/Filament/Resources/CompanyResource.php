@@ -11,6 +11,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
@@ -213,6 +214,26 @@ class CompanyResource extends Resource
                     ->columns(2)
                     ->collapsible(),
 
+                Section::make('Aviso de privacidad')
+                    ->description('Lo muestra el terminal de asistencia a los empleados: en reposo, desde el ícono de información y mientras se identifican.')
+                    ->icon('heroicon-o-shield-check')
+                    ->schema([
+                        Textarea::make('privacy_notice')
+                            ->label('Texto del aviso')
+                            ->rows(6)
+                            ->maxLength(3000)
+                            ->helperText('Cómo se usa la imagen facial de los empleados (finalidad, quién accede, cuánto se conserva, cómo ejercer sus derechos). Lo redacta la empresa; el sistema solo lo muestra.'),
+
+                        TextInput::make('privacy_policy_url')
+                            ->label('Enlace a la política completa')
+                            ->url()
+                            ->maxLength(500)
+                            ->placeholder('https://empresa.com.py/privacidad')
+                            ->helperText('Opcional. El terminal lo muestra como código QR para abrirlo desde el celular.'),
+                    ])
+                    ->collapsible()
+                    ->collapsed(fn (?Company $record) => blank($record?->privacy_notice) && blank($record?->privacy_policy_url)),
+
                 Section::make('Configuración')
                     ->description('Opciones de configuración y personalización para la empresa.')
                     ->schema([
@@ -407,6 +428,22 @@ class CompanyResource extends Resource
                         ->copyable()
                         ->copyMessage('Correo copiado')
                         ->placeholder('Sin correo'),
+                ])
+                ->collapsible(),
+
+            InfoSection::make('Aviso de privacidad')
+                ->columns(1)
+                ->schema([
+                    TextEntry::make('privacy_notice')
+                        ->label('Texto del aviso')
+                        ->placeholder('Sin aviso configurado — el terminal no muestra ninguno'),
+                    TextEntry::make('privacy_policy_url')
+                        ->label('Enlace a la política')
+                        ->placeholder('Sin enlace')
+                        ->url(fn (?string $state) => $state, shouldOpenInNewTab: true),
+                    TextEntry::make('privacy_notice_version')
+                        ->label('Versión del aviso')
+                        ->helperText('Sube sola cada vez que se cambia el texto o el enlace.'),
                 ])
                 ->collapsible(),
 

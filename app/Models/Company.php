@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /** Empresa empleadora: entidad legal de la que cuelgan sucursales, departamentos y empleados. */
 class Company extends Model implements Auditable
@@ -35,6 +36,9 @@ class Company extends Model implements Auditable
         'email',
         'city',
         'is_active',
+        'privacy_notice',
+        'privacy_policy_url',
+        'privacy_notice_version',
     ];
 
     protected $fillable = [
@@ -53,6 +57,8 @@ class Company extends Model implements Auditable
         'email',
         'city',
         'is_active',
+        'privacy_notice',
+        'privacy_policy_url',
     ];
 
     protected $casts = [
@@ -70,10 +76,37 @@ class Company extends Model implements Auditable
         });
 
         static::updating(function (Company $company): void {
+            if ($company->isDirty(['privacy_notice', 'privacy_policy_url'])) {
+                $company->privacy_notice_version = (int) $company->getOriginal('privacy_notice_version') + 1;
+            }
+
             if ($company->isDirty('is_active') && ! $company->is_active && $company->activeEmployeesCount() > 0) {
                 throw new \DomainException("No se puede desactivar la empresa: tiene {$company->activeEmployeesCount()} empleados activos. Desvincúlelos o transfiéralos primero.");
             }
         });
+    }
+
+    /**
+     * Aviso de privacidad que muestra el terminal (texto, enlace, versión y QR del enlace), o null si la empresa no
+     * cargó ninguno. Viaja en `window.terminalData` y en el latido para que funcione sin conexión.
+     *
+     * @return array{text: string|null, url: string|null, version: int, qr: string|null}|null
+     */
+    public function privacyNoticePayload(): ?array
+    {
+        $text = filled($this->privacy_notice) ? trim($this->privacy_notice) : null;
+        $url = filled($this->privacy_policy_url) ? trim($this->privacy_policy_url) : null;
+
+        if ($text === null && $url === null) {
+            return null;
+        }
+
+        return [
+            'text' => $text,
+            'url' => $url,
+            'version' => (int) $this->privacy_notice_version,
+            'qr' => $url ? 'data:image/svg+xml;base64,'.base64_encode((string) QrCode::size(180)->margin(1)->generate($url)) : null,
+        ];
     }
 
     /**

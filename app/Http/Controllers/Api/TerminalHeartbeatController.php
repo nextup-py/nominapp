@@ -111,6 +111,8 @@ class TerminalHeartbeatController extends Controller
                 'camera_resume_minutes' => (int) $settings->terminal_camera_resume_minutes,
                 'face_threshold' => (float) $settings->face_threshold,
                 'face_min_confidence_gap' => (float) $settings->face_min_confidence_gap,
+                // null = la empresa no tiene aviso: el terminal borra el que tenía guardado.
+                'privacy' => $terminal->branch?->company?->privacyNoticePayload(),
             ],
         ]);
     }
