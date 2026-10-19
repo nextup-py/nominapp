@@ -80,6 +80,8 @@ class NotificationCatalog
             'terminal.cache_empty' => ['Terminal sin empleados en caché', 'Un terminal está en línea pero no tiene empleados en su caché local.', 'terminal_health', 'update_terminal'],
             'terminal.clock_skew' => ['Reloj del terminal desajustado', 'La hora de un terminal difiere del servidor más de lo permitido.', 'terminal_health', 'update_terminal'],
             'terminal.app_outdated' => ['App del terminal desactualizada', 'Un terminal sigue con una versión anterior de la app tras un despliegue.', 'terminal_health', 'update_terminal'],
+            'terminal.not_installed' => ['Terminal en una pestaña del navegador', 'Un terminal lleva horas funcionando en una pestaña del navegador, sin instalar como app ni en modo kiosko.', 'terminal_health', 'update_terminal'],
+            'terminal.tab_hidden' => ['Pestaña del terminal oculta', 'La pestaña de un terminal lleva horas oculta o minimizada: el navegador la frena y el equipo puede suspenderse.', 'terminal_health', 'update_terminal'],
 
             'terminal.pairing_requested' => ['Solicitud de vinculación', 'Un dispositivo pidió vincularse a un terminal con un código y espera aprobación.', 'terminal_linking', 'update_terminal'],
             'terminal.provisioned' => ['Terminal provisionado', 'Un dispositivo completó su vinculación. No llega a quien generó el enlace o abrió la ventana.', 'terminal_linking', 'update_terminal', ['channels' => ['database', 'mail']]],

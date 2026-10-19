@@ -62,6 +62,19 @@
             </span>
         </button>
 
+        {{-- Solo aparece en una pestaña del navegador que ofrece instalar la app --}}
+        <button type="button" id="btnMenuInstallApp" data-scope="menu" class="menu-sheet-item hidden">
+            <svg class="menu-sheet-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span class="menu-sheet-item-label-group">
+                <span class="menu-sheet-item-label">Instalar app</span>
+                <span class="menu-sheet-item-sublabel">Ventana propia: evita que el equipo se suspenda</span>
+            </span>
+        </button>
+
         <button type="button" id="btnMenuCamera" class="menu-sheet-item" aria-pressed="false">
             <svg class="menu-sheet-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>

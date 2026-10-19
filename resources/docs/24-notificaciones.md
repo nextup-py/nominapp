@@ -62,6 +62,8 @@ Requieren el permiso **Editar Terminal**. Detalle en el capítulo **Terminales d
 | **Terminal sin empleados en caché** | El terminal está en línea pero no tiene empleados cargados |
 | **Reloj del terminal desajustado** | La hora del dispositivo difiere del servidor |
 | **App del terminal desactualizada** | El terminal sigue con una versión anterior tras un despliegue |
+| **Terminal en una pestaña del navegador** | Un terminal lleva horas funcionando en una pestaña, sin instalar como app ni en modo kiosko |
+| **Pestaña del terminal oculta** | La pestaña de un terminal lleva horas oculta o minimizada: el equipo puede suspenderse |
 
 ### Vinculación de terminales
 

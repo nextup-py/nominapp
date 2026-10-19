@@ -66,6 +66,28 @@ async function readStorage(nav) {
     }
 }
 
+/** Modos de visualización que no son una pestaña del navegador, en el orden en que se comprueban. */
+const DEDICATED_DISPLAY_MODES = ['fullscreen', 'standalone', 'minimal-ui', 'window-controls-overlay'];
+
+/**
+ * Cómo se muestra el terminal: `browser` (pestaña), `standalone` (app instalada), `fullscreen` (pantalla completa o
+ * modo kiosko), `minimal-ui` o `window-controls-overlay`. Nunca lanza.
+ * @param {Window} win
+ * @param {Navigator} [nav] - `navigator.standalone` es el equivalente de iOS Safari.
+ * @returns {string|null} null si el navegador no permite saberlo (`matchMedia` falla).
+ */
+export function detectDisplayMode(win, nav = globalThis.navigator) {
+    try {
+        for (const mode of DEDICATED_DISPLAY_MODES) {
+            if (win.matchMedia(`(display-mode: ${mode})`).matches) return mode;
+        }
+    } catch {
+        return null;
+    }
+
+    return nav?.standalone === true ? 'standalone' : 'browser';
+}
+
 /**
  * Recolecta el reporte de estado del dispositivo. Nunca lanza: lo que no se
  * pueda leer simplemente no viaja.
@@ -92,12 +114,14 @@ export async function collectDeviceReport({
 
     if (appVersion) report.app_version = String(appVersion).slice(0, 40);
 
-    try {
-        const displayStandalone = typeof win?.matchMedia === 'function' && win.matchMedia('(display-mode: standalone)').matches;
-        report.standalone = Boolean(displayStandalone || nav?.standalone === true);
-    } catch {
-        // sin matchMedia: se omite
+    const displayMode = typeof win?.matchMedia === 'function' ? detectDisplayMode(win, nav) : null;
+    if (displayMode) {
+        report.display_mode = displayMode;
+        report.standalone = displayMode !== 'browser';
     }
+
+    const visibility = win?.document?.visibilityState;
+    if (typeof visibility === 'string') report.visible = visibility !== 'hidden';
 
     if (nav?.serviceWorker) report.sw_active = Boolean(nav.serviceWorker.controller);
 

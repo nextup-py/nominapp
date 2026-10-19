@@ -12,7 +12,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Aviso por la campanita sobre un cambio de salud de un terminal (ver
- * `TerminalHealthService`): `offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty`, `clock_skew` o `app_outdated`.
+ * `TerminalHealthService`): `offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty`, `clock_skew`, `app_outdated`, `not_installed` o `tab_hidden`.
  */
 class TerminalHealthNotification extends Notification
 {
@@ -84,6 +84,16 @@ class TerminalHealthNotification extends Notification
                 ->title('Terminal con la app desactualizada')
                 ->body("El terminal {$name} sigue con una versión anterior de la app. Enviar el comando remoto Recargar app para actualizarlo.")
                 ->icon('heroicon-o-arrow-path')
+                ->warning(),
+            'not_installed' => $notification
+                ->title('Terminal en una pestaña del navegador')
+                ->body("El terminal {$name} lleva horas abierto en una pestaña del navegador, sin instalar como app ni en modo kiosko: puede quedar oculto o suspenderse y dejar de marcar. Instalarlo como app o usar el modo kiosko (ver la guía de terminales).")
+                ->icon('heroicon-o-window')
+                ->warning(),
+            'tab_hidden' => $notification
+                ->title('Pestaña del terminal oculta')
+                ->body("La pestaña del terminal {$name} lleva horas oculta o minimizada: el navegador la frena y suelta el bloqueo de pantalla, así que el equipo puede suspenderse. Dejarlo a la vista o usar el modo kiosko.")
+                ->icon('heroicon-o-eye-slash')
                 ->warning(),
             default => $notification->title('Aviso de terminal')->body("Cambió el estado del terminal {$name}.")->icon('heroicon-o-computer-desktop'),
         };
