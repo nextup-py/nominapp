@@ -454,6 +454,47 @@ body {
 .idle-install-notice.hidden { display: none; }
 .idle-install-notice-actions { display: flex; gap: var(--sp-2); }
 
+/* Aviso de privacidad de la empresa: pie de reposo, línea al identificarse y ventana completa (ver terminal/privacy-notice.js). */
+.privacy-footer {
+    margin-top: var(--sp-3);
+    padding: var(--sp-1) var(--sp-3);
+    border: 0; background: transparent;
+    color: var(--c-subtle);
+    font: inherit; font-size: clamp(.6875rem, 1.5vw, .8125rem);
+    text-decoration: underline; text-underline-offset: 3px;
+    cursor: pointer;
+}
+.privacy-footer.hidden { display: none; }
+.privacy-ident-line {
+    margin: var(--sp-2) 0 0;
+    color: var(--c-subtle);
+    font-size: clamp(.6875rem, 1.4vw, .8125rem);
+    line-height: 1.4;
+    text-align: center;
+}
+.privacy-ident-line.hidden { display: none; }
+.privacy-modal {
+    position: fixed; inset: 0; z-index: 1100;
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--sp-4);
+}
+.privacy-modal.hidden { display: none; }
+.privacy-modal-backdrop { position: absolute; inset: 0; background: rgba(15,23,42,.72); }
+.privacy-modal-panel {
+    position: relative;
+    display: flex; flex-direction: column; gap: var(--sp-4);
+    width: min(100%, 36rem); max-height: 90vh; overflow-y: auto;
+    padding: var(--sp-6);
+    border: 1px solid var(--c-border-s); border-radius: var(--r-xl);
+    background: var(--c-surface); color: var(--c-text);
+}
+.privacy-modal-title { margin: 0; font-size: 1.125rem; font-weight: 600; }
+.privacy-modal-body { margin: 0; font-size: .9375rem; line-height: 1.55; white-space: pre-line; }
+.privacy-modal-link-row { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+.privacy-modal-qr { width: 9rem; height: 9rem; background: #fff; border-radius: var(--r-lg); padding: var(--sp-2); }
+.privacy-modal-link { color: var(--c-muted); font-size: .8125rem; overflow-wrap: anywhere; }
+.privacy-modal-qr.hidden, .privacy-modal-link.hidden { display: none; }
+
 .idle-hint {
     position: absolute;
     bottom: var(--sp-8);

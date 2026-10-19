@@ -50,6 +50,8 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 ![Detalle de una empresa](/docs-images/02-empresa-detalle.png)
 
+**Aviso de privacidad:** la sección **Aviso de privacidad** del formulario (se expande sola si ya hay uno cargado) tiene el **texto del aviso** (máximo 3000 caracteres) y, opcionalmente, el **enlace a la política completa**. Lo redacta la empresa; el sistema solo lo muestra en el terminal de asistencia (ver el capítulo *Terminales de Marcación*). Cada vez que se cambia el texto o el enlace la **versión del aviso** sube sola; se ve en la vista de la empresa. Sin texto ni enlace, el terminal no muestra ningún aviso.
+
 **Datos pendientes:** si a la empresa le falta algo que usan los PDFs o los pagos (logo, dirección o ciudad, representante legal, o una cuenta bancaria principal activa), la parte superior de la vista muestra un aviso con lo que falta. Desaparece solo al completarlo.
 
 **Desactivar o eliminar:** para dejar de usar una empresa, usar la acción **Desactivar** (en el menú de la fila del listado o en el encabezado de la vista) o desmarcar **Activa** en su edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una empresa que tenga empleados activos**: hay que desvincularlos o transferirlos a otra empresa primero, y el sistema avisa cuántos son. Los terminales de sus sucursales no se modifican al desactivarla. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.

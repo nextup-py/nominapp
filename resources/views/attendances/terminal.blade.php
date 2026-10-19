@@ -36,6 +36,14 @@
                 cambios a lectores de pantalla — este span espejo sí lo hace. --}}
                 <span id="connectivityLabelSr" class="sr-only" aria-live="polite"></span>
                 {{-- Sincronizar siempre a mano: el punto indica pendientes (ámbar) o un error (rojo). Ver terminal/sync-control.js --}}
+                {{-- Aviso de privacidad completo; solo se muestra si la empresa cargó uno --}}
+                <button type="button" id="btnPrivacyInfo" class="menu-trigger hidden" aria-haspopup="dialog" aria-controls="privacyModal" aria-label="Aviso de privacidad" title="Aviso de privacidad">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                </button>
                 <button type="button" id="btnHeaderSync" class="menu-trigger sync-trigger" aria-label="Sincronizar ahora" title="Sincronizar ahora">
                     <svg id="btnHeaderSyncIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <polyline points="23 4 23 10 17 10"/>
@@ -56,6 +64,7 @@
         </header>
 
         <x-attendance.terminal-menu-sheet />
+        <x-attendance.terminal-privacy />
 
         <div id="offlineBanner" class="offline-banner" role="alert" aria-live="assertive" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -105,6 +114,7 @@
             branch_name: @json($terminal->branch?->name),
             company_name: @json($terminal->branch?->company?->name),
             company_logo: @json($terminal->branch?->company?->logo_thumbnail),
+            privacy: @json($terminal->branch?->company?->privacyNoticePayload()),
             device_brand: @json($terminal->device_brand),
             device_model: @json($terminal->device_model),
             app_version: @json(\App\Models\Terminal::currentAppVersion()),

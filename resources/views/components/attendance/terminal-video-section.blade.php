@@ -49,6 +49,9 @@
                 </div>
             </div>
 
+            {{-- Línea breve del aviso de privacidad (ver terminal/privacy-notice.js) --}}
+            <p id="privacyIdentLine" class="privacy-ident-line hidden">Su imagen facial se usa solo para registrar asistencia. Toque ⓘ para ver el aviso de privacidad.</p>
+
             {{--
                 Aparece después de varios intentos fallidos seguidos (ver
                 CONSECUTIVE_FAILURES_FOR_MANUAL_SEARCH en terminal.js) — no reemplaza el

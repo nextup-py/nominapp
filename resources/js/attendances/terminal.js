@@ -12,6 +12,7 @@ import { createSyncControl } from './terminal/sync-control.js';
 import { initManualSearch } from './terminal/manual-search.js';
 import { createCameraControl } from './terminal/camera-control.js';
 import { createInstallNotice } from './terminal/install-notice.js';
+import { createPrivacyNotice } from './terminal/privacy-notice.js';
 import { getCameraPrefs, setCameraPrefs, listVideoInputs } from './terminal/camera-prefs.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
 import { captureInstallPrompt, triggerInstallPrompt, isDismissed, dismiss } from '../shared/install-prompt.js';
@@ -538,7 +539,28 @@ document.addEventListener('DOMContentLoaded', () => {
         onAuthError: () => showUnlinked('revoked'),
         currentVersion: window.terminalData?.app_version ?? null,
     });
-    setSyncRefreshHook(() => syncControl.refresh());
+    // Aviso de privacidad de la empresa: el caché del latido manda; al cargar sirve el dato de la página (ver terminal/privacy-notice.js)
+    const privacyNotice = createPrivacyNotice({
+        loadNotice: async () => {
+            const cached = await getMeta('privacy_notice');
+            return cached !== undefined ? cached : (window.terminalData?.privacy ?? null);
+        },
+        elements: {
+            footer: document.getElementById('privacyFooter'),
+            identLine: document.getElementById('privacyIdentLine'),
+            trigger: document.getElementById('btnPrivacyInfo'),
+            modal: document.getElementById('privacyModal'),
+            body: document.getElementById('privacyModalBody'),
+            qr: document.getElementById('privacyModalQr'),
+            link: document.getElementById('privacyModalLink'),
+            closeButtons: Array.from(document.querySelectorAll('[data-privacy-close]')),
+        },
+    });
+    privacyNotice.refresh();
+    setSyncRefreshHook(() => {
+        syncControl.refresh();
+        privacyNotice.refresh();
+    });
 
     [btnForceSync, menuSyncBtn, headerSyncBtn].forEach((btn) => {
         btn?.addEventListener('click', (event) => {
