@@ -365,8 +365,8 @@ Un terminal que figura **Desconectado** a media mañana casi siempre es un equip
 
 En las PCs de escritorio el ajuste que más pesa es el **plan de energía**:
 
-1. Abrir **Configuración → Sistema → Inicio/apagado y suspensión** (en Windows 10: *Energía y suspensión*).
-2. En **Cuando está enchufado, suspender después de**, elegir **Nunca**. El apagado de la pantalla puede quedar en unos minutos: lo importante es que el equipo no se suspenda.
+1. Abrir la configuración de energía de Windows: en Windows 11, **Configuración → Sistema → Energía y batería → Pantalla y suspensión**; en Windows 10, **Configuración → Sistema → Inicio/apagado y suspensión**.
+2. En **Con la PC enchufada, suspender después de** (Windows 10: *Cuando está enchufado, suspender después de*), elegir **Nunca**. El apagado de la pantalla puede quedar en unos minutos: lo importante es que el equipo no se suspenda.
 3. Desactivar la **hibernación** y el **inicio rápido** si el equipo se queda dormido igual (Panel de control → Opciones de energía → *Elegir el comportamiento de los botones de inicio/apagado*).
 4. Dejar el navegador del terminal **abierto y visible** (no minimizado): con la pestaña oculta el navegador suelta el bloqueo de pantalla.
 5. Verificar en el panel: el detalle del terminal debe mostrar **Pantalla encendida: Activa** y el estado **En línea** durante todo el horario de atención.

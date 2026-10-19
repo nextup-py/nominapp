@@ -184,7 +184,7 @@ export function startWakeLockKeeper({ nav = navigator, doc = document, intervalM
     if (stopWakeLockKeeper) return stopWakeLockKeeper;
 
     const tryAcquire = () => {
-        if (!wakeLock && doc.visibilityState !== 'hidden') acquireWakeLock(nav);
+        if (!wakeLock && wakeLockError !== 'unsupported' && doc.visibilityState !== 'hidden') acquireWakeLock(nav);
     };
 
     tryAcquire();

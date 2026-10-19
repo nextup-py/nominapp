@@ -187,6 +187,15 @@ describe('startWakeLockKeeper', () => {
         expect(mod.hasWakeLock()).toBe(true);
     });
 
+    it('no reintenta si el navegador no soporta la API', async () => {
+        const mod = await freshModule();
+
+        mod.startWakeLockKeeper({ nav: {}, doc: fakeDoc() });
+        await vi.advanceTimersByTimeAsync(mod.WAKE_LOCK_RETRY_MS * 3);
+
+        expect(mod.getWakeLockError()).toBe('unsupported');
+    });
+
     it('reintenta cada minuto mientras el bloqueo falla y para al conseguirlo', async () => {
         const mod = await freshModule();
         const request = vi.fn()
