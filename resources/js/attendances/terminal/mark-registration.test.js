@@ -118,7 +118,7 @@ describe('registerExitWithoutEntry', () => {
 
         await registerExitWithoutEntry({ id: 1 }, { onStatusUpdate: vi.fn(), onSuccess, onError }, { onLine: true });
 
-        expect(enqueueMark).toHaveBeenCalledWith(1, 'check_out', { optimistic: false });
+        expect(enqueueMark).toHaveBeenCalledWith(1, 'check_out', { optimistic: false, reviewOnly: true });
         expect(flushQueue).toHaveBeenCalledTimes(1);
         expect(onSuccess).toHaveBeenCalledWith({ id: 1 }, { recorded_at: '2026-10-19T20:00:00Z' }, 'check_out', { queued: false, pendingReview: true });
         expect(onError).not.toHaveBeenCalled();

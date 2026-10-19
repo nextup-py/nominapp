@@ -146,7 +146,7 @@ export async function registerExitWithoutEntry(employee, { onStatusUpdate, onSuc
     onStatusUpdate('Registrando: Salida...');
     await new Promise((r) => setTimeout(r, 700));
 
-    const { recorded_at: recordedAt } = await enqueueMark(employee.id, 'check_out', { optimistic: false });
+    const { recorded_at: recordedAt } = await enqueueMark(employee.id, 'check_out', { optimistic: false, reviewOnly: true });
 
     if (nav.onLine) {
         try {

@@ -282,7 +282,7 @@ Solo disponible cuando el fallo trae datos suficientes para reconstruir el event
 3. Agregar notas si corresponde
 4. Confirmar — el sistema crea la marcación de asistencia correspondiente y marca el fallo como **Aprobado**
 
-**Salida sin entrada.** Cuando el terminal pregunta *¿Entrada o salida?* y el empleado elige **Salida** porque olvidó marcar al llegar, el fallo muestra *Aprobar agregando la entrada del horario, o descartar*. El modal de **Aprobar** trae un campo **Entrada a agregar** con la hora de inicio de su horario de ese día (o del día anterior en un turno nocturno): corregirla si el empleado llegó a otra hora. Al confirmar se crean la **entrada** (canal **Manual**) y la **salida** (con su hora real) y la jornada queda completa. Si el empleado no tiene horario no hay hora sugerida y hay que indicarla. Estas se aprueban **una por una**: **Aprobar seleccionados** las omite porque necesitan decidir la hora de entrada.
+**Salida sin entrada.** Cuando el terminal pregunta *¿Entrada o salida?* y el empleado elige **Salida** porque olvidó marcar al llegar, el fallo muestra *Aprobar agregando la entrada del horario, o descartar*. El modal de **Aprobar** trae un campo **Entrada a agregar** con la hora de inicio de su horario de ese día (o del día anterior en un turno nocturno): corregirla si el empleado llegó a otra hora. Al confirmar se crean la **entrada** (canal **Manual**) y la **salida** (con su hora real) y la jornada queda completa. Si el empleado no tiene horario no hay hora sugerida y hay que indicarla. La campanita avisa con el título *Salida sin entrada para revisar*. Estas se aprueban **una por una**: **Aprobar seleccionados** las omite porque necesitan decidir la hora de entrada.
 
 ### Resolver varios a la vez
 

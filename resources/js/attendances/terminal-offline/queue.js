@@ -200,11 +200,13 @@ export async function getEmployeeStatus(employeeId) {
  * offline. Sin heartbeat previo el offset es 0 (no hay corrección posible).
  * @param {number} employeeId
  * @param {string} eventType
- * @param {{optimistic?: boolean}} [options] - `optimistic: false` no toca el caché de estado: para una salida de quien no
- *        tiene entrada, que el servidor va a dejar como fallo para RR.HH. y no debe cambiar lo que se ofrece después.
+ * @param {{optimistic?: boolean, reviewOnly?: boolean}} [options] - `optimistic: false` no toca el caché de estado y
+ *        `reviewOnly: true` marca la marcación como «solo para revisión» (la salida de quien no tiene entrada, que el
+ *        servidor deja como fallo para RR.HH.): al sincronizar se quita de la cola en vez de quedar como conflicto, así
+ *        el terminal no muestra para siempre «requieren revisión». Van juntas: no debe cambiar lo que se ofrece después.
  * @returns {Promise<{client_event_id: string, recorded_at: string}>}
  */
-export async function enqueueMark(employeeId, eventType, { optimistic = true } = {}) {
+export async function enqueueMark(employeeId, eventType, { optimistic = true, reviewOnly = false } = {}) {
     const clientEventId = crypto.randomUUID();
     const recordedAt = await correctedNow();
 
@@ -214,6 +216,7 @@ export async function enqueueMark(employeeId, eventType, { optimistic = true } =
         event_type: eventType,
         recorded_at: recordedAt.toISOString(),
         date: localDateString(recordedAt),
+        ...(reviewOnly ? { review_only: true } : {}),
     });
 
     if (!optimistic) {
@@ -275,11 +278,19 @@ export async function getExpectedShift(employeeId) {
  * `conflict`, que no cuenta como "pending"). Se espera (await) para que el
  * caller de flushQueue() vea siempre el caché ya corregido, pero nunca deja
  * que un fallo acá tumbe el loop de sincronización de los demás eventos.
+ * Las marcaciones «solo para revisión» (`review_only`, ver `enqueueMark()`) no se marcan como conflicto: el servidor ya
+ * las dejó como fallo para RR.HH. y conservarlas aquí solo dejaría un aviso permanente en el terminal.
  * @param {Map<string, number>} employeeIdByClientEventId
+ * @param {Set<string>} [reviewOnlyIds]
  * @returns {(clientEventId: string, message?: string) => Promise<void>}
  */
-function onQueuedEventConflict(employeeIdByClientEventId) {
+function onQueuedEventConflict(employeeIdByClientEventId, reviewOnlyIds = new Set()) {
     return async (clientEventId, message) => {
+        if (reviewOnlyIds.has(clientEventId)) {
+            await removeQueuedEvent(clientEventId);
+            return;
+        }
+
         await markQueuedEventConflict(clientEventId, message);
 
         const employeeId = employeeIdByClientEventId.get(clientEventId);
@@ -331,6 +342,7 @@ export async function flushQueue() {
         if (pending.length === 0) return { synced: 0, conflicts: 0, stillPending: 0, results: [] };
 
         const employeeIdByClientEventId = new Map(pending.map((e) => [e.client_event_id, e.employee_id]));
+        const reviewOnlyIds = new Set(pending.filter((e) => e.review_only).map((e) => e.client_event_id));
 
         try {
             const { synced, conflicts, results } = await submitInChunks(
@@ -341,7 +353,7 @@ export async function flushQueue() {
                     event_type,
                     recorded_at,
                 }))),
-                { onSynced: removeQueuedEvent, onConflict: onQueuedEventConflict(employeeIdByClientEventId) },
+                { onSynced: removeQueuedEvent, onConflict: onQueuedEventConflict(employeeIdByClientEventId, reviewOnlyIds) },
                 MAX_BATCH_SIZE,
             );
             return { synced, conflicts, stillPending: await countPendingEvents(), results };

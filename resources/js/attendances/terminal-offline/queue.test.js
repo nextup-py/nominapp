@@ -228,8 +228,17 @@ describe('enqueueMark sin estado optimista', () => {
         const result = await enqueueMark(1, 'check_out', { optimistic: false });
 
         expect(queueEvent).toHaveBeenCalledWith(expect.objectContaining({ employee_id: 1, event_type: 'check_out' }));
+        expect(queueEvent).toHaveBeenCalledWith(expect.not.objectContaining({ review_only: true }));
         expect(setEmployeeStatusCache).not.toHaveBeenCalled();
         expect(result).toHaveProperty('recorded_at');
+    });
+
+    it('con reviewOnly: true la encola marcada solo para revisión', async () => {
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        await enqueueMark(1, 'check_out', { optimistic: false, reviewOnly: true });
+
+        expect(queueEvent).toHaveBeenCalledWith(expect.objectContaining({ event_type: 'check_out', review_only: true }));
     });
 
     it('conserva la entrada esperada ya informada cuando sí refresca el caché', async () => {
@@ -273,6 +282,21 @@ describe('flushQueue', () => {
         const result = await flushQueue();
 
         expect(markQueuedEventConflict).toHaveBeenCalledWith('e1', 'Secuencia inválida');
+        expect(result.conflicts).toBe(1);
+    });
+
+    it('una marcación solo para revisión que el servidor rechaza se quita de la cola, no queda como conflicto', async () => {
+        getPendingEvents.mockResolvedValue([
+            { client_event_id: 'r1', employee_id: 7, event_type: 'check_out', recorded_at: '2026-01-01T17:00:00Z', review_only: true },
+        ]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'r1', status: 'conflict', message: 'Secuencia inválida' }]);
+        countPendingEvents.mockResolvedValue(0);
+
+        const result = await flushQueue();
+
+        expect(removeQueuedEvent).toHaveBeenCalledWith('r1');
+        expect(markQueuedEventConflict).not.toHaveBeenCalled();
+        expect(fetchEmployeeStatus).not.toHaveBeenCalled();
         expect(result.conflicts).toBe(1);
     });
 

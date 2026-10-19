@@ -44,8 +44,10 @@ class SyncConflictPendingNotification extends Notification
 
         return [
             ...FilamentNotification::make()
-                ->title('Conflicto al sincronizar una marcación offline')
-                ->body("Una marcación de {$employeeLabel} desde {$modeLabel} no se pudo aplicar al reconectarse — la secuencia ya no era válida en el servidor. Requiere revisión manual.")
+                ->title($this->failure->isMissingEntry() ? 'Salida sin entrada para revisar' : 'Conflicto al sincronizar una marcación offline')
+                ->body($this->failure->isMissingEntry()
+                    ? "{$employeeLabel} marcó su salida desde {$modeLabel} pero ese día no tiene una entrada registrada. Se aprueba agregando la entrada (por defecto, la hora de inicio de su horario)."
+                    : "Una marcación de {$employeeLabel} desde {$modeLabel} no se pudo aplicar al reconectarse — la secuencia ya no era válida en el servidor. Requiere revisión manual.")
                 ->icon('heroicon-o-exclamation-triangle')
                 ->danger()
                 ->actions([

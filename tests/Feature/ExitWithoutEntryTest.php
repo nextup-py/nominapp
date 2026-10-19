@@ -11,6 +11,7 @@ use App\Models\Schedule;
 use App\Models\ScheduleDay;
 use App\Models\Terminal;
 use App\Models\User;
+use App\Notifications\SyncConflictPendingNotification;
 use App\Services\AttendanceEventSyncService;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
@@ -236,4 +237,19 @@ it('la aprobación en bloque omite las salidas sin entrada: se aprueban una por 
 
     expect($failure->fresh()->resolution_status)->toBe('pending')
         ->and(AttendanceEvent::count())->toBe(0);
+});
+
+it('el aviso a los administradores distingue una salida sin entrada de un conflicto cualquiera', function () {
+    $employee = makeExitEmployee();
+    $missing = syncExitWithoutEntry($employee, '2026-08-19 16:59:00');
+    $admin = exitAdmin();
+
+    $data = (new SyncConflictPendingNotification($missing))->toDatabase($admin);
+
+    expect($data['title'])->toBe('Salida sin entrada para revisar')
+        ->and($data['body'])->toContain('no tiene una entrada registrada');
+
+    $other = AttendanceMarkFailure::record(['mode' => 'terminal', 'failure_type' => 'sync_conflict', 'employee_id' => $employee->id, 'attempted_event_type' => 'check_in', 'failure_message' => 'x']);
+
+    expect((new SyncConflictPendingNotification($other))->toDatabase($admin)['title'])->toBe('Conflicto al sincronizar una marcación offline');
 });
