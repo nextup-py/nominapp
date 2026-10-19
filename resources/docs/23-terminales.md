@@ -375,6 +375,37 @@ En las PCs de escritorio el ajuste que más pesa es el **plan de energía**:
 
 Si aun así el terminal se apaga de noche o fuera de horario, definir el **horario de atención** de la sucursal o el **horario de vigilancia** del terminal (ver **Monitoreo del terminal**) para que no se avise de desconexiones esperadas.
 
+### Modo kiosko en Windows (recomendado)
+
+Para una PC que se usa **solo como terminal**, lo más estable es abrirlo en **modo kiosko**: pantalla completa, sin pestañas ni barra de direcciones, con un perfil de navegador propio y arranque automático. Así nadie lo deja minimizado ni detrás de otras pestañas (con la pestaña oculta el navegador suelta el bloqueo de pantalla y la PC puede suspenderse) y el terminal no se mezcla con el uso normal del navegador.
+
+**Con el script (recomendado).** Soporte entrega el archivo `Configurar-Terminal.ps1`:
+
+1. Copiarlo a la PC del terminal (por ejemplo, al Escritorio).
+2. Clic derecho en el botón de Inicio y abrir **Windows PowerShell (Administrador)** (o **Terminal (Administrador)**). Sin permisos de administrador el script igual crea los accesos directos, pero no cambia la energía.
+3. Ejecutar el script con la **URL de acceso** del terminal (**Asistencias → Terminales**, detalle del terminal), por ejemplo:
+   `powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Desktop\Configurar-Terminal.ps1" -Url https://su-dominio/terminal/CODIGO -Launch`
+4. Permitir la cámara la primera vez que se abra el terminal.
+5. Verificar en el panel: **Pantalla encendida: Activa**, **Modo** y el estado **En línea**.
+
+El script usa Chrome (o Edge si no está Chrome), crea el acceso directo **Terminal Nominapp** en el Escritorio y en la carpeta de Inicio de Windows (arranca solo al encender la PC) y deja la energía en **nunca suspender, nunca hibernar y pantalla siempre encendida**. Opciones:
+
+| Opción | Qué hace |
+|--------|----------|
+| `-Browser Chrome` o `-Browser Edge` | Fuerza el navegador (por defecto, Chrome y, si no está, Edge) |
+| `-NoKiosk` | Abre una ventana propia, sin pestañas ni barra de direcciones, en vez de pantalla completa |
+| `-NoStartup` | No agrega el acceso directo a la carpeta de Inicio |
+| `-NoPowerSettings` | No toca el plan de energía |
+| `-Launch` | Abre el terminal al terminar |
+
+> Para cerrar el modo kiosko usar **Alt + F4**; se vuelve a abrir con el acceso directo del Escritorio. Windows no permite cambiar desde un script la hora automática, el permiso de cámara ni el inicio de sesión automático: quedan a mano.
+
+**A mano, sin script:**
+
+1. Instalar el sitio como aplicación desde el menú del navegador (en Chrome, el ícono de instalación de la barra de direcciones; en Edge, **Aplicaciones → Instalar este sitio como aplicación**; el nombre exacto varía según la versión). El detalle del terminal pasa a mostrar **Instalada como app**.
+2. Para que arranque con Windows: **Windows + R**, escribir `shell:startup` y copiar ahí el acceso directo de la aplicación.
+3. Ajustar la energía con los pasos de **PC con Windows**.
+
 ## Qué se ve en el dispositivo
 
 | Pantalla | Cuándo aparece |
