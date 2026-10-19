@@ -180,7 +180,7 @@ export async function resolveEmployeeStatus(employeeId) {
 export async function getEmployeeStatus(employeeId) {
     try {
         const status = await fetchEmployeeStatus(employeeId);
-        await setEmployeeStatusCache(employeeId, status);
+        await setEmployeeStatusCache(employeeId, { ...status, shift_date: localDateString(await correctedNow()) });
         return status;
     } catch (error) {
         console.warn(`No se pudo consultar el estado en línea del empleado ${employeeId}, usando estado local:`, error.message);
@@ -236,6 +236,7 @@ export async function enqueueMark(employeeId, eventType, { optimistic = true, re
         last_event_at: recordedAt.toISOString(),
         expected_check_in: previous?.expected_check_in ?? null,
         expected_check_out: previous?.expected_check_out ?? null,
+        shift_date: previous?.shift_date ?? null,
         allowed_events: allowedNextEventTypes(eventType, employee?.has_scheduled_break ?? true),
     });
 
@@ -249,20 +250,23 @@ export async function enqueueMark(employeeId, eventType, { optimistic = true, re
  * @returns {Promise<string|null>}
  */
 export async function getExpectedCheckOut(employeeId) {
-    const cached = await getEmployeeStatusCache(employeeId);
-    return cached?.expected_check_out ?? null;
+    return (await getExpectedShift(employeeId)).expectedCheckOut;
 }
 
 /**
  * Inicio y fin del turno de hoy ("HH:MM") que el servidor informó con el último estado del empleado. Ambos null sin
- * horario ese día o si todavía no se consultó en línea. Con ellos el terminal decide si preguntar «¿Entrada o salida?»
+ * horario ese día, si todavía no se consultó en línea o si la última consulta fue de otro día (`shift_date`): un
+ * horario viejo haría preguntar «¿Entrada o salida?» a quien sí tiene turno hoy distinto. Con ellos el terminal decide si preguntar «¿Entrada o salida?»
  * (ver terminal/missing-entry.js).
  * @param {number} employeeId
  * @returns {Promise<{expectedCheckIn: string|null, expectedCheckOut: string|null}>}
  */
 export async function getExpectedShift(employeeId) {
     const cached = await getEmployeeStatusCache(employeeId);
-    return { expectedCheckIn: cached?.expected_check_in ?? null, expectedCheckOut: cached?.expected_check_out ?? null };
+    if (!cached || cached.shift_date !== localDateString(await correctedNow())) {
+        return { expectedCheckIn: null, expectedCheckOut: null };
+    }
+    return { expectedCheckIn: cached.expected_check_in ?? null, expectedCheckOut: cached.expected_check_out ?? null };
 }
 
 /**

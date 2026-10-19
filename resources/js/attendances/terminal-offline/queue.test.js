@@ -156,9 +156,16 @@ describe('resolveEmployeeStatus con estado cacheado viejo', () => {
     });
 });
 
+const todayStamp = () => {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 describe('getExpectedCheckOut', () => {
     it('devuelve la salida esperada cacheada con el estado del empleado, o null', async () => {
-        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_out: '17:30' });
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_out: '17:30', shift_date: todayStamp() });
         expect(await getExpectedCheckOut(1)).toBe('17:30');
 
         getEmployeeStatusCache.mockResolvedValueOnce(undefined);
@@ -168,11 +175,25 @@ describe('getExpectedCheckOut', () => {
 
 describe('getExpectedShift', () => {
     it('devuelve inicio y fin del turno cacheados, o null en ambos', async () => {
-        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_in: '08:00', expected_check_out: '17:30' });
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_in: '08:00', expected_check_out: '17:30', shift_date: todayStamp() });
         expect(await getExpectedShift(1)).toEqual({ expectedCheckIn: '08:00', expectedCheckOut: '17:30' });
 
         getEmployeeStatusCache.mockResolvedValueOnce(undefined);
         expect(await getExpectedShift(1)).toEqual({ expectedCheckIn: null, expectedCheckOut: null });
+    });
+
+    it('ignora un horario cacheado de otro día o sin fecha', async () => {
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_in: '08:00', expected_check_out: '17:30', shift_date: '2000-01-01' });
+        expect(await getExpectedShift(1)).toEqual({ expectedCheckIn: null, expectedCheckOut: null });
+
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_in: '08:00', expected_check_out: '17:30' });
+        expect(await getExpectedShift(1)).toEqual({ expectedCheckIn: null, expectedCheckOut: null });
+    });
+
+    it('getEmployeeStatus sella el caché con la fecha de hoy', async () => {
+        fetchEmployeeStatus.mockResolvedValue({ last_event: null, allowed_events: ['check_in'], expected_check_in: '08:00', expected_check_out: '17:30' });
+        await getEmployeeStatus(1);
+        expect(setEmployeeStatusCache).toHaveBeenCalledWith(1, expect.objectContaining({ shift_date: todayStamp(), expected_check_in: '08:00' }));
     });
 });
 
