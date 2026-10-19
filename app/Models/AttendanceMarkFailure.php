@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\DB;
  */
 class AttendanceMarkFailure extends Model
 {
+    /** Clave de `metadata` que marca una salida enviada por quien no tiene entrada ese día (ver `isMissingEntry()`). */
+    public const META_MISSING_ENTRY = 'missing_entry';
+
     protected $fillable = [
         'mode',
         'failure_type',
@@ -330,9 +333,41 @@ class AttendanceMarkFailure extends Model
             return 'Descartado sin registrar';
         }
 
+        if ($this->isMissingEntry() && $this->canBeResolved()) {
+            return 'Aprobar agregando la entrada del horario, o descartar';
+        }
+
         return $this->canBeResolved()
             ? 'Aprobar si el empleado sí estuvo, o descartar'
             : 'Sin datos para aprobar: ver diagnóstico';
+    }
+
+    /**
+     * Indica si es la salida de un empleado que no tiene entrada ese día (el terminal le preguntó «¿Entrada o
+     * salida?» y eligió salida). Se aprueba agregando una entrada (`approve()` con `$entryAt`).
+     */
+    public function isMissingEntry(): bool
+    {
+        return ($this->metadata[self::META_MISSING_ENTRY] ?? false) === true && $this->attempted_event_type === 'check_out';
+    }
+
+    /**
+     * Entrada sugerida para aprobar una salida sin entrada: la hora de inicio del horario ese día, en la fecha de la
+     * salida o —si quedaría después de ella, como en un turno nocturno— en la del día anterior. Null sin horario.
+     */
+    public function suggestedEntryAt(): ?Carbon
+    {
+        $expected = $this->metadata['expected_check_in'] ?? null;
+        $exitAt = filled($this->metadata['recorded_at'] ?? null) ? Carbon::parse($this->metadata['recorded_at']) : $this->occurred_at;
+
+        if (! $this->isMissingEntry() || blank($expected) || ! $exitAt) {
+            return null;
+        }
+
+        $exitAt = $exitAt->copy()->timezone(config('app.timezone'));
+        $entry = $exitAt->copy()->setTimeFromTimeString($expected);
+
+        return $entry->gte($exitAt) ? $entry->subDay() : $entry;
     }
 
     /**
@@ -350,6 +385,7 @@ class AttendanceMarkFailure extends Model
         ?string $eventType = null,
         ?Carbon $recordedAt = null,
         ?string $notes = null,
+        ?Carbon $entryAt = null,
     ): array {
         if (! $this->canBeResolved()) {
             return ['success' => false, 'message' => 'Este fallo ya fue revisado o no tiene datos suficientes para reconstruir la marcación.'];
@@ -370,7 +406,46 @@ class AttendanceMarkFailure extends Model
 
         $date = $recordedAt->copy()->timezone(config('app.timezone'))->toDateString();
 
-        return DB::transaction(function () use ($employee, $eventType, $recordedAt, $date, $approvedById, $notes) {
+        if ($entryAt !== null && $entryAt->gte($recordedAt)) {
+            return ['success' => false, 'message' => 'La entrada a agregar debe ser anterior a la salida.'];
+        }
+
+        return DB::transaction(function () use ($employee, $eventType, $recordedAt, $date, $approvedById, $notes, $entryAt) {
+            if ($entryAt !== null) {
+                ['day' => $entryDay, 'last' => $entryLast, 'allowed' => $entryAllowed] = AttendanceDay::resolveForEvent(
+                    $employee,
+                    $entryAt,
+                    'check_in',
+                    lockForUpdate: true,
+                    enforceReentryGap: false,
+                );
+
+                if (! in_array('check_in', $entryAllowed, true)) {
+                    $lastLabel = $entryLast ? AttendanceEvent::getEventTypeLabel($entryLast->event_type) : 'ninguno';
+
+                    return ['success' => false, 'message' => "No se puede agregar la entrada: la secuencia de ese día no la admite (último evento registrado: {$lastLabel})."];
+                }
+
+                $entryDay ??= AttendanceDay::firstOrCreate(
+                    ['employee_id' => $employee->id, 'date' => $entryAt->copy()->timezone(config('app.timezone'))->toDateString()],
+                    ['status' => 'present']
+                );
+
+                if ($entryDay->status !== 'present') {
+                    $entryDay->update(['status' => 'present']);
+                }
+
+                $entryDay->events()->create([
+                    'event_type' => 'check_in',
+                    'recorded_at' => $entryAt,
+                    'synced_at' => null,
+                    'source' => 'manual',
+                    'location' => null,
+                    'terminal_id' => null,
+                    'branch_mismatch' => false,
+                ]);
+            }
+
             // Resuelve a qué jornada asociar el evento — la de hoy, o la de ayer si sigue
             // abierta y la transición pedida solo tiene sentido ahí (turno nocturno que
             // cruza medianoche). Ver AttendanceDay::resolveForEvent(). Sin esto, un

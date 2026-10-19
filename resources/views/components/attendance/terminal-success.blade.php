@@ -34,6 +34,11 @@
                 Guardado en el dispositivo — se sincronizará cuando haya conexión.
             </p>
 
+            {{-- Salida de quien no marcó la entrada: queda para revisión de RR.HH. (ver terminal/missing-entry.js) --}}
+            <p class="success-review-notice" id="successReviewNotice" style="display:none" role="status">
+                Hoy no tiene una entrada registrada. Su salida quedó guardada y RR.HH. la revisará.
+            </p>
+
             {{-- Recordatorio de salida: solo tras una entrada, con la hora de fin del turno informada por el servidor --}}
             <p class="success-exit-reminder" id="successExitReminder" style="display:none" role="status"></p>
 

@@ -582,15 +582,18 @@ class AttendanceCalculator
     }
 
     /**
-     * True si el turno/horario efectivo del empleado para la fecha tiene un
-     * descanso configurado (break_minutes > 0). Sin horario/rotación asignado,
-     * o con break_minutes = 0/null, no hay descanso — usado para decidir si
-     * ofrecer "Inicio de descanso" al marcar asistencia (ver
+     * True si el empleado puede marcar descanso en la fecha: su turno/horario efectivo tiene descanso configurado
+     * (break_minutes > 0) **o** no tiene turno esperado ese día (sin horario ni rotación asignada, o un día libre o
+     * inactivo), porque sin turno no hay una regla que diga que no corresponde y el descanso real descuenta horas
+     * trabajadas (`calculateBreakMinutes()`). Solo se oculta con un turno que no incluye descanso (break_minutes = 0/null).
+     * Se usa para decidir si ofrecer "Inicio de descanso" al marcar asistencia (ver
      * AttendanceDay::resolveForEvent() / currentStateFor()).
      */
     public static function hasScheduledBreak(Employee $employee, \Carbon\Carbon $date): bool
     {
-        return (int) (self::resolveShiftDataFor($employee, $date)['break_minutes'] ?? 0) > 0;
+        $shift = self::resolveShiftDataFor($employee, $date);
+
+        return $shift['check_in'] === null || (int) ($shift['break_minutes'] ?? 0) > 0;
     }
 
     /**
@@ -608,7 +611,7 @@ class AttendanceCalculator
      * (employees.schedule_id).
      *
      * @param  Collection<int, Employee>  $employees  Deben traer cargado `schedule_id` (columna por defecto de `Employee::query()->get()`).
-     * @return array<int, bool> employee_id => tiene descanso hoy
+     * @return array<int, bool> employee_id => puede marcar descanso hoy (turno con descanso o sin turno esperado)
      */
     public static function hasScheduledBreakBatch(Collection $employees, \Carbon\Carbon $date): array
     {
@@ -684,7 +687,7 @@ class AttendanceCalculator
             $override = $overrides->get($employee->id);
             if ($override) {
                 $shift = $override->shift;
-                $result[$employee->id] = $shift ? (! $shift->is_day_off && (int) $shift->break_minutes > 0) : false;
+                $result[$employee->id] = $shift ? ($shift->is_day_off || (int) $shift->break_minutes > 0) : false;
 
                 continue;
             }
@@ -694,7 +697,7 @@ class AttendanceCalculator
                 $shiftId = $assignment->shiftIdForDate($date);
                 $shift = $shiftId ? $shiftTemplates->get($shiftId) : null;
                 if ($shift) {
-                    $result[$employee->id] = ! $shift->is_day_off && (int) $shift->break_minutes > 0;
+                    $result[$employee->id] = $shift->is_day_off || (int) $shift->break_minutes > 0;
 
                     continue;
                 }
@@ -704,7 +707,7 @@ class AttendanceCalculator
                 ?? $legacySchedules->get($employee->schedule_id);
 
             if (! $schedule) {
-                $result[$employee->id] = false;
+                $result[$employee->id] = true;
 
                 continue;
             }
@@ -712,7 +715,7 @@ class AttendanceCalculator
             $scheduleDay = $schedule->days->firstWhere('day_of_week', $dayOfWeek);
             $result[$employee->id] = $scheduleDay && $scheduleDay->is_active
                 ? (int) ($scheduleDay->total_break_minutes ?? 0) > 0
-                : false;
+                : true;
         }
 
         return $result;

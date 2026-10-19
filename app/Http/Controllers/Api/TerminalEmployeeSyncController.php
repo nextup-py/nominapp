@@ -87,18 +87,23 @@ class TerminalEmployeeSyncController extends Controller
             'last_event' => $state['last']?->event_type,
             'last_event_time' => $state['last']?->recorded_at?->format('H:i'),
             'last_event_at' => $state['last']?->recorded_at?->toIso8601String(),
-            'expected_check_out' => $this->expectedCheckOut($employee, $now),
+            'expected_check_in' => $this->expectedShiftTime($employee, $now, 'check_in'),
+            'expected_check_out' => $this->expectedShiftTime($employee, $now, 'check_out'),
             'allowed_events' => $state['allowed'],
         ]);
     }
 
     /**
-     * Hora de fin del turno de hoy ("HH:MM") para el recordatorio de salida del terminal; null si no tiene horario ese día.
+     * Hora de inicio (`check_in`) o fin (`check_out`) del turno de hoy ("HH:MM"); null si no tiene horario ese día.
+     * El fin alimenta el recordatorio de salida del terminal y ambas juntas deciden cuándo preguntar «¿Entrada o
+     * salida?» a quien llega con el día vacío (ver terminal/missing-entry.js).
+     *
+     * @param  'check_in'|'check_out'  $key
      */
-    private function expectedCheckOut(Employee $employee, Carbon $now): ?string
+    private function expectedShiftTime(Employee $employee, Carbon $now, string $key): ?string
     {
-        $checkOut = AttendanceCalculator::resolveShiftDataFor($employee, $now->copy()->startOfDay())['check_out'] ?? null;
+        $time = AttendanceCalculator::resolveShiftDataFor($employee, $now->copy()->startOfDay())[$key] ?? null;
 
-        return $checkOut ? substr((string) $checkOut, 0, 5) : null;
+        return $time ? substr((string) $time, 0, 5) : null;
     }
 }

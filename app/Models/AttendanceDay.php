@@ -121,7 +121,8 @@ class AttendanceDay extends Model implements Auditable
      *
      * "Inicio de descanso" además solo se considera válido si el turno/horario
      * efectivo del empleado para el día en cuestión tiene un descanso
-     * configurado (ver `AttendanceCalculator::hasScheduledBreak()`) — "Fin de
+     * configurado o si ese día no tiene turno esperado (ver
+     * `AttendanceCalculator::hasScheduledBreak()`) — "Fin de
      * descanso" nunca se filtra así: si el empleado ya está en pausa, siempre
      * puede cerrarla.
      *
@@ -507,8 +508,8 @@ class AttendanceDay extends Model implements Auditable
     }
 
     /**
-     * Quita 'break_start' del listado de transiciones permitidas si el turno del
-     * empleado para esa fecha no tiene descanso configurado. 'break_end' nunca
+     * Quita 'break_start' del listado de transiciones permitidas si el empleado tiene un turno ese día pero sin
+     * descanso configurado. Sin turno esperado (sin horario, o un día libre) sí se permite. 'break_end' nunca
      * se filtra — si ya empezó la pausa, siempre debe poder cerrarla.
      *
      * @param  array<int, string>  $allowed

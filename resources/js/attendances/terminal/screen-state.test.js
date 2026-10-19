@@ -159,3 +159,22 @@ describe('showSuccessScreen — recordatorio de salida', () => {
         expect(dom.successExitReminder.textContent).toBe('');
     });
 });
+
+describe('showSuccessScreen — salida para revisión', () => {
+    it('muestra el aviso de revisión solo con pendingReview', () => {
+        const el = () => ({ textContent: '', style: {}, src: '', alt: '' });
+        const dom = {
+            successEmployeePhoto: el(), successEmployeeName: el(), successEmployeeCI: el(), successEventType: el(),
+            successTime: el(), successQueuedNotice: el(), successExitReminder: el(), successReviewNotice: el(), countdownEl: el(), countdownFill: el(),
+        };
+        const screens = { success: fakeScreenEl() };
+
+        showSuccessScreen(screens, dom, { first_name: 'Ana' }, {}, 'check_out', { pendingReview: true }, vi.fn());
+        expect(dom.successReviewNotice.style.display).toBe('');
+
+        showSuccessScreen(screens, dom, { first_name: 'Ana' }, {}, 'check_out', {}, vi.fn());
+        expect(dom.successReviewNotice.style.display).toBe('none');
+
+        stopCountdown();
+    });
+});

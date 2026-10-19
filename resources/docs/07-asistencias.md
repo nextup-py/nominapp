@@ -265,6 +265,7 @@ Cuando un intento de marcación (terminal o dispositivo personal) no puede compl
 | **Sin sucursal asignada / sucursal sin coordenadas** | Falta configuración de ubicación necesaria para registrar la marcación |
 | **Secuencia de evento inválida** | Se intentó, por ejemplo, marcar una salida sin una entrada previa ese día |
 | **Conflicto al sincronizar (offline)** | El dispositivo capturó el evento sin conexión, pero para cuando volvió a tener red, otra marcación ya había cambiado el estado del empleado ese día (por ejemplo, alguien cargó la marcación manualmente mientras tanto) |
+| **Salida sin entrada** | El empleado marcó su salida pero ese día no tiene entrada (olvidó marcarla al llegar). Es un conflicto de sincronización: la salida queda guardada con su hora real y se aprueba agregando la entrada (ver abajo) |
 
 ### Revisar un fallo
 
@@ -281,13 +282,15 @@ Solo disponible cuando el fallo trae datos suficientes para reconstruir el event
 3. Agregar notas si corresponde
 4. Confirmar — el sistema crea la marcación de asistencia correspondiente y marca el fallo como **Aprobado**
 
+**Salida sin entrada.** Cuando el terminal pregunta *¿Entrada o salida?* y el empleado elige **Salida** porque olvidó marcar al llegar, el fallo muestra *Aprobar agregando la entrada del horario, o descartar*. El modal de **Aprobar** trae un campo **Entrada a agregar** con la hora de inicio de su horario de ese día (o del día anterior en un turno nocturno): corregirla si el empleado llegó a otra hora. Al confirmar se crean la **entrada** (canal **Manual**) y la **salida** (con su hora real) y la jornada queda completa. Si el empleado no tiene horario no hay hora sugerida y hay que indicarla. Estas se aprueban **una por una**: **Aprobar seleccionados** las omite porque necesitan decidir la hora de entrada.
+
 ### Resolver varios a la vez
 
 ![Lista de fallos de marcación con dos filas seleccionadas](/docs-images/07-fallos-marcacion-lista.png)
 
 En la lista, marcar las casillas de los fallos y usar, en el menú **Abrir acciones**, **Aprobar seleccionados** o **Descartar seleccionados** (requiere permiso para editar fallos de marcación):
 
-- **Aprobar seleccionados** registra la marcación original de cada fallo que se pueda reconstruir, con su tipo de evento y hora originales (sin ajustes). Los ya revisados y los que no tienen datos suficientes se omiten. Si hay que corregir el tipo o la hora de uno, usar **Aprobar** en su fila.
+- **Aprobar seleccionados** registra la marcación original de cada fallo que se pueda reconstruir, con su tipo de evento y hora originales (sin ajustes). Los ya revisados, los que no tienen datos suficientes y las salidas sin entrada (se aprueban una por una) se omiten. Si hay que corregir el tipo o la hora de uno, usar **Aprobar** en su fila.
 - **Descartar seleccionados** los marca como revisados sin crear ninguna marcación; admite una nota opcional.
 
 Al terminar, una notificación indica cuántos se procesaron y cuántos se omitieron.
@@ -333,7 +336,7 @@ El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Ca
 | **Sin calcular** | Registros pendientes de cálculo (recién creados o con eventos nuevos) |
 | **Incompletos** | Registros sin horas calculadas (por ejemplo, con entrada y sin salida) |
 
-> **Sin horario ese día:** un empleado sin horario asignado puede marcar entrada y salida con normalidad, pero la jornada se calcula sin horas esperadas (sin tardanza ni extras) y no se le detectan faltas. Esas jornadas quedan marcadas con el motivo *Sin horario ese día* hasta que se le asigne un horario (y, si corresponde, se recalculen). Además, **cada día a las 08:55** la campanita avisa a quienes pueden asignar horarios cuántos empleados activos siguen sin uno (no se repite mientras el aviso anterior esté sin leer). Quien no tiene horario tampoco ve el botón de inicio de descanso, que solo aparece si su turno de ese día tiene descanso.
+> **Sin horario ese día:** un empleado sin horario asignado puede marcar entrada y salida con normalidad, pero la jornada se calcula sin horas esperadas (sin tardanza ni extras) y no se le detectan faltas. Esas jornadas quedan marcadas con el motivo *Sin horario ese día* hasta que se le asigne un horario (y, si corresponde, se recalculen). Además, **cada día a las 08:55** la campanita avisa a quienes pueden asignar horarios cuántos empleados activos siguen sin uno (no se repite mientras el aviso anterior esté sin leer). Quien no tiene horario sí puede marcar **Inicio descanso** y **Fin descanso** (el descanso real se descuenta de las horas trabajadas); el botón de inicio de descanso solo se oculta cuando el turno de ese día no tiene descanso configurado.
 
 > Una jornada ya resuelta no aparece en **Requieren atención**, y tampoco las de hace más de 30 días. Para verlas (por ejemplo, para revocar una aprobación o revisar algo antiguo) abrir **Todos** o **Incompletos**.
 

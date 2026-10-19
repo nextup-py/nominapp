@@ -66,7 +66,7 @@ function makeOfflineTestEmployee(): Employee
     return $employee->fresh();
 }
 
-function assignBreakScheduleToEmployee(Employee $employee): void
+function assignBreakScheduleToEmployee(Employee $employee, bool $withBreak = true): void
 {
     $schedule = Schedule::create(['name' => 'Horario Offline Test', 'shift_type' => 'diurno', 'description' => null]);
 
@@ -79,12 +79,14 @@ function assignBreakScheduleToEmployee(Employee $employee): void
             'end_time' => '22:00',
         ]);
 
-        ScheduleBreak::create([
-            'schedule_day_id' => $day->id,
-            'name' => 'Almuerzo',
-            'start_time' => '12:00',
-            'end_time' => '13:00',
-        ]);
+        if ($withBreak) {
+            ScheduleBreak::create([
+                'schedule_day_id' => $day->id,
+                'name' => 'Almuerzo',
+                'start_time' => '12:00',
+                'end_time' => '13:00',
+            ]);
+        }
     }
 
     ScheduleAssignmentService::assign($employee, $schedule, now()->subYear());
@@ -112,7 +114,7 @@ it('status() permite marcar salida de un turno nocturno abierto el día anterior
         ->and($response->json('last_event'))->toBe('check_in');
 });
 
-it('status() no ofrece "Inicio de descanso" sin horario asignado', function () {
+it('status() sí ofrece "Inicio de descanso" sin horario asignado (sin turno no hay regla que lo impida)', function () {
     $employee = makeOfflineTestEmployee();
     $terminal = Terminal::create(['name' => 'Terminal Status Test 2', 'branch_id' => $employee->branch_id]);
     Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
@@ -122,7 +124,7 @@ it('status() no ofrece "Inicio de descanso" sin horario asignado', function () {
     $response = $this->getJson("/api/v1/terminal/employees/{$employee->id}/status");
 
     $response->assertOk();
-    expect($response->json('allowed_events'))->not->toContain('break_start');
+    expect($response->json('allowed_events'))->toContain('break_start');
 });
 
 // ─── EmployeeDescriptorSyncService::deltaSince() — break_flags ─────────────
@@ -133,13 +135,19 @@ it('deltaSince incluye break_flags reflejando si cada empleado tiene descanso co
 
     $employeeWithoutBreak = makeOfflineTestEmployee();
     $employeeWithoutBreak->update(['branch_id' => $employeeWithBreak->branch_id]);
+    assignBreakScheduleToEmployee($employeeWithoutBreak, withBreak: false);
+
+    $employeeWithoutSchedule = makeOfflineTestEmployee();
+    $employeeWithoutSchedule->update(['branch_id' => $employeeWithBreak->branch_id]);
 
     $terminal = Terminal::create(['name' => 'Terminal Delta Test', 'branch_id' => $employeeWithBreak->branch_id]);
 
     $delta = app(EmployeeDescriptorSyncService::class)->deltaSince($terminal, null);
 
+    // Un turno sin descanso no lo ofrece; sin horario no hay turno esperado y sí se puede marcar.
     expect($delta['break_flags'][$employeeWithBreak->id])->toBeTrue()
-        ->and($delta['break_flags'][$employeeWithoutBreak->id])->toBeFalse();
+        ->and($delta['break_flags'][$employeeWithoutBreak->id])->toBeFalse()
+        ->and($delta['break_flags'][$employeeWithoutSchedule->id])->toBeTrue();
 });
 
 it('deltaSince recalcula break_flags para TODOS los empleados activos, no solo los que cambiaron desde $since', function () {
@@ -147,7 +155,8 @@ it('deltaSince recalcula break_flags para TODOS los empleados activos, no solo l
     $terminal = Terminal::create(['name' => 'Terminal Delta Test 2', 'branch_id' => $employee->branch_id]);
     $service = app(EmployeeDescriptorSyncService::class);
 
-    // Primera sync completa — el empleado todavía no tiene horario.
+    // Primera sync completa — el empleado tiene un horario sin descanso.
+    assignBreakScheduleToEmployee($employee, withBreak: false);
     $first = $service->deltaSince($terminal, null);
     expect($first['break_flags'][$employee->id])->toBeFalse();
 
@@ -174,14 +183,14 @@ it('el heartbeat móvil incluye has_scheduled_break en el payload del empleado',
     expect($response->json('employee.has_scheduled_break'))->toBeTrue();
 });
 
-it('el heartbeat móvil marca has_scheduled_break en false sin horario asignado', function () {
+it('el heartbeat móvil marca has_scheduled_break en true sin horario asignado (sin turno puede marcar descanso)', function () {
     $employee = makeOfflineTestEmployee();
     Sanctum::actingAs($employee, [Employee::MOBILE_SYNC_ABILITY]);
 
     $response = $this->postJson('/api/v1/mobile/heartbeat');
 
     $response->assertOk();
-    expect($response->json('employee.has_scheduled_break'))->toBeFalse();
+    expect($response->json('employee.has_scheduled_break'))->toBeTrue();
 });
 
 it('status() informa la hora de la última marcación y la salida esperada del turno para el recordatorio', function () {

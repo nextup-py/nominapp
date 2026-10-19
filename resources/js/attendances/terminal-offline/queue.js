@@ -200,9 +200,11 @@ export async function getEmployeeStatus(employeeId) {
  * offline. Sin heartbeat previo el offset es 0 (no hay corrección posible).
  * @param {number} employeeId
  * @param {string} eventType
+ * @param {{optimistic?: boolean}} [options] - `optimistic: false` no toca el caché de estado: para una salida de quien no
+ *        tiene entrada, que el servidor va a dejar como fallo para RR.HH. y no debe cambiar lo que se ofrece después.
  * @returns {Promise<{client_event_id: string, recorded_at: string}>}
  */
-export async function enqueueMark(employeeId, eventType) {
+export async function enqueueMark(employeeId, eventType, { optimistic = true } = {}) {
     const clientEventId = crypto.randomUUID();
     const recordedAt = await correctedNow();
 
@@ -213,6 +215,10 @@ export async function enqueueMark(employeeId, eventType) {
         recorded_at: recordedAt.toISOString(),
         date: localDateString(recordedAt),
     });
+
+    if (!optimistic) {
+        return { client_event_id: clientEventId, recorded_at: recordedAt.toISOString() };
+    }
 
     // Refresca el caché de estado de inmediato — sin esto, una vez que este
     // evento se sincroniza y se borra de outbound_events, resolveEmployeeStatus()
@@ -225,6 +231,7 @@ export async function enqueueMark(employeeId, eventType) {
         last_event: eventType,
         last_event_time: recordedAt.toTimeString().slice(0, 5),
         last_event_at: recordedAt.toISOString(),
+        expected_check_in: previous?.expected_check_in ?? null,
         expected_check_out: previous?.expected_check_out ?? null,
         allowed_events: allowedNextEventTypes(eventType, employee?.has_scheduled_break ?? true),
     });
@@ -241,6 +248,18 @@ export async function enqueueMark(employeeId, eventType) {
 export async function getExpectedCheckOut(employeeId) {
     const cached = await getEmployeeStatusCache(employeeId);
     return cached?.expected_check_out ?? null;
+}
+
+/**
+ * Inicio y fin del turno de hoy ("HH:MM") que el servidor informó con el último estado del empleado. Ambos null sin
+ * horario ese día o si todavía no se consultó en línea. Con ellos el terminal decide si preguntar «¿Entrada o salida?»
+ * (ver terminal/missing-entry.js).
+ * @param {number} employeeId
+ * @returns {Promise<{expectedCheckIn: string|null, expectedCheckOut: string|null}>}
+ */
+export async function getExpectedShift(employeeId) {
+    const cached = await getEmployeeStatusCache(employeeId);
+    return { expectedCheckIn: cached?.expected_check_in ?? null, expectedCheckOut: cached?.expected_check_out ?? null };
 }
 
 /**

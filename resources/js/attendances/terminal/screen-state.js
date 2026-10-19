@@ -47,15 +47,16 @@ export function showScreen(screens, screenName) {
 
 /**
  * @param {Record<string, HTMLElement|null>} screens
- * @param {{successEmployeePhoto?, successEmployeeName, successEmployeeCI, successEventType, successTime, successQueuedNotice?, successExitReminder?}} dom
+ * @param {{successEmployeePhoto?, successEmployeeName, successEmployeeCI, successEventType, successTime, successQueuedNotice?, successExitReminder?, successReviewNotice?}} dom
  * @param {{first_name?: string, last_name?: string, ci?: string, photo_url?: string}} employee
  * @param {{recorded_at?: string}} markData
  * @param {string} eventType
- * @param {{queued?: boolean}} opts - queued=true: la marcación se guardó localmente pero
- *        todavía no se confirmó con el servidor — se avisa sin asustar al empleado.
+ * @param {{queued?: boolean, expectedCheckOut?: string|null, pendingReview?: boolean}} opts - queued=true: la marcación se
+ *        guardó localmente pero todavía no se confirmó con el servidor — se avisa sin asustar al empleado.
+ *        pendingReview=true: es una salida sin entrada que RR.HH. tiene que revisar — se avisa en lugar de «guardado».
  * @param {() => void} onCountdownComplete
  */
-export function showSuccessScreen(screens, dom, employee, markData, eventType, { queued = false, expectedCheckOut = null } = {}, onCountdownComplete) {
+export function showSuccessScreen(screens, dom, employee, markData, eventType, { queued = false, expectedCheckOut = null, pendingReview = false } = {}, onCountdownComplete) {
     const eventTypeNames = { check_in: 'Entrada', break_start: 'Inicio descanso', break_end: 'Fin descanso', check_out: 'Salida' };
     const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
 
@@ -72,6 +73,10 @@ export function showSuccessScreen(screens, dom, employee, markData, eventType, {
 
     if (dom.successQueuedNotice) {
         dom.successQueuedNotice.style.display = queued ? '' : 'none';
+    }
+
+    if (dom.successReviewNotice) {
+        dom.successReviewNotice.style.display = pendingReview ? '' : 'none';
     }
 
     if (dom.successExitReminder) {
