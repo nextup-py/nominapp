@@ -78,8 +78,30 @@ export async function loadModels() {
     }
 }
 
-/** @returns {boolean} */
+/**
+ * Un stream sigue sirviendo mientras alguna de sus pistas de video está viva. Al suspenderse el equipo (o si el
+ * driver reinicia la cámara) las pistas pasan a `ended` y el `<video>` queda congelado en el último cuadro.
+ * @param {MediaStream|null} candidate
+ * @returns {boolean}
+ */
+export function isStreamLive(candidate) {
+    if (!candidate || candidate.active === false || typeof candidate.getVideoTracks !== 'function') return false;
+    return candidate.getVideoTracks().some((track) => track.readyState === 'live');
+}
+
+/** Suelta el stream actual (pistas incluidas) para poder abrir uno nuevo. */
+function discardStream() {
+    if (stream && typeof stream.getTracks === 'function') stream.getTracks().forEach((track) => track.stop());
+    stream = null;
+}
+
+/**
+ * ¿Hay un stream utilizable? Un stream muerto se descarta en el acto: así quien lo consulta
+ * (`startCamera`, la detección de presencia) abre uno nuevo en vez de reutilizar uno congelado.
+ * @returns {boolean}
+ */
 export function hasStream() {
+    if (stream && !isStreamLive(stream)) discardStream();
     return stream !== null;
 }
 
@@ -98,13 +120,9 @@ export function adoptStream(adoptedStream) {
  * @returns {Promise<{ok: boolean, message?: string}>}
  */
 export async function startCamera(videoEl, overlayEl) {
-    if (stream) return { ok: true };
+    if (hasStream()) return { ok: true };
     try {
-        stream = await openCameraStream();
-        videoEl.srcObject = stream;
-        await new Promise((resolve) => { videoEl.onloadedmetadata = resolve; });
-        overlayEl.width = videoEl.videoWidth;
-        overlayEl.height = videoEl.videoHeight;
+        await attachNewStream(videoEl, overlayEl);
         return { ok: true };
     } catch (error) {
         console.error('Error al iniciar cámara:', error);
@@ -114,6 +132,50 @@ export async function startCamera(videoEl, overlayEl) {
         else if (error.name === 'NotReadableError') message += 'La cámara está siendo usada por otra aplicación.';
         else message += 'Error desconocido: ' + error.message;
         return { ok: false, message };
+    }
+}
+
+/**
+ * Abre la cámara y la conecta al `<video>`; ajusta el overlay al tamaño real del video.
+ * @param {HTMLVideoElement} videoEl
+ * @param {HTMLCanvasElement} [overlayEl]
+ */
+async function attachNewStream(videoEl, overlayEl) {
+    stream = await openCameraStream();
+    videoEl.srcObject = stream;
+    await new Promise((resolve) => { videoEl.onloadedmetadata = resolve; });
+    if (overlayEl) {
+        overlayEl.width = videoEl.videoWidth;
+        overlayEl.height = videoEl.videoHeight;
+    }
+}
+
+/** Separación mínima entre dos intentos de reabrir una cámara que se cortó (evita martillar `getUserMedia`). */
+export const CAMERA_RECOVERY_RETRY_MS = 5000;
+let recovering = false;
+let nextRecoveryAt = 0;
+
+/**
+ * Si la cámara se cortó (suspensión del equipo, driver reiniciado) la reabre sola. Devuelve `true` cuando el
+ * stream está vivo y se puede detectar; `false` si no lo está (se reintenta en el siguiente ciclo).
+ * @param {HTMLVideoElement} videoEl
+ * @param {HTMLCanvasElement} [overlayEl]
+ * @returns {Promise<boolean>}
+ */
+export async function ensureLiveStream(videoEl, overlayEl) {
+    if (hasStream()) return true;
+    if (recovering || Date.now() < nextRecoveryAt) return false;
+
+    recovering = true;
+    try {
+        await attachNewStream(videoEl, overlayEl);
+        return true;
+    } catch (error) {
+        console.warn('No se pudo reabrir la cámara:', error);
+        nextRecoveryAt = Date.now() + CAMERA_RECOVERY_RETRY_MS;
+        return false;
+    } finally {
+        recovering = false;
     }
 }
 
@@ -152,7 +214,9 @@ async function drawLoopTick(videoEl, overlayEl, ctx, callbacks) {
     if (!drawLoopActive) return;
 
     try {
-        if (videoEl.readyState >= 2 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+        if (!(await ensureLiveStream(videoEl, overlayEl))) {
+            ctx.clearRect(0, 0, overlayEl.width, overlayEl.height);
+        } else if (videoEl.readyState >= 2 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
             const detection = await faceapi.detectSingleFace(videoEl, getLightOptions());
             ctx.clearRect(0, 0, overlayEl.width, overlayEl.height);
 
