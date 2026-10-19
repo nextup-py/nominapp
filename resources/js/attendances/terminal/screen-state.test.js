@@ -169,11 +169,17 @@ describe('showSuccessScreen — salida para revisión', () => {
         };
         const screens = { success: fakeScreenEl() };
 
+        dom.successTitle = el();
+
         showSuccessScreen(screens, dom, { first_name: 'Ana' }, {}, 'check_out', { pendingReview: true }, vi.fn());
         expect(dom.successReviewNotice.style.display).toBe('');
+        expect(dom.successTitle.textContent).toBe('Salida enviada a revisión');
+        expect(screens.success.classList.contains('is-review')).toBe(true);
 
         showSuccessScreen(screens, dom, { first_name: 'Ana' }, {}, 'check_out', {}, vi.fn());
         expect(dom.successReviewNotice.style.display).toBe('none');
+        expect(dom.successTitle.textContent).toBe('Marcación registrada');
+        expect(screens.success.classList.contains('is-review')).toBe(false);
 
         stopCountdown();
     });

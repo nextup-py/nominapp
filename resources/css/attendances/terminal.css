@@ -1418,6 +1418,13 @@ body {
 
 /* Contraste: el fondo de toda la pantalla confirma el resultado. */
 #successScreen { background: var(--c-success-bg); }
+
+/* Salida sin entrada: queda guardada para revisión de RR.HH., no es una marcación normal (ver terminal/screen-state.js). */
+#successScreen.is-review { background: var(--c-warning-bg); }
+#successScreen.is-review .result-card--success { border-top-color: var(--c-warning); }
+#successScreen.is-review .result-icon--success { background: var(--c-warning-bg); border-color: var(--c-warning-ring); }
+#successScreen.is-review .result-icon--success svg { stroke: var(--c-warning); }
+#successScreen.is-review .success-title { color: var(--c-warning); }
 #errorScreen   { background: var(--c-danger-bg); }
 #dayCompleteScreen { background: var(--c-info-bg); }
 .identification-frame:has(.video-wrapper--success) .identification-status,

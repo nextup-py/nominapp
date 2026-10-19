@@ -47,7 +47,7 @@ export function showScreen(screens, screenName) {
 
 /**
  * @param {Record<string, HTMLElement|null>} screens
- * @param {{successEmployeePhoto?, successEmployeeName, successEmployeeCI, successEventType, successTime, successQueuedNotice?, successExitReminder?, successReviewNotice?}} dom
+ * @param {{successEmployeePhoto?, successEmployeeName, successEmployeeCI, successEventType, successTime, successQueuedNotice?, successExitReminder?, successReviewNotice?, successTitle?}} dom
  * @param {{first_name?: string, last_name?: string, ci?: string, photo_url?: string}} employee
  * @param {{recorded_at?: string}} markData
  * @param {string} eventType
@@ -78,6 +78,12 @@ export function showSuccessScreen(screens, dom, employee, markData, eventType, {
     if (dom.successReviewNotice) {
         dom.successReviewNotice.style.display = pendingReview ? '' : 'none';
     }
+
+    if (dom.successTitle) {
+        dom.successTitle.textContent = pendingReview ? 'Salida enviada a revisión' : 'Marcación registrada';
+    }
+    if (pendingReview) screens.success?.classList.add('is-review');
+    else screens.success?.classList.remove('is-review');
 
     if (dom.successExitReminder) {
         const showReminder = eventType === 'check_in' && Boolean(expectedCheckOut);

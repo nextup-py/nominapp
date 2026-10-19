@@ -9,7 +9,7 @@
                 </svg>
             </div>
 
-            <h1 class="result-headline success-title">Marcación registrada</h1>
+            <h1 class="result-headline success-title" id="successTitle">Marcación registrada</h1>
 
             <div class="employee-photo-wrap">
                 <img id="successEmployeePhoto" class="employee-photo" src="" alt="" aria-hidden="true">
