@@ -836,7 +836,7 @@ class TerminalResource extends Resource
     {
         return match ($record->device_report['wake_lock'] ?? null) {
             true => 'Activa',
-            false => 'Inactiva: la tablet puede dormirse y dejar de marcar',
+            false => 'Inactiva: el equipo puede dormirse y dejar de marcar'.($record->wakeLockErrorLabel() ? " (motivo: {$record->wakeLockErrorLabel()})" : ''),
             default => null,
         };
     }

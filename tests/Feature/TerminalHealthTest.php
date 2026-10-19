@@ -649,6 +649,30 @@ it('el detalle muestra el estado del dispositivo informado, con avisos de versi�
         ->assertSee('Siempre (24/7)');
 });
 
+it('el detalle y las pistas de desconexión explican por qué no se logró mantener la pantalla encendida', function () {
+    $this->actingAs(healthSuperAdmin());
+    $terminal = makeHealthTerminal([
+        'last_heartbeat_at' => now()->subMinute(),
+        'device_report' => ['wake_lock' => false, 'wake_lock_error' => 'NotAllowedError'],
+        'device_report_at' => now()->subMinute(),
+    ]);
+
+    Livewire::test(ViewTerminal::class, ['record' => $terminal->getKey()])
+        ->assertSee('Inactiva')
+        ->assertSee('el navegador no lo concedió');
+
+    expect(implode(' ', $terminal->offlineHints()))->toContain('Motivo: el navegador no lo concedió');
+});
+
+it('un motivo de Wake Lock desconocido se muestra tal cual y sin motivo no se agrega nada', function () {
+    $unknown = makeHealthTerminal(['device_report' => ['wake_lock' => false, 'wake_lock_error' => 'RareError']]);
+    $none = makeHealthTerminal(['device_report' => ['wake_lock' => false]]);
+
+    expect($unknown->wakeLockErrorLabel())->toBe('el navegador informó «RareError»')
+        ->and($none->wakeLockErrorLabel())->toBeNull()
+        ->and(implode(' ', $none->offlineHints()))->not->toContain('Motivo:');
+});
+
 it('sin reporte del dispositivo el detalle no muestra la sección de estado', function () {
     $this->actingAs(healthSuperAdmin());
     $terminal = makeHealthTerminal();
