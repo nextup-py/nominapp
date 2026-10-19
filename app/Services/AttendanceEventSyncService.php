@@ -205,8 +205,9 @@ class AttendanceEventSyncService
             $staleOpen = AttendanceDay::staleOpenDayConflictInfo($employee, $recordedAt);
 
             // Salida de quien no marcó la entrada (el terminal pregunta «¿Entrada o salida?» y eligió salida): se
-            // guarda con la hora de entrada del horario para que RR.HH. la apruebe agregando esa entrada.
-            $missingEntry = $eventData['event_type'] === 'check_out' && $last === null;
+            // guarda con la hora de entrada del horario para que RR.HH. la apruebe agregando esa entrada. Si en cambio
+            // hay una jornada vieja abierta, es una salida huérfana y se resuelve corrigiendo esa jornada.
+            $missingEntry = $eventData['event_type'] === 'check_out' && $last === null && $staleOpen['metadata'] === [];
             $expectedCheckIn = $missingEntry
                 ? (AttendanceCalculator::resolveShiftDataFor($employee, $recordedAt->copy()->startOfDay())['check_in'] ?? null)
                 : null;

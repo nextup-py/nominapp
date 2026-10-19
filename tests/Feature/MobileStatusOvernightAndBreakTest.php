@@ -108,7 +108,7 @@ it('status móvil permite marcar salida de un turno nocturno abierto el día ant
         ->and($response->json('today_events.0.event_type'))->toBe('check_in');
 });
 
-it('status móvil no ofrece "Inicio de descanso" sin horario asignado', function () {
+it('status móvil sí ofrece "Inicio de descanso" sin horario asignado (sin turno no hay regla que lo impida)', function () {
     $employee = makeStatusTestEmployee();
 
     expect(markAttendanceEvent($employee, 'check_in')['ok'])->toBeTrue();
@@ -117,7 +117,7 @@ it('status móvil no ofrece "Inicio de descanso" sin horario asignado', function
     $response = $this->getJson('/api/v1/mobile/status');
 
     $response->assertOk();
-    expect($response->json('allowed_events'))->not->toContain('break_start');
+    expect($response->json('allowed_events'))->toContain('break_start');
 });
 
 it('status móvil ofrece "Inicio de descanso" con horario que lo contempla', function () {
