@@ -692,9 +692,11 @@ body {
 .video-wrapper--success     .terminal-scan-corner { border-color: var(--c-success); }
 .video-wrapper--error       .terminal-scan-corner { border-color: var(--c-danger); }
 
+/* `contain`, no `cover`: la detección corre sobre la imagen completa de la cámara; si el marco recortara
+   (monitor ancho y bajo) la persona vería menos de lo que se detecta, se alejaría para "encajar" y perdería luz. */
 #terminalVideo {
     width: 100%; height: 100%;
-    object-fit: cover; display: block;
+    object-fit: contain; display: block;
 }
 #terminalOverlay {
     position: absolute; inset: 0;
