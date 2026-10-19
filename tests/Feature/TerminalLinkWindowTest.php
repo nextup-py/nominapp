@@ -430,7 +430,7 @@ it('el detalle de cada evento se arma legible y todo tipo de evento emitido tien
         ->and($closed->detail)->toBe('Motivo: venció sin usarse')
         ->and($bare->detail)->toBeNull();
 
-    $emitted = ['pairing_requested', 'pairing_approved', 'pairing_auto_approved', 'pairing_denied', 'pairing_claimed', 'link_window_opened', 'link_window_closed', 'setup_link_generated', 'linked', 'revoked', 'health_offline', 'health_recovered', 'health_unlinked', 'health_queue_stuck', 'health_queue_recovered', 'health_battery_low', 'health_battery_ok', 'health_no_enrolled', 'health_enrolled_ok', 'health_cache_empty', 'health_cache_ok', 'health_clock_skew', 'health_clock_ok', 'health_app_outdated', 'health_app_ok', 'monitoring_configured', 'command_sent', 'command_done', 'command_failed', 'command_expired'];
+    $emitted = ['pairing_requested', 'pairing_approved', 'pairing_auto_approved', 'pairing_denied', 'pairing_claimed', 'link_window_opened', 'link_window_closed', 'setup_link_generated', 'linked', 'revoked', 'health_offline', 'health_recovered', 'health_unlinked', 'health_queue_stuck', 'health_queue_recovered', 'health_battery_low', 'health_battery_ok', 'health_no_enrolled', 'health_enrolled_ok', 'health_cache_empty', 'health_cache_ok', 'health_clock_skew', 'health_clock_ok', 'health_app_outdated', 'health_app_ok', 'health_not_installed', 'health_installed_ok', 'health_tab_hidden', 'health_tab_ok', 'monitoring_configured', 'command_sent', 'command_done', 'command_failed', 'command_expired'];
     expect(array_keys(TerminalEvent::getTypeLabels()))->toEqualCanonicalizing($emitted)
         ->and(array_keys(TerminalEvent::getTypeColors()))->toEqualCanonicalizing($emitted);
 });

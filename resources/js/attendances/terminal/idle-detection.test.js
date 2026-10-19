@@ -172,6 +172,57 @@ describe('acquireWakeLock', () => {
     });
 });
 
+describe('getWakeLockReport', () => {
+    it('con el bloqueo activo informa true, sin motivo', async () => {
+        const mod = await freshModule();
+        await mod.acquireWakeLock(fakeWakeLockNav().nav);
+
+        expect(mod.getWakeLockReport(fakeDoc())).toEqual({ active: true, error: null });
+    });
+
+    it('mientras la solicitud está en curso no se sabe todavía (null), no «inactivo»', async () => {
+        const mod = await freshModule();
+        let resolve;
+        const pending = new Promise((r) => { resolve = r; });
+        const { nav } = fakeWakeLockNav(vi.fn(() => pending));
+
+        const request = mod.acquireWakeLock(nav);
+
+        expect(mod.getWakeLockReport(fakeDoc())).toEqual({ active: null, error: null });
+
+        resolve({ addEventListener: vi.fn() });
+        await request;
+        expect(mod.getWakeLockReport(fakeDoc()).active).toBe(true);
+    });
+
+    it('sin haberlo pedido nunca tampoco se sabe', async () => {
+        const mod = await freshModule();
+
+        expect(mod.getWakeLockReport(fakeDoc())).toEqual({ active: null, error: null });
+    });
+
+    it('con la pestaña oculta informa inactivo por «hidden» (el navegador suelta el bloqueo)', async () => {
+        const mod = await freshModule();
+
+        expect(mod.getWakeLockReport(fakeDoc('hidden'))).toEqual({ active: false, error: 'hidden' });
+    });
+
+    it('si el navegador lo rechazó con la pestaña visible informa el motivo', async () => {
+        const mod = await freshModule();
+        const error = Object.assign(new Error('x'), { name: 'NotAllowedError' });
+        await mod.acquireWakeLock(fakeWakeLockNav(vi.fn().mockRejectedValue(error)).nav);
+
+        expect(mod.getWakeLockReport(fakeDoc())).toEqual({ active: false, error: 'NotAllowedError' });
+    });
+
+    it('un navegador sin la API informa «unsupported»', async () => {
+        const mod = await freshModule();
+        await mod.acquireWakeLock({});
+
+        expect(mod.getWakeLockReport(fakeDoc())).toEqual({ active: false, error: 'unsupported' });
+    });
+});
+
 describe('startWakeLockKeeper', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());

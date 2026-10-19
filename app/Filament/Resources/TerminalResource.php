@@ -544,6 +544,15 @@ class TerminalResource extends Resource
                     ->formatStateUsing(fn (string $state) => Terminal::getConnectivityStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state) => Terminal::getConnectivityStatusColors()[$state] ?? 'gray'),
 
+                TextColumn::make('display_kind')
+                    ->label('Modo')
+                    ->badge()
+                    ->getStateUsing(fn (Terminal $record) => $record->displayKind())
+                    ->formatStateUsing(fn (?string $state) => Terminal::getDisplayKindLabels()[$state] ?? $state)
+                    ->color(fn (?string $state) => Terminal::getDisplayKindColors()[$state] ?? 'gray')
+                    ->placeholder('Sin dato')
+                    ->tooltip('App o kiosko: ventana propia (app instalada o pantalla completa). Pestaña: abierto en una pestaña del navegador, que puede quedar oculta y dejar que el equipo se suspenda. Según el último reporte del terminal'),
+
                 TextColumn::make('link_window')
                     ->label('Ventana de vinculación')
                     ->badge()
@@ -627,6 +636,14 @@ class TerminalResource extends Resource
                             default => $query,
                         };
                     }),
+
+                SelectFilter::make('display_kind')
+                    ->label('Modo de ejecución')
+                    ->options(Terminal::getDisplayKindLabels())
+                    ->native(false)
+                    ->query(fn (Builder $query, array $data) => filled($data['value'] ?? null)
+                        ? $query->whereIn('terminals.id', Terminal::idsByDisplayKind($data['value']))
+                        : $query),
 
                 Filter::make('link_window_open')
                     ->label('Ventana de vinculación abierta')
@@ -793,16 +810,21 @@ class TerminalResource extends Resource
         return $version === null ? null : $version.($record->isAppOutdated() ? ' — desactualizada, recargar el terminal' : ' — al día');
     }
 
-    /** Si el terminal corre instalado como app o en una pestaña del navegador, y si el service worker está activo. */
+    /** Cómo corre el terminal (app instalada, pantalla completa o pestaña del navegador), si la pestaña está oculta y si hay service worker. */
     public static function describeInstallMode(Terminal $record): ?string
     {
         $report = $record->device_report ?? [];
+        $kind = $record->displayKind();
 
-        if (! array_key_exists('standalone', $report)) {
+        if ($kind === null) {
             return null;
         }
 
-        $mode = $report['standalone'] ? 'Instalada como app' : 'En el navegador (sin instalar)';
+        $mode = Terminal::getDisplayModeLabels()[$report['display_mode'] ?? ''] ?? ($kind === 'app' ? 'Instalada como app' : 'En el navegador (sin instalar)');
+
+        if ($record->reportedHidden()) {
+            $mode .= ' · pestaña oculta';
+        }
 
         return ($report['sw_active'] ?? true) ? $mode : $mode.' · sin service worker (no funciona offline)';
     }

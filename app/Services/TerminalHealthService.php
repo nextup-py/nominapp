@@ -35,6 +35,9 @@ class TerminalHealthService
     /** Minutos con la versión de la app desactualizada (terminal en línea) antes de avisar. */
     public const APP_OUTDATED_ALERT_MINUTES = 120;
 
+    /** Minutos seguidos en una pestaña del navegador o con la pestaña oculta (terminal en línea y en su horario) antes de avisar. */
+    public const DISPLAY_ALERT_MINUTES = 120;
+
     /** Reportes seguidos con el reloj desfasado antes de avisar (evita avisar por un reporte suelto). */
     private const CLOCK_SKEW_CONSECUTIVE_REPORTS = 3;
 
@@ -51,7 +54,7 @@ class TerminalHealthService
     /**
      * Evalúa un terminal, actualiza su estado guardado y dispara los avisos de las transiciones.
      *
-     * @return array<int, string> Tipos de aviso emitidos (`offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty`, `clock_skew`, `app_outdated`).
+     * @return array<int, string> Tipos de aviso emitidos (`offline`, `recovered`, `unlinked`, `queue_stuck`, `battery_low`, `no_enrolled`, `cache_empty`, `clock_skew`, `app_outdated`, `not_installed`, `tab_hidden`).
      */
     public function evaluate(Terminal $terminal): array
     {
@@ -80,6 +83,10 @@ class TerminalHealthService
             'clock_report_at' => $previous['clock_report_at'] ?? null,
             'app_outdated' => (bool) ($previous['app_outdated'] ?? false),
             'app_outdated_since' => $previous['app_outdated_since'] ?? null,
+            'not_installed' => (bool) ($previous['not_installed'] ?? false),
+            'not_installed_since' => $previous['not_installed_since'] ?? null,
+            'tab_hidden' => (bool) ($previous['tab_hidden'] ?? false),
+            'tab_hidden_since' => $previous['tab_hidden_since'] ?? null,
         ];
 
         $alerts = [];
@@ -98,6 +105,7 @@ class TerminalHealthService
                 ...$this->evaluateEnrollment($terminal, $connectivity, $snapshot),
                 ...$this->evaluateClock($terminal, $snapshot),
                 ...$this->evaluateAppVersion($terminal, $connectivity, $snapshot),
+                ...$this->evaluateDisplay($terminal, $connectivity, $snapshot),
             ];
         }
 
@@ -365,6 +373,55 @@ class TerminalHealthService
         }
 
         return [];
+    }
+
+    /**
+     * Cómo corre el terminal: en una pestaña del navegador (`not_installed`) o con la pestaña oculta (`tab_hidden`)
+     * durante más de `DISPLAY_ALERT_MINUTES` seguidos, con el terminal en línea, reporte fresco y dentro de su
+     * horario de vigilancia. Lo que el reporte no informa (null) no cambia el estado.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function evaluateDisplay(Terminal $terminal, string $connectivity, array &$snapshot): array
+    {
+        if ($connectivity !== 'online' || ! $terminal->hasFreshDeviceReport() || ! $terminal->isWithinWatchWindow()) {
+            return [];
+        }
+
+        $kind = $terminal->displayKind();
+        $conditions = [
+            'not_installed' => [$kind === null ? null : $kind === 'browser', 'health_not_installed', 'health_installed_ok'],
+            'tab_hidden' => [$terminal->reportedHidden(), 'health_tab_hidden', 'health_tab_ok'],
+        ];
+
+        $alerts = [];
+
+        foreach ($conditions as $alert => [$active, $raisedEvent, $okEvent]) {
+            if ($active === null) {
+                continue;
+            }
+
+            if ($active) {
+                $snapshot["{$alert}_since"] ??= now()->toIso8601String();
+
+                if (! $snapshot[$alert] && Carbon::parse($snapshot["{$alert}_since"])->lte(now()->subMinutes(self::DISPLAY_ALERT_MINUTES))) {
+                    $snapshot[$alert] = true;
+                    $alerts[] = $this->raise($terminal, $alert, $raisedEvent, ['mode' => $terminal->device_report['display_mode'] ?? null]);
+                }
+
+                continue;
+            }
+
+            $snapshot["{$alert}_since"] = null;
+
+            if ($snapshot[$alert]) {
+                $snapshot[$alert] = false;
+                $this->record($terminal, $okEvent);
+            }
+        }
+
+        return $alerts;
     }
 
     /**

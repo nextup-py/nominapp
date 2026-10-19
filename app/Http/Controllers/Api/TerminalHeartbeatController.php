@@ -50,6 +50,7 @@ class TerminalHeartbeatController extends Controller
     private const DEVICE_REPORT_KEYS = [
         'app_version', 'standalone', 'sw_active', 'battery_level', 'battery_charging',
         'camera', 'cached_employees', 'clock_skew_seconds', 'storage_used_mb', 'storage_quota_mb', 'wake_lock', 'wake_lock_error',
+        'display_mode', 'visible',
     ];
 
     public function store(Request $request, GeneralSettings $settings): JsonResponse
@@ -64,6 +65,8 @@ class TerminalHeartbeatController extends Controller
             'device' => ['nullable', 'array'],
             'device.app_version' => ['nullable', 'string', 'max:40'],
             'device.standalone' => ['nullable', 'boolean'],
+            'device.display_mode' => ['nullable', 'string', 'in:browser,standalone,fullscreen,minimal-ui,window-controls-overlay'],
+            'device.visible' => ['nullable', 'boolean'],
             'device.sw_active' => ['nullable', 'boolean'],
             'device.battery_level' => ['nullable', 'integer', 'between:0,100'],
             'device.battery_charging' => ['nullable', 'boolean'],

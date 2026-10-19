@@ -129,7 +129,7 @@ export function setAppVersionHandler(handler) {
 /**
  * Registra cómo saber si la pantalla se mantiene encendida (Wake Lock) y, si no, por qué, para incluirlo en el
  * reporte del dispositivo.
- * @param {(() => boolean)|null} probe
+ * @param {(() => boolean|null)|null} probe - `null` = todavía no se sabe.
  * @param {(() => string|null)|null} [errorProbe] - motivo del último intento fallido.
  */
 export function setWakeLockProbe(probe, errorProbe = null) {
@@ -146,6 +146,16 @@ export function queueCommandAck(ack) {
 }
 
 /**
+ * Estado del Wake Lock para el reporte: `true`/`false` si se sabe, `null` si no (solicitud en curso o sin sonda).
+ * @returns {boolean|null}
+ */
+function readWakeLock() {
+    const value = wakeLockProbe ? wakeLockProbe() : null;
+
+    return typeof value === 'boolean' ? value : null;
+}
+
+/**
  * Reporte de estado del dispositivo para el heartbeat. Un fallo al recolectarlo
  * nunca debe impedir el heartbeat: en ese caso viaja vacío.
  * @returns {Promise<Record<string, string|number|boolean>>}
@@ -156,7 +166,7 @@ async function buildDeviceReport() {
             appVersion: globalThis.window?.terminalData?.app_version ?? null,
             cachedEmployees: await countCachedEmployees(),
             clockOffsetMs: (await getMeta('server_clock_offset_ms')) ?? null,
-            wakeLock: wakeLockProbe ? Boolean(wakeLockProbe()) : null,
+            wakeLock: readWakeLock(),
             wakeLockError: wakeLockErrorProbe ? wakeLockErrorProbe() : null,
         });
     } catch {

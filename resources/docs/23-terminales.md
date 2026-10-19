@@ -219,11 +219,11 @@ El detalle incluye la sección **Estado del dispositivo** con lo que el terminal
 | Dato | Qué indica |
 |------|------------|
 | **Versión de la app** | Si el terminal corre la versión actual (*al día*) o una vieja (*desactualizada, recargar el terminal*). Con una versión vieja, el terminal en línea se recarga solo en cuanto queda en reposo (sin marcaciones en curso), sin esperar el comando **Recargar app** |
-| **Modo** | Si está **instalado como app** o abierto en una pestaña del navegador, y si el service worker está activo (sin él no funciona sin conexión) |
+| **Modo** | Cómo corre: **Instalada como app**, **Pantalla completa (modo kiosko)** o **En el navegador (sin instalar)**, o sea en una pestaña. Si la pestaña estaba oculta o minimizada se agrega *· pestaña oculta*. También indica si el service worker está activo (sin él no funciona sin conexión) |
 | **Batería** | Nivel y si está cargando. Solo la informan algunos navegadores (Chrome en Android, por ejemplo); iPhone y iPad no |
 | **Cámara** | **Permitida**, **Bloqueada** (el terminal no puede identificar) o **Sin decidir** (falta aceptar el permiso) |
 | **Empleados en caché** | Cuántos rostros tiene descargados para identificar sin conexión |
-| **Pantalla encendida** | **Activa** si el terminal logró mantener la pantalla encendida; **Inactiva** si no (el equipo puede dormirse y dejar de marcar: revisar el ahorro de batería y el plan de energía). Cuando está inactiva se indica el **motivo** que informó el navegador: *no lo concedió* (ahorro de energía, pestaña oculta o falta una interacción), *no lo permite* (navegador sin soporte) o *lo interrumpió*. El terminal lo reintenta solo cada minuto |
+| **Pantalla encendida** | **Activa** si el terminal logró mantener la pantalla encendida; **Inactiva** si no (el equipo puede dormirse y dejar de marcar: revisar el ahorro de batería y el plan de energía). Cuando está inactiva se indica el **motivo** que informó el navegador: *no lo concedió* (ahorro de energía, pestaña oculta o falta una interacción), *no lo permite* (navegador sin soporte) o *lo interrumpió*; y *la pestaña del terminal está oculta o minimizada* cuando el navegador lo suelta por eso. Mientras el navegador todavía lo está concediendo (los primeros segundos tras cargar) no se informa nada en vez de mostrar «Inactiva». El terminal lo reintenta solo cada minuto |
 | **Desfase de reloj** | Diferencia entre el reloj del dispositivo y el del servidor; se advierte si pasa de un minuto |
 | **Almacenamiento** | Espacio usado del navegador en el dispositivo |
 
@@ -261,6 +261,8 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Caché de empleados vacía** / **normalizada** | El terminal en línea reportó 0 empleados en caché habiendo empleados enrolados, o volvió a tenerlos |
 | **Reloj desajustado** / **normalizado** | El reloj del dispositivo pasó (o dejó de pasar) el desfase tolerado |
 | **App desactualizada** / **actualizada** | El terminal en línea siguió con una versión anterior de la app durante más de 2 horas (o ya se actualizó) |
+| **Abierto en una pestaña** / **Ya no corre en una pestaña** | El terminal en línea, dentro de su horario de vigilancia, siguió más de 2 horas en una pestaña del navegador (o pasó a una app o pantalla completa) |
+| **Pestaña oculta** / **Pestaña visible** | La pestaña del terminal siguió más de 2 horas oculta o minimizada (o volvió a verse) |
 | **Monitoreo configurado** | Un usuario cambió el umbral u horario de vigilancia con la acción masiva |
 | **Comando enviado** / **ejecutado** / **falló** / **vencido** | Ciclo de un comando remoto (ver [Comandos remotos](#comandos-remotos)) |
 
@@ -282,6 +284,8 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 | **Terminal sin empleados en caché** | El terminal está en línea pero reporta 0 empleados en su caché, aunque su sucursal tiene empleados enrolados. Enviar el comando remoto **Limpiar caché** o **Recargar app** |
 | **Terminal con la app desactualizada** | El terminal está en línea pero sigue con una versión anterior de la app más de 2 horas después de reportarla así. Enviar el comando remoto **Recargar app** |
 | **Reloj del terminal desajustado** | El reloj del dispositivo difiere del servidor por más del valor tolerado en tres reportes seguidos. Activar la fecha y hora automáticas del dispositivo |
+| **Terminal en una pestaña del navegador** | El terminal en línea, dentro de su horario de vigilancia, lleva más de 2 horas abierto en una pestaña del navegador, sin instalar como app ni en modo kiosko: puede quedar oculto o suspenderse. Instalarlo o usar el modo kiosko (ver **Modo kiosko en Windows**) |
+| **Pestaña del terminal oculta** | La pestaña del terminal lleva más de 2 horas oculta o minimizada: el navegador la frena y suelta el bloqueo de pantalla. Dejarlo a la vista o usar el modo kiosko |
 
 Los umbrales de la cola atascada, la batería baja y el desfase de reloj tolerado se editan en **Configuración General → Terminales de Marcación**. Los terminales **inactivos** no se evalúan, y al aplicar esta función por primera vez el sistema solo toma una foto del estado actual, sin avisar de lo que ya estaba así. Que la cola se normalice o que la batería se recupere queda en la **Bitácora**, sin notificación.
 
@@ -293,7 +297,7 @@ El **Escritorio** muestra la tarjeta **Salud de los terminales** para quien pued
 
 ### Filtros del listado
 
-**Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad** (incluye **Fuera de horario**), **Ventana de vinculación abierta** y **Cola de sync**. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
+**Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad** (incluye **Fuera de horario**), **Modo de ejecución** (**App o kiosko** o **Pestaña**, según el último reporte), **Ventana de vinculación abierta** y **Cola de sync**. La columna **Modo** del listado muestra lo mismo de un vistazo: un terminal en **Pestaña** puede quedar oculto detrás de otras ventanas y dejar que el equipo se suspenda. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
 
 ---
 
@@ -413,6 +417,7 @@ El script usa Chrome (o Edge si no está Chrome), crea el acceso directo **Termi
 | **Toque para comenzar** | Al abrir la URL. El toque activa el sonido y la cámara (el navegador lo exige), pero **no hace falta para sincronizar**: desde que carga la página el terminal ya se conecta con el servidor, descarga empleados, envía marcaciones pendientes y recibe comandos remotos. Un terminal recién recargado o reiniciado aparece **En línea** en el panel aunque nadie lo haya tocado todavía; para marcar sí hay que tocar **Comenzar** |
 | **Terminal sin vincular** | No hay acceso vigente. Muestra el código para aprobar en el panel |
 | **Terminal fuera de servicio** | El terminal está desactivado |
+| **Aviso de pestaña del navegador** | En la pantalla de reposo, si el terminal está abierto en una pestaña del navegador: *«Este terminal está abierto en una pestaña del navegador…»*, con el botón **Instalar app** cuando el navegador lo ofrece y **Ocultar** (se oculta durante esa sesión). Nunca impide marcar. El menú **⋮** también tiene **Instalar app** en ese caso. No aparece si ya corre como app o en pantalla completa |
 | **Terminal sin empleados** | El terminal no tiene a nadie en su caché, así que la cámara se mantiene **apagada**. Muestra un mensaje simple y, en **Ver detalle**, la causa: *sincronizando por primera vez*, *sin conexión y sin empleados descargados*, *la sucursal no tiene empleados activos*, *tiene N empleados activos pero ninguno con rostro registrado* o *tiene N con rostro pero este terminal no los descargó*. Reintenta la sincronización cada 30 segundos (o con **Sincronizar ahora**) y vuelve solo a identificación apenas llegan empleados |
 | **Reposo** | Terminal listo; se activa al detectar a una persona o al tocar la pantalla |
 | **Identificación** | La cámara ocupa casi toda la pantalla (en tablet vertical, horizontal, celular y monitor) con el óvalo guía. Se ve la **imagen completa** de la cámara, sin recortar: en un monitor ancho y bajo pueden quedar franjas negras a los lados; el estado ("Posicione su rostro dentro del óvalo…", "Acérquese un poco más…") aparece superpuesto abajo y el borde cambia de color según el resultado |

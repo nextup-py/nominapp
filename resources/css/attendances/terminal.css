@@ -435,6 +435,25 @@ body {
 .idle-sync-btn:hover { background: var(--c-primary-bg); border-color: var(--c-primary); color: var(--c-primary); }
 .idle-sync-btn-icon { width: 15px; height: 15px; flex-shrink: 0; }
 
+/* Aviso discreto de «abierto en una pestaña»: informa, nunca bloquea (ver terminal/install-notice.js). */
+.idle-install-notice {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: var(--sp-2) var(--sp-3);
+    max-width: 34rem;
+    margin-top: var(--sp-4);
+    padding: var(--sp-2) var(--sp-4);
+    border: 1px solid var(--c-border-s);
+    border-left: 3px solid var(--c-warning);
+    border-radius: var(--r-lg);
+    background: var(--c-surface);
+    color: var(--c-muted);
+    font-size: clamp(.6875rem, 1.5vw, .8125rem);
+    line-height: 1.4;
+    text-align: center;
+}
+.idle-install-notice.hidden { display: none; }
+.idle-install-notice-actions { display: flex; gap: var(--sp-2); }
+
 .idle-hint {
     position: absolute;
     bottom: var(--sp-8);

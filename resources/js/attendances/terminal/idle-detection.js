@@ -159,6 +159,23 @@ export function getWakeLockError() {
 }
 
 /**
+ * Estado del bloqueo para el reporte del dispositivo. Distingue lo que no es un fallo del navegador:
+ * - `active: true`: lo tiene.
+ * - `active: false` con `error: 'hidden'`: la pestaña está oculta o minimizada (el navegador suelta el bloqueo).
+ * - `active: false` con un motivo: el navegador lo rechazó.
+ * - `active: null`: no se sabe todavía (solicitud en curso o aún sin pedir): no se informa, para no reportar «inactivo» de más.
+ * @param {Document} [doc] - inyectable para tests.
+ * @returns {{active: boolean|null, error: string|null}}
+ */
+export function getWakeLockReport(doc = globalThis.document) {
+    if (wakeLock) return { active: true, error: null };
+    if (doc?.visibilityState === 'hidden') return { active: false, error: 'hidden' };
+    if (wakeLockError) return { active: false, error: wakeLockError };
+
+    return { active: null, error: null };
+}
+
+/**
  * Mantiene el bloqueo de pantalla: lo pide ya, lo reintenta cada `intervalMs` mientras no lo tenga, cuando la
  * pestaña vuelve a estar visible y en la primera interacción (algunos navegadores lo exigen). Sin esto un
  * equipo que se suspendió —o un terminal que se recargó y espera el toque de «Comenzar»— quedaba sin bloqueo

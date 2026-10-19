@@ -11,10 +11,13 @@ import { setOffline, updateIdleSyncStatus, setSyncRefreshHook } from './terminal
 import { createSyncControl } from './terminal/sync-control.js';
 import { initManualSearch } from './terminal/manual-search.js';
 import { createCameraControl } from './terminal/camera-control.js';
+import { createInstallNotice } from './terminal/install-notice.js';
 import { getCameraPrefs, setCameraPrefs, listVideoInputs } from './terminal/camera-prefs.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
+import { captureInstallPrompt, triggerInstallPrompt, isDismissed, dismiss } from '../shared/install-prompt.js';
 import { createMenuSheet } from '../shared/menu-sheet.js';
 import { heartbeat, syncEmployees, TerminalAuthError } from './terminal-offline/sync.js';
+import { detectDisplayMode } from './terminal-offline/device-report.js';
 import { flushQueue, countPendingEvents, countConflictEvents } from './terminal-offline/queue.js';
 import { getMeta, countCachedEmployees } from './terminal-offline/db.js';
 
@@ -549,6 +552,31 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
     }));
     syncControl.refresh();
+
+    // ============================================================================
+    // INSTALACIÓN — aviso en reposo si corre en una pestaña y botón «Instalar app» (ver terminal/install-notice.js)
+    // ============================================================================
+    let installNoticeDismissed = false;
+    const installNotice = createInstallNotice({
+        getDisplayMode: () => detectDisplayMode(window),
+        isDismissed: () => {
+            if (installNoticeDismissed) return true;
+            try { return isDismissed('terminal', window.sessionStorage); } catch { return false; }
+        },
+        dismiss: () => {
+            installNoticeDismissed = true;
+            try { dismiss('terminal', window.sessionStorage); } catch { /* sin storage: se oculta solo en esta carga */ }
+        },
+        triggerInstall: triggerInstallPrompt,
+        elements: {
+            notice: document.getElementById('installNotice'),
+            text: document.getElementById('installNoticeText'),
+            installButtons: [document.getElementById('btnInstallNoticeInstall'), document.getElementById('btnMenuInstallApp')],
+            dismissButton: document.getElementById('btnInstallNoticeDismiss'),
+        },
+    });
+    captureInstallPrompt(() => installNotice.setCanInstall(true));
+    installNotice.render();
 
     // ============================================================================
     // TEMA CLARO / OSCURO

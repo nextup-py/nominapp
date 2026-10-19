@@ -726,6 +726,7 @@ class Terminal extends Model implements AuthenticatableContract
             'NotAllowedError' => 'el navegador no lo concedió (ahorro de energía, pestaña oculta o falta una interacción)',
             'AbortError' => 'el navegador interrumpió la solicitud',
             'NotSupportedError' => 'el dispositivo no lo admite',
+            'hidden' => 'la pestaña del terminal está oculta o minimizada: el navegador suelta el bloqueo',
         ];
     }
 
@@ -761,8 +762,12 @@ class Terminal extends Model implements AuthenticatableContract
             $hints[] = 'No lograba mantener la pantalla encendida: probablemente el equipo se suspendió.'.($this->wakeLockErrorLabel() ? ' Motivo: '.$this->wakeLockErrorLabel().'.' : '');
         }
 
-        if (($report['standalone'] ?? null) === false) {
+        if ($this->displayKind() === 'browser') {
             $hints[] = 'Estaba abierto en una pestaña del navegador, sin instalar como app.';
+        }
+
+        if ($this->reportedHidden() === true) {
+            $hints[] = 'La pestaña del terminal estaba oculta o minimizada: el navegador la frena y suelta el bloqueo de pantalla.';
         }
 
         $level = $this->reportedBatteryLevel();
@@ -784,6 +789,79 @@ class Terminal extends Model implements AuthenticatableContract
         }
 
         return $hints;
+    }
+
+    /**
+     * Modos de visualización que informa el terminal y su etiqueta en el panel. `browser` es una pestaña; el resto
+     * es una ventana propia (app instalada, pantalla completa o modo kiosko).
+     *
+     * @return array<string, string>
+     */
+    public static function getDisplayModeLabels(): array
+    {
+        return [
+            'browser' => 'En el navegador (sin instalar)',
+            'standalone' => 'Instalada como app',
+            'fullscreen' => 'Pantalla completa (modo kiosko)',
+            'minimal-ui' => 'Ventana de app',
+            'window-controls-overlay' => 'Instalada como app',
+        ];
+    }
+
+    /**
+     * Etiquetas de `displayKind()` para columnas y filtros.
+     *
+     * @return array<string, string>
+     */
+    public static function getDisplayKindLabels(): array
+    {
+        return ['app' => 'App o kiosko', 'browser' => 'Pestaña'];
+    }
+
+    /**
+     * Colores de `displayKind()` para badges.
+     *
+     * @return array<string, string>
+     */
+    public static function getDisplayKindColors(): array
+    {
+        return ['app' => 'success', 'browser' => 'warning'];
+    }
+
+    /**
+     * Cómo corre el terminal según su último reporte: `browser`, `app` (ventana propia) o null si no se sabe.
+     * Un reporte viejo sin `display_mode` se resuelve con `standalone`.
+     */
+    public function displayKind(): ?string
+    {
+        $report = $this->device_report ?? [];
+
+        if (array_key_exists('display_mode', $report)) {
+            return $report['display_mode'] === 'browser' ? 'browser' : 'app';
+        }
+
+        if (array_key_exists('standalone', $report)) {
+            return $report['standalone'] ? 'app' : 'browser';
+        }
+
+        return null;
+    }
+
+    /** Si el último reporte dice que la pestaña del terminal estaba oculta o minimizada (null si no se sabe). */
+    public function reportedHidden(): ?bool
+    {
+        $visible = $this->device_report['visible'] ?? null;
+
+        return $visible === null ? null : ! $visible;
+    }
+
+    /** Ids de los terminales que corren en una pestaña (`browser`) o en una ventana propia (`app`), según su último reporte. */
+    public static function idsByDisplayKind(string $kind): array
+    {
+        return static::query()->get(['id', 'device_report'])
+            ->filter(fn (self $terminal) => $terminal->displayKind() === $kind)
+            ->pluck('id')
+            ->all();
     }
 
     /** Indica si el último reporte dice que el dispositivo está enchufado (null si no se sabe). */

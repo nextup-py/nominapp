@@ -70,7 +70,7 @@ it('cada notificación declara una clave que existe en el catálogo y no sobra n
         $expression = $match[1] ?? null;
 
         if ($expression === '"terminal.{$this->alert}"') {
-            array_push($used, ...array_map(fn ($alert) => "terminal.{$alert}", ['offline', 'recovered', 'unlinked', 'queue_stuck', 'battery_low', 'no_enrolled', 'cache_empty', 'clock_skew', 'app_outdated']));
+            array_push($used, ...array_map(fn ($alert) => "terminal.{$alert}", ['offline', 'recovered', 'unlinked', 'queue_stuck', 'battery_low', 'no_enrolled', 'cache_empty', 'clock_skew', 'app_outdated', 'not_installed', 'tab_hidden']));
 
             continue;
         }
