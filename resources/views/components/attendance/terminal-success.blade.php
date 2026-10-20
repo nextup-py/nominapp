@@ -9,7 +9,7 @@
                 </svg>
             </div>
 
-            <h1 class="result-headline success-title">Marcación registrada</h1>
+            <h1 class="result-headline success-title" id="successTitle">Marcación registrada</h1>
 
             <div class="employee-photo-wrap">
                 <img id="successEmployeePhoto" class="employee-photo" src="" alt="" aria-hidden="true">
@@ -32,6 +32,11 @@
 
             <p class="success-queued-notice" id="successQueuedNotice" style="display:none" role="status">
                 Guardado en el dispositivo — se sincronizará cuando haya conexión.
+            </p>
+
+            {{-- Salida de quien no marcó la entrada: queda para revisión de RR.HH. (ver terminal/missing-entry.js) --}}
+            <p class="success-review-notice" id="successReviewNotice" style="display:none" role="status">
+                Hoy no tiene una entrada registrada. Su salida quedó guardada y RR.HH. la revisará.
             </p>
 
             {{-- Recordatorio de salida: solo tras una entrada, con la hora de fin del turno informada por el servidor --}}

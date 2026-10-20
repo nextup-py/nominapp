@@ -204,12 +204,26 @@ class AttendanceEventSyncService
 
             $staleOpen = AttendanceDay::staleOpenDayConflictInfo($employee, $recordedAt);
 
+            // Salida de quien no marcó la entrada (el terminal pregunta «¿Entrada o salida?» y eligió salida): se
+            // guarda con la hora de entrada del horario para que RR.HH. la apruebe agregando esa entrada. Si en cambio
+            // hay una jornada vieja abierta, es una salida huérfana y se resuelve corrigiendo esa jornada.
+            $missingEntry = $eventData['event_type'] === 'check_out' && $last === null && $staleOpen['metadata'] === [];
+            $expectedCheckIn = $missingEntry
+                ? (AttendanceCalculator::resolveShiftDataFor($employee, $recordedAt->copy()->startOfDay())['check_in'] ?? null)
+                : null;
+
             $this->recordSyncFailure(
                 $terminal,
                 'sync_conflict',
-                'La secuencia de marcación ya no es válida en el servidor al sincronizar (último evento registrado: '.($last->event_type ?? 'ninguno').').'.$staleOpen['message'],
+                $missingEntry
+                    ? 'Salida sin entrada registrada: el empleado marcó la salida pero ese día no tiene entrada.'
+                    : 'La secuencia de marcación ya no es válida en el servidor al sincronizar (último evento registrado: '.($last->event_type ?? 'ninguno').').'.$staleOpen['message'],
                 [
                     ...$staleOpen['metadata'],
+                    ...($missingEntry ? [
+                        AttendanceMarkFailure::META_MISSING_ENTRY => true,
+                        'expected_check_in' => $expectedCheckIn ? substr((string) $expectedCheckIn, 0, 5) : null,
+                    ] : []),
                     'client_event_id' => $clientEventId,
                     'attempted_event' => $eventData['event_type'],
                     'last_event' => $last?->event_type,

@@ -26,7 +26,8 @@ import { showTypeSelectionForEmployee, registerMark, clearPendingEmployee } from
 import { identifyEmployee as matchDescriptor } from '../offline-shared/matcher.js';
 import { getCachedEmployees, getMeta } from '../terminal-offline/db.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
-import { getEmployeeStatus } from '../terminal-offline/queue.js';
+import { getEmployeeStatus, getExpectedShift } from '../terminal-offline/queue.js';
+import { shouldAskEntryOrExit } from './missing-entry.js';
 import { setTerminalVideoState, setIdStatusDot, showCaptureProgress, updateCaptureProgress, finishCaptureProgress } from './ui-feedback.js';
 import { hasUserInteracted } from '../../shared/audio-feedback.js';
 import { showManualSearchLink, hideManualSearchLink, closeManualSearch } from './manual-search.js';
@@ -303,7 +304,18 @@ export async function startAutoIdentification(refs) {
 
                 // Tras una salida, la nueva entrada (segundo turno del día) nunca se registra sola:
                 // si el empleado vuelve a ser reconocido sin querer, no debe abrir otra jornada.
-                if (allowedEvents.length === 1 && result.last_event !== 'check_out') {
+                const { expectedCheckIn, expectedCheckOut } = await getExpectedShift(result.employee.id);
+                const askEntryOrExit = shouldAskEntryOrExit({
+                    allowedEvents,
+                    lastEvent: result.last_event ?? null,
+                    expectedCheckIn,
+                    expectedCheckOut,
+                });
+
+                if (askEntryOrExit) {
+                    // Cerca del fin del turno y sin entrada hoy: puede haberse olvidado de marcar al llegar.
+                    showTypeSelectionForEmployee(refs.screens, refs.typeSelectionDom, result.employee, allowedEvents, null, null, { entryOrExit: true });
+                } else if (allowedEvents.length === 1 && result.last_event !== 'check_out') {
                     await registerMark(result.employee, allowedEvents[0], markCallbacks);
                 } else if (allowedEvents.length > 1) {
                     showTypeSelectionForEmployee(refs.screens, refs.typeSelectionDom, result.employee, allowedEvents, result.last_event, result.last_event_time);

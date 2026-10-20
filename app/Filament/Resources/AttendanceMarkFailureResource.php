@@ -253,9 +253,9 @@ class AttendanceMarkFailureResource extends Resource
             ->requiresConfirmation()
             ->modalHeading('Aprobar fallos seleccionados')
             ->modalDescription(function (Collection $records) {
-                $resolvable = $records->filter(fn (AttendanceMarkFailure $record) => $record->canBeResolved())->count();
+                $resolvable = $records->filter(fn (AttendanceMarkFailure $record) => $record->canBeResolved() && ! $record->isMissingEntry())->count();
 
-                return "Se registrará la marcación original de {$resolvable} fallo(s) de {$records->count()} seleccionado(s). Los ya revisados o sin datos suficientes se omiten.";
+                return "Se registrará la marcación original de {$resolvable} fallo(s) de {$records->count()} seleccionado(s). Los ya revisados, sin datos suficientes o que son una salida sin entrada (se aprueban una por una) se omiten.";
             })
             ->modalSubmitActionLabel('Sí, aprobar')
             ->deselectRecordsAfterCompletion()
@@ -265,7 +265,8 @@ class AttendanceMarkFailureResource extends Resource
                 $skipped = 0;
 
                 foreach ($records as $record) {
-                    if (! $record->canBeResolved()) {
+                    // Una salida sin entrada necesita decidir la hora de la entrada: se aprueba una por una.
+                    if (! $record->canBeResolved() || $record->isMissingEntry()) {
                         $skipped++;
 
                         continue;
@@ -372,7 +373,9 @@ class AttendanceMarkFailureResource extends Resource
             ->color('success')
             ->visible(fn (AttendanceMarkFailure $record) => static::canResolve() && $record->canBeResolved())
             ->modalHeading('Aprobar marcación')
-            ->modalDescription('Se creará la marcación de asistencia correspondiente. Podés ajustar el tipo de evento y la hora antes de confirmar.')
+            ->modalDescription(fn (AttendanceMarkFailure $record) => $record->isMissingEntry()
+                ? 'El empleado marcó la salida pero ese día no tiene entrada. Se agregará la entrada indicada (por defecto, la hora de inicio de su horario) y después su salida.'
+                : 'Se creará la marcación de asistencia correspondiente. Podés ajustar el tipo de evento y la hora antes de confirmar.')
             ->modalSubmitActionLabel('Aprobar y registrar')
             ->form([
                 Select::make('event_type')
@@ -396,6 +399,15 @@ class AttendanceMarkFailureResource extends Resource
                     ->native(false)
                     ->required(),
 
+                DateTimePicker::make('entry_at')
+                    ->label('Entrada a agregar')
+                    ->helperText('Hora de la entrada que faltaba. Sugerida: el inicio del horario de ese día; corregila si el empleado llegó a otra hora.')
+                    ->default(fn (AttendanceMarkFailure $record) => $record->suggestedEntryAt())
+                    ->seconds(false)
+                    ->native(false)
+                    ->visible(fn (AttendanceMarkFailure $record) => $record->isMissingEntry())
+                    ->required(fn (AttendanceMarkFailure $record) => $record->isMissingEntry()),
+
                 Textarea::make('notes')
                     ->label('Notas (opcional)')
                     ->rows(2),
@@ -406,6 +418,7 @@ class AttendanceMarkFailureResource extends Resource
                     $data['event_type'],
                     Carbon::parse($data['recorded_at']),
                     $data['notes'] ?? null,
+                    filled($data['entry_at'] ?? null) ? Carbon::parse($data['entry_at']) : null,
                 );
 
                 if ($result['success']) {

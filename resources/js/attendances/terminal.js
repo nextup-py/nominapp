@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
         successTime:          document.getElementById('successTime'),
         successQueuedNotice:  document.getElementById('successQueuedNotice'),
         successExitReminder:  document.getElementById('successExitReminder'),
+        successReviewNotice:  document.getElementById('successReviewNotice'),
+        successTitle:         document.getElementById('successTitle'),
         countdownEl:          document.getElementById('countdown'),
         countdownFill:        document.getElementById('countdownFill'),
     };
@@ -433,11 +435,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Re-entrancy guard: un doble-tap en pantalla táctil no debe encolar
             // dos marcaciones para el mismo empleado — ver mark.js (btnMark.disabled)
             // para el mismo patrón en el modo móvil.
+            // «Salida» en la pregunta «¿Entrada o salida?» (olvidó marcar la entrada): va a revisión de RR.HH.
+            const exitWithoutEntry = markRegistration.isEntryOrExitPending() && eventType === 'check_out';
             markRegistration.clearPendingEmployee();
             typeButtons.forEach((btn) => { btn.disabled = true; });
 
             idleDetection.clearIdleTimer();
-            await markRegistration.registerMark(employee, eventType, {
+            const markCallbacks = {
                 onStatusUpdate: (text) => {
                     const statusTextEl = identificationStatus?.querySelector('.id-status-text');
                     if (statusTextEl) statusTextEl.textContent = text;
@@ -447,7 +451,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     () => identificationFlow.startIdentificationFlow(identificationRefs, { onIdleTimeout: enterIdle }),
                 ),
                 onError: (message) => screenState.showError(screens, errorMessageEl, message),
-            });
+            };
+
+            if (exitWithoutEntry) {
+                await markRegistration.registerExitWithoutEntry(employee, markCallbacks);
+            } else {
+                await markRegistration.registerMark(employee, eventType, markCallbacks);
+            }
         });
     });
 

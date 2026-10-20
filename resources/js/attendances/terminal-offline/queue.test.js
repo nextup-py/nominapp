@@ -32,7 +32,7 @@ import {
     countPendingEvents, getEmployeeStatusCache, setEmployeeStatusCache,
 } from './db.js';
 import { submitEvents, fetchEmployeeStatus, TerminalAuthError } from './sync.js';
-import { allowedNextEventTypes, resolveEmployeeStatus, getEmployeeStatus, enqueueMark, flushQueue, isOpenStateStale, getExpectedCheckOut } from './queue.js';
+import { allowedNextEventTypes, resolveEmployeeStatus, getEmployeeStatus, enqueueMark, flushQueue, isOpenStateStale, getExpectedCheckOut, getExpectedShift } from './queue.js';
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -156,13 +156,44 @@ describe('resolveEmployeeStatus con estado cacheado viejo', () => {
     });
 });
 
+const todayStamp = () => {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 describe('getExpectedCheckOut', () => {
     it('devuelve la salida esperada cacheada con el estado del empleado, o null', async () => {
-        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_out: '17:30' });
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_out: '17:30', shift_date: todayStamp() });
         expect(await getExpectedCheckOut(1)).toBe('17:30');
 
         getEmployeeStatusCache.mockResolvedValueOnce(undefined);
         expect(await getExpectedCheckOut(1)).toBeNull();
+    });
+});
+
+describe('getExpectedShift', () => {
+    it('devuelve inicio y fin del turno cacheados, o null en ambos', async () => {
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_in: '08:00', expected_check_out: '17:30', shift_date: todayStamp() });
+        expect(await getExpectedShift(1)).toEqual({ expectedCheckIn: '08:00', expectedCheckOut: '17:30' });
+
+        getEmployeeStatusCache.mockResolvedValueOnce(undefined);
+        expect(await getExpectedShift(1)).toEqual({ expectedCheckIn: null, expectedCheckOut: null });
+    });
+
+    it('ignora un horario cacheado de otro día o sin fecha', async () => {
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_in: '08:00', expected_check_out: '17:30', shift_date: '2000-01-01' });
+        expect(await getExpectedShift(1)).toEqual({ expectedCheckIn: null, expectedCheckOut: null });
+
+        getEmployeeStatusCache.mockResolvedValueOnce({ expected_check_in: '08:00', expected_check_out: '17:30' });
+        expect(await getExpectedShift(1)).toEqual({ expectedCheckIn: null, expectedCheckOut: null });
+    });
+
+    it('getEmployeeStatus sella el caché con la fecha de hoy', async () => {
+        fetchEmployeeStatus.mockResolvedValue({ last_event: null, allowed_events: ['check_in'], expected_check_in: '08:00', expected_check_out: '17:30' });
+        await getEmployeeStatus(1);
+        expect(setEmployeeStatusCache).toHaveBeenCalledWith(1, expect.objectContaining({ shift_date: todayStamp(), expected_check_in: '08:00' }));
     });
 });
 
@@ -211,6 +242,36 @@ describe('enqueueMark', () => {
     });
 });
 
+describe('enqueueMark sin estado optimista', () => {
+    it('con optimistic: false encola pero no toca el caché de estado', async () => {
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        const result = await enqueueMark(1, 'check_out', { optimistic: false });
+
+        expect(queueEvent).toHaveBeenCalledWith(expect.objectContaining({ employee_id: 1, event_type: 'check_out' }));
+        expect(queueEvent).toHaveBeenCalledWith(expect.not.objectContaining({ review_only: true }));
+        expect(setEmployeeStatusCache).not.toHaveBeenCalled();
+        expect(result).toHaveProperty('recorded_at');
+    });
+
+    it('con reviewOnly: true la encola marcada solo para revisión', async () => {
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        await enqueueMark(1, 'check_out', { optimistic: false, reviewOnly: true });
+
+        expect(queueEvent).toHaveBeenCalledWith(expect.objectContaining({ event_type: 'check_out', review_only: true }));
+    });
+
+    it('conserva la entrada esperada ya informada cuando sí refresca el caché', async () => {
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+        getEmployeeStatusCache.mockResolvedValue({ last_event: null, expected_check_in: '08:00', expected_check_out: '17:30' });
+
+        await enqueueMark(1, 'check_in');
+
+        expect(setEmployeeStatusCache).toHaveBeenCalledWith(1, expect.objectContaining({ expected_check_in: '08:00' }));
+    });
+});
+
 describe('flushQueue', () => {
     it('sin eventos pendientes, retorna de inmediato sin llamar a submitEvents', async () => {
         getPendingEvents.mockResolvedValue([]);
@@ -242,6 +303,21 @@ describe('flushQueue', () => {
         const result = await flushQueue();
 
         expect(markQueuedEventConflict).toHaveBeenCalledWith('e1', 'Secuencia inválida');
+        expect(result.conflicts).toBe(1);
+    });
+
+    it('una marcación solo para revisión que el servidor rechaza se quita de la cola, no queda como conflicto', async () => {
+        getPendingEvents.mockResolvedValue([
+            { client_event_id: 'r1', employee_id: 7, event_type: 'check_out', recorded_at: '2026-01-01T17:00:00Z', review_only: true },
+        ]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'r1', status: 'conflict', message: 'Secuencia inválida' }]);
+        countPendingEvents.mockResolvedValue(0);
+
+        const result = await flushQueue();
+
+        expect(removeQueuedEvent).toHaveBeenCalledWith('r1');
+        expect(markQueuedEventConflict).not.toHaveBeenCalled();
+        expect(fetchEmployeeStatus).not.toHaveBeenCalled();
         expect(result.conflicts).toBe(1);
     });
 

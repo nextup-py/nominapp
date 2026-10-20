@@ -18,11 +18,14 @@
 
 import { showScreen } from './screen-state.js';
 import { enqueueMark, flushQueue, getExpectedCheckOut } from '../terminal-offline/queue.js';
+import { ENTRY_OR_EXIT_OPTIONS } from './missing-entry.js';
 import { refreshIdleSyncStatus } from './sync-status-ui.js';
 
 const eventTypeNames = { check_in: 'Entrada', break_start: 'Inicio descanso', break_end: 'Fin descanso', check_out: 'Salida' };
 
 let pendingEmployee = null;
+/** La pantalla de selección es la pregunta «¿Entrada o salida?» (día vacío cerca del fin del turno), no el menú normal. */
+let pendingEntryOrExit = false;
 
 /**
  * @param {Record<string, HTMLElement|null>} screens
@@ -32,8 +35,10 @@ let pendingEmployee = null;
  * @param {string|null} lastEvent
  * @param {string|null} lastEventTime
  */
-export function showTypeSelectionForEmployee(screens, dom, employee, allowedEvents, lastEvent, lastEventTime) {
+export function showTypeSelectionForEmployee(screens, dom, employee, allowedEvents, lastEvent, lastEventTime, { entryOrExit = false } = {}) {
     pendingEmployee = employee;
+    pendingEntryOrExit = entryOrExit;
+    if (entryOrExit) allowedEvents = ENTRY_OR_EXIT_OPTIONS;
 
     dom.typeButtons.forEach((btn) => {
         const evtType = btn.getAttribute('data-event-type');
@@ -72,9 +77,15 @@ export function getPendingEmployee() {
     return pendingEmployee;
 }
 
+/** @returns {boolean} true si la selección pendiente es «¿Entrada o salida?». */
+export function isEntryOrExitPending() {
+    return pendingEntryOrExit;
+}
+
 /** Limpia el empleado pendiente (al cancelar o resetear). */
 export function clearPendingEmployee() {
     pendingEmployee = null;
+    pendingEntryOrExit = false;
 }
 
 /**
@@ -119,5 +130,32 @@ export async function registerMark(employee, eventType, { onStatusUpdate, onSucc
         onSuccess(employee, { recorded_at: recordedAt }, eventType, { queued: true, ...reminder });
     }
 
+    await refreshIdleSyncStatus();
+}
+
+/**
+ * Salida de quien no marcó la entrada (eligió «Salida» en la pregunta «¿Entrada o salida?»). El servidor no puede
+ * registrar una salida sin entrada: la rechaza y queda como fallo de marcación con la hora real para que RR.HH. la
+ * apruebe agregando la entrada. Para el empleado se muestra siempre «enviada para revisión» (con o sin conexión) y no
+ * como error, y no se toca el estado local (lo que se ofrece después no cambia).
+ * @param {{id: number}} employee
+ * @param {{onStatusUpdate: (text: string) => void, onSuccess: (employee, markData, eventType, opts: {queued: boolean, pendingReview: boolean}) => void}} callbacks
+ * @param {Navigator} [nav] - inyectable para tests; navigator en producción
+ */
+export async function registerExitWithoutEntry(employee, { onStatusUpdate, onSuccess }, nav = navigator) {
+    onStatusUpdate('Registrando: Salida...');
+    await new Promise((r) => setTimeout(r, 700));
+
+    const { recorded_at: recordedAt } = await enqueueMark(employee.id, 'check_out', { optimistic: false, reviewOnly: true });
+
+    if (nav.onLine) {
+        try {
+            await flushQueue();
+        } catch (error) {
+            console.error('Error al sincronizar la cola:', error);
+        }
+    }
+
+    onSuccess(employee, { recorded_at: recordedAt }, 'check_out', { queued: false, pendingReview: true });
     await refreshIdleSyncStatus();
 }

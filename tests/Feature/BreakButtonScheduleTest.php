@@ -92,7 +92,7 @@ afterEach(function () {
     Carbon::setTestNow();
 });
 
-it('sin horario asignado, no ofrece ni acepta "Inicio de descanso"', function () {
+it('sin horario asignado, sí ofrece y acepta el descanso (inicio y fin) y lo descuenta de las horas trabajadas', function () {
     $employee = makeBreakTestEmployee();
 
     expect(markAttendanceEvent($employee, 'check_in')['ok'])->toBeTrue();
@@ -100,10 +100,14 @@ it('sin horario asignado, no ofrece ni acepta "Inicio de descanso"', function ()
     Carbon::setTestNow(Carbon::now()->addMinutes(5));
 
     $state = AttendanceDay::currentStateFor($employee, Carbon::now());
-    expect($state['allowed'])->not->toContain('break_start')
+    expect($state['allowed'])->toContain('break_start')
         ->and($state['allowed'])->toContain('check_out');
 
-    expect(markAttendanceEvent($employee, 'break_start')['ok'])->toBeFalse();
+    expect(markAttendanceEvent($employee, 'break_start')['ok'])->toBeTrue();
+
+    Carbon::setTestNow(Carbon::now()->addMinutes(30));
+    expect(AttendanceDay::currentStateFor($employee, Carbon::now())['allowed'])->toContain('break_end');
+    expect(markAttendanceEvent($employee, 'break_end')['ok'])->toBeTrue();
 });
 
 it('con horario asignado pero sin descanso configurado (break_minutes = 0), tampoco lo ofrece', function () {

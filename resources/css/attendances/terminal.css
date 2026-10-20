@@ -1059,6 +1059,13 @@ body {
 }
 
 /* Recordatorio de la hora de salida del turno, tras marcar la entrada */
+.success-review-notice {
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--c-warning);
+    margin-bottom: var(--sp-4);
+}
+
 .success-exit-reminder {
     font-size: .875rem;
     font-weight: 600;
@@ -1407,9 +1414,17 @@ body {
 .mark-stat-time { font-size: clamp(1.75rem, min(6vw, 6vh), 3.5rem); }
 .success-exit-reminder { font-size: clamp(1rem, 2.4vw, 1.375rem); }
 .success-queued-notice { font-size: clamp(.875rem, 2vw, 1.125rem); }
+.success-review-notice { font-size: clamp(.875rem, 2vw, 1.125rem); }
 
 /* Contraste: el fondo de toda la pantalla confirma el resultado. */
 #successScreen { background: var(--c-success-bg); }
+
+/* Salida sin entrada: queda guardada para revisión de RR.HH., no es una marcación normal (ver terminal/screen-state.js). */
+#successScreen.is-review { background: var(--c-warning-bg); }
+#successScreen.is-review .result-card--success { border-top-color: var(--c-warning); }
+#successScreen.is-review .result-icon--success { background: var(--c-warning-bg); border-color: var(--c-warning-ring); }
+#successScreen.is-review .result-icon--success svg { stroke: var(--c-warning); }
+#successScreen.is-review .success-title { color: var(--c-warning); }
 #errorScreen   { background: var(--c-danger-bg); }
 #dayCompleteScreen { background: var(--c-info-bg); }
 .identification-frame:has(.video-wrapper--success) .identification-status,

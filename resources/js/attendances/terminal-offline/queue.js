@@ -180,7 +180,7 @@ export async function resolveEmployeeStatus(employeeId) {
 export async function getEmployeeStatus(employeeId) {
     try {
         const status = await fetchEmployeeStatus(employeeId);
-        await setEmployeeStatusCache(employeeId, status);
+        await setEmployeeStatusCache(employeeId, { ...status, shift_date: localDateString(await correctedNow()) });
         return status;
     } catch (error) {
         console.warn(`No se pudo consultar el estado en línea del empleado ${employeeId}, usando estado local:`, error.message);
@@ -200,9 +200,13 @@ export async function getEmployeeStatus(employeeId) {
  * offline. Sin heartbeat previo el offset es 0 (no hay corrección posible).
  * @param {number} employeeId
  * @param {string} eventType
+ * @param {{optimistic?: boolean, reviewOnly?: boolean}} [options] - `optimistic: false` no toca el caché de estado y
+ *        `reviewOnly: true` marca la marcación como «solo para revisión» (la salida de quien no tiene entrada, que el
+ *        servidor deja como fallo para RR.HH.): al sincronizar se quita de la cola en vez de quedar como conflicto, así
+ *        el terminal no muestra para siempre «requieren revisión». Van juntas: no debe cambiar lo que se ofrece después.
  * @returns {Promise<{client_event_id: string, recorded_at: string}>}
  */
-export async function enqueueMark(employeeId, eventType) {
+export async function enqueueMark(employeeId, eventType, { optimistic = true, reviewOnly = false } = {}) {
     const clientEventId = crypto.randomUUID();
     const recordedAt = await correctedNow();
 
@@ -212,7 +216,12 @@ export async function enqueueMark(employeeId, eventType) {
         event_type: eventType,
         recorded_at: recordedAt.toISOString(),
         date: localDateString(recordedAt),
+        ...(reviewOnly ? { review_only: true } : {}),
     });
+
+    if (!optimistic) {
+        return { client_event_id: clientEventId, recorded_at: recordedAt.toISOString() };
+    }
 
     // Refresca el caché de estado de inmediato — sin esto, una vez que este
     // evento se sincroniza y se borra de outbound_events, resolveEmployeeStatus()
@@ -225,7 +234,9 @@ export async function enqueueMark(employeeId, eventType) {
         last_event: eventType,
         last_event_time: recordedAt.toTimeString().slice(0, 5),
         last_event_at: recordedAt.toISOString(),
+        expected_check_in: previous?.expected_check_in ?? null,
         expected_check_out: previous?.expected_check_out ?? null,
+        shift_date: previous?.shift_date ?? null,
         allowed_events: allowedNextEventTypes(eventType, employee?.has_scheduled_break ?? true),
     });
 
@@ -239,8 +250,23 @@ export async function enqueueMark(employeeId, eventType) {
  * @returns {Promise<string|null>}
  */
 export async function getExpectedCheckOut(employeeId) {
+    return (await getExpectedShift(employeeId)).expectedCheckOut;
+}
+
+/**
+ * Inicio y fin del turno de hoy ("HH:MM") que el servidor informó con el último estado del empleado. Ambos null sin
+ * horario ese día, si todavía no se consultó en línea o si la última consulta fue de otro día (`shift_date`): un
+ * horario viejo haría preguntar «¿Entrada o salida?» a quien sí tiene turno hoy distinto. Con ellos el terminal decide si preguntar «¿Entrada o salida?»
+ * (ver terminal/missing-entry.js).
+ * @param {number} employeeId
+ * @returns {Promise<{expectedCheckIn: string|null, expectedCheckOut: string|null}>}
+ */
+export async function getExpectedShift(employeeId) {
     const cached = await getEmployeeStatusCache(employeeId);
-    return cached?.expected_check_out ?? null;
+    if (!cached || cached.shift_date !== localDateString(await correctedNow())) {
+        return { expectedCheckIn: null, expectedCheckOut: null };
+    }
+    return { expectedCheckIn: cached.expected_check_in ?? null, expectedCheckOut: cached.expected_check_out ?? null };
 }
 
 /**
@@ -256,11 +282,19 @@ export async function getExpectedCheckOut(employeeId) {
  * `conflict`, que no cuenta como "pending"). Se espera (await) para que el
  * caller de flushQueue() vea siempre el caché ya corregido, pero nunca deja
  * que un fallo acá tumbe el loop de sincronización de los demás eventos.
+ * Las marcaciones «solo para revisión» (`review_only`, ver `enqueueMark()`) no se marcan como conflicto: el servidor ya
+ * las dejó como fallo para RR.HH. y conservarlas aquí solo dejaría un aviso permanente en el terminal.
  * @param {Map<string, number>} employeeIdByClientEventId
+ * @param {Set<string>} [reviewOnlyIds]
  * @returns {(clientEventId: string, message?: string) => Promise<void>}
  */
-function onQueuedEventConflict(employeeIdByClientEventId) {
+function onQueuedEventConflict(employeeIdByClientEventId, reviewOnlyIds = new Set()) {
     return async (clientEventId, message) => {
+        if (reviewOnlyIds.has(clientEventId)) {
+            await removeQueuedEvent(clientEventId);
+            return;
+        }
+
         await markQueuedEventConflict(clientEventId, message);
 
         const employeeId = employeeIdByClientEventId.get(clientEventId);
@@ -312,6 +346,7 @@ export async function flushQueue() {
         if (pending.length === 0) return { synced: 0, conflicts: 0, stillPending: 0, results: [] };
 
         const employeeIdByClientEventId = new Map(pending.map((e) => [e.client_event_id, e.employee_id]));
+        const reviewOnlyIds = new Set(pending.filter((e) => e.review_only).map((e) => e.client_event_id));
 
         try {
             const { synced, conflicts, results } = await submitInChunks(
@@ -322,7 +357,7 @@ export async function flushQueue() {
                     event_type,
                     recorded_at,
                 }))),
-                { onSynced: removeQueuedEvent, onConflict: onQueuedEventConflict(employeeIdByClientEventId) },
+                { onSynced: removeQueuedEvent, onConflict: onQueuedEventConflict(employeeIdByClientEventId, reviewOnlyIds) },
                 MAX_BATCH_SIZE,
             );
             return { synced, conflicts, stillPending: await countPendingEvents(), results };
