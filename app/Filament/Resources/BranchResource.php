@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\BranchStatusAction;
+use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Resources\BranchResource\Pages;
 use App\Filament\Resources\BranchResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\BranchResource\RelationManagers\EmployeesRelationManager;
@@ -118,6 +119,8 @@ class BranchResource extends Resource
                             ? "No se puede desactivar: la sucursal tiene {$active} empleados activos. Reasígnelos primero."
                             : 'Las sucursales inactivas no se ofrecen al asignar empleados o terminales.')
                         ->hiddenOn('create'),
+
+                    MobileMarkingFields::select('Valor para los empleados de la sucursal que no tengan el suyo. «Heredar» usa el de la empresa o Configuración General (por defecto, solo terminal).'),
                 ])
                 ->columns(2)
                 ->collapsible(),

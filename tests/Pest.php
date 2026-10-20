@@ -3,6 +3,7 @@
 use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\Employee;
+use App\Settings\GeneralSettings;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -100,4 +101,15 @@ function markAttendanceEvent(Employee $employee, string $eventType, ?Carbon\Carb
     } catch (RuntimeException) {
         return ['ok' => false];
     }
+}
+
+/**
+ * Habilita por defecto la marcación desde el celular (en producción nace apagada): los tests del modo
+ * móvil parten de empleados que sí pueden marcar y cada uno que prueba el bloqueo lo apaga explícitamente.
+ */
+function enableMobileMarking(): void
+{
+    $settings = app(GeneralSettings::class);
+    $settings->attendance_mobile_marking_default = true;
+    $settings->save();
 }

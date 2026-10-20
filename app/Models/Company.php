@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\MobileMarkingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -39,6 +40,7 @@ class Company extends Model implements Auditable
         'privacy_notice',
         'privacy_policy_url',
         'privacy_notice_version',
+        'mobile_marking_allowed',
     ];
 
     protected $fillable = [
@@ -59,9 +61,11 @@ class Company extends Model implements Auditable
         'is_active',
         'privacy_notice',
         'privacy_policy_url',
+        'mobile_marking_allowed',
     ];
 
     protected $casts = [
+        'mobile_marking_allowed' => 'boolean',
         'is_active' => 'boolean',
         'founded_at' => 'date',
     ];
@@ -82,6 +86,12 @@ class Company extends Model implements Auditable
 
             if ($company->isDirty('is_active') && ! $company->is_active && $company->activeEmployeesCount() > 0) {
                 throw new \DomainException("No se puede desactivar la empresa: tiene {$company->activeEmployeesCount()} empleados activos. Desvincúlelos o transfiéralos primero.");
+            }
+        });
+
+        static::updated(function (Company $company): void {
+            if ($company->wasChanged('mobile_marking_allowed')) {
+                MobileMarkingService::revokeDisallowed(Employee::query()->whereIn('branch_id', $company->branches()->select('id')));
             }
         });
     }

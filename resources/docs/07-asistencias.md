@@ -37,6 +37,8 @@ Cada terminal tiene su propia URL con un código único (ej: `/terminal/a3x9bc7q
 ### Modo móvil
 El empleado usa su propio dispositivo (celular o tablet). Puede marcar desde cualquier lugar. Útil para empleados remotos o en campo. A diferencia de la terminal compartida, cada dispositivo se vincula a un único empleado — ver la sección **Dispositivo personal (vinculación)** más abajo.
 
+> **Por defecto se marca solo desde el terminal.** El modo móvil se habilita por empleado, sucursal o empresa — ver **Quién puede marcar desde el celular**.
+
 ---
 
 ## Gestión de Terminales
@@ -55,11 +57,25 @@ Si un empleado marca desde un terminal de una sucursal distinta a la suya, el si
 
 A diferencia de la terminal compartida, el dispositivo personal (celular o tablet propio del empleado) se vincula a un único empleado y **no requiere que un administrador genere ningún enlace**: el propio empleado se vincula desde `/vincular-dispositivo`.
 
+### Quién puede marcar desde el celular
+
+El campo **Marcación desde el celular** tiene tres valores: **Heredar**, **Sí, puede marcar desde el celular** y **No, solo desde el terminal**. Se define en cuatro niveles y gana el más específico:
+
+1. La ficha del **empleado** (sección **Asignación Laboral**).
+2. La **sucursal** (sección **Información general**).
+3. La **empresa** (sección **Configuración**).
+4. **Configuración → Configuración General → Configuración Laboral → Permitir marcar desde el celular por defecto** (apagado de fábrica: solo terminal).
+
+En **Empleados** se ve la columna **Marca desde el celular** (con el nivel que la define, por ejemplo «No (de la sucursal)») y el filtro **Marcación desde el celular**. Para cambiar varios a la vez: seleccionar y usar la acción masiva **Marcación desde el celular**.
+
+- Al **deshabilitar** a un empleado (o a su sucursal o empresa) se **revoca en el momento** su celular vinculado; el celular deja de marcar en su próxima conexión.
+- Si alguien sin permiso intenta vincular su celular, ve el mensaje «Tu usuario no está habilitado para marcar desde el celular» y RR.HH. recibe el aviso **Vinculación de celular sin permiso** (no se repite mientras no se lea).
+
 ### Cómo se vincula un empleado
 
 1. El empleado abre `/vincular-dispositivo` desde su celular
 2. Ingresa su **CI** y **fecha de nacimiento**
-3. Si los datos coinciden con un empleado activo, el sistema emite un token de sincronización para ese dispositivo
+3. Si los datos coinciden con un empleado activo **habilitado para marcar desde el celular**, el sistema emite un token de sincronización para ese dispositivo
 4. El empleado ya puede usar `/marcar` desde su celular con reconocimiento facial, igual que en la terminal compartida
 
 > La CI + fecha de nacimiento **no reemplaza** el reconocimiento facial como control real — es solo el paso para que el dispositivo identifique a qué empleado pertenece. Cada marcación sigue exigiendo que el rostro coincida.

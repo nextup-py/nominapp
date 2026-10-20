@@ -7,6 +7,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+beforeEach(fn () => enableMobileMarking());
+
 it('incluye company_name y company_logo en la respuesta exitosa de vinculación', function () {
     $company = Company::create([
         'name' => 'Empresa Test',

@@ -92,6 +92,7 @@ Requieren el permiso **Editar Terminal**.
 | **Contratos por vencer o vencidos** | Ver contratos | Aviso diario (08:00) según los días configurados |
 | **Celular vinculado** | Ver dispositivos de empleados | Un empleado vinculó su celular |
 | **Celular re-vinculado** | Ver dispositivos de empleados | Un empleado vinculó un celular nuevo (obligatorio) |
+| **Vinculación de celular sin permiso** | Editar empleados | Un empleado no habilitado intentó vincular su celular |
 | **Límite de vinculación agotado** | Ver dispositivos de empleados | Se agotaron los intentos diarios de vinculación desde una IP |
 
 > **Quién recibe qué:** además de la elección de cada usuario, un aviso solo llega a quien tiene el permiso del módulo. Si a un usuario le cambian el rol, la lista de su pantalla se ajusta sola.

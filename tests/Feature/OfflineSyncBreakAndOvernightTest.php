@@ -18,6 +18,8 @@ use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
+beforeEach(fn () => enableMobileMarking());
+
 /**
  * Regresión: el turno nocturno y el filtro de "Inicio de descanso" solo se
  * habían arreglado en el flujo de marcación online (AttendanceFaceMarkController)

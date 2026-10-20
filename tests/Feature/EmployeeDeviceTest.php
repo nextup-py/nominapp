@@ -19,6 +19,8 @@ use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
+beforeEach(fn () => enableMobileMarking());
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function makeDeviceTestEmployee(): Employee

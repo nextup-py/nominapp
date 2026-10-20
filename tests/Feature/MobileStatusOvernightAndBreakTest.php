@@ -19,6 +19,8 @@ use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
+beforeEach(fn () => enableMobileMarking());
+
 /**
  * Regresión: MobileStatusController::show() (endpoint online-preferido de
  * /marcar para el celular) y AttendanceMarkFailure::approve() (aprobación
