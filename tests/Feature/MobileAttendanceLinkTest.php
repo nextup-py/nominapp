@@ -27,6 +27,8 @@ use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
 
+beforeEach(fn () => enableMobileMarking());
+
 /** Admin con acceso a dispositivos de empleados: los avisos de vinculación solo llegan a quien puede verlos. */
 function deviceAdmin(string $email, string $name = 'Admin'): User
 {

@@ -7,6 +7,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Pages\SettingsPage;
 
@@ -114,6 +115,10 @@ class ManageGeneralSettings extends SettingsPage
                             ->default(16)
                             ->suffix('horas')
                             ->helperText('Si la última marcación de la jornada de ayer es más antigua que esto, ya no se considera un turno nocturno en curso: una salida nueva no se le asigna y queda como conflicto. 0 = sin límite.'),
+
+                        Toggle::make('attendance_mobile_marking_default')
+                            ->label('Permitir marcar desde el celular por defecto')
+                            ->helperText('Valor para los empleados que no lo tienen definido ni en su ficha, ni en su sucursal ni en su empresa. Apagado = solo desde el terminal. Los celulares ya vinculados de quienes dejen de estar habilitados se desvinculan solos en su próxima conexión.'),
                     ]),
 
                 Section::make('Configuración de Contratos')

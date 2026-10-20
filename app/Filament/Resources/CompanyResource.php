@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\CompanyStatusAction;
+use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Resources\CompanyResource\Pages;
 use App\Filament\Resources\CompanyResource\RelationManagers;
 use App\Models\Company;
@@ -255,6 +256,8 @@ class CompanyResource extends Resource
                                 ? "No se puede desactivar: la empresa tiene {$active} empleados activos. Desvincúlelos o transfiéralos primero."
                                 : 'Las empresas inactivas no aparecen en los selectores.')
                             ->hiddenOn('create'),
+
+                        MobileMarkingFields::select('Valor para los empleados de la empresa que no tengan el suyo ni uno en su sucursal. «Heredar» usa Configuración General (por defecto, solo terminal).'),
                     ])
                     ->collapsible(),
             ]);

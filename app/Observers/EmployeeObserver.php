@@ -30,6 +30,10 @@ class EmployeeObserver
 
     public function updated(Employee $employee): void
     {
+        if ($employee->wasChanged('mobile_marking_allowed') && $employee->hasMobileLinked() && ! $employee->canMarkFromMobile()) {
+            $employee->revokeMobileToken();
+        }
+
         if (! $employee->isDirty('status')) {
             return;
         }

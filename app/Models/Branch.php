@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\MobileMarkingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +29,7 @@ class Branch extends Model implements Auditable
         'watch_days',
         'watch_from',
         'watch_to',
+        'mobile_marking_allowed',
     ];
 
     protected $fillable = [
@@ -42,6 +44,7 @@ class Branch extends Model implements Auditable
         'watch_days',
         'watch_from',
         'watch_to',
+        'mobile_marking_allowed',
     ];
 
     /** @var array<string, mixed> Las sucursales nuevas nacen activas (igual que el default de la base). */
@@ -53,6 +56,7 @@ class Branch extends Model implements Auditable
         'coordinates' => 'array',
         'is_active' => 'boolean',
         'watch_days' => 'array',
+        'mobile_marking_allowed' => 'boolean',
     ];
 
     /** Red de seguridad: ninguna ruta puede borrar una sucursal con empleados, terminales o fallas de marcación asociadas. */
@@ -74,6 +78,12 @@ class Branch extends Model implements Auditable
         static::updating(function (Branch $branch): void {
             if ($branch->isDirty('is_active') && ! $branch->is_active && $branch->activeEmployeesCount() > 0) {
                 throw new \DomainException("No se puede desactivar la sucursal: tiene {$branch->activeEmployeesCount()} empleados activos. Reasígnelos primero.");
+            }
+        });
+
+        static::updated(function (Branch $branch): void {
+            if ($branch->wasChanged('mobile_marking_allowed')) {
+                MobileMarkingService::revokeDisallowed(Employee::query()->where('branch_id', $branch->id));
             }
         });
     }

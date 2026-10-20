@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Resources\EmployeeResource\Pages;
 use App\Filament\Resources\EmployeeResource\RelationManagers;
@@ -292,6 +293,8 @@ class EmployeeResource extends Resource
                             ->required()
                             ->hiddenOn('create')
                             ->helperText('Seleccioná el estado del empleado.'),
+
+                        MobileMarkingFields::select('Por defecto se marca solo desde el terminal. «Sí» permite vincular su celular; «No» lo bloquea y revoca el vinculado. «Heredar» usa lo definido en la sucursal, la empresa o Configuración General.'),
 
                         Select::make('initial_schedule_id')
                             ->label('Horario Inicial')
@@ -831,6 +834,18 @@ class EmployeeResource extends Resource
                     ->color('info')
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                TextColumn::make('mobile_marking_allowed')
+                    ->label('Marca desde el celular')
+                    ->getStateUsing(function (Employee $record): string {
+                        $info = $record->mobileMarkingSource();
+                        $origin = $info['source'] === 'employee' ? '' : ' ('.Employee::getMobileMarkingSourceLabels()[$info['source']].')';
+
+                        return ($info['allowed'] ? 'Sí' : 'No').$origin;
+                    })
+                    ->badge()
+                    ->color(fn (Employee $record): string => $record->canMarkFromMobile() ? 'success' : 'gray')
+                    ->toggleable(),
+
                 TextColumn::make('mobile_linked_at')
                     ->label('Dispositivo vinculado')
                     ->formatStateUsing(fn ($state) => $state ? 'Vinculado' : 'No vinculado')
@@ -947,6 +962,17 @@ class EmployeeResource extends Resource
                     ->queries(
                         true: fn (Builder $query) => $query->withFace(),
                         false: fn (Builder $query) => $query->withoutFace(),
+                        blank: fn (Builder $query) => $query,
+                    ),
+
+                TernaryFilter::make('mobile_marking')
+                    ->label('Marcación desde el celular')
+                    ->placeholder('Todos')
+                    ->trueLabel('Pueden marcar desde el celular')
+                    ->falseLabel('Solo desde el terminal')
+                    ->queries(
+                        true: fn (Builder $query) => $query->mobileMarking(true),
+                        false: fn (Builder $query) => $query->mobileMarking(false),
                         blank: fn (Builder $query) => $query,
                     ),
 
@@ -1098,6 +1124,8 @@ class EmployeeResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     ScheduleAssignmentActions::bulk(),
+
+                    MobileMarkingFields::bulk(),
 
                     BulkAction::make('activate')
                         ->label('Activar seleccionados')

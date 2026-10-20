@@ -15,6 +15,8 @@ use Illuminate\Http\Request;
 
 uses(RefreshDatabase::class);
 
+beforeEach(fn () => enableMobileMarking());
+
 /**
  * Regresión: mismo gotcha que Terminal::claimSanctumToken() /
  * Employee::claimMobileToken() — un fallo del mailer no debe convertir una

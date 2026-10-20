@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MobileLinkController;
+use App\Http\Middleware\EnsureMobileMarkingAllowed;
 use App\Http\Middleware\EnsureTerminalIsActive;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
             'terminal.active' => EnsureTerminalIsActive::class,
+            'mobile.allowed' => EnsureMobileMarkingAllowed::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

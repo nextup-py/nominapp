@@ -64,15 +64,15 @@ Route::prefix('v1/terminal')->name('api.terminal.')->middleware(['auth:sanctum',
 // devuelve el descriptor facial actualizado del propio empleado.
 Route::prefix('v1/mobile')->name('api.mobile.')->middleware(['auth:sanctum'])->group(function () {
     Route::post('/heartbeat', [MobileHeartbeatController::class, 'store'])
-        ->middleware('ability:mobile:sync')
+        ->middleware(['ability:mobile:sync', 'mobile.allowed'])
         ->name('heartbeat');
 
     Route::get('/status', [MobileStatusController::class, 'show'])
-        ->middleware('ability:mobile:sync')
+        ->middleware(['ability:mobile:sync', 'mobile.allowed'])
         ->name('status');
 
     Route::post('/events/sync', [MobileEventSyncController::class, 'store'])
-        ->middleware('ability:mobile:sync')
+        ->middleware(['ability:mobile:sync', 'mobile.allowed'])
         ->name('events.sync');
 
     Route::post('/unlink', [MobileUnlinkController::class, 'store'])

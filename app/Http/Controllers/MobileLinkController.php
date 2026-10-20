@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\User;
+use App\Notifications\MobileLinkBlockedNotification;
 use App\Notifications\MobileLinkThrottledNotification;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -69,6 +71,16 @@ class MobileLinkController extends Controller
             ], 422);
         }
 
+        if (! $employee->canMarkFromMobile()) {
+            static::notifyBlockedLinkOnce($employee);
+
+            return response()->json([
+                'ok' => false,
+                'code' => 'mobile_not_allowed',
+                'message' => 'Tu usuario no está habilitado para marcar desde el celular. Marcá desde el terminal; si lo necesitás, pedile a RRHH que lo habilite.',
+            ], 403);
+        }
+
         $plainTextToken = $employee->claimMobileToken($request->userAgent(), $data['device_model_hint'] ?? null);
 
         Log::info("Dispositivo vinculado para el empleado #{$employee->id} ({$employee->first_name} {$employee->last_name})", [
@@ -127,6 +139,27 @@ class MobileLinkController extends Controller
             'ok' => false,
             'message' => "Demasiados intentos. Espere {$minutes} minuto".($minutes === 1 ? '' : 's').' e intente de nuevo.',
         ], 429, $headers);
+    }
+
+    /**
+     * Avisa a RR.HH. del intento, sin repetirse mientras haya un aviso sin leer del mismo empleado
+     * (se mira a todos los usuarios: con el filtro por permiso, un usuario de referencia puede no recibirlo).
+     */
+    private static function notifyBlockedLinkOnce(Employee $employee): void
+    {
+        try {
+            $alreadyPending = DatabaseNotification::query()
+                ->whereNull('read_at')
+                ->where('type', MobileLinkBlockedNotification::class)
+                ->get()
+                ->contains(fn (DatabaseNotification $n) => (int) ($n->data['employee_id'] ?? 0) === $employee->id);
+
+            if (! $alreadyPending) {
+                User::all()->each(fn (User $user) => $user->notify(new MobileLinkBlockedNotification($employee)));
+            }
+        } catch (\Throwable $e) {
+            Log::warning("No se pudo notificar el intento de vinculación sin permiso del empleado #{$employee->id}: {$e->getMessage()}");
+        }
     }
 
     /**

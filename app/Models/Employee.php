@@ -6,6 +6,7 @@ use App\Notifications\MobileDeviceLinkedNotification;
 use App\Notifications\MobileDeviceRelinkedNotification;
 use App\Services\DeviceHintsParser;
 use App\Services\RestDayCalculator;
+use App\Settings\GeneralSettings;
 use App\Settings\PayrollSettings;
 use Carbon\Carbon;
 use Illuminate\Auth\Authenticatable;
@@ -62,6 +63,7 @@ class Employee extends Model implements AuthenticatableContract
         'face_descriptor',
         'mobile_linked_at',
         'mobile_last_heartbeat_at',
+        'mobile_marking_allowed',
     ];
 
     protected $casts = [
@@ -70,6 +72,7 @@ class Employee extends Model implements AuthenticatableContract
         'face_descriptor' => 'array',
         'mobile_linked_at' => 'datetime',
         'mobile_last_heartbeat_at' => 'datetime',
+        'mobile_marking_allowed' => 'boolean',
     ];
 
     // ───────────────────────────────────────────
@@ -1312,6 +1315,61 @@ class Employee extends Model implements AuthenticatableContract
         $this->activeDevice?->update(['unlinked_at' => now()]);
         $this->setRelation('activeDevice', null);
         $this->forceFill(['mobile_linked_at' => null, 'mobile_last_heartbeat_at' => null])->save();
+    }
+
+    /**
+     * Indica si el empleado puede marcar desde su celular: el valor propio, si no el de su
+     * sucursal, si no el de su empresa, si no el global de Configuración General.
+     */
+    public function canMarkFromMobile(): bool
+    {
+        return $this->mobileMarkingSource()['allowed'];
+    }
+
+    /**
+     * Permiso efectivo de marcación móvil y el nivel que lo define.
+     *
+     * @return array{allowed: bool, source: 'employee'|'branch'|'company'|'general'}
+     */
+    public function mobileMarkingSource(): array
+    {
+        foreach ([
+            'employee' => $this,
+            'branch' => $this->branch,
+            'company' => $this->branch?->company,
+        ] as $source => $model) {
+            if ($model?->mobile_marking_allowed !== null) {
+                return ['allowed' => (bool) $model->mobile_marking_allowed, 'source' => $source];
+            }
+        }
+
+        return ['allowed' => (bool) app(GeneralSettings::class)->attendance_mobile_marking_default, 'source' => 'general'];
+    }
+
+    /** @return array<string, string> Nivel que define el permiso → etiqueta para mostrar «(de la sucursal)», etc. */
+    public static function getMobileMarkingSourceLabels(): array
+    {
+        return ['employee' => 'propio', 'branch' => 'de la sucursal', 'company' => 'de la empresa', 'general' => 'general'];
+    }
+
+    /**
+     * Filtra por el permiso de marcación móvil efectivo (misma cadena que `canMarkFromMobile()`),
+     * resuelta en SQL para el filtro del listado y la revocación masiva.
+     *
+     * @param  Builder<Employee>  $query
+     * @return Builder<Employee>
+     */
+    public function scopeMobileMarking(Builder $query, bool $allowed = true): Builder
+    {
+        $default = app(GeneralSettings::class)->attendance_mobile_marking_default ? 1 : 0;
+
+        return $query->whereRaw(
+            'COALESCE(employees.mobile_marking_allowed, '
+            .'(SELECT b.mobile_marking_allowed FROM branches b WHERE b.id = employees.branch_id), '
+            .'(SELECT c.mobile_marking_allowed FROM branches b2 JOIN companies c ON c.id = b2.company_id WHERE b2.id = employees.branch_id), '
+            .'?) = ?',
+            [$default, $allowed ? 1 : 0],
+        );
     }
 
     /** Indica si el empleado tiene un dispositivo vinculado actualmente. */
