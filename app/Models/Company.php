@@ -96,6 +96,12 @@ class Company extends Model implements Auditable
         });
     }
 
+    /** Indica si la empresa cargó un aviso de privacidad (texto o enlace). */
+    public function hasPrivacyNotice(): bool
+    {
+        return filled($this->privacy_notice) || filled($this->privacy_policy_url);
+    }
+
     /**
      * Aviso de privacidad que muestra el terminal (texto, enlace, versión y QR del enlace), o null si la empresa no
      * cargó ninguno. Viaja en `window.terminalData` y en el latido para que funcione sin conexión.

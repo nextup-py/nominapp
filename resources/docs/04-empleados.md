@@ -90,7 +90,7 @@ Empleado, CI, Género, Edad, Cumpleaños, Fecha de ingreso, Antigüedad, Salario
 
 ### Filtros disponibles
 
-**Empresa**, **Sucursal**, **Departamento** (en cascada), **Tipo de contrato**, **Método de pago**, **Género**, **Mes de cumpleaños** (útil para planificar saludos o beneficios por cumpleaños), **Rango de fecha de registro** y **Sin horario asignado** (empleados sin horario fijo ni rotación vigente; desde ahí se les puede asignar uno con **Asignar horario**, ver el capítulo de Horarios).
+**Empresa**, **Sucursal**, **Departamento** (en cascada), **Tipo de contrato**, **Método de pago**, **Género**, **Mes de cumpleaños** (útil para planificar saludos o beneficios por cumpleaños), **Rango de fecha de registro** **Aviso de privacidad** (si aceptaron la versión vigente, una anterior o ninguna; ver el capítulo de Asistencias) y **Sin horario asignado** (empleados sin horario fijo ni rotación vigente; desde ahí se les puede asignar uno con **Asignar horario**, ver el capítulo de Horarios).
 
 ### Exportar
 

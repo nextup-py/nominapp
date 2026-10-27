@@ -99,6 +99,24 @@
                         </ul>
                     </div>
 
+                    {{-- Aviso de privacidad de la empresa: solo en el autoenrolamiento y solo si la empresa cargó uno.
+                    La aceptación es obligatoria para iniciar la cámara y el servidor la vuelve a exigir al guardar. --}}
+                    @if ($isEnrollment && ! empty($privacyNotice))
+                        <div class="privacy-consent" id="privacyConsent" role="group" aria-labelledby="privacy-consent-title">
+                            <span class="privacy-consent-title" id="privacy-consent-title">Aviso de privacidad</span>
+                            @if ($privacyNotice['text'])
+                                <p class="privacy-consent-text">{{ $privacyNotice['text'] }}</p>
+                            @endif
+                            @if ($privacyNotice['url'])
+                                <a class="privacy-consent-link" href="{{ $privacyNotice['url'] }}" target="_blank" rel="noopener noreferrer">Leer la política completa</a>
+                            @endif
+                            <label class="privacy-consent-check">
+                                <input type="checkbox" id="privacyConsentCheck" data-version="{{ $privacyNotice['version'] }}">
+                                <span>He leído y acepto el aviso de privacidad</span>
+                            </label>
+                        </div>
+                    @endif
+
                     <div class="controls row">
                         <button id="btnStart" type="button" class="btn-gray" aria-label="Iniciar cámara">
                             <span aria-hidden="true"><svg class="btn-icon" viewBox="0 0 24 24" fill="none"

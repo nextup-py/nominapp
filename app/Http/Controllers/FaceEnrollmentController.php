@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FaceEnrollment;
+use App\Models\PrivacyConsent;
 use App\Models\User;
 use App\Notifications\FaceEnrollmentPendingApprovalNotification;
 use App\Rules\FaceDescriptor;
@@ -36,7 +37,9 @@ class FaceEnrollmentController extends Controller
         // Obtener el empleado asociado al registro de inscripción facial para mostrar su información en la vista
         $employee = $enrollment->employee;
 
-        return view('enrollments.capture-face', compact('enrollment', 'employee'));
+        $privacyNotice = $employee->company?->privacyNoticePayload();
+
+        return view('enrollments.capture-face', compact('enrollment', 'employee', 'privacyNotice'));
     }
 
     /**
@@ -72,6 +75,16 @@ class FaceEnrollmentController extends Controller
                 'face_score' => ['nullable', 'numeric', 'min:0', 'max:1'],
             ]);
 
+            // Si la empresa cargó un aviso de privacidad, el empleado debe haber aceptado su versión vigente
+            $company = $enrollment->employee?->company;
+            $notice = $company?->privacyNoticePayload();
+            if ($notice !== null && (int) $request->input('privacy_consent_version') !== $notice['version']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debe aceptar el aviso de privacidad para continuar.',
+                ], 422);
+            }
+
             // El descriptor puede ser un array o una cadena JSON, manejar ambos casos
             $descriptor = is_string($data['face_descriptor'])
                 ? json_decode($data['face_descriptor'], true)
@@ -105,6 +118,10 @@ class FaceEnrollmentController extends Controller
                 'ip_address' => $request->ip(),
                 'user_agent' => substr($request->userAgent() ?? '', 0, 255),
             ]);
+
+            if ($notice !== null) {
+                PrivacyConsent::record($enrollment->employee, $company, PrivacyConsent::CONTEXT_FACE_ENROLLMENT, $notice, $request);
+            }
 
             // Registrar el evento de captura facial para auditoría
             Log::info("Captura facial recibida — empleado ID {$enrollment->employee_id} (enrollment #{$enrollment->id}, pendiente de aprobación)", [

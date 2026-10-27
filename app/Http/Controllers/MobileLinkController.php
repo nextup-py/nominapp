@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\PrivacyConsent;
 use App\Models\User;
 use App\Notifications\MobileLinkBlockedNotification;
 use App\Notifications\MobileLinkThrottledNotification;
@@ -48,6 +49,7 @@ class MobileLinkController extends Controller
             'ci' => ['required', 'string', 'max:20'],
             'birth_date' => ['required', 'date'],
             'device_model_hint' => ['nullable', 'string', 'max:100'],
+            'accept_privacy_version' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $employee = Employee::query()
@@ -81,7 +83,25 @@ class MobileLinkController extends Controller
             ], 403);
         }
 
+        $company = $employee->company;
+        $notice = $company?->privacyNoticePayload();
+        $needsConsent = $notice !== null && ! $employee->privacyConsents()->where('context', PrivacyConsent::CONTEXT_MOBILE_LINK)->exists();
+
+        if ($needsConsent && (int) $request->input('accept_privacy_version') !== $notice['version']) {
+            return response()->json([
+                'ok' => false,
+                'code' => 'privacy_consent_required',
+                'message' => 'Para vincular su celular debe aceptar el aviso de privacidad.',
+                'privacy' => $notice,
+                'company_name' => $company->name,
+            ], 422);
+        }
+
         $plainTextToken = $employee->claimMobileToken($request->userAgent(), $data['device_model_hint'] ?? null);
+
+        if ($needsConsent) {
+            PrivacyConsent::record($employee, $company, PrivacyConsent::CONTEXT_MOBILE_LINK, $notice, $request);
+        }
 
         Log::info("Dispositivo vinculado para el empleado #{$employee->id} ({$employee->first_name} {$employee->last_name})", [
             'employee_id' => $employee->id,

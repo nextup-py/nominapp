@@ -42,11 +42,12 @@ export async function getClientHintModel(nav = navigator) {
 
 /**
  * Envía CI + fecha de nacimiento al backend y persiste el token en éxito.
- * @param {{ci: string, birth_date: string}} formValues
+ * @param {{ci: string, birth_date: string, accept_privacy_version?: number}} formValues
  * @param {string} endpoint - URL a la que hacer POST (window.location.pathname sin barra final)
  * @param {string} csrfToken
  * @param {{getItem: Function, setItem: Function}} [storage] - inyectable para tests; localStorage en producción
- * @returns {Promise<{ok: boolean, message?: string, employee?: object}>}
+ * @returns {Promise<{ok: boolean, message?: string, employee?: object, privacy?: object}>} `privacy` viene cuando la empresa
+ *          exige aceptar su aviso de privacidad antes de vincular (se reenvía con `accept_privacy_version`).
  */
 export async function handleLinkSubmit(formValues, endpoint, csrfToken, storage = localStorage) {
     try {
@@ -57,9 +58,14 @@ export async function handleLinkSubmit(formValues, endpoint, csrfToken, storage 
                 ci: formValues.ci,
                 birth_date: formValues.birth_date,
                 device_model_hint: await getClientHintModel(),
+                accept_privacy_version: formValues.accept_privacy_version,
             }),
         });
         const data = await response.json();
+
+        if (!data.ok && data.code === 'privacy_consent_required' && data.privacy) {
+            return { ok: false, message: data.message, privacy: data.privacy };
+        }
 
         if (!data.ok) {
             return { ok: false, message: data.message || 'No se pudo vincular el dispositivo.' };
@@ -92,6 +98,25 @@ function initLinkForm() {
     const brandingLogo = document.getElementById('linkSuccessLogo');
     const brandingName = document.getElementById('linkSuccessCompanyName');
 
+    const consentBox = document.getElementById('privacyConsent');
+    const consentText = document.getElementById('privacyConsentText');
+    const consentLink = document.getElementById('privacyConsentLink');
+    const consentCheck = document.getElementById('privacyConsentCheck');
+    let consentVersion = null;
+
+    /** Muestra el aviso de privacidad de la empresa y exige tildarlo antes de reenviar. */
+    const showConsent = (privacy) => {
+        consentVersion = privacy.version;
+        if (consentText) consentText.textContent = privacy.text || '';
+        consentText?.classList.toggle('hidden', !privacy.text);
+        if (consentLink) {
+            consentLink.href = privacy.url || '#';
+            consentLink.classList.toggle('hidden', !privacy.url);
+        }
+        if (consentCheck) consentCheck.checked = false;
+        consentBox?.classList.remove('hidden');
+    };
+
     const setLoading = (isLoading) => {
         btn.disabled = isLoading;
         btnSpinner?.classList.toggle('hidden', !isLoading);
@@ -103,6 +128,13 @@ function initLinkForm() {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         statusEl.classList.add('hidden');
+
+        if (consentVersion !== null && !consentCheck?.checked) {
+            statusEl.textContent = 'Para vincular su celular acepte el aviso de privacidad.';
+            statusEl.className = 'status alert-box alert-box-error';
+            return;
+        }
+
         setLoading(true);
 
         const endpoint = window.location.pathname.replace(/\/$/, '');
@@ -110,10 +142,19 @@ function initLinkForm() {
             {
                 ci: document.getElementById('ci').value.trim(),
                 birth_date: document.getElementById('birth_date').value,
+                accept_privacy_version: consentVersion ?? undefined,
             },
             endpoint,
             csrf,
         );
+
+        if (!result.ok && result.privacy) {
+            showConsent(result.privacy);
+            statusEl.textContent = result.message;
+            statusEl.className = 'status alert-box alert-box-error';
+            setLoading(false);
+            return;
+        }
 
         if (!result.ok) {
             statusEl.textContent = result.message;

@@ -50,7 +50,7 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 ![Detalle de una empresa](/docs-images/02-empresa-detalle.png)
 
-**Aviso de privacidad:** la sección **Aviso de privacidad** del formulario (se expande sola si ya hay uno cargado) tiene el **texto del aviso** (máximo 3000 caracteres) y, opcionalmente, el **enlace a la política completa**. Lo redacta la empresa; el sistema solo lo muestra en el terminal de asistencia (ver el capítulo *Terminales de Marcación*). Cada vez que se cambia el texto o el enlace la **versión del aviso** sube sola; se ve en la vista de la empresa. Sin texto ni enlace, el terminal no muestra ningún aviso.
+**Aviso de privacidad:** la sección **Aviso de privacidad** del formulario (se expande sola si ya hay uno cargado) tiene el **texto del aviso** (máximo 3000 caracteres) y, opcionalmente, el **enlace a la política completa**. Lo redacta la empresa; el sistema solo lo muestra en el terminal de asistencia (ver el capítulo *Terminales de Marcación*). Cada vez que se cambia el texto o el enlace la **versión del aviso** sube sola; se ve en la vista de la empresa. Sin texto ni enlace, el terminal no muestra ningún aviso. Con un aviso cargado, además se pide la aceptación al empleado cuando registra su rostro por enlace o vincula su celular (ver *Consentimiento del aviso de privacidad* en el capítulo de Asistencias).
 
 **Datos pendientes:** si a la empresa le falta algo que usan los PDFs o los pagos (logo, dirección o ciudad, representante legal, o una cuenta bancaria principal activa), la parte superior de la vista muestra un aviso con lo que falta. Desaparece solo al completarlo.
 

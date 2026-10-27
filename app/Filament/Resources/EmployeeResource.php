@@ -766,6 +766,7 @@ class EmployeeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('branch.company')->withLatestConsentVersion())
             ->columns([
                 ImageColumn::make('photo')
                     ->label('Foto')
@@ -845,6 +846,14 @@ class EmployeeResource extends Resource
                     ->badge()
                     ->color(fn (Employee $record): string => $record->canMarkFromMobile() ? 'success' : 'gray')
                     ->toggleable(),
+
+                TextColumn::make('privacy_consent')
+                    ->label('Aviso de privacidad')
+                    ->getStateUsing(fn (Employee $record): string => Employee::getPrivacyConsentStatusLabels()[$record->privacyConsentStatus()])
+                    ->badge()
+                    ->color(fn (Employee $record): string => Employee::getPrivacyConsentStatusColors()[$record->privacyConsentStatus()])
+                    ->tooltip('Si el empleado aceptó la versión vigente del aviso de privacidad de su empresa')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('mobile_linked_at')
                     ->label('Dispositivo vinculado')
@@ -975,6 +984,17 @@ class EmployeeResource extends Resource
                         false: fn (Builder $query) => $query->mobileMarking(false),
                         blank: fn (Builder $query) => $query,
                     ),
+
+                SelectFilter::make('privacy_consent')
+                    ->label('Aviso de privacidad')
+                    ->options([
+                        'current' => 'Aceptó la versión vigente',
+                        'outdated' => 'Aceptó una versión anterior',
+                        'none' => 'Sin registro de aceptación',
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->privacyConsentStatus($data['value'])
+                        : $query),
 
                 Filter::make('without_schedule')
                     ->label('Sin horario asignado')
