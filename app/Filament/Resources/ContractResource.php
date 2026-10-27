@@ -747,7 +747,7 @@ class ContractResource extends Resource
                         ->label('Renovar')
                         ->icon('heroicon-o-arrow-path')
                         ->color('success')
-                        ->visible(fn (Contract $record) => $record->status === 'active' && $record->type !== 'indefinido' && auth()->user()->can('renew_contract'))
+                        ->visible(fn (Contract $record) => $record->canBeRenewed() && auth()->user()->can('renew_contract'))
                         ->requiresConfirmation()
                         ->modalHeading('Renovar Contrato')
                         ->modalDescription(function (Contract $record) {

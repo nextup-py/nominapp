@@ -431,6 +431,28 @@ class Contract extends Model implements Auditable
     }
 
     /**
+     * Indica si el contrato puede renovarse: vigente o ya vencido (un contrato a plazo se vence a las 00:05 del día
+     * siguiente a su fin, y desde entonces la renovación es la vía correcta para continuar), y no indefinido.
+     */
+    public function canBeRenewed(): bool
+    {
+        return in_array($this->status, ['active', 'expired'], true) && $this->type !== 'indefinido';
+    }
+
+    /**
+     * Indica si al guardar una edición con esta fecha de fin un contrato vencido debe volver a Vigente: el vencimiento
+     * es una consecuencia de la fecha, así que si la fecha ya no pasó el estado deja de ser coherente.
+     *
+     * @param  mixed  $newEndDate  Fecha de fin que se está guardando.
+     */
+    public function shouldReactivateOnEdit(mixed $newEndDate): bool
+    {
+        return $this->status === 'expired'
+            && filled($newEndDate)
+            && Carbon::parse($newEndDate)->startOfDay()->gte(Carbon::today());
+    }
+
+    /**
      * Verifica si al renovar este contrato se convertiría en indefinido (Art. 53 CLT)
      */
     public function wouldBecomeIndefiniteOnRenewal(): bool

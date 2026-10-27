@@ -104,7 +104,7 @@ class ViewContract extends ViewRecord
                 ->label('Renovar')
                 ->icon('heroicon-o-arrow-path')
                 ->color('success')
-                ->visible(fn () => $this->record->status === 'active' && $this->record->type !== 'indefinido' && auth()->user()->can('renew_contract'))
+                ->visible(fn () => $this->record->canBeRenewed() && auth()->user()->can('renew_contract'))
                 ->requiresConfirmation()
                 ->modalHeading('Renovar Contrato')
                 ->modalDescription(function () {

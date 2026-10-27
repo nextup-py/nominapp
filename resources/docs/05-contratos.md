@@ -11,7 +11,7 @@ El módulo de contratos gestiona el ciclo de vida laboral de cada empleado, desd
 | **Borrador** | Creado pero no activado. Puede editarse o eliminarse. No genera nómina. |
 | **Vigente** | Contrato activo. El empleado participa en nómina normalmente. |
 | **Suspendido** | Contrato pausado temporalmente. Percepciones y deducciones desactivadas. |
-| **Vencido** | La fecha de fin fue alcanzada. El empleado queda inactivo automáticamente. |
+| **Vencido** | La fecha de fin fue alcanzada (el estado cambia solo a las 00:05 del día siguiente). Puede **renovarse** o volver a **Vigente** extendiendo la fecha de fin. |
 | **Terminado** | Rescindido manualmente. El empleado queda inactivo automáticamente. |
 | **Renovado** | Reemplazado por un nuevo contrato. Estado final sin acciones disponibles. |
 
@@ -57,10 +57,19 @@ Suspendido ──[Reactivar]──> Vigente
 Vigente  ──[Renovar]──> Renovado (+ nuevo contrato Vigente)
 Vigente  ──[Terminar]──> Terminado
 Vigente  ──[Vence automáticamente a las 00:05]──> Vencido
+Vencido  ──[Renovar]──> Renovado (+ nuevo contrato Vigente)
+Vencido  ──[Editar y extender la fecha de fin]──> Vigente
 Borrador ──[Eliminar]──> (eliminado)
 ```
 
-Al pasar a **Vencido** o **Terminado**, el empleado queda **Inactivo** automáticamente — salvo que tenga otro contrato activo.
+Al pasar a **Terminado**, el empleado queda **Inactivo** automáticamente — salvo que tenga otro contrato activo. El vencimiento automático de las 00:05 cambia solo el estado del contrato, no el del empleado.
+
+### Contrato vencido: renovar o extender la fecha
+
+Un contrato **Vencido** se puede continuar de dos maneras:
+
+- **Renovar** (recomendado): crea un contrato nuevo y deja el anterior como **Renovado**, con su historial. Es la vía que aplica la regla del Art. 53 CLT (la segunda renovación a plazo pasa a Indefinido).
+- **Editar y cambiar la fecha de fin**: si la nueva fecha de fin es **hoy o posterior**, al guardar el contrato vuelve a **Vigente** (y el empleado, si estaba inactivo por ese vencimiento, vuelve a estar activo). Si la fecha sigue en el pasado, el contrato permanece Vencido. Este camino corrige la fecha del mismo contrato y **no** cuenta como renovación.
 
 ---
 
@@ -69,7 +78,7 @@ Al pasar a **Vencido** o **Terminado**, el empleado queda **Inactivo** automáti
 ### Desde la tabla de contratos
 Agrupadas en el menú **Más acciones** (⋮) de cada fila:
 - **Suspender / Reactivar** — disponible por fila según estado
-- **Renovar** — solo contratos Vigentes de tipo distinto a Indefinido
+- **Renovar** — contratos Vigentes o Vencidos de tipo distinto a Indefinido
 - **Terminar** — solo contratos Vigentes. Al confirmar, la notificación incluye un botón **Crear Liquidación** con acceso directo al formulario de liquidación del empleado
 - **Generar PDF** — genera el PDF del contrato según la plantilla de la empresa
 - **Subir / Reemplazar Firmado** — para adjuntar el PDF escaneado con firmas (el label cambia a "Reemplazar" si ya hay uno subido)

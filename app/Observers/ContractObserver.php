@@ -31,6 +31,11 @@ class ContractObserver
                 ->where('deactivated_by_system', true)
                 ->get()
                 ->each(fn ($d) => $d->update(['end_date' => null, 'deactivated_by_system' => false]));
+        } elseif ($contract->status === 'active' && $contract->getOriginal('status') === 'expired') {
+            // El contrato vencido volvió a estar vigente (fecha de fin extendida): el empleado deja de estar inactivo por ello
+            if ($employee->status === 'inactive') {
+                $employee->update(['status' => 'active']);
+            }
         } elseif (in_array($contract->status, ['expired', 'terminated'])) {
             // Solo marcar inactivo si no tiene otro contrato vigente
             $hasOtherActive = $employee->contracts()
