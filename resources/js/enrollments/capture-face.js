@@ -52,19 +52,6 @@ class EnrollmentCaptureApp extends FaceCaptureApp {
     }
 
     /**
-     * Override: si la empresa cargó un aviso de privacidad, la cámara no arranca hasta que se acepte.
-     */
-    async handleStartCamera() {
-        const consent = document.getElementById("privacyConsentCheck");
-        if (consent && !consent.checked) {
-            this.updateStatus("Para continuar, acepte el aviso de privacidad");
-            consent.focus();
-            return;
-        }
-        return super.handleStartCamera();
-    }
-
-    /**
      * Override: no redirige a /employees, solo cierra el modal.
      */
     hideModal() {
