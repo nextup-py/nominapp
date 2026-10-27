@@ -382,6 +382,10 @@ export class FaceCaptureApp {
         formData.append("face_descriptor", JSON.stringify(this.currentDescriptor));
         formData.append("_token", csrfToken);
 
+        const consent = document.getElementById("privacyConsentCheck");
+        if (consent?.checked) {
+            formData.append("privacy_consent_version", consent.dataset.version);
+        }
         if (this._lastFaceCropBase64) {
             formData.append("face_snapshot", this._lastFaceCropBase64);
         }

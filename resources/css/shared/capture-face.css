@@ -469,3 +469,25 @@ button:disabled { opacity: .5; cursor: not-allowed; }
     button:focus-visible { outline-width: 3px; }
     .video-blur-overlay { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,.45); }
 }
+
+/* ============================================================
+   AVISO DE PRIVACIDAD (autoenrolamiento)
+   ============================================================ */
+.privacy-consent {
+    padding: var(--sp-4);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    margin-bottom: var(--sp-3);
+    display: flex; flex-direction: column; gap: var(--sp-2);
+}
+.privacy-consent-title { font-size: .8125rem; font-weight: 700; color: var(--c-text); }
+.privacy-consent-text {
+    font-size: .8125rem; color: var(--c-text); line-height: 1.45;
+    max-height: 9rem; overflow-y: auto; white-space: pre-line;
+}
+.privacy-consent-link { font-size: .8125rem; color: var(--c-primary); font-weight: 600; }
+.privacy-consent-check {
+    display: flex; align-items: flex-start; gap: var(--sp-2);
+    font-size: .875rem; color: var(--c-text); font-weight: 600; cursor: pointer;
+}
+.privacy-consent-check input { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; }

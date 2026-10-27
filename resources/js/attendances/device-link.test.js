@@ -21,6 +21,26 @@ describe('handleLinkSubmit', () => {
         globalThis.fetch = fetchMock;
     });
 
+    it('si la empresa exige el aviso de privacidad devuelve el aviso sin guardar token y reenvía la versión aceptada', async () => {
+        const privacy = { text: 'Texto', url: null, version: 2, qr: null };
+        fetchMock.mockResolvedValueOnce({
+            json: () => Promise.resolve({ ok: false, code: 'privacy_consent_required', message: 'Acepte el aviso', privacy }),
+        });
+        const storage = fakeStorage();
+
+        const first = await handleLinkSubmit({ ci: '1234567', birth_date: '1990-05-20' }, '/vincular-dispositivo', 'csrf-token', storage);
+
+        expect(first).toEqual({ ok: false, message: 'Acepte el aviso', privacy });
+        expect(storage.getItem('nominapp_mobile_token')).toBeNull();
+
+        fetchMock.mockResolvedValueOnce({
+            json: () => Promise.resolve({ ok: true, token: 'tok-1', employee: { id: 5, first_name: 'Juan' } }),
+        });
+        await handleLinkSubmit({ ci: '1234567', birth_date: '1990-05-20', accept_privacy_version: 2 }, '/vincular-dispositivo', 'csrf-token', storage);
+
+        expect(JSON.parse(fetchMock.mock.calls[1][1].body).accept_privacy_version).toBe(2);
+    });
+
     it('en éxito guarda el token y employee_id y devuelve datos de branding', async () => {
         fetchMock.mockResolvedValue({
             json: () => Promise.resolve({

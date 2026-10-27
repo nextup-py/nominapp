@@ -84,6 +84,17 @@
                             </div>
                         </div>
 
+                        {{-- Aviso de privacidad de la empresa: aparece solo si el servidor lo exige (primera vinculación). --}}
+                        <div id="privacyConsent" class="privacy-consent hidden" role="group" aria-labelledby="privacy-consent-title">
+                            <span class="privacy-consent-title" id="privacy-consent-title">Aviso de privacidad</span>
+                            <p id="privacyConsentText" class="privacy-consent-text hidden"></p>
+                            <a id="privacyConsentLink" class="privacy-consent-link hidden" href="#" target="_blank" rel="noopener noreferrer">Leer la política completa</a>
+                            <label class="privacy-consent-check">
+                                <input type="checkbox" id="privacyConsentCheck">
+                                <span>He leído y acepto el aviso de privacidad</span>
+                            </label>
+                        </div>
+
                         <button type="submit" id="btnLink" class="btn btn-primary btn-full btn-lg">
                             <svg class="btn-spinner hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10" stroke-opacity=".25"/>

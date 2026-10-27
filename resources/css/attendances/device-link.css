@@ -251,3 +251,26 @@ body {
 @media (prefers-reduced-motion: reduce) {
     * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ============================================================
+   AVISO DE PRIVACIDAD (primera vinculación)
+   ============================================================ */
+.privacy-consent {
+    padding: var(--sp-4);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    display: flex; flex-direction: column; gap: var(--sp-2);
+}
+.privacy-consent.hidden { display: none; }
+.privacy-consent-title { font-size: .8125rem; font-weight: 700; color: var(--c-text); }
+.privacy-consent-text {
+    font-size: .8125rem; color: var(--c-text); line-height: 1.45;
+    max-height: 9rem; overflow-y: auto; white-space: pre-line;
+}
+.privacy-consent-text.hidden, .privacy-consent-link.hidden { display: none; }
+.privacy-consent-link { font-size: .8125rem; color: var(--c-primary); font-weight: 600; }
+.privacy-consent-check {
+    display: flex; align-items: flex-start; gap: var(--sp-2);
+    font-size: .875rem; color: var(--c-text); font-weight: 600; cursor: pointer;
+}
+.privacy-consent-check input { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; }

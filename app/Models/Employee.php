@@ -1239,6 +1239,90 @@ class Employee extends Model implements AuthenticatableContract
         return $this->hasMany(EmployeeDevice::class)->latest('linked_at');
     }
 
+    /** Aceptaciones del aviso de privacidad de la empresa (más reciente primero). */
+    public function privacyConsents(): HasMany
+    {
+        return $this->hasMany(PrivacyConsent::class)->latest('accepted_at')->latest('id');
+    }
+
+    /**
+     * Estado del consentimiento frente al aviso vigente de la empresa: `no_notice` (la empresa no cargó uno),
+     * `current` (aceptó la versión vigente), `outdated` (aceptó una versión anterior) o `none` (nunca aceptó).
+     * Requiere `branch.company` cargado; si el listado trajo `latest_consent_version` (ver
+     * `scopeWithLatestConsentVersion()`) no consulta por fila.
+     *
+     * @return 'no_notice'|'current'|'outdated'|'none'
+     */
+    public function privacyConsentStatus(): string
+    {
+        $company = $this->branch?->company;
+
+        if (! $company || ! $company->hasPrivacyNotice()) {
+            return 'no_notice';
+        }
+
+        $latest = array_key_exists('latest_consent_version', $this->attributes)
+            ? $this->attributes['latest_consent_version']
+            : $this->privacyConsents()->max('notice_version');
+
+        return match (true) {
+            $latest === null => 'none',
+            (int) $latest >= (int) $company->privacy_notice_version => 'current',
+            default => 'outdated',
+        };
+    }
+
+    /** @return array<string, string> */
+    public static function getPrivacyConsentStatusLabels(): array
+    {
+        return ['current' => 'Vigente', 'outdated' => 'Desactualizado', 'none' => 'Sin registro', 'no_notice' => 'Sin aviso'];
+    }
+
+    /** @return array<string, string> */
+    public static function getPrivacyConsentStatusColors(): array
+    {
+        return ['current' => 'success', 'outdated' => 'warning', 'none' => 'danger', 'no_notice' => 'gray'];
+    }
+
+    /**
+     * Agrega `latest_consent_version`: la versión más alta del aviso que el empleado aceptó (null si nunca).
+     *
+     * @param  Builder<Employee>  $query
+     * @return Builder<Employee>
+     */
+    public function scopeWithLatestConsentVersion(Builder $query): Builder
+    {
+        if (empty($query->getQuery()->columns)) {
+            $query->select('employees.*');
+        }
+
+        return $query->addSelect([
+            'latest_consent_version' => PrivacyConsent::query()
+                ->selectRaw('max(notice_version)')
+                ->whereColumn('privacy_consents.employee_id', 'employees.id'),
+        ]);
+    }
+
+    /**
+     * Filtra por estado de consentimiento (`current`, `outdated`, `none`) solo entre empleados cuya empresa tiene
+     * un aviso cargado.
+     *
+     * @param  Builder<Employee>  $query
+     * @return Builder<Employee>
+     */
+    public function scopePrivacyConsentStatus(Builder $query, string $status): Builder
+    {
+        $latest = '(select max(pc.notice_version) from privacy_consents pc where pc.employee_id = employees.id)';
+        $version = '(select c.privacy_notice_version from branches b join companies c on c.id = b.company_id where b.id = employees.branch_id)';
+        $hasNotice = "(select (coalesce(c.privacy_notice, '') <> '' or coalesce(c.privacy_policy_url, '') <> '') from branches b join companies c on c.id = b.company_id where b.id = employees.branch_id) = 1";
+
+        return $query->whereRaw($hasNotice)->whereRaw(match ($status) {
+            'current' => "$latest >= $version",
+            'outdated' => "$latest is not null and $latest < $version",
+            default => "$latest is null",
+        });
+    }
+
     /** Dispositivo actualmente vinculado (unlinked_at null) — a lo sumo uno por empleado. */
     public function activeDevice(): HasOne
     {

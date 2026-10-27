@@ -132,11 +132,26 @@ Para encontrar a quienes todavía no tienen rostro, ir a **Empleados** y filtrar
 **Opción B — Enlace de enrolamiento (el empleado captura):**
 
 1. Clic en **Generar enlace de enrolamiento** (o, en **Asistencias → Registro Facial**, el botón **Generar Enlace** con vigencia de 4, 24 o 72 horas). El enlace vence según el tiempo configurado en **Configuración General**
-2. El empleado abre el enlace en su celular o PC con cámara y sigue la captura (el sistema toma varias muestras). El registro queda **Pendiente de aprobación**
+2. El empleado abre el enlace en su celular o PC con cámara y sigue la captura (el sistema toma varias muestras). Si su empresa cargó un aviso de privacidad, primero debe tildar **He leído y acepto el aviso de privacidad**: sin eso la cámara no arranca. El registro queda **Pendiente de aprobación**
 3. Ir a **Asistencias → Registro Facial**, buscar el registro, revisar la imagen y el score de calidad, y clic en **Aprobar** (o **Rechazar** si la calidad es insuficiente)
 4. Si el enlace venció o se perdió, usar **Ver Enlace** o **Regenerar Enlace** en esa misma lista
 
 Una vez aprobado, el terminal de la sucursal incorpora el rostro en su siguiente sincronización y el empleado puede marcar.
+
+### Consentimiento del aviso de privacidad
+
+Si la empresa cargó un **aviso de privacidad** (**Organización → Empresas → Aviso de privacidad**), se le pide aceptarlo al empleado en dos momentos: al registrar su rostro por enlace (Opción B) y la **primera vez que vincula su celular** en `/vincular-dispositivo` (el aviso aparece después de ingresar CI y fecha de nacimiento, con una casilla obligatoria). Cada aceptación guarda quién, cuándo, desde qué dispositivo y **qué versión** del aviso aceptó, junto con una copia del texto de ese momento.
+
+En **Empleados** hay una columna **Aviso de privacidad** (oculta por defecto) y un filtro del mismo nombre:
+
+| Estado | Significado |
+|--------|-------------|
+| **Vigente** | Aceptó la versión actual del aviso de su empresa |
+| **Desactualizado** | Aceptó una versión anterior: la empresa cambió el aviso desde entonces |
+| **Sin registro** | Nunca registró una aceptación (por ejemplo, quienes se enrolaron o vincularon antes de esta función, o los enrolados por un administrador) |
+| **Sin aviso** | Su empresa no cargó ningún aviso |
+
+> El sistema **no vuelve a pedir** la aceptación cuando cambia la versión: el estado **Desactualizado** sirve para que RR.HH. decida si hace falta pedirla de nuevo. El enrolamiento con el administrador presente (Opción A) y los empleados ya vinculados no pasan por la casilla.
 
 ### Estados del registro facial
 
