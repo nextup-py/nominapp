@@ -347,7 +347,9 @@ Salario del mes 13, pagadero en diciembre. Se gestiona por `AguinaldoPeriod` (un
 
 **Terminar contrato → Liquidación:** `ContractService::terminate()` solo actualiza el contrato; la notificación posterior a terminar incluye un botón "Crear Liquidación" con link directo al formulario de `LiquidacionResource` para ese empleado (no se crea automáticamente).
 
-**Cascada de estado del empleado:** al pasar a `expired` o `terminated`, `ContractObserver` marca al empleado `inactive` — salvo que tenga otro contrato `active` (ver convención "Observer para cascada de estados" más abajo).
+**Cascada de estado del empleado:** al pasar a `expired` o `terminated`, `ContractObserver` marca al empleado `inactive` — salvo que tenga otro contrato `active` (ver convención "Observer para cascada de estados" más abajo). **Ojo:** `contracts:expire` usa un `update()` masivo, que no dispara el observer, así que el vencimiento automático de las 00:05 solo cambia el estado del contrato y **no** desactiva al empleado (sí lo hace `ContractService::terminate()`).
+
+**Contrato vencido:** `Contract::canBeRenewed()` (vigente o vencido, y no indefinido) decide la visibilidad de **Renovar** en el listado, la edición y el detalle: antes solo aparecía en vigentes y, como el cron vence el contrato apenas pasa la fecha, RR.HH. no tenía cómo renovarlo y editaba la fecha, dejando un «Vencido» con fecha futura (reporte real de Macro). Además, `EditContract::mutateFormDataBeforeSave()` devuelve a `active` un contrato `expired` cuando la nueva fecha de fin no pasó (`shouldReactivateOnEdit()`), y `ContractObserver` reactiva al empleado inactivo en esa transición `expired → active`. Editar la fecha **no** cuenta como renovación del Art. 53 (solo `renew()` marca el contrato como `renewed`).
 
 ### Módulo de Empresas (`CompanyResource`)
 

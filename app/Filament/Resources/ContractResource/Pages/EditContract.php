@@ -133,7 +133,7 @@ class EditContract extends EditRecord
                 ->label('Renovar')
                 ->icon('heroicon-o-arrow-path')
                 ->color('success')
-                ->visible(fn (Contract $record) => $record->status === 'active' && $record->type !== 'indefinido' && auth()->user()->can('renew_contract'))
+                ->visible(fn (Contract $record) => $record->canBeRenewed() && auth()->user()->can('renew_contract'))
                 ->requiresConfirmation()
                 ->modalHeading('Renovar Contrato')
                 ->modalDescription(function (Contract $record) {
@@ -238,6 +238,25 @@ class EditContract extends EditRecord
         ];
     }
 
+    /** Indica que el guardado actual devolvió el contrato a Vigente (para avisarlo en la notificación). */
+    protected bool $reactivatedOnSave = false;
+
+    /**
+     * Si el contrato estaba Vencido y la nueva fecha de fin todavía no pasó, vuelve a Vigente.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if ($this->record->shouldReactivateOnEdit($data['end_date'] ?? null)) {
+            $data['status'] = 'active';
+            $this->reactivatedOnSave = true;
+        }
+
+        return $data;
+    }
+
     /**
      * Crea la cuenta bancaria del empleado si se ingresó una al editar el contrato con pago por débito.
      */
@@ -276,7 +295,9 @@ class EditContract extends EditRecord
     {
         return Notification::make()
             ->success()
-            ->title('Contrato actualizado')
-            ->body('Los datos del contrato fueron guardados correctamente.');
+            ->title($this->reactivatedOnSave ? 'Contrato actualizado y vigente' : 'Contrato actualizado')
+            ->body($this->reactivatedOnSave
+                ? 'La nueva fecha de fin todavía no pasó, así que el contrato volvió a estar Vigente. Si se trata de una renovación, usá la acción Renovar para dejar el historial (Art. 53 CLT).'
+                : 'Los datos del contrato fueron guardados correctamente.');
     }
 }
