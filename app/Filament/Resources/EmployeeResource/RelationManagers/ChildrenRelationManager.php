@@ -19,6 +19,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
 /** Gestiona los hijos a cargo del empleado para el cálculo de bonificación familiar. */
@@ -31,6 +32,22 @@ class ChildrenRelationManager extends RelationManager
     protected static ?string $modelLabel = 'hijo';
 
     protected static ?string $pluralModelLabel = 'hijos';
+
+    /**
+     * Cantidad de hijos pendientes de completar, visible en la pestaña.
+     */
+    public static function getBadge(Model $ownerRecord, string $pageClass): ?string
+    {
+        $pending = $ownerRecord->children()->where('is_placeholder', true)->count();
+
+        return $pending > 0 ? (string) $pending : null;
+    }
+
+    /** Color de la insignia de la pestaña. */
+    public static function getBadgeColor(Model $ownerRecord, string $pageClass): ?string
+    {
+        return 'warning';
+    }
 
     public function isReadOnly(): bool
     {
@@ -120,7 +137,9 @@ class ChildrenRelationManager extends RelationManager
                 TextColumn::make('full_name')
                     ->label('Nombre')
                     ->getStateUsing(fn (EmployeeChild $record) => $record->full_name)
-                    ->description(fn (EmployeeChild $record) => $record->ci ? 'CI: '.$record->ci : null)
+                    ->description(fn (EmployeeChild $record) => $record->is_placeholder
+                        ? 'Datos provisorios: completar con los datos reales'
+                        : ($record->ci ? 'CI: '.$record->ci : null))
                     ->searchable(query: fn (Builder $query, string $search) => $query
                         ->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
@@ -129,14 +148,22 @@ class ChildrenRelationManager extends RelationManager
                 TextColumn::make('birth_date')
                     ->label('Fecha de nacimiento')
                     ->date('d/m/Y')
-                    ->description(fn (EmployeeChild $record) => $record->age.' años')
+                    ->placeholder('Sin cargar')
+                    ->description(fn (EmployeeChild $record) => $record->age !== null ? $record->age.' años' : null)
                     ->sortable(),
 
                 TextColumn::make('is_eligible')
                     ->label('Elegibilidad')
                     ->badge()
-                    ->getStateUsing(fn (EmployeeChild $record) => $record->is_eligible ? 'Menor de edad' : 'Mayor de edad')
-                    ->color(fn (EmployeeChild $record) => $record->is_eligible ? 'success' : 'gray'),
+                    ->getStateUsing(fn (EmployeeChild $record) => $record->isPending()
+                        ? 'Pendiente de completar'
+                        : ($record->is_eligible ? 'Menor de edad' : 'Mayor de edad'))
+                    ->color(fn (EmployeeChild $record) => $record->isPending()
+                        ? 'warning'
+                        : ($record->is_eligible ? 'success' : 'gray'))
+                    ->tooltip(fn (EmployeeChild $record) => $record->isPending()
+                        ? 'No genera bonificación familiar hasta cargar la fecha de nacimiento real.'
+                        : null),
 
                 IconColumn::make('birth_certificate_path')
                     ->label('Certificado')
@@ -167,6 +194,11 @@ class ChildrenRelationManager extends RelationManager
 
                 EditAction::make()
                     ->label('Editar')
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $data['is_placeholder'] = false;
+
+                        return $data;
+                    })
                     ->icon('heroicon-o-pencil-square')
                     ->color('primary'),
 
@@ -194,6 +226,7 @@ class ChildrenRelationManager extends RelationManager
                         }),
                 ]),
             ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->orderByDesc('is_placeholder'))
             ->emptyStateHeading('Sin hijos registrados')
             ->emptyStateDescription('Registrá los hijos a cargo para gestionar la bonificación familiar.')
             ->emptyStateIcon('heroicon-o-user-group');

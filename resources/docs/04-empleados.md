@@ -76,6 +76,16 @@ El documento incluye datos personales, contrato activo e historial relevante.
 
 ---
 
+## Hijos a cargo y bonificación familiar
+
+En la pestaña **Hijos** de cada empleado se registran los hijos a cargo. La bonificación familiar de la nómina se paga solo por los hijos **menores de 18 años con fecha de nacimiento cargada**.
+
+Cuando se migra un empleado que ya tenía una cantidad de hijos pero sin detalle, el sistema puede crear hijos provisorios (comando `employees:generate-children-placeholders`, que pide confirmación o `--force`). Estos aparecen en la pestaña con la insignia **Pendiente de completar**, sin fecha de nacimiento, y la pestaña **Hijos** muestra un número naranja con la cantidad pendiente.
+
+> Los hijos pendientes de completar **no generan bonificación familiar**. Para que cuenten, clic en **Editar**, cargar nombre y fecha de nacimiento reales y guardar: el registro deja de ser provisorio.
+
+---
+
 ## Reporte de Empleados
 
 Ir a **Reportes → Reporte de Empleados** para ver una nómina completa de todos los empleados con antigüedad, salario, cumpleaños y datos de contrato — útil para RR.HH. y para auditorías generales del personal. Los datos de contrato (salario, cargo, departamento, fecha de ingreso) provienen siempre del **contrato activo**.

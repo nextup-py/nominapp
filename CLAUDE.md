@@ -291,6 +291,10 @@ Registro de amonestaciones laborales emitidas a empleados. Salvo la suspensión 
 - `Warning::getReasonOptions/Label()` — motivo predefinido
 - `Warning::hasSuspension()`, `suspensionDays()`, `suspension_end_date` (accessor)
 
+### Hijos a cargo y bonificación familiar (placeholders)
+
+`employee_children.is_placeholder` (boolean, default false) marca los hijos provisorios que crea `employees:generate-children-placeholders` (con `birth_date` nulo; la columna ahora admite null). **`Employee::eligibleChildren()` los excluye** (`is_placeholder = false` y nacimiento posterior a hace 18 años), así que `FamilyBonusCalculator` no paga nada por ellos hasta que RR.HH. cargue los datos reales: la `EditAction` de `ChildrenRelationManager` fuerza `is_placeholder = false` al guardar (la fecha de nacimiento es obligatoria en el form). El comando exige `--force` o confirmación interactiva (`--dry-run` solo lista). La pestaña **Hijos** muestra una insignia naranja con los pendientes y la columna de elegibilidad dice «Pendiente de completar». La migración convirtió en placeholders los que ya había creado el comando anterior (nombre «Hijo/a…», nacimiento 2015-01-01, sin CI).
+
 ### Módulo de Liquidación
 
 Liquidación de haberes por desvinculación del empleado. Se calcula manualmente desde `LiquidacionResource` (`LiquidacionService`).

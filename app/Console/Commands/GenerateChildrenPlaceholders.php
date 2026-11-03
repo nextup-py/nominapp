@@ -10,14 +10,16 @@ use Illuminate\Console\Command;
  * Genera registros placeholder de hijos para empleados que tienen children_count > 0
  * pero aún no tienen hijos registrados individualmente.
  *
- * Diseñado para ejecutarse una sola vez durante el deployment que introduce el módulo
- * de hijos a cargo. Los placeholders deben ser reemplazados por los datos reales
- * desde el panel de administración.
+ * Los placeholders se crean con `is_placeholder = true` y sin fecha de nacimiento: no son
+ * elegibles para la bonificación familiar hasta que RR.HH. cargue los datos reales desde
+ * el panel (al editarlos se desmarcan). Como crean registros en la base, exigen `--force`
+ * (o confirmación interactiva); `--dry-run` solo lista.
  */
 class GenerateChildrenPlaceholders extends Command
 {
     protected $signature = 'employees:generate-children-placeholders
-                            {--dry-run : Muestra lo que se haría sin crear registros}';
+                            {--dry-run : Muestra lo que se haría sin crear registros}
+                            {--force : Crea los placeholders sin pedir confirmación}';
 
     protected $description = 'Genera placeholders de hijos para empleados con children_count > 0 sin hijos registrados';
 
@@ -46,6 +48,16 @@ class GenerateChildrenPlaceholders extends Command
 
         $totalCreated = 0;
 
+        if (! $dryRun && ! $this->option('force')) {
+            $this->components->warn('Los placeholders no generan bonificación familiar hasta que RR.HH. cargue los datos reales de cada hijo.');
+
+            if (! $this->input->isInteractive() || ! $this->components->confirm('¿Crear los placeholders?', false)) {
+                $this->components->error('Cancelado. Use --force para crear sin confirmación o --dry-run para ver el detalle.');
+
+                return self::FAILURE;
+            }
+        }
+
         foreach ($employees as $employee) {
             $count = (int) $employee->children_count;
 
@@ -59,7 +71,8 @@ class GenerateChildrenPlaceholders extends Command
                         'employee_id' => $employee->id,
                         'first_name' => $firstName,
                         'last_name' => $employee->last_name,
-                        'birth_date' => '2015-01-01',
+                        'birth_date' => null,
+                        'is_placeholder' => true,
                     ]);
                 }
 
@@ -73,7 +86,7 @@ class GenerateChildrenPlaceholders extends Command
         } else {
             $this->newLine();
             $this->components->success("Se crearon {$totalCreated} placeholder(s) en {$employees->count()} empleado(s).");
-            $this->components->warn('Recordá actualizar los datos reales (nombre, fecha de nacimiento, CI) desde el panel de administración.');
+            $this->components->warn('Quedan pendientes de completar (no pagan bonificación familiar): cargá los datos reales desde la pestaña Hijos de cada empleado.');
         }
 
         return self::SUCCESS;

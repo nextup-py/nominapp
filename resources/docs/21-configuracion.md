@@ -99,7 +99,7 @@ Acceder desde **Configuración → Configuración de Nómina**.
 
 ### Bonificación Familiar
 
-- **Porcentaje por hijo:** % del salario mínimo mensual pagado por hijo a cargo (por defecto 5%). Aplica a empleados con hijos que ganen hasta 2 salarios mínimos (Arts. 253–262 CLT).
+- **Porcentaje por hijo:** % del salario mínimo mensual pagado por hijo a cargo (por defecto 5%). Aplica a empleados con hijos que ganen hasta 2 salarios mínimos (Arts. 253–262 CLT). Los hijos marcados como **Pendiente de completar** no generan bonificación hasta que se cargue su fecha de nacimiento real.
 
 ### IRP — Impuesto a la Renta Personal
 

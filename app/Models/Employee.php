@@ -307,10 +307,14 @@ class Employee extends Model implements AuthenticatableContract
         return $this->hasMany(EmployeeChild::class);
     }
 
-    /** Hijos menores de 18 años, elegibles para la bonificación familiar (Arts. 253-262 CLT). */
+    /**
+     * Hijos menores de 18 años, elegibles para la bonificación familiar (Arts. 253-262 CLT).
+     * Excluye los placeholders pendientes de completar.
+     */
     public function eligibleChildren(): HasMany
     {
         return $this->hasMany(EmployeeChild::class)
+            ->where('is_placeholder', false)
             ->where('birth_date', '>', now()->subYears(18)->toDateString());
     }
 

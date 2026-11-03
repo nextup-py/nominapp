@@ -299,3 +299,83 @@ it('no califica el hijo que cumple exactamente 18 años hoy', function () {
 afterEach(function () {
     Mockery::close();
 });
+
+
+// ─── Placeholders de hijos ───────────────────────────────────────────────────
+
+it('no paga bonificación por hijos placeholder pendientes de completar', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    EmployeeChild::create([
+        'employee_id' => $employee->id,
+        'first_name' => 'Hijo/a',
+        'last_name' => 'FBC',
+        'birth_date' => null,
+        'is_placeholder' => true,
+    ]);
+
+    $result = (new FamilyBonusCalculator)->calculate($employee->fresh(), makeFbcPeriod());
+
+    expect($result)->toBe(['total' => 0.0, 'items' => []])
+        ->and($employee->eligibleChildren()->count())->toBe(0);
+});
+
+it('excluye un placeholder aunque tenga fecha de nacimiento reciente', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    EmployeeChild::create([
+        'employee_id' => $employee->id,
+        'first_name' => 'Hijo/a',
+        'last_name' => 'FBC',
+        'birth_date' => now()->subYears(5)->toDateString(),
+        'is_placeholder' => true,
+    ]);
+
+    expect((new FamilyBonusCalculator)->calculate($employee->fresh(), makeFbcPeriod())['total'])->toBe(0.0);
+});
+
+it('paga solo el hijo real cuando convive con un placeholder', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    addMinorChildren($employee, 1);
+    EmployeeChild::create([
+        'employee_id' => $employee->id,
+        'first_name' => 'Hijo/a',
+        'last_name' => 'FBC',
+        'birth_date' => null,
+        'is_placeholder' => true,
+    ]);
+
+    $result = (new FamilyBonusCalculator)->calculate($employee->fresh(), makeFbcPeriod());
+
+    expect((float) $result['total'])->toBe(round(2_550_328 * 0.05, 2))
+        ->and($result['items'][0]['description'])->toContain('1 hijo');
+});
+
+it('un placeholder completado con datos reales vuelve a ser elegible', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    $child = EmployeeChild::create([
+        'employee_id' => $employee->id,
+        'first_name' => 'Hijo/a',
+        'last_name' => 'FBC',
+        'birth_date' => null,
+        'is_placeholder' => true,
+    ]);
+
+    $child->update(['birth_date' => now()->subYears(4)->toDateString(), 'is_placeholder' => false]);
+
+    expect((new FamilyBonusCalculator)->calculate($employee->fresh(), makeFbcPeriod())['total'])->toBeGreaterThan(0);
+});
+
+it('el comando crea placeholders no elegibles y exige --force', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    $employee->update(['children_count' => 2]);
+
+    $this->artisan('employees:generate-children-placeholders --no-interaction')->assertFailed();
+    expect($employee->children()->count())->toBe(0);
+
+    $this->artisan('employees:generate-children-placeholders --dry-run')->assertSuccessful();
+    expect($employee->children()->count())->toBe(0);
+
+    $this->artisan('employees:generate-children-placeholders --force')->assertSuccessful();
+
+    expect($employee->children()->where('is_placeholder', true)->whereNull('birth_date')->count())->toBe(2)
+        ->and((new FamilyBonusCalculator)->calculate($employee->fresh(), makeFbcPeriod())['total'])->toBe(0.0);
+});

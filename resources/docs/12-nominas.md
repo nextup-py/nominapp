@@ -48,7 +48,7 @@ Desde la vista de la planilla (clic en la planilla para abrirla):
    - Horas extra desde las asistencias registradas
    - Día de descanso semanal remunerado (para jornaleros)
    - Deducciones activas (IPS, préstamos, adelantos, retiros de mercadería, ausencias injustificadas)
-   - Bonificación familiar IPS
+   - Bonificación familiar IPS (solo por hijos menores de 18 años con fecha de nacimiento cargada; los hijos **pendientes de completar** no cuentan — ver capítulo Empleados)
 
 Si algún empleado no pudo procesarse, el sistema lo informa con el motivo en una notificación aparte (no bloquea la generación del resto). También avisa si, tras generar, quedan empleados con contrato por vencer dentro de los próximos días configurados.
 
