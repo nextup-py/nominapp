@@ -210,6 +210,12 @@ export async function heartbeat() {
         if (Number.isFinite(data.config.camera_resume_minutes)) {
             await setMeta('camera_resume_minutes', data.config.camera_resume_minutes);
         }
+        if (typeof data.config.confirm_exit === 'boolean') {
+            await setMeta('terminal_confirm_exit', data.config.confirm_exit);
+        }
+        if (Number.isFinite(data.config.selection_timeout_seconds)) {
+            await setMeta('terminal_selection_timeout_seconds', data.config.selection_timeout_seconds);
+        }
         if ('privacy' in data.config) {
             await setMeta('privacy_notice', data.config.privacy ?? null);
         }

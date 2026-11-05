@@ -31,13 +31,79 @@ import { shouldAskEntryOrExit } from './missing-entry.js';
 import { setTerminalVideoState, setIdStatusDot, showCaptureProgress, updateCaptureProgress, finishCaptureProgress } from './ui-feedback.js';
 import { hasUserInteracted } from '../../shared/audio-feedback.js';
 import { showManualSearchLink, hideManualSearchLink, closeManualSearch } from './manual-search.js';
+import {
+    shouldConfirmEvent,
+    normalizeSelectionTimeout,
+    createSelectionTimer,
+    dismissEmployee,
+    isEmployeeDismissed,
+    DISMISS_AFTER_TIMEOUT_MS,
+    DISMISS_AFTER_CANCEL_MS,
+} from './selection-guard.js';
 
 const CONSECUTIVE_FAILURES_FOR_MANUAL_SEARCH = 2;
+/** Pausa de la cámara tras reconocer a alguien descartado, para no analizarlo en cada ciclo. */
+const DISMISSED_RECHECK_COOLDOWN_MS = 3000;
 
 let identifyInterval = null;
 let isProcessing = false;
 let consecutiveFailures = 0;
 let manualCandidate = null;
+
+/** @type {{stop: () => void}|null} Temporizador de la pantalla de selección/confirmación abierta. */
+let selectionTimer = null;
+/** @type {number|string|null} Empleado cuya pantalla de selección está abierta. */
+let selectionEmployeeId = null;
+
+/**
+ * Detiene el temporizador de la pantalla de selección (al tocar un botón, cancelar o reiniciar).
+ */
+export function clearSelectionTimeout() {
+    if (selectionTimer) {
+        selectionTimer.stop();
+        selectionTimer = null;
+    }
+    selectionEmployeeId = null;
+}
+
+/**
+ * Abre el temporizador de la pantalla de selección/confirmación del empleado indicado.
+ * Si nadie toca un botón antes de que llegue a cero, vuelve a la cámara sin registrar nada.
+ * @param {object} refs - Referencias del flujo de identificación.
+ * @param {object} employee - Empleado reconocido.
+ * @param {number} seconds - Segundos de espera (0 = sin límite).
+ */
+function startSelectionTimeout(refs, employee, seconds) {
+    clearSelectionTimeout();
+    selectionEmployeeId = employee.id;
+    const countdownEl = refs.typeSelectionDom?.countdownEl;
+    selectionTimer = createSelectionTimer({
+        seconds,
+        onTick: (remaining) => {
+            if (countdownEl) countdownEl.textContent = `Vuelve a la cámara en ${remaining} s`;
+        },
+        onExpire: () => cancelSelection(refs, { reason: 'timeout' }),
+    });
+    if (countdownEl) countdownEl.textContent = '';
+    selectionTimer.start();
+}
+
+/**
+ * Cierra la pantalla de selección sin registrar nada y vuelve a la cámara. Se usa al vencer el
+ * tiempo de espera o al tocar «Cancelar». Ignora un rato al empleado para que no reaparezca en bucle
+ * mientras sigue frente a la cámara.
+ * @param {object} refs - Referencias del flujo de identificación.
+ * @param {{reason?: 'timeout'|'cancel'}} [options]
+ */
+export function cancelSelection(refs, { reason = 'cancel' } = {}) {
+    const employeeId = selectionEmployeeId;
+    clearSelectionTimeout();
+    clearPendingEmployee();
+    if (employeeId !== null && employeeId !== undefined) {
+        dismissEmployee(employeeId, reason === 'timeout' ? DISMISS_AFTER_TIMEOUT_MS : DISMISS_AFTER_CANCEL_MS);
+    }
+    startIdentificationFlow(refs, { onIdleTimeout: refs.onIdleTimeout });
+}
 /** Terminal sin vincular: ninguna ruta de re-entrada puede volver a arrancar cámara ni identificación. */
 let blocked = false;
 
@@ -196,6 +262,7 @@ function updateStatus(identificationStatusEl, text) {
  * @param {{onIdleTimeout: () => void}} callbacks
  */
 export function startIdentificationFlow(refs, { onIdleTimeout }) {
+    clearSelectionTimeout();
     if (blocked) {
         showScreen(refs.screens, 'unlinked');
         return;
@@ -283,6 +350,16 @@ export async function startAutoIdentification(refs) {
             }
 
             if (result.ok && result.employee) {
+                if (isEmployeeDismissed(result.employee.id)) {
+                    // Canceló o dejó vencer su pantalla hace un momento y sigue frente a la cámara: no se reabre.
+                    await finishCaptureProgress('filled');
+                    camera.setNotRecognizedCooldown(DISMISSED_RECHECK_COOLDOWN_MS);
+                    setTerminalVideoState('detecting');
+                    setIdStatusDot('detecting');
+                    updateStatus(refs.identificationStatus, 'Posicione su rostro dentro del óvalo...');
+                    return;
+                }
+
                 consecutiveFailures = 0;
                 manualCandidate = null;
                 hideManualSearchLink();
@@ -312,13 +389,26 @@ export async function startAutoIdentification(refs) {
                     expectedCheckOut,
                 });
 
+                // Pantalla de selección o confirmación: si nadie toca un botón en unos segundos, vuelve a la cámara
+                // sin registrar nada (antes quedaba abierta, o la salida se registraba sola al pasar de largo).
+                const selectionSeconds = normalizeSelectionTimeout(await getMeta('terminal_selection_timeout_seconds'));
+                const confirmEnabled = await getMeta('terminal_confirm_exit');
+
                 if (askEntryOrExit) {
                     // Cerca del fin del turno y sin entrada hoy: puede haberse olvidado de marcar al llegar.
                     showTypeSelectionForEmployee(refs.screens, refs.typeSelectionDom, result.employee, allowedEvents, null, null, { entryOrExit: true });
+                    startSelectionTimeout(refs, result.employee, selectionSeconds);
                 } else if (allowedEvents.length === 1 && result.last_event !== 'check_out') {
-                    await registerMark(result.employee, allowedEvents[0], markCallbacks);
+                    if (shouldConfirmEvent(allowedEvents[0], confirmEnabled)) {
+                        // Salida y descansos: un solo botón de confirmación, no se registran solos al pasar frente a la cámara.
+                        showTypeSelectionForEmployee(refs.screens, refs.typeSelectionDom, result.employee, allowedEvents, result.last_event, result.last_event_time);
+                        startSelectionTimeout(refs, result.employee, selectionSeconds);
+                    } else {
+                        await registerMark(result.employee, allowedEvents[0], markCallbacks);
+                    }
                 } else if (allowedEvents.length > 1) {
                     showTypeSelectionForEmployee(refs.screens, refs.typeSelectionDom, result.employee, allowedEvents, result.last_event, result.last_event_time);
+                    startSelectionTimeout(refs, result.employee, selectionSeconds);
                 } else {
                     showDayComplete(refs.screens, refs.dayCompleteDom, result.employee, onCountdownComplete);
                 }

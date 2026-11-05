@@ -12,7 +12,10 @@ vi.mock('../terminal-offline/sync.js', () => {
     class MockTerminalAuthError extends Error {}
     return { getFaceConfig: vi.fn(), TerminalAuthError: MockTerminalAuthError };
 });
-vi.mock('../terminal-offline/queue.js', () => ({ getEmployeeStatus: vi.fn() }));
+vi.mock('../terminal-offline/queue.js', () => ({
+    getEmployeeStatus: vi.fn(),
+    getExpectedShift: vi.fn().mockResolvedValue({ expectedCheckIn: null, expectedCheckOut: null }),
+}));
 
 // Mocks exclusivos de la suite `startIdentificationFlow` de más abajo: ese
 // flujo orquesta cámara/pantallas/búsqueda-manual/feedback además del
@@ -58,7 +61,9 @@ vi.mock('./manual-search.js', () => ({
 import { getCachedEmployees, getMeta } from '../terminal-offline/db.js';
 import { identifyEmployee as matchDescriptor } from '../offline-shared/matcher.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
-import { getEmployeeStatus } from '../terminal-offline/queue.js';
+import { getEmployeeStatus, getExpectedShift } from '../terminal-offline/queue.js';
+import { showTypeSelectionForEmployee, registerMark, clearPendingEmployee } from './mark-registration.js';
+import { clearDismissed, isEmployeeDismissed } from './selection-guard.js';
 import * as camera from './camera.js';
 import {
     identifyEmployeeFromDescriptor,
@@ -67,6 +72,8 @@ import {
     stopAutoIdentification,
     getConsecutiveFailures,
     setCameraPausedProbe,
+    cancelSelection,
+    clearSelectionTimeout,
 } from './identification-flow.js';
 
 describe('identifyEmployeeFromDescriptor', () => {
@@ -391,5 +398,166 @@ describe('cámara apagada a mano', () => {
         startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
 
         await vi.waitFor(() => expect(camera.startCamera).toHaveBeenCalled());
+    });
+});
+
+
+describe('confirmación de salida y tiempo de espera de la selección', () => {
+    const employee = { id: 3, first_name: 'Juan', last_name: 'Pérez', ci: '1' };
+    const refs = {
+        screens: {},
+        video: {},
+        overlay: {},
+        ctx: {},
+        identificationStatus: null,
+        successDom: {},
+        errorMessageEl: {},
+        dayCompleteDom: {},
+        typeSelectionDom: { countdownEl: { textContent: '' } },
+        onIdleTimeout: vi.fn(),
+    };
+
+    /** Deja al empleado reconocido por la cámara con el estado del día indicado y la config del servidor. */
+    function setup({ lastEvent, allowedEvents, meta = {} }) {
+        camera.isFaceDetected.mockReturnValue(true);
+        camera.isInCooldown.mockReturnValue(false);
+        camera.captureDescriptor.mockResolvedValue(new Float32Array(128));
+        getFaceConfig.mockResolvedValue({ threshold: 0.5, minGap: 0.1 });
+        getCachedEmployees.mockResolvedValue([employee]);
+        matchDescriptor.mockReturnValue({ employee, distance: 0.2 });
+        getEmployeeStatus.mockResolvedValue({ last_event: lastEvent, last_event_time: '07:00', allowed_events: allowedEvents });
+        getExpectedShift.mockResolvedValue({ expectedCheckIn: null, expectedCheckOut: null });
+        getMeta.mockImplementation(async (key) => meta[key]);
+    }
+
+    /** Arranca el flujo y deja correr un ciclo de identificación (el intervalo es de 1500 ms). */
+    async function identifyOnce() {
+        startIdentificationFlow(refs, { onIdleTimeout: vi.fn() });
+        await vi.advanceTimersByTimeAsync(1500);
+    }
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+        clearDismissed();
+        clearSelectionTimeout();
+        refs.typeSelectionDom.countdownEl.textContent = '';
+    });
+
+    afterEach(() => {
+        stopAutoIdentification({});
+        clearSelectionTimeout();
+        vi.useRealTimers();
+    });
+
+    it('la salida (único evento permitido) pide confirmación y NO se registra sola', async () => {
+        setup({ lastEvent: 'check_in', allowedEvents: ['check_out'] });
+
+        await identifyOnce();
+
+        expect(showTypeSelectionForEmployee).toHaveBeenCalledTimes(1);
+        expect(showTypeSelectionForEmployee.mock.calls[0][3]).toEqual(['check_out']);
+        expect(registerMark).not.toHaveBeenCalled();
+    });
+
+    it('el fin de un descanso también pide confirmación', async () => {
+        setup({ lastEvent: 'break_start', allowedEvents: ['break_end'] });
+
+        await identifyOnce();
+
+        expect(showTypeSelectionForEmployee).toHaveBeenCalledTimes(1);
+        expect(registerMark).not.toHaveBeenCalled();
+    });
+
+    it('la entrada sigue registrándose sola', async () => {
+        setup({ lastEvent: null, allowedEvents: ['check_in'] });
+
+        await identifyOnce();
+
+        expect(registerMark).toHaveBeenCalledTimes(1);
+        expect(registerMark.mock.calls[0][1]).toBe('check_in');
+        expect(showTypeSelectionForEmployee).not.toHaveBeenCalled();
+    });
+
+    it('con la confirmación desactivada en Configuración General, la salida se registra sola como antes', async () => {
+        setup({ lastEvent: 'check_in', allowedEvents: ['check_out'], meta: { terminal_confirm_exit: false } });
+
+        await identifyOnce();
+
+        expect(registerMark).toHaveBeenCalledTimes(1);
+        expect(registerMark.mock.calls[0][1]).toBe('check_out');
+        expect(showTypeSelectionForEmployee).not.toHaveBeenCalled();
+    });
+
+    it('si nadie toca el botón, vuelve a la cámara sin registrar nada y no reabre la pantalla en bucle', async () => {
+        setup({ lastEvent: 'check_in', allowedEvents: ['check_out'] });
+
+        await identifyOnce();
+        expect(refs.typeSelectionDom.countdownEl.textContent).toBe('Vuelve a la cámara en 15 s');
+
+        await vi.advanceTimersByTimeAsync(15_000);
+
+        expect(registerMark).not.toHaveBeenCalled();
+        expect(clearPendingEmployee).toHaveBeenCalled();
+        expect(isEmployeeDismissed(employee.id)).toBe(true);
+
+        // Sigue frente a la cámara: se lo reconoce otra vez, pero no se reabre su pantalla.
+        await vi.advanceTimersByTimeAsync(1500);
+        expect(showTypeSelectionForEmployee).toHaveBeenCalledTimes(1);
+    });
+
+    it('el tiempo de espera es el configurado por el servidor', async () => {
+        setup({ lastEvent: 'check_in', allowedEvents: ['check_out'], meta: { terminal_selection_timeout_seconds: 5 } });
+
+        await identifyOnce();
+        clearPendingEmployee.mockClear();
+        expect(refs.typeSelectionDom.countdownEl.textContent).toBe('Vuelve a la cámara en 5 s');
+
+        await vi.advanceTimersByTimeAsync(4_000);
+        expect(clearPendingEmployee).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(clearPendingEmployee).toHaveBeenCalled();
+    });
+
+    it('con 0 segundos la pantalla no vence sola', async () => {
+        setup({ lastEvent: 'check_in', allowedEvents: ['check_out'], meta: { terminal_selection_timeout_seconds: 0 } });
+
+        await identifyOnce();
+        clearPendingEmployee.mockClear();
+        await vi.advanceTimersByTimeAsync(120_000);
+
+        expect(clearPendingEmployee).not.toHaveBeenCalled();
+        expect(registerMark).not.toHaveBeenCalled();
+    });
+
+    it('Cancelar cierra la selección, no registra nada y ignora al empleado unos segundos', async () => {
+        setup({ lastEvent: 'check_in', allowedEvents: ['break_start', 'check_out'] });
+
+        await identifyOnce();
+        expect(showTypeSelectionForEmployee).toHaveBeenCalledTimes(1);
+
+        cancelSelection(refs, { reason: 'cancel' });
+
+        expect(registerMark).not.toHaveBeenCalled();
+        expect(clearPendingEmployee).toHaveBeenCalled();
+        expect(isEmployeeDismissed(employee.id)).toBe(true);
+
+        // Pasados unos segundos puede volver a marcar (el descarte tras cancelar es corto).
+        await vi.advanceTimersByTimeAsync(6_000);
+        expect(isEmployeeDismissed(employee.id)).toBe(false);
+    });
+
+    it('tocar un botón detiene el temporizador: no vence después', async () => {
+        setup({ lastEvent: 'check_in', allowedEvents: ['check_out'] });
+
+        await identifyOnce();
+        clearSelectionTimeout();
+        clearPendingEmployee.mockClear();
+
+        await vi.advanceTimersByTimeAsync(30_000);
+
+        expect(clearPendingEmployee).not.toHaveBeenCalled();
+        expect(isEmployeeDismissed(employee.id)).toBe(false);
     });
 });

@@ -109,6 +109,8 @@ class TerminalHeartbeatController extends Controller
             'config' => [
                 'overnight_max_hours' => (int) $settings->attendance_overnight_max_hours,
                 'camera_resume_minutes' => (int) $settings->terminal_camera_resume_minutes,
+                'confirm_exit' => (bool) $settings->terminal_confirm_exit,
+                'selection_timeout_seconds' => (int) $settings->terminal_selection_timeout_seconds,
                 'face_threshold' => (float) $settings->face_threshold,
                 'face_min_confidence_gap' => (float) $settings->face_min_confidence_gap,
                 // null = la empresa no tiene aviso: el terminal borra el que tenía guardado.

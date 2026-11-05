@@ -66,6 +66,11 @@
                 <span class="btn-text">Salida</span>
             </button>
         </div>
+
+        {{-- Cuenta regresiva y salida: si nadie toca un botón, vuelve a la cámara sin registrar nada.
+             Evita que la salida o un descanso se registren solos al pasar frente al terminal. --}}
+        <p class="type-selection-countdown" id="typeSelectionCountdown" aria-live="polite"></p>
+        <button type="button" class="type-selection-cancel" id="btnTypeCancel">Cancelar</button>
     </div>
 </section>
 
