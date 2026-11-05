@@ -627,6 +627,30 @@ body {
     text-align: center;
 }
 
+/* Cuenta regresiva y botón Cancelar de la selección/confirmación: sin toque, vuelve a la cámara */
+.type-selection-countdown {
+    font-size: .875rem;
+    color: var(--c-muted);
+    text-align: center;
+    min-height: 1.25rem;
+}
+.type-selection-cancel {
+    font-family: var(--font);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--c-muted);
+    background: transparent;
+    border: 2px solid var(--c-border);
+    border-radius: var(--r-2xl);
+    padding: var(--sp-3) var(--sp-8);
+    cursor: pointer;
+    transition: all var(--tr);
+}
+.type-selection-cancel:hover {
+    color: var(--c-text);
+    border-color: var(--c-border-s);
+}
+
 /* Grid 2×2 de tipos */
 .type-grid {
     display: grid;

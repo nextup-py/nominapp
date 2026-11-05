@@ -41,6 +41,12 @@ class GeneralSettings extends Settings
     /** Minutos tras los que la cámara apagada a mano en un terminal se reenciende sola; 0 = nunca. */
     public int $terminal_camera_resume_minutes;
 
+    /** La salida y los descansos piden un toque de confirmación en el terminal en vez de registrarse solos al reconocer al empleado. */
+    public bool $terminal_confirm_exit;
+
+    /** Segundos que espera la pantalla de selección/confirmación del terminal antes de volver a la cámara sin registrar nada; 0 = sin límite. */
+    public int $terminal_selection_timeout_seconds;
+
     /** Permiso de marcación desde el celular cuando ni el empleado, ni su sucursal ni su empresa lo definen. */
     public bool $attendance_mobile_marking_default;
 

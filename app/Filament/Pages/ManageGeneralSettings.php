@@ -225,6 +225,22 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('minutos')
                             ->helperText('Si alguien apaga la cámara a mano desde el menú del terminal, se vuelve a encender sola pasado este tiempo, para no dejar el terminal inutilizado por olvido. 0 = queda apagada hasta que se encienda a mano'),
 
+                        Toggle::make('terminal_confirm_exit')
+                            ->label('Confirmar la salida y los descansos en el terminal')
+                            ->default(true)
+                            ->helperText('Al reconocer a un empleado, la salida y los descansos piden un toque en «Marcar» en vez de registrarse solos. Evita que una salida se marque por pasar frente a la cámara. La entrada sigue siendo automática'),
+
+                        TextInput::make('terminal_selection_timeout_seconds')
+                            ->label('Espera de la pantalla de selección')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(120)
+                            ->default(15)
+                            ->suffix('segundos')
+                            ->helperText('Si nadie toca un botón, el terminal vuelve a la cámara sin registrar nada. Aplica a la confirmación y a la selección del tipo de marcación. 0 = sin límite de espera'),
+
                         TextInput::make('terminal_events_retention_days')
                             ->label('Retención de la bitácora de terminales')
                             ->numeric()

@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         screenTitleEl:   document.getElementById('typeSelectionTitle'),
         screenEyebrowEl: document.getElementById('typeSelectionEyebrow'),
         lastMarkEl:      document.getElementById('typeSelectionLastMark'),
+        countdownEl:     document.getElementById('typeSelectionCountdown'),
     };
 
     const errorMessageEl = document.getElementById('errorMessage');
@@ -164,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================================
     function enterIdle() {
         idleDetection.clearIdleTimer();
+        identificationFlow.clearSelectionTimeout();
         identificationFlow.stopAutoIdentification(video);
         screenState.stopCountdown();
         isIdle = true;
@@ -406,6 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetTerminal() {
         identificationFlow.stopAutoIdentification(video);
+        identificationFlow.clearSelectionTimeout();
         markRegistration.clearPendingEmployee();
         screenState.resetTerminal(screens, typeButtons, () => identificationFlow.startIdentificationFlow(identificationRefs, { onIdleTimeout: enterIdle }));
     }
@@ -431,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const eventType = button.getAttribute('data-event-type');
             const employee = markRegistration.getPendingEmployee();
             if (!employee) return;
+            identificationFlow.clearSelectionTimeout();
 
             // Re-entrancy guard: un doble-tap en pantalla táctil no debe encolar
             // dos marcaciones para el mismo empleado — ver mark.js (btnMark.disabled)
@@ -464,6 +468,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (screens.idle) {
         screens.idle.addEventListener('click', () => exitIdle());
     }
+
+    // Cancelar la selección o confirmación: vuelve a la cámara sin registrar nada.
+    document.getElementById('btnTypeCancel')?.addEventListener('click', () => {
+        identificationFlow.cancelSelection(identificationRefs, { reason: 'cancel' });
+    });
 
     if (btnCancel) {
         btnCancel.addEventListener('click', () => {

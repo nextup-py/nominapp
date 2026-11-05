@@ -445,6 +445,14 @@ En el menú **⋮**, debajo del resultado, se ve cuántos empleados tiene descar
 
 Cuando hay una versión nueva de la app aparece **Actualizar app** (en el menú **⋮** y en la pantalla de reposo): recarga el terminal sin perder las marcaciones pendientes. Si nadie lo toca, el terminal se actualiza solo al quedar en reposo.
 
+### Confirmación de la salida y los descansos
+
+Al reconocer a un empleado, la **entrada** se registra sola, pero la **salida** y los **descansos** piden un toque en **Marcar** (o en el tipo que corresponda). Así una salida no se marca por pasar frente a la cámara después de haber marcado.
+
+- La pantalla de selección muestra una cuenta regresiva (**Vuelve a la cámara en N s**). Si nadie toca nada, vuelve a la cámara **sin registrar nada**.
+- El botón **Cancelar** vuelve a la cámara de inmediato. El empleado cancelado o vencido no se vuelve a identificar durante unos segundos, para que quien sigue pasando frente a la cámara no reabra la pantalla.
+- Se configura en **Configuración → General → Terminales de Marcación**: **Confirmar la salida y los descansos en el terminal** (activado por defecto; apagado = la salida se registra sola como antes) y **Espera de la pantalla de selección** (15 segundos por defecto; **0** = sin límite). El cambio llega a los terminales con su siguiente sincronización.
+
 ### Controles de la cámara
 
 El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: se recuerdan en ese navegador y no cambian lo que ven otros terminales.
