@@ -38,13 +38,14 @@ it('Super Admin ve la acción de reabrir el asistente en Configuración General'
         ->assertActionVisible('reopenSetupWizard');
 });
 
-it('un usuario sin rol Super Admin no ve la acción de reabrir el asistente', function () {
+it('un usuario sin rol Super Admin no puede abrir Configuración General ni reabrir el asistente', function () {
     $rrhh = User::factory()->create();
     $rrhh->assignRole('RRHH');
     $this->actingAs($rrhh);
 
-    Livewire::test(ManageGeneralSettings::class)
-        ->assertActionHidden('reopenSetupWizard');
+    expect(ManageGeneralSettings::canAccess())->toBeFalse();
+
+    Livewire::test(ManageGeneralSettings::class)->assertForbidden();
 });
 
 it('reabrir el wizard no bloquea el resto del panel', function () {
