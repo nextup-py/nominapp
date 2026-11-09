@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Exports\MerchandiseReportExport;
 use App\Exports\MerchandiseWithdrawalsSheet;
+use App\Filament\Resources\MerchandiseWithdrawalResource;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -35,6 +36,12 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class MerchandiseReport extends Page implements HasTable
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return MerchandiseWithdrawalResource::canViewAny();
+    }
+
     use InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';

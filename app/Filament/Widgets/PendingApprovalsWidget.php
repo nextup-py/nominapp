@@ -16,6 +16,12 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 /** Widget de aprobaciones pendientes: muestra elementos que requieren acción inmediata. */
 class PendingApprovalsWidget extends BaseWidget
 {
+    /** Solo lo ven quienes tienen permiso sobre el módulo que resume. */
+    public static function canView(): bool
+    {
+        return LoanResource::canViewAny() || AdvanceResource::canViewAny() || AbsenceResource::canViewAny() || EmployeeLeaveResource::canViewAny();
+    }
+
     protected static ?int $sort = 2;
 
     protected static ?string $pollingInterval = '60s';

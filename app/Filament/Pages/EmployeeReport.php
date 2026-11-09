@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Exports\EmployeeReportExport;
+use App\Filament\Resources\EmployeeResource;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Contract;
@@ -36,6 +37,12 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class EmployeeReport extends Page implements HasTable
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return EmployeeResource::canViewAny();
+    }
+
     use InteractsWithTable;
 
     protected static ?string $slug = 'reporte-empleados';

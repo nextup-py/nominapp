@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\AttendanceDayResource;
 use App\Models\AttendanceDay;
 use App\Models\Branch;
 use Filament\Widgets\ChartWidget;
@@ -9,6 +10,12 @@ use Filament\Widgets\ChartWidget;
 /** Widget de gráfico: presencias y ausencias por sucursal para el día de hoy. */
 class BranchAttendanceToday extends ChartWidget
 {
+    /** Solo lo ven quienes tienen permiso sobre el módulo que resume. */
+    public static function canView(): bool
+    {
+        return AttendanceDayResource::canViewAny();
+    }
+
     protected static ?string $heading = 'Presencias / Ausencias por Sucursal';
 
     protected static ?string $description = 'Estado de asistencia del día de hoy';

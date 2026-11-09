@@ -8,6 +8,7 @@ use App\Exports\AttendanceReportDetailExport;
 use App\Exports\AttendanceReportSummaryExport;
 use App\Exports\OvertimeReportDetailExport;
 use App\Exports\OvertimeReportSummaryExport;
+use App\Filament\Resources\AttendanceDayResource;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Department;
@@ -41,6 +42,12 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class AttendanceReport extends Page implements HasTable
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return AttendanceDayResource::canViewAny();
+    }
+
     use InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';

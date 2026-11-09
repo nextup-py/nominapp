@@ -113,29 +113,31 @@ Route::prefix('registro-facial')->name('face-enrollment.')->middleware('throttle
 Route::middleware(['auth'])->group(function () {
 
     // Captura de rostro de empleados
-    Route::prefix('employees/{employee}')->name('face.')->group(function () {
+    Route::prefix('employees/{employee}')->name('face.')->middleware('can:update,employee')->group(function () {
         Route::get('/capture-face', [EmployeeFaceController::class, 'show'])->name('capture');
         Route::post('/capture-face', [EmployeeFaceController::class, 'store'])->name('capture.store');
     });
 
     // Exportación de asistencias
     Route::get('/asistencias/{attendance_day}/export', [AttendanceExportController::class, 'export'])
+        ->middleware('can:view,attendance_day')
         ->name('attendance-days.export');
 
     // Recibos de pago (nómina)
-    Route::prefix('recibos/{payroll}')->name('payrolls.')->group(function () {
+    Route::prefix('recibos/{payroll}')->name('payrolls.')->middleware('can:view,payroll')->group(function () {
         Route::get('/download', [PayrollController::class, 'download'])->name('download');
         Route::get('/view', [PayrollController::class, 'view'])->name('view');
     });
     Route::get('/recibos/temp/{filename}', [PayrollController::class, 'downloadTemp'])
+        ->middleware('can:viewAny,App\\Models\\Payroll')
         ->name('payrolls.download.temp')
         ->where('filename', '.+');
 
     // Recibos de aguinaldo (13° salario)
-    Route::get('/aguinaldos/{aguinaldo}/download', [AguinaldoController::class, 'download'])->name('aguinaldos.download');
+    Route::get('/aguinaldos/{aguinaldo}/download', [AguinaldoController::class, 'download'])->middleware('can:view,aguinaldo')->name('aguinaldos.download');
 
     // Liquidaciones (finiquitos)
-    Route::prefix('liquidaciones/{liquidacion}')->name('liquidaciones.')->group(function () {
+    Route::prefix('liquidaciones/{liquidacion}')->name('liquidaciones.')->middleware('can:view,liquidacion')->group(function () {
         Route::get('/download', [LiquidacionController::class, 'download'])->name('download');
         Route::get('/view', [LiquidacionController::class, 'view'])->name('view');
     });
@@ -144,56 +146,60 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/terminales/{terminal}/hoja-instalacion', [TerminalInstallSheetController::class, 'show'])->name('terminals.install-sheet');
 
     // Amonestaciones
-    Route::get('/amonestaciones/{warning}/pdf', [WarningController::class, 'show'])->name('warnings.pdf');
+    Route::get('/amonestaciones/{warning}/pdf', [WarningController::class, 'show'])->middleware('can:view,warning')->name('warnings.pdf');
 
     // Préstamos y adelantos (rutas estáticas deben ir ANTES de las dinámicas con {advance})
-    Route::get('/prestamos/{loan}/pdf', [LoanController::class, 'show'])->name('loans.pdf');
-    Route::get('/retiros-mercaderia/reporte/pdf', [MerchandiseReportController::class, 'pdf'])->name('merchandise.report.pdf');
-    Route::get('/retiros-mercaderia/{merchandiseWithdrawal}/pdf', [MerchandiseWithdrawalController::class, 'show'])->name('merchandise-withdrawals.pdf');
-    Route::get('/adelantos/pdf/masivo', [AdvanceController::class, 'bulkPdf'])->name('advances.pdf.bulk');
-    Route::get('/adelantos/reporte/pdf', [AdvanceReportController::class, 'pdf'])->name('advances.report.pdf');
-    Route::get('/nominas/reporte/salarios/pdf', [SalaryReportController::class, 'pdf'])->name('salary-report.pdf');
-    Route::get('/asistencia/reporte/asistencias/pdf', [AttendancePdfReportController::class, 'attendance'])->name('attendance.report.attendance.pdf');
-    Route::get('/asistencia/reporte/ausencias/pdf', [AttendancePdfReportController::class, 'absence'])->name('attendance.report.absence.pdf');
-    Route::get('/asistencia/reporte/overtime/pdf', [AttendancePdfReportController::class, 'overtime'])->name('attendance.report.overtime.pdf');
-    Route::get('/empleados/reporte/pdf', [EmployeeReportController::class, 'pdf'])->name('employees.report.pdf');
-    Route::get('/adelantos/{advance}/pdf', [AdvanceController::class, 'show'])->name('advances.pdf');
+    Route::get('/prestamos/{loan}/pdf', [LoanController::class, 'show'])->middleware('can:view,loan')->name('loans.pdf');
+    Route::get('/retiros-mercaderia/reporte/pdf', [MerchandiseReportController::class, 'pdf'])->middleware('can:viewAny,App\\Models\\MerchandiseWithdrawal')->name('merchandise.report.pdf');
+    Route::get('/retiros-mercaderia/{merchandiseWithdrawal}/pdf', [MerchandiseWithdrawalController::class, 'show'])->middleware('can:view,merchandiseWithdrawal')->name('merchandise-withdrawals.pdf');
+    Route::get('/adelantos/pdf/masivo', [AdvanceController::class, 'bulkPdf'])->middleware('can:viewAny,App\\Models\\Advance')->name('advances.pdf.bulk');
+    Route::get('/adelantos/reporte/pdf', [AdvanceReportController::class, 'pdf'])->middleware('can:viewAny,App\\Models\\Advance')->name('advances.report.pdf');
+    Route::get('/nominas/reporte/salarios/pdf', [SalaryReportController::class, 'pdf'])->middleware('can:viewAny,App\\Models\\Payroll')->name('salary-report.pdf');
+    Route::get('/asistencia/reporte/asistencias/pdf', [AttendancePdfReportController::class, 'attendance'])->middleware('can:viewAny,App\\Models\\AttendanceDay')->name('attendance.report.attendance.pdf');
+    Route::get('/asistencia/reporte/ausencias/pdf', [AttendancePdfReportController::class, 'absence'])->middleware('can:viewAny,App\\Models\\AttendanceDay')->name('attendance.report.absence.pdf');
+    Route::get('/asistencia/reporte/overtime/pdf', [AttendancePdfReportController::class, 'overtime'])->middleware('can:viewAny,App\\Models\\AttendanceDay')->name('attendance.report.overtime.pdf');
+    Route::get('/empleados/reporte/pdf', [EmployeeReportController::class, 'pdf'])->middleware('can:viewAny,App\\Models\\Employee')->name('employees.report.pdf');
+    Route::get('/adelantos/{advance}/pdf', [AdvanceController::class, 'show'])->middleware('can:view,advance')->name('advances.pdf');
 
     // Reportes de contratos (rutas estáticas deben ir ANTES de /contratos/{contract}/pdf)
     Route::get('/contratos/reporte/pdf', [ContractReportController::class, 'pdf'])
+        ->middleware('can:viewAny,App\\Models\\Contract')
         ->name('contracts.report.pdf');
 
     // Contratos laborales
-    Route::get('/contratos/{contract}/pdf', [ContractController::class, 'show'])->name('contracts.pdf');
-    Route::get('/preview/plantilla-contrato/{contractTemplate}', [ContractController::class, 'previewTemplate'])->name('contract-templates.preview');
+    Route::get('/contratos/{contract}/pdf', [ContractController::class, 'show'])->middleware('can:view,contract')->name('contracts.pdf');
+    Route::get('/preview/plantilla-contrato/{contractTemplate}', [ContractController::class, 'previewTemplate'])->middleware('can:view,contractTemplate')->name('contract-templates.preview');
 
     // Legajo del empleado
-    Route::get('/empleados/{employee}/legajo', [EmployeeController::class, 'legajo'])->name('employees.legajo');
+    Route::get('/empleados/{employee}/legajo', [EmployeeController::class, 'legajo'])->middleware('can:view,employee')->name('employees.legajo');
 
     // Administración de horarios
     Route::post('/admin/schedules/{schedule}/remove-employee/{employee}', [ScheduleEmployeeController::class, 'removeEmployee'])
+        ->middleware('can:update,schedule')
         ->name('schedules.remove-employee');
 
     // Documentos y reportes de vacaciones
     Route::get('/vacaciones/documentos/{filename}', [VacationDocumentController::class, 'download'])
+        ->middleware('can:viewAny,App\\Models\\Vacation')
         ->name('vacation.documents.download');
     Route::get('/vacaciones/reporte/pdf', [VacationReportController::class, 'pdf'])
+        ->middleware('can:viewAny,App\\Models\\Vacation')
         ->name('vacation.report.pdf');
 
     // Descarga de archivos de log
-    Route::get('/logs/download', [LogController::class, 'download'])->name('logs.download');
+    Route::get('/logs/download', [LogController::class, 'download'])->middleware('can:super-admin')->name('logs.download');
 
     // Organigrama de empresas
-    Route::prefix('empresas/{company}')->name('org-chart.')->group(function () {
+    Route::prefix('empresas/{company}')->name('org-chart.')->middleware('can:view,company')->group(function () {
         Route::get('/organigrama', [OrgChartController::class, 'show'])->name('show');
         Route::get('/organigrama/pdf', [OrgChartController::class, 'exportPdf'])->name('pdf');
     });
 
     // Planificador visual de turnos rotativos
-    Route::prefix('admin/shift-planner')->name('shift-planner.')->group(function () {
+    Route::prefix('admin/shift-planner')->name('shift-planner.')->middleware('can:viewAny,App\\Models\\Schedule')->group(function () {
         Route::get('/data', [ShiftPlannerController::class, 'data'])->name('data');
         Route::get('/shifts', [ShiftPlannerController::class, 'shifts'])->name('shifts');
-        Route::post('/override', [ShiftPlannerController::class, 'storeOverride'])->name('override.store');
-        Route::delete('/override', [ShiftPlannerController::class, 'destroyOverride'])->name('override.destroy');
+        Route::post('/override', [ShiftPlannerController::class, 'storeOverride'])->middleware('can:update_schedule')->name('override.store');
+        Route::delete('/override', [ShiftPlannerController::class, 'destroyOverride'])->middleware('can:update_schedule')->name('override.destroy');
     });
 });

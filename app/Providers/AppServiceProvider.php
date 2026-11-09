@@ -48,6 +48,9 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::before(fn (User $user) => $user->hasRole('Super Admin') ? true : null);
 
+        // Pantallas y descargas reservadas al Super Admin (configuración, logs): el Gate::before ya lo deja pasar.
+        Gate::define('super-admin', fn (User $user) => $user->hasRole('Super Admin'));
+
         $this->configureRateLimiting();
     }
 

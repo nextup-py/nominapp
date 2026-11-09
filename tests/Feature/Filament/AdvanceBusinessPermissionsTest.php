@@ -186,14 +186,14 @@ it('muestra la acción de cancelar adelanto con el permiso cancel_advance', func
 // ─── export_advance ────────────────────────────────────────────────────────
 
 it('oculta la acción de exportar adelantos sin el permiso export_advance', function () {
-    actingAsAdvancePermUser([], withCrud: false);
+    actingAsAdvancePermUser(['view_any_advance'], withCrud: false);
 
     Livewire::test(AdvanceReport::class)
         ->assertActionHidden('export');
 });
 
 it('muestra la acción de exportar adelantos con el permiso export_advance', function () {
-    actingAsAdvancePermUser(['export_advance'], withCrud: false);
+    actingAsAdvancePermUser(['view_any_advance', 'export_advance'], withCrud: false);
 
     Livewire::test(AdvanceReport::class)
         ->assertActionVisible('export');
