@@ -426,5 +426,5 @@ it('la excepción no deja el campo de control guardado ni afecta una renovación
     ]);
 
     expect($renewed->type)->toBe('plazo_fijo')
-        ->and($renewed->notes)->not->toContain('excepción al Art. 53');
+        ->and((string) $renewed->notes)->not->toContain('excepción al Art. 53');
 });
