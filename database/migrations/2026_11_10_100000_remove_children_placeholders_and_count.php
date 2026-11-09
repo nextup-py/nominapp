@@ -22,18 +22,19 @@ return new class extends Migration
             $this->exportDeclaredChildren();
         }
 
-        DB::table('employee_children')
-            ->whereIn('id', function ($query) {
-                $query->select('c.id')
-                    ->from('employee_children as c')
-                    ->join('employees as e', 'e.id', '=', 'c.employee_id')
-                    ->where(fn ($q) => $q->where('c.first_name', 'Hijo/a')->orWhere('c.first_name', 'like', 'Hijo/a %'))
-                    ->whereColumn('c.last_name', 'e.last_name')
-                    ->whereDate('c.birth_date', '2015-01-01')
-                    ->whereNull('c.ci')
-                    ->whereNull('c.birth_certificate_path');
-            })
-            ->delete();
+        $placeholderIds = DB::table('employee_children as c')
+            ->join('employees as e', 'e.id', '=', 'c.employee_id')
+            ->where(fn ($q) => $q->where('c.first_name', 'Hijo/a')->orWhere('c.first_name', 'like', 'Hijo/a %'))
+            ->whereColumn('c.last_name', 'e.last_name')
+            ->whereDate('c.birth_date', '2015-01-01')
+            ->whereNull('c.ci')
+            ->whereNull('c.birth_certificate_path')
+            ->pluck('c.id');
+
+        // Se borra por ids ya resueltos: MySQL no permite borrar con un subselect sobre la misma tabla (error 1093).
+        foreach ($placeholderIds->chunk(500) as $chunk) {
+            DB::table('employee_children')->whereIn('id', $chunk->all())->delete();
+        }
 
         if (Schema::hasColumn('employees', 'children_count')) {
             Schema::table('employees', function (Blueprint $table) {
