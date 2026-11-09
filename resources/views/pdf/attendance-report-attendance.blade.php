@@ -125,6 +125,7 @@
                 <th>Estado</th>
                 <th>Entrada</th>
                 <th>Salida</th>
+                <th>Descansos</th>
                 <th class="num">Hs. Totales</th>
                 <th class="num">Hs. Netas</th>
                 <th class="center">Sal. Anticipada</th>
@@ -134,6 +135,20 @@
         <tbody>
             @foreach($days as $day)
             @php
+                $breakLabels = [];
+                $openBreak = null;
+                foreach ($day->events as $ev) {
+                    if ($ev->event_type === 'break_start') {
+                        if ($openBreak) { $breakLabels[] = $openBreak.'–?'; }
+                        $openBreak = $ev->recorded_at->format('H:i');
+                    } elseif ($openBreak) {
+                        $breakLabels[] = $openBreak.'–'.$ev->recorded_at->format('H:i');
+                        $openBreak = null;
+                    } else {
+                        $breakLabels[] = '?–'.$ev->recorded_at->format('H:i');
+                    }
+                }
+                if ($openBreak) { $breakLabels[] = $openBreak.'–?'; }
                 $dias = ['Monday'=>'Lunes','Tuesday'=>'Martes','Wednesday'=>'Miércoles','Thursday'=>'Jueves','Friday'=>'Viernes','Saturday'=>'Sábado','Sunday'=>'Domingo'];
             @endphp
             <tr>
@@ -142,6 +157,7 @@
                 <td>{{ \App\Models\AttendanceDay::getStatusLabel($day->status ?? 'absent') }}</td>
                 <td>{{ $day->check_in_time  ? \Carbon\Carbon::parse($day->check_in_time)->format('H:i')  : '—' }}</td>
                 <td>{{ $day->check_out_time ? \Carbon\Carbon::parse($day->check_out_time)->format('H:i') : '—' }}</td>
+                <td>{{ $breakLabels ? implode(' · ', $breakLabels) : '—' }}</td>
                 <td class="num">{{ number_format((float)($day->total_hours ?? 0), 2) }} h</td>
                 <td class="num">{{ number_format((float)($day->net_hours ?? 0), 2) }} h</td>
                 <td class="center">{{ (int)($day->early_leave_minutes ?? 0) > 0 ? (int)$day->early_leave_minutes.' min' : '—' }}</td>
