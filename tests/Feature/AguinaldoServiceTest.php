@@ -324,3 +324,58 @@ it('regenera correctamente el aguinaldo con nuevos montos', function () {
 afterEach(function () {
     Mockery::close();
 });
+
+// ─── Nóminas en borrador ─────────────────────────────────────────────────────
+
+it('ignora nóminas en borrador al generar el aguinaldo', function () {
+    $company = makeAguCompany();
+    $period = makeAguPeriod($company, 2025);
+    $employee = makeAguEmployee($company);
+
+    makePayroll($employee, makeAguinaldoPayPeriod(2025, 5), 2_400_000);
+    makePayroll($employee, makeAguinaldoPayPeriod(2025, 6), 9_999_999)->update(['status' => 'draft']);
+
+    makeAguService()->generateForPeriod($period);
+
+    $aguinaldo = Aguinaldo::first();
+    expect((int) $aguinaldo->months_worked)->toBe(1)
+        ->and((float) $aguinaldo->total_earned)->toBe(2_400_000.0)
+        ->and(AguinaldoItem::count())->toBe(1);
+});
+
+it('no genera aguinaldo si todas las nóminas del año están en borrador', function () {
+    $company = makeAguCompany();
+    $period = makeAguPeriod($company, 2025);
+    $employee = makeAguEmployee($company);
+
+    makePayroll($employee, makeAguinaldoPayPeriod(2025, 6), 2_550_000)->update(['status' => 'draft']);
+
+    expect(makeAguService()->generateForPeriod($period))->toBe(0);
+});
+
+it('ignora nóminas en borrador al regenerar y en la provisión', function () {
+    $company = makeAguCompany();
+    $aguPeriod = makeAguPeriod($company, 2025);
+    $employee = makeAguEmployee($company);
+
+    makePayroll($employee, makeAguinaldoPayPeriod(2025, 5), 2_400_000);
+    makePayroll($employee, makeAguinaldoPayPeriod(2025, 6), 9_999_999)->update(['status' => 'draft']);
+
+    $aguinaldo = Aguinaldo::create([
+        'aguinaldo_period_id' => $aguPeriod->id,
+        'employee_id' => $employee->id,
+        'total_earned' => 0,
+        'months_worked' => 0,
+        'aguinaldo_amount' => 0,
+        'status' => 'pending',
+        'generated_at' => now(),
+    ]);
+
+    makeAguService()->regenerateForEmployee($aguinaldo);
+
+    expect((float) $aguinaldo->fresh()->total_earned)->toBe(2_400_000.0);
+
+    $row = makeAguService()->provisionQuery($aguPeriod, 12)->first();
+    expect((int) $row->months_worked)->toBe(1)
+        ->and((float) $row->total_earned)->toBe(2_400_000.0);
+});

@@ -23,6 +23,7 @@ class AguinaldoService
 
     /**
      * Genera aguinaldos para todos los empleados del período que aún no los tienen.
+     * Solo cuenta nóminas del año que ya no están en borrador (`draft`).
      * Retorna el número de aguinaldos generados exitosamente.
      */
     public function generateForPeriod(AguinaldoPeriod $period): int
@@ -49,6 +50,7 @@ class AguinaldoService
             $payrolls = Payroll::with(['period', 'items'])
                 ->join('payroll_periods', 'payrolls.payroll_period_id', '=', 'payroll_periods.id')
                 ->where('payrolls.employee_id', $employee->id)
+                ->where('payrolls.status', '!=', 'draft')
                 ->whereYear('payroll_periods.start_date', $year)
                 ->orderBy('payroll_periods.start_date')
                 ->select('payrolls.*')
@@ -115,6 +117,7 @@ class AguinaldoService
         $payrolls = Payroll::with(['period', 'items'])
             ->join('payroll_periods', 'payrolls.payroll_period_id', '=', 'payroll_periods.id')
             ->where('payrolls.employee_id', $employee->id)
+            ->where('payrolls.status', '!=', 'draft')
             ->whereYear('payroll_periods.start_date', $year)
             ->orderBy('payroll_periods.start_date')
             ->select('payrolls.*')
@@ -185,6 +188,7 @@ class AguinaldoService
             ->join('payrolls', 'payrolls.employee_id', '=', 'employees.id')
             ->join('payroll_periods', 'payroll_periods.id', '=', 'payrolls.payroll_period_id')
             ->where('branches.company_id', $period->company_id)
+            ->where('payrolls.status', '!=', 'draft')
             ->whereYear('payroll_periods.start_date', $period->year)
             ->whereMonth('payroll_periods.start_date', '<=', $upToMonth)
             ->groupBy(

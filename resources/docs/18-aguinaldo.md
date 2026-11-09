@@ -10,9 +10,9 @@ El aguinaldo es el salario adicional obligatorio que corresponde a cada empleado
 Aguinaldo = Total de ingresos del año ÷ 12
 ```
 
-El **total de ingresos** es la suma, mes a mes, de todas las nóminas generadas para el empleado dentro del año del período — de **salario base + percepciones que afectan IPS** (las salariales, como bonos o comisiones) **+ horas extra**. Las percepciones que no afectan IPS (viáticos, subsidios) **no** se incluyen en la base del aguinaldo.
+El **total de ingresos** es la suma, mes a mes, de las nóminas del empleado dentro del año del período que ya no están en **Borrador** (aprobadas, acreditadas o pagadas) — de **salario base + percepciones que afectan IPS** (las salariales, como bonos o comisiones) **+ horas extra**. Las percepciones que no afectan IPS (viáticos, subsidios) **no** se incluyen en la base del aguinaldo.
 
-> "Meses trabajados" es un dato informativo (la cantidad de nóminas generadas ese año para el empleado) — **no** multiplica el resultado. Un empleado que ingresó a mitad de año ya tiene un total de ingresos menor porque solo tuvo nóminas esos meses; la fórmula sigue siendo simplemente dividir ese total entre 12.
+> "Meses trabajados" es un dato informativo (la cantidad de nóminas no borrador de ese año para el empleado) — **no** multiplica el resultado. Un empleado que ingresó a mitad de año ya tiene un total de ingresos menor porque solo tuvo nóminas esos meses; la fórmula sigue siendo simplemente dividir ese total entre 12.
 
 ---
 
@@ -43,7 +43,7 @@ Todo el proceso se gestiona desde **Nóminas → Aguinaldo**.
 
 1. Abrir el período de aguinaldo
 2. Clic en **Generar** (solo disponible en estado Borrador)
-3. El sistema calcula un registro por cada empleado activo de la empresa que tenga al menos una nómina generada en el año, y pasa el período a **En Proceso**
+3. El sistema calcula un registro por cada empleado activo de la empresa que tenga al menos una nómina no borrador en el año, y pasa el período a **En Proceso**
 4. Revisar los montos calculados en la pestaña de aguinaldos del período — el recibo en PDF de cada uno se genera automáticamente al crearse
 
 **Ver Provisión** (disponible en cualquier estado del período): abre un reporte que muestra, mes a mes, cuánto lleva acumulado cada empleado en concepto de aguinaldo hasta el mes elegido — útil para contabilidad antes de cerrar el año. Tiene su propio botón **Exportar Excel**.

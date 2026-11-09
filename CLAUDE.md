@@ -325,9 +325,9 @@ Salario del mes 13, pagadero en diciembre. Se gestiona por `AguinaldoPeriod` (un
 
 **Ciclo de vida de cada `Aguinaldo`:** `pending` → `paid` (vía `markAsPaid()`)
 
-**Generación:** `AguinaldoService::generateForPeriod()` recorre los empleados activos o suspendidos de la empresa, suma los salarios de las nóminas pagadas en el año del período (`paid`) y calcula el proporcional. Se puede regenerar para un empleado individual con `regenerateForEmployee()`.
+**Generación:** `AguinaldoService::generateForPeriod()` recorre los empleados activos de la empresa (`employees.status = 'active'`; un contrato suspendido no los excluye), suma `base_salary + ips_perceptions` de las nóminas del año del período (por `payroll_periods.start_date`) **excluyendo las que siguen en `draft`** (cualquier otro estado cuenta: `approved`, `disbursed`, `paid`) y divide entre 12. Se puede regenerar para un empleado individual con `regenerateForEmployee()`, con el mismo filtro.
 
-**Provisión mensual:** `AguinaldoService::provisionQuery()` retorna una query agregada para mostrar el monto acumulado hasta el mes indicado — útil para reportes contables.
+**Provisión mensual:** `AguinaldoService::provisionQuery()` retorna una query agregada para mostrar el monto acumulado hasta el mes indicado (mismo filtro: sin nóminas `draft`) — útil para reportes contables.
 
 ### Módulo de Vacaciones
 
@@ -1602,7 +1602,7 @@ El `lockForUpdate()` serializa las transacciones concurrentes sobre esa fila —
 
 ### Deployment a producción — Cliente Macro (Sedacosmetica)
 
-**Servidor propio del cliente Macro (Sedacosmetica):** `sedvouco@bh7104` — CentOS, cPanel, PHP 8.2 via `/opt/cpanel/ea-php82/root/usr/bin/php`, Node 16 (sin RAM suficiente para Vite build). Esta sección aplica únicamente a la instalación de Macro; ver la sección siguiente para Bar777 (infraestructura de TechForge, mecanismo distinto).
+**Servidor propio del cliente Macro (Sedacosmetica):** `sedvouco@bh7104` — CentOS, cPanel, PHP 8.3 via `/opt/cpanel/ea-php83/root/usr/bin/php`, Node 16 (sin RAM suficiente para Vite build). Esta sección aplica únicamente a la instalación de Macro; ver la sección siguiente para Bar777 (infraestructura de TechForge, mecanismo distinto).
 
 **Limitación Node 16:** Vite 6 + Rollup requieren Node ≥18 y ~512MB RAM para compilar. El servidor falla con `RangeError: WebAssembly.instantiate(): Out of memory`. **Solución permanente: buildear en local y subir assets via rsync.**
 
@@ -1630,7 +1630,7 @@ rsync -avz --delete public/build/ sedvouco@bh7104:/ruta/nominapp/public/build/
 
 **Scheduler configurado** (`crontab -l`):
 ```
-* * * * * cd /ruta/nominapp && /opt/cpanel/ea-php82/root/usr/bin/php artisan schedule:run >> storage/logs/cron.log 2>&1
+* * * * * cd /ruta/nominapp && /opt/cpanel/ea-php83/root/usr/bin/php artisan schedule:run >> storage/logs/cron.log 2>&1
 ```
 Tareas activas: `app:calculate-attendance` (23:00 diario), `attendance:check-missing` (cada 15min, 6am-8pm, lun-sáb), `face:expire-enrollments` (cada hora), `contracts:expire` (00:05 diario), `contracts:notify-expiring` (08:00 diario), `audits:purge` (03:00 diario).
 
