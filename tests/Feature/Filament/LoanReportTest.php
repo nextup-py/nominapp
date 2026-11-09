@@ -13,6 +13,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
@@ -58,6 +59,7 @@ it('carga sin error 500 cuando hay un préstamo otorgado por un usuario', functi
     $loan->activate($grantedBy->id);
 
     $role = Role::create(['name' => 'Test Role '.uniqid(), 'guard_name' => 'web']);
+    $role->givePermissionTo(Permission::firstOrCreate(['name' => 'view_any_loan', 'guard_name' => 'web']));
     $viewer = User::factory()->create();
     $viewer->assignRole($role);
     test()->actingAs($viewer);

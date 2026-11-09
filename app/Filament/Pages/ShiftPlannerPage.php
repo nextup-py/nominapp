@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Resources\ScheduleResource;
 use App\Models\Branch;
 use App\Models\Company;
 use Filament\Pages\Page;
@@ -14,12 +15,23 @@ use Filament\Pages\Page;
  */
 class ShiftPlannerPage extends Page
 {
-    protected static ?string $navigationGroup   = 'Asistencias';
-    protected static ?string $navigationIcon    = 'heroicon-o-calendar-days';
-    protected static ?string $navigationLabel   = 'Planificador de Turnos';
-    protected static ?string $title             = 'Planificador de Turnos';
-    protected static ?string $slug              = 'planificador';
-    protected static ?int    $navigationSort    = 22;
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return ScheduleResource::canViewAny();
+    }
+
+    protected static ?string $navigationGroup = 'Asistencias';
+
+    protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
+
+    protected static ?string $navigationLabel = 'Planificador de Turnos';
+
+    protected static ?string $title = 'Planificador de Turnos';
+
+    protected static ?string $slug = 'planificador';
+
+    protected static ?int $navigationSort = 22;
 
     protected static string $view = 'filament.pages.shift-planner';
 
@@ -38,12 +50,12 @@ class ShiftPlannerPage extends Page
         return [
             'initData' => [
                 'companies' => $companies,
-                'branches'  => $branches,
-                'csrf'      => csrf_token(),
-                'routes'    => [
-                    'data'            => route('shift-planner.data'),
-                    'shifts'          => route('shift-planner.shifts'),
-                    'overrideStore'   => route('shift-planner.override.store'),
+                'branches' => $branches,
+                'csrf' => csrf_token(),
+                'routes' => [
+                    'data' => route('shift-planner.data'),
+                    'shifts' => route('shift-planner.shifts'),
+                    'overrideStore' => route('shift-planner.override.store'),
                     'overrideDestroy' => route('shift-planner.override.destroy'),
                 ],
             ],

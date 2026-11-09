@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Exports\LoanReportExport;
+use App\Filament\Resources\LoanResource;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -30,6 +31,12 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class LoanReport extends Page implements HasTable
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return LoanResource::canViewAny();
+    }
+
     use InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-credit-card';

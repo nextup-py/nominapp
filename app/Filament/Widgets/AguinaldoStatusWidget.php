@@ -17,7 +17,8 @@ class AguinaldoStatusWidget extends BaseWidget
     /** Solo visible cuando hay un período de aguinaldo activo (no cerrado). */
     public static function canView(): bool
     {
-        return AguinaldoPeriod::whereIn('status', ['draft', 'processing'])->exists();
+        return AguinaldoPeriodResource::canViewAny()
+            && AguinaldoPeriod::whereIn('status', ['draft', 'processing'])->exists();
     }
 
     /**

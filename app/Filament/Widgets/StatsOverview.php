@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Resources\AbsenceResource;
+use App\Filament\Resources\EmployeeResource;
 use App\Models\AttendanceDay;
 use App\Models\Employee;
 use Carbon\Carbon;
@@ -12,6 +13,12 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 /** Widget de resumen estadístico del dashboard: empleados, asistencia y cumpleaños. */
 class StatsOverview extends BaseWidget
 {
+    /** Solo lo ven quienes tienen permiso sobre el módulo que resume. */
+    public static function canView(): bool
+    {
+        return EmployeeResource::canViewAny();
+    }
+
     protected static ?int $sort = 1;
 
     /** Refresca los datos cada 60 segundos sin recargar la página. */

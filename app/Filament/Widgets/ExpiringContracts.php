@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\ContractResource;
 use App\Models\Contract;
 use App\Settings\GeneralSettings;
 use Filament\Tables\Columns\TextColumn;
@@ -84,6 +85,10 @@ class ExpiringContracts extends BaseWidget
      */
     public static function canView(): bool
     {
+        if (! ContractResource::canViewAny()) {
+            return false;
+        }
+
         $settings = app(GeneralSettings::class);
         $alertDays = $settings->contract_alert_days;
 
