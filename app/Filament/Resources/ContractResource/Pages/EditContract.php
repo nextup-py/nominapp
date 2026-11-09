@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ContractResource\Pages;
 
+use App\Filament\Actions\ContractRenewalForm;
 use App\Filament\Resources\ContractResource;
 use App\Models\Contract;
 use App\Models\EmployeeBankAccount;
@@ -9,10 +10,8 @@ use App\Services\ContractService;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -145,37 +144,7 @@ class EditContract extends EditRecord
                     return $msg;
                 })
                 ->modalSubmitActionLabel('Sí, renovar')
-                ->form([
-                    DatePicker::make('start_date')
-                        ->label('Fecha de Inicio')
-                        ->native(false)
-                        ->displayFormat('d/m/Y')
-                        ->required()
-                        ->default(fn (Contract $record) => $record->end_date ?? now())
-                        ->closeOnDateSelection(),
-
-                    DatePicker::make('end_date')
-                        ->label('Fecha de Finalización')
-                        ->native(false)
-                        ->displayFormat('d/m/Y')
-                        ->closeOnDateSelection()
-                        ->visible(fn (Contract $record) => ! $record->wouldBecomeIndefiniteOnRenewal())
-                        ->required(fn (Contract $record) => ! $record->wouldBecomeIndefiniteOnRenewal())
-                        ->helperText(fn (Contract $record) => $record->type === 'plazo_fijo' ? 'Art. 53 CLT: Máximo 1 año' : null),
-
-                    TextInput::make('salary')
-                        ->label(fn (Contract $record) => $record->salary_type === 'jornal' ? 'Jornal Diario' : 'Salario Mensual')
-                        ->numeric()
-                        ->required()
-                        ->prefix('Gs.')
-                        ->suffix(fn (Contract $record) => $record->salary_type === 'jornal' ? '/día' : '/mes')
-                        ->default(fn (Contract $record) => $record->salary),
-
-                    Textarea::make('notes')
-                        ->label('Notas')
-                        ->placeholder('Notas sobre la renovación...')
-                        ->rows(2),
-                ])
+                ->form(fn (Contract $record) => ContractRenewalForm::fields($record))
                 ->action(function (Contract $record, array $data) {
                     $oldType = $record->type;
                     $newContract = ContractService::renew($record, $data);

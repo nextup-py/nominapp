@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\ContractRenewalForm;
 use App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource\RelationManagers;
 use App\Models\Company;
@@ -180,6 +181,16 @@ class ContractResource extends Resource
                             ->maxValue(180)
                             ->default(30)
                             ->suffix('días'),
+
+                        TextInput::make('renewals_count')
+                            ->label('Renovaciones previas')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(5)
+                            ->default(0)
+                            ->visible(fn (Get $get) => $get('type') === 'plazo_fijo')
+                            ->helperText('Cuántas veces ya se renovó este plazo fijo (incluyendo contratos cargados a mano). Con 1 o más, la próxima renovación pasa a indefinido (Art. 53 CLT).'),
                     ])
                     ->columns(3),
 
@@ -759,39 +770,7 @@ class ContractResource extends Resource
                             return $msg;
                         })
                         ->modalSubmitActionLabel('Sí, renovar')
-                        ->form([
-                            DatePicker::make('start_date')
-                                ->label('Fecha de Inicio')
-                                ->native(false)
-                                ->displayFormat('d/m/Y')
-                                ->required()
-                                ->default(fn (Contract $record) => $record->end_date ?? now())
-                                ->closeOnDateSelection(),
-
-                            DatePicker::make('end_date')
-                                ->label('Fecha de Finalización')
-                                ->native(false)
-                                ->displayFormat('d/m/Y')
-                                ->closeOnDateSelection()
-                                ->visible(fn (Contract $record) => ! $record->wouldBecomeIndefiniteOnRenewal())
-                                ->required(fn (Contract $record) => ! $record->wouldBecomeIndefiniteOnRenewal())
-                                ->helperText(fn (Contract $record) => $record->type === 'plazo_fijo' ? 'Art. 53 CLT: Máximo 1 año' : null),
-
-                            TextInput::make('salary')
-                                ->label(fn (Contract $record) => $record->salary_type === 'jornal' ? 'Jornal Diario' : 'Salario Mensual')
-                                ->numeric()
-                                ->required()
-                                ->minValue(fn (Contract $record) => Contract::getMinSalaryFor($record->salary_type))
-                                ->prefix('Gs.')
-                                ->suffix(fn (Contract $record) => $record->salary_type === 'jornal' ? '/día' : '/mes')
-                                ->default(fn (Contract $record) => $record->salary)
-                                ->validationMessages(['minValue' => 'El salario no puede ser menor al mínimo legal vigente.']),
-
-                            Textarea::make('notes')
-                                ->label('Notas')
-                                ->placeholder('Notas sobre la renovación...')
-                                ->rows(2),
-                        ])
+                        ->form(fn (Contract $record) => ContractRenewalForm::fields($record))
                         ->action(function (Contract $record, array $data) {
                             $oldType = $record->type;
                             $newContract = ContractService::renew($record, $data);

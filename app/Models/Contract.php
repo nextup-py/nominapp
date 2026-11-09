@@ -27,6 +27,7 @@ class Contract extends Model implements Auditable
         'start_date',
         'end_date',
         'trial_days',
+        'renewals_count',
         'work_modality',
         'payment_method',
         'notes',
@@ -38,6 +39,7 @@ class Contract extends Model implements Auditable
         'start_date',
         'end_date',
         'trial_days',
+        'renewals_count',
         'salary_type',
         'salary',
         'payroll_type',
@@ -58,6 +60,7 @@ class Contract extends Model implements Auditable
         'end_date' => 'date',
         'terminated_at' => 'datetime',
         'trial_days' => 'integer',
+        'renewals_count' => 'integer',
         'salary' => 'integer',
         'advance_percent' => 'integer',
     ];
@@ -397,17 +400,14 @@ class Contract extends Model implements Auditable
     public function renew(array $newContractData): Contract
     {
         return DB::transaction(function () use ($newContractData) {
+            $renewals = $this->effectiveRenewals();
+
             // Marcar este contrato como renovado
             $this->update(['status' => 'renewed']);
 
-            // Art. 53 CLT: Verificar si ya fue renovado antes (segunda renovación = indefinido)
-            $previousRenewals = static::where('employee_id', $this->employee_id)
-                ->where('status', 'renewed')
-                ->where('type', 'plazo_fijo')
-                ->count();
-
-            // Si es la segunda renovación de un plazo fijo, forzar tipo indefinido
-            $forceIndefinido = $this->type === 'plazo_fijo' && $previousRenewals >= 2;
+            // Art. 53 CLT: segunda renovación de un plazo fijo = indefinido. Se cuenta antes de marcar este contrato
+            // como renovado, para no contarlo a sí mismo.
+            $forceIndefinido = $this->type === 'plazo_fijo' && $renewals >= 1;
 
             $data = array_merge([
                 'employee_id' => $this->employee_id,
@@ -419,6 +419,7 @@ class Contract extends Model implements Auditable
                 'department_id' => $this->department_id,
                 'work_modality' => $this->work_modality,
                 'status' => 'active',
+                'renewals_count' => $this->type === 'plazo_fijo' ? $renewals + 1 : 0,
             ], $newContractData);
 
             // Si se forzó indefinido, quitar fecha de fin
@@ -457,17 +458,22 @@ class Contract extends Model implements Auditable
      */
     public function wouldBecomeIndefiniteOnRenewal(): bool
     {
-        if ($this->type !== 'plazo_fijo') {
-            return false;
-        }
+        return $this->type === 'plazo_fijo' && $this->effectiveRenewals() >= 1;
+    }
 
-        $previousRenewals = static::where('employee_id', $this->employee_id)
+    /**
+     * Renovaciones previas de este plazo fijo: el mayor entre las declaradas en el contrato (`renewals_count`, para
+     * cuando el contrato anterior se cargó a mano) y los contratos «Renovado» de plazo fijo del mismo empleado.
+     */
+    public function effectiveRenewals(): int
+    {
+        $byStatus = static::where('employee_id', $this->employee_id)
             ->where('status', 'renewed')
             ->where('type', 'plazo_fijo')
+            ->where('id', '!=', $this->id)
             ->count();
 
-        // El contrato actual también cuenta como renovación al renovarse
-        return $previousRenewals >= 1;
+        return max((int) $this->renewals_count, $byStatus);
     }
 
     // ───────────────────────────────────────────
@@ -578,6 +584,7 @@ class Contract extends Model implements Auditable
             'start_date' => 'Fecha de inicio',
             'end_date' => 'Fecha de fin',
             'trial_days' => 'Días de prueba',
+            'renewals_count' => 'Renovaciones previas',
             'work_modality' => 'Modalidad',
             'payment_method' => 'Método de pago',
             'notes' => 'Notas',

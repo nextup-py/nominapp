@@ -36,6 +36,17 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 
 > El estado se puede cambiar manualmente con la acción **Cambiar estado** desde el perfil del empleado, entre Activo e Inactivo.
 
+### Empleado sin contrato o sin horario
+
+Un empleado **activo** puede marcar asistencia aunque todavía no tenga contrato ni horario: solo necesita tener la sucursal asignada y el rostro registrado (no necesita una cuenta de usuario; los usuarios son solo para entrar al panel).
+
+- Puede marcar **entrada y salida** (y descanso). Sus horas trabajadas quedan guardadas.
+- Sin horario no se calculan tardanza ni horas extra, y no se generan ausencias. Sus jornadas aparecen como **Sin horario ese día** en **Requieren atención**, y RR.HH. recibe el aviso diario de empleados sin horario.
+- **No entra en la nómina**: solo se generan recibos para empleados con contrato activo, así que no tiene recibo ni reporte de salario hasta que se le cargue el contrato.
+- Aparece en los reportes de asistencia y de empleados, y en las alertas de **empleados activos sin contrato** de su empresa y sucursal.
+
+Para que cobre: crear el contrato (salario y cargo) y asignar un horario. Las jornadas ya marcadas se pueden volver a calcular con **Volver a leer el horario vigente**, salvo las de períodos con nómina ya generada.
+
 ---
 
 ## Contratos
