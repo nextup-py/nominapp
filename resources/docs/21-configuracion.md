@@ -102,6 +102,15 @@ Acceder desde **Configuración → Configuración de Nómina**.
 
 - **Porcentaje por hijo:** % del salario mínimo mensual pagado por hijo a cargo (por defecto 5%). Aplica a empleados con hijos que ganen hasta 2 salarios mínimos (Arts. 253–262 CLT).
 
+Un hijo genera bonificación solo si cumple **todo** lo siguiente:
+
+| Condición | Detalle |
+|---|---|
+| Edad | Menor de 18 años **al fin del período de la nómina** (no con la fecha de hoy) |
+| Respaldo | Tiene cargada la **cédula del menor** o el **certificado de nacimiento** (PDF) adjunto |
+
+Los hijos se cargan en la pestaña **Hijos** del empleado. La columna **Bonificación** indica *Cobra*, *Falta respaldo* o *No aplica* (mayor de edad). No se pueden cargar dos hijos con el mismo nombre y fecha de nacimiento para un mismo empleado, ni una fecha futura o de hace más de 18 años.
+
 ### IRP — Impuesto a la Renta Personal
 
 - **Umbral anual gravado:** renta anual a partir de la cual se retiene IRP (por defecto Gs. 80.000.000).
