@@ -138,7 +138,7 @@ class EditContract extends EditRecord
                 ->modalDescription(function (Contract $record) {
                     $msg = "Se creará un nuevo contrato para {$record->employee->full_name} y el contrato actual pasará a estado 'Renovado'.";
                     if ($record->wouldBecomeIndefiniteOnRenewal()) {
-                        $msg .= "\n\n⚠ Art. 53 CLT: Este contrato a plazo fijo ya fue renovado anteriormente. Al renovar nuevamente, el nuevo contrato será automáticamente de tipo INDEFINIDO.";
+                        $msg .= "\n\n⚠ Art. 53 CLT: Este contrato a plazo fijo ya fue renovado anteriormente. Al renovar nuevamente, el nuevo contrato será automáticamente de tipo INDEFINIDO, salvo que active «Mantener a plazo fijo» en el formulario e indique el motivo.";
                     }
 
                     return $msg;
