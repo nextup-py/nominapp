@@ -61,7 +61,7 @@ Two separate axes that converge in `Contract`:
 | Extra hours | `ExtraHourCalculator` |
 | Rest day | `RestDayCalculator` — pago del día de descanso semanal remunerado |
 | Tardiness penalty | `AbsencePenaltyCalculator` — descuento por minutos de tardanza aprobados por RR.HH. (**no** procesa ausencias injustificadas — ver nota abajo) |
-| Family bonus | `FamilyBonusCalculator` — bonificación familiar IPS |
+| Family bonus | `FamilyBonusCalculator` — bonificación familiar IPS. Un hijo (`EmployeeChild::isEligibleAt($finDelPeríodo)`) cobra si es menor de 18 años **al fin del período** y tiene `ci` o certificado adjunto (`hasSupport()`); `Employee::eligibleChildrenAt()` filtra la relación `children` precargada. La columna `employees.children_count` y el comando de relleno de hijos se eliminaron (la migración `remove_children_placeholders_and_count` borra el relleno inequívoco y guarda un CSV de declarados en `storage/app`) |
 | Loans | `Loan`, `LoanInstallment`, `LoanInstallmentCalculator` |
 | Advances | `Advance`, `AdvanceCalculator` |
 | Merchandise withdrawals | `MerchandiseWithdrawal`, `MerchandiseWithdrawalItem`, `MerchandiseWithdrawalInstallment`, `MerchandiseInstallmentCalculator` |
