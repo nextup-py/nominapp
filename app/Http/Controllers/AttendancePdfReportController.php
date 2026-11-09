@@ -50,7 +50,11 @@ class AttendancePdfReportController extends Controller
             ->get();
 
         $detail = AttendanceDay::query()
-            ->with(['employee', 'employee.branch'])
+            ->with([
+                'employee',
+                'employee.branch',
+                'events' => fn ($q) => $q->whereIn('event_type', ['break_start', 'break_end'])->orderBy('recorded_at')->orderBy('id'),
+            ])
             ->join('employees', 'employees.id', '=', 'attendance_days.employee_id')
             ->select('attendance_days.*')
             ->when($from, fn ($q) => $q->whereDate('attendance_days.date', '>=', $from))
