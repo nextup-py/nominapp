@@ -100,6 +100,18 @@ Al renovar un contrato a plazo fijo por segunda vez, el sistema convierte autom�
 
 El modal de renovación avisa al usuario cuando esto ocurrirá antes de confirmar.
 
+### Datos de la renovación
+
+| Campo | Cómo funciona |
+|-------|---------------|
+| **Fecha de Inicio** | Se propone el **día siguiente** al fin del contrato anterior, para no dejar un hueco ni superponer dos contratos. Se puede cambiar. |
+| **Fecha de Finalización** | Obligatoria salvo que el nuevo contrato sea Indefinido. En plazo fijo y aprendizaje debe ser posterior al inicio y **no pasar de 1 año** (Art. 53 CLT); si pasa, el sistema no deja renovar. |
+| **Salario** | Se propone el del contrato anterior. Si ese salario está **por debajo del mínimo legal**, se puede renovar con el **mismo valor** (el formulario muestra un aviso), pero un salario **nuevo** no puede quedar por debajo del mínimo. |
+
+### Renovaciones previas
+
+El sistema cuenta las renovaciones previas por los contratos marcados **Renovado**. Si un contrato anterior se cargó a mano (sin usar **Renovar**), el sistema no sabe que era una renovación. Para eso, el formulario del contrato a plazo fijo tiene el campo **Renovaciones previas**: se carga cuántas veces ya se renovó. Con **1 o más**, la próxima renovación pasa a Indefinido. El cambio queda en el historial de auditoría.
+
 ---
 
 ## Plantillas de contrato PDF

@@ -111,6 +111,16 @@ class ContractsRelationManager extends RelationManager
                             ->maxValue(180)
                             ->default(30)
                             ->suffix('días'),
+
+                        TextInput::make('renewals_count')
+                            ->label('Renovaciones previas')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(5)
+                            ->default(0)
+                            ->visible(fn (Get $get) => $get('type') === 'plazo_fijo')
+                            ->helperText('Cuántas veces ya se renovó este plazo fijo (incluyendo contratos cargados a mano). Con 1 o más, la próxima renovación pasa a indefinido (Art. 53 CLT).'),
                     ])
                     ->columns(3),
 

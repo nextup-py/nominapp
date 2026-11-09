@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Actions\ContractRenewalForm;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Contract;
@@ -11,6 +12,7 @@ use App\Services\ContractService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
@@ -27,23 +29,23 @@ function makeContractEmployee(): array
     static $ci = 4000000;
     $n = $ci++;
 
-    $company    = Company::create(['name' => "EmpC {$n}", 'ruc' => "{$n}-1", 'employer_number' => $n]);
-    $branch     = Branch::create(['name' => "SucC {$n}", 'company_id' => $company->id]);
+    $company = Company::create(['name' => "EmpC {$n}", 'ruc' => "{$n}-1", 'employer_number' => $n]);
+    $branch = Branch::create(['name' => "SucC {$n}", 'company_id' => $company->id]);
     $department = Department::create(['name' => "DepC {$n}", 'company_id' => $company->id]);
-    $position   = Position::create(['name' => "PosC {$n}", 'department_id' => $department->id]);
+    $position = Position::create(['name' => "PosC {$n}", 'department_id' => $department->id]);
 
     $employee = Employee::create([
         'first_name' => 'Test',
-        'last_name'  => 'Contract',
-        'ci'         => (string) $n,
-        'email'      => "ctr{$n}@test.com",
-        'branch_id'  => $branch->id,
-        'status'     => 'active',
+        'last_name' => 'Contract',
+        'ci' => (string) $n,
+        'email' => "ctr{$n}@test.com",
+        'branch_id' => $branch->id,
+        'status' => 'active',
     ]);
 
     return [
-        'employee'      => $employee,
-        'position_id'   => $position->id,
+        'employee' => $employee,
+        'position_id' => $position->id,
         'department_id' => $department->id,
     ];
 }
@@ -51,7 +53,7 @@ function makeContractEmployee(): array
 /**
  * Crea un contrato para el empleado dado.
  *
- * @param  string  $type    'plazo_fijo' | 'indefinido' | 'obra'
+ * @param  string  $type  'plazo_fijo' | 'indefinido' | 'obra'
  * @param  string  $status  'active' | 'renewed' | 'terminated'
  */
 function makeContract(
@@ -64,18 +66,18 @@ function makeContract(
     ?string $notes = null,
 ): Contract {
     return Contract::create([
-        'employee_id'   => $employee->id,
-        'type'          => $type,
-        'start_date'    => '2026-01-01',
-        'end_date'      => $endDate,
-        'salary_type'   => 'mensual',
-        'salary'        => 2_550_000,
-        'payroll_type'  => 'monthly',
+        'employee_id' => $employee->id,
+        'type' => $type,
+        'start_date' => '2026-01-01',
+        'end_date' => $endDate,
+        'salary_type' => 'mensual',
+        'salary' => 2_550_000,
+        'payroll_type' => 'monthly',
         'work_modality' => 'presencial',
-        'position_id'   => $positionId,
+        'position_id' => $positionId,
         'department_id' => $departmentId,
-        'status'        => $status,
-        'notes'         => $notes,
+        'status' => $status,
+        'notes' => $notes,
     ]);
 }
 
@@ -215,4 +217,113 @@ it('renovación de contrato indefinido no aplica Art. 53 CLT', function () {
     $renewed = ContractService::renew($contract, ['start_date' => '2026-07-01']);
 
     expect($renewed->type)->toBe('indefinido');
+});
+
+// ─── Renovaciones previas (Art. 53 CLT) ─────────────────────────────────────
+
+it('la primera renovación de un plazo fijo deja renewals_count en 1', function () {
+    Auth::login(User::factory()->create());
+
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId, type: 'plazo_fijo');
+
+    $renewed = ContractService::renew($contract, ['start_date' => '2026-07-01', 'end_date' => '2026-12-31']);
+
+    expect($renewed->type)->toBe('plazo_fijo')
+        ->and($renewed->renewals_count)->toBe(1);
+});
+
+it('un plazo fijo cargado a mano con renovaciones previas declaradas pasa a indefinido al renovar', function () {
+    Auth::login(User::factory()->create());
+
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId, type: 'plazo_fijo');
+    $contract->update(['renewals_count' => 1]);
+
+    expect($contract->fresh()->wouldBecomeIndefiniteOnRenewal())->toBeTrue();
+
+    $renewed = ContractService::renew($contract->fresh(), ['start_date' => '2026-07-01', 'end_date' => '2026-12-31']);
+
+    expect($renewed->type)->toBe('indefinido')
+        ->and($renewed->end_date)->toBeNull();
+});
+
+it('un plazo fijo sin renovaciones previas no pasa a indefinido', function () {
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId, type: 'plazo_fijo');
+
+    expect($contract->wouldBecomeIndefiniteOnRenewal())->toBeFalse()
+        ->and($contract->effectiveRenewals())->toBe(0);
+});
+
+it('effectiveRenewals toma el mayor entre lo declarado y los contratos Renovado del empleado', function () {
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    makeContract($employee, $posId, $deptId, type: 'plazo_fijo', status: 'renewed');
+    $active = makeContract($employee, $posId, $deptId, type: 'plazo_fijo');
+
+    expect($active->effectiveRenewals())->toBe(1);
+
+    $active->update(['renewals_count' => 2]);
+
+    expect($active->fresh()->effectiveRenewals())->toBe(2);
+});
+
+// ─── Formulario de renovación ───────────────────────────────────────────────
+
+it('la renovación propone iniciar el día siguiente al fin del contrato anterior', function () {
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId, endDate: '2026-10-12');
+
+    expect(ContractRenewalForm::defaultStartDate($contract)->toDateString())->toBe('2026-10-13');
+});
+
+it('la renovación de un contrato sin fecha de fin propone iniciar hoy', function () {
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId, type: 'indefinido', endDate: null);
+
+    expect(ContractRenewalForm::defaultStartDate($contract)->toDateString())->toBe(Carbon::today()->toDateString());
+});
+
+it('la renovación valida la duración máxima de un año en plazo fijo', function (string $type, string $start, string $end, bool $valid) {
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId, type: $type);
+
+    $error = ContractRenewalForm::endDateError($contract, $start, $end);
+
+    expect($error === null)->toBe($valid);
+})->with([
+    'plazo fijo de un año exacto' => ['plazo_fijo', '2026-10-13', '2027-10-13', true],
+    'plazo fijo de seis meses' => ['plazo_fijo', '2026-10-13', '2027-04-13', true],
+    'plazo fijo de más de un año' => ['plazo_fijo', '2026-10-13', '2027-10-14', false],
+    'aprendizaje de más de un año' => ['aprendizaje', '2026-10-13', '2027-12-01', false],
+    'fin igual al inicio' => ['plazo_fijo', '2026-10-13', '2026-10-13', false],
+    'fin anterior al inicio' => ['plazo_fijo', '2026-10-13', '2026-09-01', false],
+    'obra determinada no tiene tope de un año' => ['obra_determinada', '2026-10-13', '2028-10-13', true],
+]);
+
+it('la renovación no valida la fecha de fin si falta el inicio o el fin', function () {
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId);
+
+    expect(ContractRenewalForm::endDateError($contract, null, '2027-10-13'))->toBeNull()
+        ->and(ContractRenewalForm::endDateError($contract, '2026-10-13', null))->toBeNull();
+});
+
+it('la renovación permite el mismo salario bajo el mínimo pero bloquea fijar uno nuevo bajo el mínimo', function () {
+    foreach (['min_salary_monthly' => 3_044_000, 'min_salary_daily_jornal' => 101_467] as $name => $value) {
+        DB::table('settings')->updateOrInsert(
+            ['group' => 'payroll', 'name' => $name],
+            ['payload' => json_encode($value), 'locked' => false],
+        );
+    }
+
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId);
+
+    expect($contract->salary)->toBe(2_550_000)
+        ->and(ContractRenewalForm::salaryError($contract, 2_550_000))->toBeNull()
+        ->and(ContractRenewalForm::salaryError($contract, 2_800_000))->toBeString()
+        ->and(ContractRenewalForm::salaryError($contract, 3_044_000))->toBeNull()
+        ->and(ContractRenewalForm::salaryError($contract, 3_500_000))->toBeNull()
+        ->and(ContractRenewalForm::salaryHint($contract))->toContain('por debajo del mínimo legal');
 });
