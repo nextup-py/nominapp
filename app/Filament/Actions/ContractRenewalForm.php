@@ -9,6 +9,7 @@ use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Get;
 
 /**
@@ -41,13 +42,26 @@ class ContractRenewalForm
                 ->helperText('Por defecto, el día siguiente al fin del contrato anterior, para no dejar un hueco ni superponer dos contratos.')
                 ->closeOnDateSelection(),
 
+            Toggle::make('keep_fixed_term')
+                ->label('Mantener a plazo fijo (excepción al Art. 53 CLT)')
+                ->helperText('Por defecto, esta segunda renovación pasa a Indefinido. Si activa la excepción debe indicar el motivo, que queda en las notas del contrato. Valide con su contador o abogado.')
+                ->live()
+                ->default(false)
+                ->visible($becomesIndefinite),
+
+            Textarea::make('keep_fixed_term_reason')
+                ->label('Motivo de la excepción')
+                ->rows(2)
+                ->visible(fn (Get $get): bool => $becomesIndefinite && (bool) $get('keep_fixed_term'))
+                ->required(fn (Get $get): bool => $becomesIndefinite && (bool) $get('keep_fixed_term')),
+
             DatePicker::make('end_date')
                 ->label('Fecha de Finalización')
                 ->native(false)
                 ->displayFormat('d/m/Y')
                 ->closeOnDateSelection()
-                ->visible(! $becomesIndefinite)
-                ->required(! $becomesIndefinite)
+                ->visible(fn (Get $get): bool => ! $becomesIndefinite || (bool) $get('keep_fixed_term'))
+                ->required(fn (Get $get): bool => ! $becomesIndefinite || (bool) $get('keep_fixed_term'))
                 ->rules([
                     fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($record, $get): void {
                         $error = self::endDateError($record, $get('start_date'), $value);

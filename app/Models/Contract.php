@@ -399,15 +399,26 @@ class Contract extends Model implements Auditable
      */
     public function renew(array $newContractData): Contract
     {
-        return DB::transaction(function () use ($newContractData) {
+        $keepFixedTerm = (bool) ($newContractData['keep_fixed_term'] ?? false);
+        $keepReason = trim((string) ($newContractData['keep_fixed_term_reason'] ?? ''));
+        unset($newContractData['keep_fixed_term'], $newContractData['keep_fixed_term_reason']);
+
+        $wouldBeForced = $this->wouldBecomeIndefiniteOnRenewal();
+
+        if ($wouldBeForced && $keepFixedTerm && $keepReason === '') {
+            throw new \InvalidArgumentException('Debe indicar el motivo para mantener el contrato a plazo fijo.');
+        }
+
+        return DB::transaction(function () use ($newContractData, $keepFixedTerm, $keepReason, $wouldBeForced) {
             $renewals = $this->effectiveRenewals();
 
             // Marcar este contrato como renovado
             $this->update(['status' => 'renewed']);
 
-            // Art. 53 CLT: segunda renovación de un plazo fijo = indefinido. Se cuenta antes de marcar este contrato
+            // Art. 53 CLT: segunda renovación de un plazo fijo = indefinido (si la configuración lo pide), salvo que
+            // esta renovación indique expresamente mantener el plazo fijo. Se cuenta antes de marcar este contrato
             // como renovado, para no contarlo a sí mismo.
-            $forceIndefinido = $this->type === 'plazo_fijo' && $renewals >= 1;
+            $forceIndefinido = $wouldBeForced && ! $keepFixedTerm;
 
             $data = array_merge([
                 'employee_id' => $this->employee_id,
@@ -425,6 +436,11 @@ class Contract extends Model implements Auditable
             // Si se forzó indefinido, quitar fecha de fin
             if ($forceIndefinido) {
                 $data['end_date'] = null;
+            }
+
+            // Excepción al Art. 53: queda el motivo en las notas del contrato nuevo
+            if ($wouldBeForced && $keepFixedTerm) {
+                $data['notes'] = trim(($data['notes'] ?? '')."\n\nRenovado a plazo fijo por excepción al Art. 53 CLT: ".$keepReason);
             }
 
             return static::create($data);
@@ -458,7 +474,9 @@ class Contract extends Model implements Auditable
      */
     public function wouldBecomeIndefiniteOnRenewal(): bool
     {
-        return $this->type === 'plazo_fijo' && $this->effectiveRenewals() >= 1;
+        return $this->type === 'plazo_fijo'
+            && app(GeneralSettings::class)->contract_force_indefinite_on_second_renewal
+            && $this->effectiveRenewals() >= 1;
     }
 
     /**

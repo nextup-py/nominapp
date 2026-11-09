@@ -22,6 +22,7 @@ Acceder desde **Configuración → Configuración General**.
 ### Configuración de Contratos
 
 - **Días de anticipación para alertas:** cuántos días antes del vencimiento de un contrato a plazo el sistema muestra la alerta (por defecto 30).
+- **Pasar a indefinido en la segunda renovación (Art. 53 CLT):** al renovar por segunda vez un contrato a plazo fijo, el contrato nuevo se crea indefinido (encendido por defecto). Apagado, el tipo no cambia solo. Aunque esté encendido, cada renovación puede mantener el plazo fijo indicando el motivo. Validar con el contador o un abogado antes de apagarlo.
 
 ### Reconocimiento Facial
 

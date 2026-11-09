@@ -133,6 +133,11 @@ class ManageGeneralSettings extends SettingsPage
                             ->default(30)
                             ->suffix('días')
                             ->helperText('Cantidad de días antes del vencimiento para mostrar alertas de contratos'),
+
+                        Toggle::make('contract_force_indefinite_on_second_renewal')
+                            ->label('Pasar a indefinido en la segunda renovación (Art. 53 CLT)')
+                            ->default(true)
+                            ->helperText('Al renovar por segunda vez un contrato a plazo fijo, el nuevo contrato se crea indefinido. Apagado: no cambia solo. Aunque esté encendido, cada renovación puede mantener el plazo fijo indicando el motivo. Valide con su contador o abogado antes de apagarlo.'),
                     ]),
 
                 Section::make('Reconocimiento Facial')

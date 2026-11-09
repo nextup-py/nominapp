@@ -10,6 +10,9 @@ class GeneralSettings extends Settings
 
     public int $contract_alert_days;
 
+    /** La segunda renovación de un contrato a plazo fijo pasa a indefinido (Art. 53 CLT); si es false no cambia solo. */
+    public bool $contract_force_indefinite_on_second_renewal;
+
     public int $face_enrollment_expiry_hours;
 
     public int $absence_threshold_minutes;

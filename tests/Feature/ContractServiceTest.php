@@ -327,3 +327,104 @@ it('la renovación permite el mismo salario bajo el mínimo pero bloquea fijar u
         ->and(ContractRenewalForm::salaryError($contract, 3_500_000))->toBeNull()
         ->and(ContractRenewalForm::salaryHint($contract))->toContain('por debajo del mínimo legal');
 });
+
+// ─── Excepción al Art. 53 (pasar a indefinido en la segunda renovación) ─────
+
+/**
+ * Enciende o apaga el interruptor de Configuración General que convierte a indefinido la segunda renovación.
+ */
+function setForceIndefiniteOnSecondRenewal(bool $enabled): void
+{
+    DB::table('settings')->updateOrInsert(
+        ['group' => 'general', 'name' => 'contract_force_indefinite_on_second_renewal'],
+        ['payload' => json_encode($enabled), 'locked' => false],
+    );
+}
+
+/**
+ * Crea un plazo fijo que ya fue renovado una vez (la próxima renovación sería la segunda).
+ */
+function makeRenewedOncePlazoFijo(): Contract
+{
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId, type: 'plazo_fijo');
+    $contract->update(['renewals_count' => 1]);
+
+    return $contract->fresh();
+}
+
+it('con el interruptor apagado la segunda renovación no pasa a indefinido', function () {
+    Auth::login(User::factory()->create());
+    setForceIndefiniteOnSecondRenewal(false);
+    $contract = makeRenewedOncePlazoFijo();
+
+    expect($contract->wouldBecomeIndefiniteOnRenewal())->toBeFalse();
+
+    $renewed = ContractService::renew($contract, ['start_date' => '2026-07-01', 'end_date' => '2026-12-31']);
+
+    expect($renewed->type)->toBe('plazo_fijo')
+        ->and($renewed->end_date->toDateString())->toBe('2026-12-31')
+        ->and($renewed->renewals_count)->toBe(2);
+});
+
+it('con el interruptor encendido (por defecto) la segunda renovación pasa a indefinido', function () {
+    Auth::login(User::factory()->create());
+    $contract = makeRenewedOncePlazoFijo();
+
+    expect($contract->wouldBecomeIndefiniteOnRenewal())->toBeTrue();
+
+    $renewed = ContractService::renew($contract, ['start_date' => '2026-07-01', 'end_date' => '2026-12-31']);
+
+    expect($renewed->type)->toBe('indefinido')
+        ->and($renewed->end_date)->toBeNull();
+});
+
+it('la excepción mantiene el plazo fijo y deja el motivo en las notas', function () {
+    Auth::login(User::factory()->create());
+    $contract = makeRenewedOncePlazoFijo();
+
+    $renewed = ContractService::renew($contract, [
+        'start_date' => '2026-07-01',
+        'end_date' => '2026-12-31',
+        'keep_fixed_term' => true,
+        'keep_fixed_term_reason' => 'Reemplazo de una licencia por maternidad',
+        'notes' => 'Renovación acordada',
+    ]);
+
+    expect($renewed->type)->toBe('plazo_fijo')
+        ->and($renewed->end_date->toDateString())->toBe('2026-12-31')
+        ->and($renewed->notes)->toContain('Renovación acordada')
+        ->and($renewed->notes)->toContain('excepción al Art. 53')
+        ->and($renewed->notes)->toContain('Reemplazo de una licencia por maternidad');
+});
+
+it('la excepción sin motivo no renueva y deja el contrato original como estaba', function () {
+    Auth::login(User::factory()->create());
+    $contract = makeRenewedOncePlazoFijo();
+
+    expect(fn () => ContractService::renew($contract, [
+        'start_date' => '2026-07-01',
+        'end_date' => '2026-12-31',
+        'keep_fixed_term' => true,
+        'keep_fixed_term_reason' => '   ',
+    ]))->toThrow(InvalidArgumentException::class);
+
+    expect($contract->fresh()->status)->toBe('active')
+        ->and(Contract::where('employee_id', $contract->employee_id)->count())->toBe(1);
+});
+
+it('la excepción no deja el campo de control guardado ni afecta una renovación que no pasa a indefinido', function () {
+    Auth::login(User::factory()->create());
+    ['employee' => $employee, 'position_id' => $posId, 'department_id' => $deptId] = makeContractEmployee();
+    $contract = makeContract($employee, $posId, $deptId, type: 'plazo_fijo');
+
+    $renewed = ContractService::renew($contract, [
+        'start_date' => '2026-07-01',
+        'end_date' => '2026-12-31',
+        'keep_fixed_term' => true,
+        'keep_fixed_term_reason' => 'No aplica',
+    ]);
+
+    expect($renewed->type)->toBe('plazo_fijo')
+        ->and((string) $renewed->notes)->not->toContain('excepción al Art. 53');
+});

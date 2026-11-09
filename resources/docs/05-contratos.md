@@ -100,6 +100,12 @@ Al renovar un contrato a plazo fijo por segunda vez, el sistema convierte autom�
 
 El modal de renovación avisa al usuario cuando esto ocurrirá antes de confirmar.
 
+**Excepción:** la conversión automática se puede ajustar de dos maneras.
+- **Para todos los contratos:** en **Configuración → General → Configuración de Contratos**, el interruptor **Pasar a indefinido en la segunda renovación (Art. 53 CLT)** (encendido por defecto). Apagado, la segunda renovación no cambia sola el tipo de contrato.
+- **Para una renovación puntual:** con el interruptor encendido, el formulario de renovación muestra **Mantener a plazo fijo (excepción al Art. 53 CLT)**. Al activarlo hay que indicar el **motivo** y la fecha de fin; el contrato nuevo queda a plazo fijo y el motivo se guarda en sus notas.
+
+> La conversión a Indefinido responde al Art. 53 del Código del Trabajo. Antes de apagarla o de usar la excepción conviene validarlo con el contador o un abogado.
+
 ### Datos de la renovación
 
 | Campo | Cómo funciona |
