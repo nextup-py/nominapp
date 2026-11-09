@@ -50,6 +50,16 @@ Desde la vista de la planilla (clic en la planilla para abrirla):
    - Deducciones activas (IPS, préstamos, adelantos, retiros de mercadería, ausencias injustificadas)
    - Bonificación familiar IPS
 
+**Revisar antes de generar:** el cuadro de confirmación de **Generar Recibos** muestra, cuando corresponde, una lista de avisos con la cantidad de casos. No bloquean la generación; sirven para corregir antes de calcular:
+
+| Aviso | Qué significa |
+|-------|---------------|
+| Empleados activos sin contrato vigente | No entran en la nómina. |
+| Empleados con contrato sin descuento de IPS vigente | No se les descuenta el aporte; asignar la deducción desde su pestaña **Deducciones** (**Asignar obligatorias**). |
+| Percepciones salariales o de tipo Otro que no aportan al IPS | Un plus fijo que no aporta queda fuera de la base del IPS; revisar el interruptor **Aporta a IPS** en **Percepciones**. |
+| Contratos con salario por debajo del mínimo legal | Informativo. |
+| Pago por débito bancario sin cuenta principal activa | Cargar la cuenta del empleado o cambiar el método de pago; el archivo del banco los incluiría sin cuenta. |
+
 Si algún empleado no pudo procesarse, el sistema lo informa con el motivo en una notificación aparte (no bloquea la generación del resto). También avisa si, tras generar, quedan empleados con contrato por vencer dentro de los próximos días configurados.
 
 Para agregar manualmente un empleado que no fue incluido: clic en **Agregar Recibo** y seleccionarlo.

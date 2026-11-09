@@ -13,6 +13,7 @@ use App\Models\DisbursementBatch;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollPeriod;
+use App\Services\PayrollPreflightService;
 use App\Services\PayrollService;
 use App\Settings\GeneralSettings;
 use Filament\Actions\Action;
@@ -95,7 +96,20 @@ class ViewPayrollPeriod extends ViewRecord
                     $companyLabel = $companyName ? "Empresa: {$companyName}" : '';
                     $employeeLabel = $pending === 1 ? '1 empleado sin recibo' : "{$pending} empleados sin recibo";
 
-                    return implode(' · ', array_filter([$companyLabel, $employeeLabel]));
+                    $summary = e(implode(' · ', array_filter([$companyLabel, $employeeLabel])));
+
+                    // Avisos previos (no bloquean): lo que suele descubrirse a mano después de generar.
+                    $warnings = app(PayrollPreflightService::class)->check($this->record);
+
+                    if ($warnings === []) {
+                        return new HtmlString($summary);
+                    }
+
+                    $items = collect($warnings)
+                        ->map(fn (array $warning) => '<li>'.e($warning['count'].' '.$warning['label']).'</li>')
+                        ->implode('');
+
+                    return new HtmlString($summary.'<p style="margin-top:.75rem;font-weight:600;">Revisar antes de generar:</p><ul style="list-style:disc;padding-left:1.25rem;text-align:left;">'.$items.'</ul>');
                 })
                 ->action(function (PayrollService $payrollService) {
                     $result = $payrollService->generateForPeriod($this->record);

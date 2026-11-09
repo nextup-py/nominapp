@@ -76,6 +76,8 @@ Two separate axes that converge in `Contract`:
 | Face Recognition | TensorFlow.js (128-element descriptors), `FaceEnrollment`, `FaceCaptureApp.js` |
 | Warnings | `Warning`, `SuspensionService` — amonestaciones laborales; la suspensión disciplinaria opcional genera deducciones `SUS-DIS` por día |
 
+**Verificación previa a generar (`PayrollPreflightService`):** `check(PayrollPeriod)` cuenta, para la empresa y la frecuencia del período, empleados activos sin contrato, con contrato sin la deducción IPS (`PayrollSettings::ips_deduction_code`) vigente en el período, asignaciones de percepciones `salary`/`other` con `affects_ips = false`, contratos bajo el mínimo legal y pagos por débito sin cuenta principal activa. Solo informa: el modal de **Generar Recibos** (`ViewPayrollPeriod`) lo muestra como lista; no bloquea. Agregar un aviso = una entrada en `check()` y un método privado.
+
 ### Pipeline de cálculo de nómina (`PayrollService`)
 
 El orden de ejecución de calculadoras dentro de `generateForPeriod()` / `generateForEmployee()` es fijo y tiene dependencias:
