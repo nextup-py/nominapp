@@ -9,9 +9,11 @@ use App\Services\RestDayCalculator;
 use App\Settings\GeneralSettings;
 use App\Settings\PayrollSettings;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -307,11 +309,15 @@ class Employee extends Model implements AuthenticatableContract
         return $this->hasMany(EmployeeChild::class);
     }
 
-    /** Hijos menores de 18 años, elegibles para la bonificación familiar (Arts. 253-262 CLT). */
-    public function eligibleChildren(): HasMany
+    /**
+     * Hijos que generan bonificación familiar en la fecha dada (Arts. 253-262 CLT): menores de 18 años a esa
+     * fecha y con cédula del menor o certificado adjunto. Usa la relación `children` (precargable).
+     *
+     * @return Collection<int, EmployeeChild>
+     */
+    public function eligibleChildrenAt(CarbonInterface $date): Collection
     {
-        return $this->hasMany(EmployeeChild::class)
-            ->where('birth_date', '>', now()->subYears(18)->toDateString());
+        return $this->children->filter(fn (EmployeeChild $child) => $child->isEligibleAt($date))->values();
     }
 
     // Obtener todos los eventos de asistencia a través de los días

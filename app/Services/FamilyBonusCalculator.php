@@ -10,7 +10,8 @@ use App\Settings\PayrollSettings;
  * Calcula la bonificación familiar según Arts. 253-262 del Código del Trabajo (Ley 213/93).
  *
  * Reglas:
- *  - Solo aplica a empleados con hijos menores de 18 años registrados.
+ *  - Solo aplica a empleados con hijos menores de 18 años (al fin del período) registrados con
+ *    cédula del menor o certificado de nacimiento adjunto.
  *  - Solo aplica si el salario base del contrato no supera dos salarios mínimos mensuales.
  *  - Monto por hijo = min_salary_monthly × (family_bonus_percentage / 100).
  *  - No es percepción salarial: no computa para IPS ni aguinaldo.
@@ -20,18 +21,17 @@ class FamilyBonusCalculator
     /**
      * Calcula la bonificación familiar para un empleado en un período dado.
      *
-     * @param  PayrollPeriod  $period  No se usa para el cálculo pero mantiene la firma uniforme.
+     * @param  PayrollPeriod  $period  Su fecha de fin determina la edad de los hijos.
      * @return array{total: float, items: array}
      */
     public function calculate(Employee $employee, PayrollPeriod $period): array
     {
         $emptyResult = ['total' => 0.0, 'items' => []];
 
-        // Property access: usa la relación precargada por PayrollService cuando está
-        // disponible (evita 1 query por empleado en generateForPeriod); si no está
-        // precargada, Eloquent la carga aquí mismo con el mismo scope, sin cambio de
-        // comportamiento — la relación no depende del período, siempre es segura.
-        $eligibleCount = $employee->eligibleChildren->count();
+        // Usa la relación `children` precargada por PayrollService (evita 1 query por empleado);
+        // si no está precargada, Eloquent la carga aquí. La edad se evalúa al fin del período,
+        // no con la fecha de hoy, y solo cuentan hijos con cédula o certificado adjunto.
+        $eligibleCount = $employee->eligibleChildrenAt($period->end_date)->count();
 
         if ($eligibleCount <= 0) {
             return $emptyResult;

@@ -8,6 +8,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkActionGroup;
@@ -69,17 +70,35 @@ class ChildrenRelationManager extends RelationManager
                             ->minValue(1)
                             ->maxValue(99999999)
                             ->placeholder('Ej: 7654321')
-                            ->helperText('Opcional. Número sin puntos ni guiones.'),
+                            ->helperText('Número sin puntos ni guiones. Sin la cédula del menor o el certificado adjunto, el hijo no genera bonificación.'),
 
                         DatePicker::make('birth_date')
                             ->label('Fecha de nacimiento')
                             ->native(false)
                             ->displayFormat('d/m/Y')
                             ->maxDate(now())
+                            ->minDate(fn (string $operation) => $operation === 'create'
+                                ? now()->subYears(EmployeeChild::MAX_AGE)->addDay()
+                                : null)
                             ->closeOnDateSelection()
                             ->required()
                             ->placeholder('Seleccionar fecha')
-                            ->helperText('Determina si el hijo califica para la bonificación familiar (menores de 18 años).'),
+                            ->helperText('Determina si el hijo califica para la bonificación familiar (menores de 18 años al fin del período de nómina).')
+                            ->rules([
+                                fn (Get $get, ?EmployeeChild $record): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($get, $record) {
+                                    $duplicate = EmployeeChild::query()
+                                        ->where('employee_id', $this->getOwnerRecord()->id)
+                                        ->whereRaw('LOWER(first_name) = ?', [mb_strtolower(trim((string) $get('first_name')))])
+                                        ->whereRaw('LOWER(last_name) = ?', [mb_strtolower(trim((string) $get('last_name')))])
+                                        ->whereDate('birth_date', $value)
+                                        ->when($record, fn (Builder $q) => $q->whereKeyNot($record->getKey()))
+                                        ->exists();
+
+                                    if ($duplicate) {
+                                        $fail('Este empleado ya tiene un hijo con el mismo nombre y fecha de nacimiento.');
+                                    }
+                                },
+                            ]),
                     ]),
 
                 Section::make('Certificado de Nacimiento')
@@ -96,7 +115,7 @@ class ChildrenRelationManager extends RelationManager
                             ->maxSize(5120)
                             ->downloadable()
                             ->previewable()
-                            ->helperText('Opcional. Formato PDF, tamaño máximo 5 MB.')
+                            ->helperText('Alternativa a la cédula del menor: uno de los dos es necesario para cobrar la bonificación. Formato PDF, tamaño máximo 5 MB.')
                             ->getUploadedFileNameForStorageUsing(function ($file): string {
                                 $employeeId = $this->getOwnerRecord()->id;
                                 $ext = $file->getClientOriginalExtension();
@@ -137,6 +156,21 @@ class ChildrenRelationManager extends RelationManager
                     ->badge()
                     ->getStateUsing(fn (EmployeeChild $record) => $record->is_eligible ? 'Menor de edad' : 'Mayor de edad')
                     ->color(fn (EmployeeChild $record) => $record->is_eligible ? 'success' : 'gray'),
+
+                TextColumn::make('pays_bonus')
+                    ->label('Bonificación')
+                    ->badge()
+                    ->getStateUsing(fn (EmployeeChild $record) => match (true) {
+                        ! $record->is_eligible => 'No aplica',
+                        ! $record->hasSupport() => 'Falta respaldo',
+                        default => 'Cobra',
+                    })
+                    ->color(fn (string $state) => match ($state) {
+                        'Cobra' => 'success',
+                        'Falta respaldo' => 'warning',
+                        default => 'gray',
+                    })
+                    ->tooltip('Cobra si es menor de 18 años y tiene cédula del menor o certificado adjunto.'),
 
                 IconColumn::make('birth_certificate_path')
                     ->label('Certificado')

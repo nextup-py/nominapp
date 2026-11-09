@@ -89,11 +89,14 @@ function makeFbcEmployee(int $salary = 2_550_000, string $salaryType = 'mensual'
 /** Crea hijos menores de edad para un empleado. */
 function addMinorChildren(Employee $employee, int $count): void
 {
+    static $seq = 0;
+
     for ($i = 0; $i < $count; $i++) {
         EmployeeChild::create([
             'employee_id' => $employee->id,
             'first_name' => 'Hijo',
             'last_name' => 'Test',
+            'ci' => (string) (7_000_000 + ++$seq),
             'birth_date' => now()->subYears(5)->toDateString(),
         ]);
     }
@@ -106,6 +109,7 @@ function addAdultChild(Employee $employee): EmployeeChild
         'employee_id' => $employee->id,
         'first_name' => 'Hijo',
         'last_name' => 'Adulto',
+        'ci' => '7999999',
         'birth_date' => now()->subYears(20)->toDateString(),
     ]);
 }
@@ -280,20 +284,84 @@ it('cuenta solo los hijos menores de 18 cuando hay una mezcla', function () {
         ->and($result['items'][0]['description'])->toContain('2 hijos');
 });
 
-it('no califica el hijo que cumple exactamente 18 años hoy', function () {
+it('no califica el hijo que cumple exactamente 18 años el último día del período', function () {
     $employee = makeFbcEmployee(2_000_000);
+    $period = makeFbcPeriod();
     EmployeeChild::create([
         'employee_id' => $employee->id,
         'first_name' => 'Cumple',
-        'last_name' => 'Hoy',
-        'birth_date' => now()->subYears(18)->toDateString(), // exactamente 18 hoy
+        'last_name' => 'Fin',
+        'ci' => '7888888',
+        'birth_date' => $period->end_date->copy()->subYears(18)->toDateString(),
     ]);
-    $period = makeFbcPeriod();
 
     $result = (new FamilyBonusCalculator)->calculate($employee, $period);
 
-    // birth_date = hoy - 18 años → no es estrictamente mayor que now()-18años → no elegible
     expect($result)->toBe(['total' => 0.0, 'items' => []]);
+});
+
+it('evalúa la edad al fin del período y no con la fecha de hoy', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    $period = makeFbcPeriod();
+    // Tenía 17 años al fin del período aunque hoy ya cumplió los 18.
+    EmployeeChild::create([
+        'employee_id' => $employee->id,
+        'first_name' => 'Casi',
+        'last_name' => 'Mayor',
+        'ci' => '7777777',
+        'birth_date' => $period->end_date->copy()->subYears(18)->addDay()->toDateString(),
+    ]);
+
+    $result = (new FamilyBonusCalculator)->calculate($employee->fresh(), $period);
+
+    expect($result['items'][0]['description'])->toContain('1 hijo');
+});
+
+it('no cuenta un hijo nacido después del fin del período', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    $period = makeFbcPeriod();
+    EmployeeChild::create([
+        'employee_id' => $employee->id,
+        'first_name' => 'Recién',
+        'last_name' => 'Nacido',
+        'ci' => '7666666',
+        'birth_date' => $period->end_date->copy()->addDay()->toDateString(),
+    ]);
+
+    $result = (new FamilyBonusCalculator)->calculate($employee, $period);
+
+    expect($result)->toBe(['total' => 0.0, 'items' => []]);
+});
+
+it('no paga por un hijo sin cédula ni certificado', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    $period = makeFbcPeriod();
+    EmployeeChild::create([
+        'employee_id' => $employee->id,
+        'first_name' => 'Sin',
+        'last_name' => 'Respaldo',
+        'birth_date' => now()->subYears(5)->toDateString(),
+    ]);
+
+    $result = (new FamilyBonusCalculator)->calculate($employee, $period);
+
+    expect($result)->toBe(['total' => 0.0, 'items' => []]);
+});
+
+it('paga por un hijo con certificado adjunto aunque no tenga cédula', function () {
+    $employee = makeFbcEmployee(2_000_000);
+    $period = makeFbcPeriod();
+    EmployeeChild::create([
+        'employee_id' => $employee->id,
+        'first_name' => 'Con',
+        'last_name' => 'Certificado',
+        'birth_certificate_path' => 'employees/children/certificates/cert.pdf',
+        'birth_date' => now()->subYears(5)->toDateString(),
+    ]);
+
+    $result = (new FamilyBonusCalculator)->calculate($employee, $period);
+
+    expect($result['items'][0]['description'])->toContain('1 hijo');
 });
 
 afterEach(function () {
