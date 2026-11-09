@@ -115,7 +115,11 @@ Los pasos 4, 5 y 6 deben correr **antes** que el paso 7 porque crean los `Employ
 
 **Idempotencia:** Llamar a `calculate()` dos veces en el mismo período no duplica `EmployeeDeduction`. Si la cuota ya tiene `employee_deduction_id`, actualiza el registro existente.
 
-**Limpieza al eliminar nómina:** `Payroll::booted()` revierte las cuotas a `pending` y elimina los `EmployeeDeduction` asociados al período.
+**Cuotas atrasadas (períodos sin generar):** `calculate()` toma las cuotas `pending` con `payroll_id IS NULL` y `due_date <= period->end_date` (no solo las del período), ordenadas por vencimiento. Un período salteado ya no deja cuotas sin cobrar para siempre (caso Macro: jun–oct 2026). El `EmployeeDeduction` de una atrasada conserva `start_date = due_date` (mantiene única la clave `employee_id+deduction_id+start_date`) pero lleva `end_date = fin del período` para que `DeductionCalculator` (`forPeriod`) la recoja; las del período siguen siendo puntuales. Limitación aceptada: regenerar una nómina de un período *anterior* de ese empleado vería esa deducción por solaparse con su rango.
+
+**Tope Art. 245 con atrasadas (`applyOverdueCap()`):** las cuotas con vencimiento dentro del período se descuentan siempre (el tope ya se validó en `Loan::activate()`); las atrasadas entran de la más antigua a la más nueva mientras `suma ≤ base × loan_installment_cap_percent / 100` (base = `Employee::getLoanDeductionBase()`, compartida con `Loan`); al primer rechazo se corta y el resto se arrastra (`pending`) a la próxima nómina. Sin salario definido (base 0) no hay tope. Mercadería: sin tope, todas las atrasadas en la misma nómina.
+
+**Limpieza al eliminar nómina:** `Payroll::booted()` revierte las cuotas a `pending` y elimina los `EmployeeDeduction` asociados. Ahora identifica las cuotas por `payroll_id` (cubre atrasadas; las anteriores a la columna se reconocen por vencimiento dentro del período) y restaura el saldo del préstamo/retiro desde las cuotas pendientes, devolviendo `paid` → `disbursed`/`approved`. Antes solo revertía préstamos con estado `approved` (los `disbursed`, que son los que descuentan, quedaban sin revertir) y no restauraba el saldo de mercadería.
 
 **UI — acciones disponibles según estado:**
 - `pending`: Aprobar, Rechazar, Editar. Sin DeleteAction en ViewRecord.
@@ -197,7 +201,9 @@ Compra a crédito de productos del catálogo del empleador, con descuento autom�
 
 **Idempotencia:** Llamar a `calculate()` dos veces en el mismo período no duplica `EmployeeDeduction`. Si la cuota ya tiene `employee_deduction_id`, actualiza el registro existente.
 
-**Limpieza al eliminar nómina:** `Payroll::booted()` revierte las cuotas a `pending` y elimina los `EmployeeDeduction` asociados al período.
+**Cuotas atrasadas:** igual que préstamos (ver arriba) pero **sin tope**: toda cuota `pending` sin nómina con `due_date <= period->end_date` se descuenta en la misma nómina.
+
+**Limpieza al eliminar nómina:** `Payroll::booted()` revierte las cuotas a `pending` (por `payroll_id`), elimina los `EmployeeDeduction` y restaura `outstanding_balance`/estado del retiro.
 
 **Generación de cuotas:** Al aprobar (`approve()`), el modelo genera automáticamente las cuotas con `due_date` a partir de `approved_at` + 30 días (primera cuota), incrementando de a 30 días.
 

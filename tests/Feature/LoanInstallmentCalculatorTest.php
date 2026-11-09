@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\EmployeeDeduction;
 use App\Models\Loan;
 use App\Models\LoanInstallment;
+use App\Models\Payroll;
 use App\Models\PayrollPeriod;
 use App\Models\Position;
 use App\Services\LoanInstallmentCalculator;
@@ -201,19 +202,110 @@ it('excluye cuotas ya pagadas', function () {
     expect(EmployeeDeduction::count())->toBe(0);
 });
 
-it('excluye cuotas con due_date fuera del período', function () {
+it('excluye cuotas con due_date posterior al fin del período', function () {
     seedLoanDeductions();
     $employee = makeLoanEmployee();
     $period = makeLoanPeriod(month: 3); // 2026-03-01 – 2026-03-31
     $loan = makeLoan($employee);
 
-    makeLoanInstallment($loan, 1, '2026-02-28'); // antes del período
-    makeLoanInstallment($loan, 2, '2026-04-01'); // después del período
+    makeLoanInstallment($loan, 1, '2026-04-01'); // después del período
 
     $result = app(LoanInstallmentCalculator::class)->calculate($employee, $period);
 
     expect($result['installments'])->toBeEmpty();
     expect(EmployeeDeduction::count())->toBe(0);
+});
+
+it('cobra en el período actual la cuota atrasada de un mes sin nómina', function () {
+    seedLoanDeductions();
+    $employee = makeLoanEmployee();
+    $period = makeLoanPeriod(month: 3);
+    $loan = makeLoan($employee);
+
+    $overdue = makeLoanInstallment($loan, 1, '2026-02-28', amount: 300_000);
+    makeLoanInstallment($loan, 2, '2026-03-15', amount: 300_000);
+
+    $result = app(LoanInstallmentCalculator::class)->calculate($employee, $period);
+
+    expect($result['installments'])->toHaveCount(2);
+
+    $deduction = EmployeeDeduction::find($overdue->fresh()->employee_deduction_id);
+    expect((float) $deduction->custom_amount)->toBe(300_000.0)
+        ->and($deduction->start_date->toDateString())->toBe('2026-02-28')
+        ->and($deduction->end_date->toDateString())->toBe('2026-03-31');
+
+    // DeductionCalculator la recoge dentro del período
+    expect($employee->employeeDeductions()->forPeriod($period->start_date, $period->end_date)->count())->toBe(2);
+});
+
+it('arrastra las atrasadas que superan el tope del salario, las más antiguas primero', function () {
+    seedLoanDeductions();
+    $employee = makeLoanEmployee(); // tope 25 % de 2.550.000 = 637.500
+    $period = makeLoanPeriod(month: 3);
+    $loan = makeLoan($employee);
+
+    $oldest = makeLoanInstallment($loan, 1, '2026-01-31', amount: 300_000);
+    $middle = makeLoanInstallment($loan, 2, '2026-02-28', amount: 300_000);
+    $current = makeLoanInstallment($loan, 3, '2026-03-15', amount: 300_000);
+
+    $result = app(LoanInstallmentCalculator::class)->calculate($employee, $period);
+
+    expect($result['installments']->pluck('id')->all())->toBe([$oldest->id, $current->id])
+        ->and($middle->fresh()->employee_deduction_id)->toBeNull()
+        ->and($middle->fresh()->status)->toBe('pending');
+});
+
+it('no duplica EmployeeDeduction de cuotas atrasadas al regenerar', function () {
+    seedLoanDeductions();
+    $employee = makeLoanEmployee();
+    $period = makeLoanPeriod(month: 3);
+    $loan = makeLoan($employee);
+
+    $overdue = makeLoanInstallment($loan, 1, '2026-02-28', amount: 300_000);
+
+    $calculator = app(LoanInstallmentCalculator::class);
+    $calculator->calculate($employee, $period);
+    $firstId = $overdue->fresh()->employee_deduction_id;
+    $calculator->calculate($employee, $period);
+
+    expect(EmployeeDeduction::count())->toBe(1)
+        ->and($overdue->fresh()->employee_deduction_id)->toBe($firstId);
+});
+
+it('revierte las cuotas atrasadas al eliminar la nómina que las cobró', function () {
+    seedLoanDeductions();
+    $employee = makeLoanEmployee();
+    $period = makeLoanPeriod(month: 3);
+    $loan = makeLoan($employee, 2, 300_000);
+    $loan->update(['outstanding_balance' => 600_000]);
+
+    $overdue = makeLoanInstallment($loan, 1, '2026-02-28', amount: 300_000, capitalAmount: 300_000);
+    makeLoanInstallment($loan, 2, '2026-03-15', amount: 300_000, capitalAmount: 300_000);
+
+    $calculator = app(LoanInstallmentCalculator::class);
+    $result = $calculator->calculate($employee, $period);
+
+    $payroll = Payroll::create([
+        'employee_id' => $employee->id,
+        'payroll_period_id' => $period->id,
+        'base_salary' => 2_550_000,
+        'gross_salary' => 2_550_000,
+        'net_salary' => 1_950_000,
+        'status' => 'draft',
+    ]);
+    $calculator->markInstallmentsAsPaid($result['installments']->pluck('id')->all(), $payroll->id);
+
+    expect($loan->fresh()->status)->toBe('paid')
+        ->and($overdue->fresh()->payroll_id)->toBe($payroll->id);
+
+    $payroll->delete();
+
+    expect($overdue->fresh()->status)->toBe('pending')
+        ->and($overdue->fresh()->payroll_id)->toBeNull()
+        ->and($overdue->fresh()->employee_deduction_id)->toBeNull()
+        ->and(EmployeeDeduction::count())->toBe(0)
+        ->and($loan->fresh()->status)->toBe('disbursed')
+        ->and((float) $loan->fresh()->outstanding_balance)->toBe(600_000.0);
 });
 
 it('excluye cuotas de préstamos no aprobados (cancelled, paid, rejected)', function () {

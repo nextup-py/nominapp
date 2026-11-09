@@ -69,7 +69,9 @@ El valor por defecto se configura en **Ajustes → Nómina** (`Días hasta la pr
 
 Las cuotas se generan automáticamente al **aprobar** el préstamo. Sin embargo, el descuento en nómina solo ocurre una vez que el préstamo pasa al estado **Desembolsado** — un préstamo aprobado pero no desembolsado **no** genera deducción.
 
-Al generar la nómina de un período, el sistema incluye automáticamente las cuotas vencidas de cada empleado. No es necesario agregarlas manualmente.
+Al generar la nómina de un período, el sistema incluye automáticamente las cuotas pendientes de cada empleado cuyo vencimiento sea **hasta el fin del período**. No es necesario agregarlas manualmente.
+
+**Cuotas atrasadas:** si un período no se generó (por ejemplo, se saltó un mes), sus cuotas no se pierden: quedan pendientes y se cobran en la siguiente nómina que se genere, de la más antigua a la más nueva. Para respetar el tope del Art. 245 (ver más abajo), la suma de cuotas de préstamo descontadas en una nómina no supera el porcentaje del salario: las cuotas del propio período se descuentan siempre y las atrasadas entran mientras haya margen; las que no caben **se arrastran** a la nómina siguiente. Al eliminar o regenerar una nómina, las cuotas que cobró (atrasadas incluidas) vuelven a Pendiente y se restituye el saldo del préstamo.
 
 Para ver el detalle de cuotas, abrir el préstamo y revisar la sección **Cuotas**. Cada cuota muestra:
 

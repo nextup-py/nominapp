@@ -50,6 +50,8 @@ Desde la vista de la planilla (clic en la planilla para abrirla):
    - Deducciones activas (IPS, préstamos, adelantos, retiros de mercadería, ausencias injustificadas)
    - Bonificación familiar IPS
 
+Las cuotas de **préstamos** y **retiros de mercadería** con vencimiento hasta el fin del período se descuentan en el recibo, incluidas las atrasadas de períodos que nunca se generaron (en préstamos, con el tope del Art. 245 CLT por nómina; lo que no entra se arrastra a la siguiente). Revisar el detalle de deducciones del primer recibo tras un período salteado: puede ser mayor al habitual.
+
 Si algún empleado no pudo procesarse, el sistema lo informa con el motivo en una notificación aparte (no bloquea la generación del resto). También avisa si, tras generar, quedan empleados con contrato por vencer dentro de los próximos días configurados.
 
 Para agregar manualmente un empleado que no fue incluido: clic en **Agregar Recibo** y seleccionarlo.

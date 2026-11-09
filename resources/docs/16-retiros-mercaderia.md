@@ -60,7 +60,9 @@ Después de crear el retiro, ir a la pestaña de productos para cargar los ítem
 
 ## Cuotas y descuento en nómina
 
-Al generar la nómina de un período, el sistema incluye automáticamente las cuotas vencidas del período como deducción. No es necesario agregarlas manualmente.
+Al generar la nómina de un período, el sistema incluye automáticamente como deducción las cuotas pendientes cuyo vencimiento sea **hasta el fin del período**. No es necesario agregarlas manualmente.
+
+**Cuotas atrasadas:** si un período no se generó, sus cuotas quedan pendientes y se cobran **todas juntas** en la siguiente nómina que se genere (a diferencia de los préstamos, la mercadería no tiene tope por nómina). Al eliminar o regenerar la nómina, esas cuotas vuelven a Pendiente y se restituye el saldo del retiro.
 
 Para ver el detalle de cuotas, abrir el retiro y revisar la pestaña de cuotas (solo lectura). Cada cuota muestra:
 - Número de cuota (ej: "Cuota 3/12")

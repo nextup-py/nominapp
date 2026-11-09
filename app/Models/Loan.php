@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Settings\PayrollSettings;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -377,7 +379,7 @@ class Loan extends Model implements Auditable
         // Validar límite de cuota como % del salario (configurable en PayrollSettings)
         $salaryBase = $this->getLoanDeductionBase();
         if ($salaryBase > 0) {
-            $capPercent = app(\App\Settings\PayrollSettings::class)->loan_installment_cap_percent;
+            $capPercent = app(PayrollSettings::class)->loan_installment_cap_percent;
             $cap = round($salaryBase * $capPercent / 100, 2);
             if ($pmt > $cap) {
                 $capFormatted = number_format($cap, 0, ',', '.');
@@ -538,15 +540,7 @@ class Loan extends Model implements Auditable
      */
     protected function getLoanDeductionBase(): float
     {
-        if ($this->employee->base_salary && $this->employee->base_salary > 0) {
-            return (float) $this->employee->base_salary;
-        }
-
-        if ($this->employee->daily_rate && $this->employee->daily_rate > 0) {
-            return round((float) $this->employee->daily_rate * 30, 2);
-        }
-
-        return 0.0;
+        return $this->employee->getLoanDeductionBase();
     }
 
     /**
@@ -622,8 +616,8 @@ class Loan extends Model implements Auditable
     /**
      * Filtra por estado.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByStatus($query, string $status)
     {
@@ -633,8 +627,8 @@ class Loan extends Model implements Auditable
     /**
      * Filtra préstamos aprobados (en curso de cobro).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeApproved($query)
     {
@@ -644,8 +638,8 @@ class Loan extends Model implements Auditable
     /**
      * Filtra préstamos pendientes.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopePending($query)
     {
@@ -655,8 +649,8 @@ class Loan extends Model implements Auditable
     /**
      * Filtra préstamos de un empleado específico.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeForEmployee($query, int $employeeId)
     {

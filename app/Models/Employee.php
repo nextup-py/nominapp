@@ -977,6 +977,24 @@ class Employee extends Model implements AuthenticatableContract
     }
 
     /**
+     * Base salarial mensual para el tope de cuotas de préstamo (Art. 245 CLT).
+     *
+     * Mensualeros: salario base. Jornaleros: jornal × 30. Sin salario definido: 0 (sin tope).
+     */
+    public function getLoanDeductionBase(): float
+    {
+        if ($this->base_salary && $this->base_salary > 0) {
+            return (float) $this->base_salary;
+        }
+
+        if ($this->daily_rate && $this->daily_rate > 0) {
+            return round((float) $this->daily_rate * 30, 2);
+        }
+
+        return 0.0;
+    }
+
+    /**
      * Calcula el salario devengado de referencia para adelantos.
      * - Mensual: salario base fijo del contrato activo.
      * - Jornalero: (días efectivamente trabajados en el período actual × jornal diario) más el

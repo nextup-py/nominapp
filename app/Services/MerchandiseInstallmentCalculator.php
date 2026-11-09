@@ -8,11 +8,14 @@ use App\Models\EmployeeDeduction;
 use App\Models\MerchandiseWithdrawal;
 use App\Models\MerchandiseWithdrawalInstallment;
 use App\Models\PayrollPeriod;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Calcula y registra las cuotas de retiros de mercadería que vencen en el período de nómina.
+ * Calcula y registra las cuotas de retiros de mercadería que vencen en el período de nómina
+ * o que quedaron atrasadas de períodos que nunca se generaron (todas en la misma nómina,
+ * sin tope: la mercadería no está sujeta al límite del Art. 245 CLT).
  *
  * Por cada cuota encontrada crea (o actualiza) un registro en `employee_deductions`
  * usando el código MER001, de modo que DeductionCalculator las procese junto al
@@ -24,7 +27,7 @@ class MerchandiseInstallmentCalculator
     private ?int $merchandiseDeductionId = null;
 
     /**
-     * Identifica cuotas de retiros vencidas en el período, crea sus EmployeeDeduction
+     * Identifica cuotas `pending` con `due_date <= period->end_date` (del período y atrasadas), crea sus EmployeeDeduction
      * y retorna la colección de instancias para trazabilidad posterior.
      *
      * @return array{installments: Collection}
@@ -49,9 +52,11 @@ class MerchandiseInstallmentCalculator
                 ->where('employee_id', $employee->id)
                 ->where('status', 'approved'))
             ->where('status', 'pending')
-            ->whereBetween('due_date', [$period->start_date, $period->end_date])
+            ->whereNull('payroll_id')
+            ->whereDate('due_date', '<=', $period->end_date)
             ->with('withdrawal')
             ->orderBy('due_date')
+            ->orderBy('id')
             ->lockForUpdate()
             ->get();
 
@@ -64,16 +69,17 @@ class MerchandiseInstallmentCalculator
                 if ($employeeDeduction) {
                     $employeeDeduction->update([
                         'custom_amount' => (float) $installment->amount,
+                        'end_date' => $this->deductionEndDate($installment, $period),
                         'notes' => $notes,
                     ]);
                 } else {
                     $employeeDeduction = $this->createEmployeeDeduction(
-                        $employee->id, $deductionId, $installment, $notes
+                        $employee->id, $deductionId, $installment, $notes, $period
                     );
                 }
             } else {
                 $employeeDeduction = $this->createEmployeeDeduction(
-                    $employee->id, $deductionId, $installment, $notes
+                    $employee->id, $deductionId, $installment, $notes, $period
                 );
             }
 
@@ -144,15 +150,28 @@ class MerchandiseInstallmentCalculator
         int $deductionId,
         MerchandiseWithdrawalInstallment $installment,
         string $notes,
+        PayrollPeriod $period,
     ): EmployeeDeduction {
         return EmployeeDeduction::create([
             'employee_id' => $employeeId,
             'deduction_id' => $deductionId,
             'start_date' => $installment->due_date,
-            'end_date' => $installment->due_date,
+            'end_date' => $this->deductionEndDate($installment, $period),
             'custom_amount' => (float) $installment->amount,
             'notes' => $notes,
         ]);
+    }
+
+    /**
+     * Fecha fin del EmployeeDeduction: el vencimiento para cuotas del período (puntual) o el
+     * fin del período para atrasadas, así DeductionCalculator las recoge. El inicio sigue
+     * siendo `due_date`, que mantiene única la clave empleado+deducción+inicio.
+     */
+    private function deductionEndDate(MerchandiseWithdrawalInstallment $installment, PayrollPeriod $period): Carbon
+    {
+        return $installment->due_date->lt($period->start_date)
+            ? Carbon::parse($period->end_date)
+            : $installment->due_date;
     }
 
     /**

@@ -74,40 +74,40 @@ class Payroll extends Model implements Auditable
 
             $period = $payroll->period;
             if ($period) {
-                // --- PRÉSTAMOS: revertir cuotas pagadas en este período ---
+                // --- PRÉSTAMOS: revertir cuotas descontadas en esta nómina ---
+                // Se identifican por payroll_id (incluye atrasadas de períodos sin nómina); las
+                // anteriores a que existiera la columna se reconocen por vencimiento dentro del período.
 
-                // Recopilar employee_deduction_id de cuotas a revertir antes de actualizarlas
-                $deductionIds = LoanInstallment::whereHas('loan', fn ($q) => $q
-                    ->where('employee_id', $payroll->employee_id))
-                    ->whereBetween('due_date', [$period->start_date, $period->end_date])
+                $loanInstallments = fn () => LoanInstallment::query()
+                    ->whereHas('loan', fn ($q) => $q->where('employee_id', $payroll->employee_id))
+                    ->where(fn ($q) => $q
+                        ->where('payroll_id', $payroll->id)
+                        ->orWhere(fn ($q) => $q->whereNull('payroll_id')
+                            ->whereBetween('due_date', [$period->start_date, $period->end_date])));
+
+                $deductionIds = $loanInstallments()
                     ->whereNotNull('employee_deduction_id')
                     ->pluck('employee_deduction_id')
                     ->filter();
 
-                LoanInstallment::whereHas('loan', fn ($q) => $q
-                    ->where('employee_id', $payroll->employee_id)
-                    ->where('status', 'approved'))
+                $affectedLoanIds = $loanInstallments()
+                    ->whereIn('status', ['paid', 'pending'])
+                    ->pluck('loan_id')
+                    ->unique();
+
+                $loanInstallments()
                     ->where('status', 'paid')
-                    ->whereBetween('due_date', [$period->start_date, $period->end_date])
                     ->update(['status' => 'pending', 'paid_at' => null, 'payroll_id' => null]);
 
-                // Restaurar outstanding_balance en los préstamos afectados
-                LoanInstallment::whereHas('loan', fn ($q) => $q
-                    ->where('employee_id', $payroll->employee_id))
-                    ->whereBetween('due_date', [$period->start_date, $period->end_date])
-                    ->where('status', 'pending')
-                    ->with('loan')
-                    ->get()
-                    ->groupBy('loan_id')
-                    ->each(function ($installments) {
-                        $loan = $installments->first()->loan;
-                        if ($loan && $loan->status === 'approved') {
-                            $pendingCapital = $loan->installments()
-                                ->where('status', 'pending')
-                                ->sum('capital_amount');
-                            $loan->update(['outstanding_balance' => $pendingCapital]);
-                        }
-                    });
+                // Restaurar saldo y estado de los préstamos afectados (uno pagado por completo vuelve a desembolsado)
+                Loan::whereIn('id', $affectedLoanIds)->get()->each(function (Loan $loan) {
+                    if (in_array($loan->status, ['approved', 'disbursed', 'paid'], true)) {
+                        $loan->update([
+                            'status' => $loan->status === 'paid' ? 'disbursed' : $loan->status,
+                            'outstanding_balance' => $loan->installments()->where('status', 'pending')->sum('capital_amount'),
+                        ]);
+                    }
+                });
 
                 // Eliminar EmployeeDeduction puntuales de cuotas.
                 // La FK nullOnDelete limpia automáticamente loan_installments.employee_deduction_id.
@@ -138,19 +138,35 @@ class Payroll extends Model implements Auditable
 
                 // --- MERCADERÍA: revertir cuotas descontadas en esta nómina ---
 
-                $merchandiseDeductionIds = MerchandiseWithdrawalInstallment::whereHas('withdrawal', fn ($q) => $q
-                    ->where('employee_id', $payroll->employee_id))
-                    ->whereBetween('due_date', [$period->start_date, $period->end_date])
+                $merchandiseInstallments = fn () => MerchandiseWithdrawalInstallment::query()
+                    ->whereHas('withdrawal', fn ($q) => $q->where('employee_id', $payroll->employee_id))
+                    ->where(fn ($q) => $q
+                        ->where('payroll_id', $payroll->id)
+                        ->orWhere(fn ($q) => $q->whereNull('payroll_id')
+                            ->whereBetween('due_date', [$period->start_date, $period->end_date])));
+
+                $merchandiseDeductionIds = $merchandiseInstallments()
                     ->whereNotNull('employee_deduction_id')
                     ->pluck('employee_deduction_id')
                     ->filter();
 
-                MerchandiseWithdrawalInstallment::whereHas('withdrawal', fn ($q) => $q
-                    ->where('employee_id', $payroll->employee_id)
-                    ->where('status', 'approved'))
+                $affectedWithdrawalIds = $merchandiseInstallments()
+                    ->whereIn('status', ['paid', 'pending'])
+                    ->pluck('merchandise_withdrawal_id')
+                    ->unique();
+
+                $merchandiseInstallments()
                     ->where('status', 'paid')
-                    ->whereBetween('due_date', [$period->start_date, $period->end_date])
                     ->update(['status' => 'pending', 'paid_at' => null, 'payroll_id' => null]);
+
+                MerchandiseWithdrawal::whereIn('id', $affectedWithdrawalIds)->get()->each(function (MerchandiseWithdrawal $withdrawal) {
+                    if (in_array($withdrawal->status, ['approved', 'paid'], true)) {
+                        $withdrawal->update([
+                            'status' => $withdrawal->status === 'paid' ? 'approved' : $withdrawal->status,
+                            'outstanding_balance' => $withdrawal->installments()->where('status', 'pending')->sum('amount'),
+                        ]);
+                    }
+                });
 
                 if ($merchandiseDeductionIds->isNotEmpty()) {
                     EmployeeDeduction::whereIn('id', $merchandiseDeductionIds)->delete();
