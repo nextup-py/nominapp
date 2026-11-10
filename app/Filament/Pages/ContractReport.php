@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Exports\ContractReportExport;
+use App\Filament\Resources\ContractResource;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Contract;
@@ -37,6 +38,12 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class ContractReport extends Page implements HasTable
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return ContractResource::canViewAny();
+    }
+
     use InteractsWithTable;
 
     protected static ?string $slug = 'reporte-contratos';

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\AttendanceDayResource;
 use App\Models\AttendanceEvent;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\TextEntry;
@@ -18,6 +19,12 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 /** Widget de tabla: últimas marcaciones del día actual. */
 class LatestAttendances extends BaseWidget
 {
+    /** Solo lo ven quienes tienen permiso sobre el módulo que resume. */
+    public static function canView(): bool
+    {
+        return AttendanceDayResource::canViewAny();
+    }
+
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Últimas Marcaciones de Hoy';

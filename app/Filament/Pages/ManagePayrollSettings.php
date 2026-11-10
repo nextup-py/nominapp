@@ -13,6 +13,12 @@ use Filament\Pages\SettingsPage;
 
 class ManagePayrollSettings extends SettingsPage
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->hasRole('Super Admin') ?? false;
+    }
+
     // Configuraciones de la página
     protected static ?string $navigationIcon = 'heroicon-o-calculator';
 

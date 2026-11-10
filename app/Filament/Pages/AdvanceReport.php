@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Exports\AdvanceReportExport;
+use App\Filament\Resources\AdvanceResource;
 use App\Models\Advance;
 use App\Models\Branch;
 use App\Models\Company;
@@ -31,6 +32,12 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class AdvanceReport extends Page implements HasTable
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return AdvanceResource::canViewAny();
+    }
+
     use InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';

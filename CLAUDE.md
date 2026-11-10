@@ -61,7 +61,7 @@ Two separate axes that converge in `Contract`:
 | Extra hours | `ExtraHourCalculator` |
 | Rest day | `RestDayCalculator` — pago del día de descanso semanal remunerado |
 | Tardiness penalty | `AbsencePenaltyCalculator` — descuento por minutos de tardanza aprobados por RR.HH. (**no** procesa ausencias injustificadas — ver nota abajo) |
-| Family bonus | `FamilyBonusCalculator` — bonificación familiar IPS |
+| Family bonus | `FamilyBonusCalculator` — bonificación familiar IPS. Un hijo (`EmployeeChild::isEligibleAt($finDelPeríodo)`) cobra si es menor de 18 años **al fin del período** y tiene `ci` o certificado adjunto (`hasSupport()`); `Employee::eligibleChildrenAt()` filtra la relación `children` precargada. La columna `employees.children_count` y el comando de relleno de hijos se eliminaron (la migración `remove_children_placeholders_and_count` borra el relleno inequívoco y guarda un CSV de declarados en `storage/app`) |
 | Loans | `Loan`, `LoanInstallment`, `LoanInstallmentCalculator` |
 | Advances | `Advance`, `AdvanceCalculator` |
 | Merchandise withdrawals | `MerchandiseWithdrawal`, `MerchandiseWithdrawalItem`, `MerchandiseWithdrawalInstallment`, `MerchandiseInstallmentCalculator` |
@@ -399,6 +399,8 @@ Control de acceso vía `spatie/laravel-permission`. Cubre permisos CRUD por mode
 `RoleSeeder` también asigna Super Admin a cualquier usuario existente sin rol (`User::doesntHave('roles')`), tanto en la primera siembra como en reejecuciones — útil para instalaciones que migran a este sistema.
 
 **Permisos de acciones de negocio (`BusinessActionPermissionSeeder`):** convención `{accion}_{modelo}` (ej. `approve_loan`, `close_payroll_period`), un permiso por recurso+verbo — no por cada ocurrencia del botón en fila/header/bulk, que comparten el mismo permiso. Se agrega como `&& auth()->user()->can('{permiso}')` a la condición de estado ya existente en cada `->visible()`. Acciones puramente administrativas (cambiar método de pago, editar borrador, descargar un archivo ya generado) quedan cubiertas por los permisos CRUD de Plan 1 (`update_{modelo}`/`view_{modelo}`), sin permiso de negocio propio. `RoleResource` muestra los permisos de negocio junto a los CRUD de cada modelo, dentro del mismo `CheckboxList` agrupado por módulo — no en una sección aparte.
+
+**Páginas, widgets y descargas piden permiso (no solo los Resources):** una `Page` de Filament **no** consulta la policy sola (`canAccess()` es `true` por defecto), y las rutas de `routes/web.php` solo tenían `auth`. Ahora cada página de reporte define `canAccess()` con `XResource::canViewAny()` del módulo que lee; Configuración de nómina, Configuración general y el visor de logs son solo Super Admin (`hasRole('Super Admin')`); los widgets del Escritorio definen `canView()` con el mismo criterio; y las rutas de PDF/Excel llevan `->middleware('can:view,{modelo}')` o `can:viewAny,App\\Models\\{Modelo}` (el middleware `can` resuelve la policy con el parámetro enlazado). `Gate::define('super-admin')` (en `AppServiceProvider`) sirve para `->middleware('can:super-admin')`. **Toda página, widget o ruta nueva que muestre datos debe llevar su guarda**; `PagePermissionsTest` cubre los casos principales.
 
 **Bloqueo de panel sin rol:** `User::canAccessPanel()` requiere al menos un rol asignado — un usuario recién creado sin rol no puede entrar a `/admin` hasta que se le asigne uno.
 

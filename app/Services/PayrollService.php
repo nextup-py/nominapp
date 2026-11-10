@@ -62,7 +62,7 @@ class PayrollService
             ->where('status', 'active')
             ->whereHas('activeContract', fn ($q) => $q->where('status', 'active'))
             ->when($period->company_id, fn ($q) => $q->whereHas('branch', fn ($q) => $q->where('company_id', $period->company_id)))
-            ->with(['activeContract', 'eligibleChildren'])
+            ->with(['activeContract', 'children'])
             ->get();
 
         [$employees, $excludedEmployees] = $candidates->partition(

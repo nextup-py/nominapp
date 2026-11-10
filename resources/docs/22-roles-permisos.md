@@ -41,6 +41,21 @@ Además, los módulos con flujo de aprobación (Préstamos, Adelantos, Retiros d
 
 > **Notificaciones:** los avisos de la campanita y el correo solo llegan a quien tiene el permiso del módulo (por ejemplo **Editar Terminal** para los de terminales). Cada usuario ajusta cuáles recibe, por qué canal y con qué frecuencia desde su menú de usuario → **Mis notificaciones**, sin necesidad de un permiso extra (ver el capítulo **Mis notificaciones**).
 
+## Reportes, configuración y descargas
+
+Además de los módulos, estas pantallas y descargas también dependen del rol:
+
+| Pantalla o descarga | Qué se necesita |
+|---------------------|-----------------|
+| **Configuración de nómina**, **Configuración general** y **Registros del sistema** (logs) | Solo el rol **Super Admin** |
+| **Reportes** (Salarios, Empleados, Préstamos, Adelantos, Retiros de Mercadería, Contratos, Asistencia, Vacaciones) y sus PDF o Excel | **Ver listado** del módulo correspondiente (por ejemplo, el Reporte de Salarios pide **Ver listado** de Nóminas) |
+| **Modos de marcación** | **Ver listado** de Terminales |
+| **Planificador de turnos** | **Ver listado** de Horarios; **Editar Horario** para modificar turnos |
+| Tarjetas del **Escritorio** | Cada tarjeta se muestra solo si el usuario tiene **Ver listado** del módulo que resume |
+| **PDF de un registro** (recibo, contrato, préstamo, adelanto, amonestación, liquidación, legajo, etc.) | **Ver detalle** del módulo correspondiente |
+
+> Un usuario con un rol sin esos permisos no ve la pantalla en el menú y, si abre el enlace directo de una descarga, recibe un error de acceso denegado.
+
 ---
 
 ![Edición de permisos de un rol](/docs-images/22-rol-editar.png)

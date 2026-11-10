@@ -13,6 +13,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Resources\Components\Tab;
+use Filament\Support\Colors\Color;
 use Filament\Tables;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -25,6 +26,12 @@ use Livewire\Attributes\Url;
 /** Visor de logs de la aplicación con filtros, búsqueda y detalle de stack trace. */
 class LogViewer extends Page implements HasTable
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->hasRole('Super Admin') ?? false;
+    }
+
     use InteractsWithTable;
 
     protected static ?string $slug = 'logs';
@@ -60,11 +67,11 @@ class LogViewer extends Page implements HasTable
                 Tables\Columns\TextColumn::make('env')
                     ->label('Entorno')
                     ->color(fn (string $state): array => match ($state) {
-                        'local' => \Filament\Support\Colors\Color::Blue,
-                        'production' => \Filament\Support\Colors\Color::Red,
-                        'staging' => \Filament\Support\Colors\Color::Orange,
-                        'testing' => \Filament\Support\Colors\Color::Gray,
-                        default => \Filament\Support\Colors\Color::Yellow,
+                        'local' => Color::Blue,
+                        'production' => Color::Red,
+                        'staging' => Color::Orange,
+                        'testing' => Color::Gray,
+                        default => Color::Yellow,
                     })
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->badge(),
@@ -200,7 +207,7 @@ class LogViewer extends Page implements HasTable
         return $options;
     }
 
-    /** @return array<\Filament\Actions\Action> */
+    /** @return array<Action> */
     protected function getHeaderActions(): array
     {
         return [

@@ -11,6 +11,12 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 /** Widget de estado de nómina: muestra el período activo y el progreso de aprobación. */
 class PayrollStatusWidget extends BaseWidget
 {
+    /** Solo lo ven quienes tienen permiso sobre el módulo que resume. */
+    public static function canView(): bool
+    {
+        return PayrollPeriodResource::canViewAny();
+    }
+
     protected static ?int $sort = 3;
 
     protected static ?string $pollingInterval = '60s';

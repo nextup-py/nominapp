@@ -13,6 +13,12 @@ use Filament\Pages\SettingsPage;
 
 class ManageGeneralSettings extends SettingsPage
 {
+    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->hasRole('Super Admin') ?? false;
+    }
+
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?string $navigationLabel = 'Configuración General';

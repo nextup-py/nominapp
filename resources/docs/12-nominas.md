@@ -48,7 +48,7 @@ Desde la vista de la planilla (clic en la planilla para abrirla):
    - Horas extra desde las asistencias registradas
    - Día de descanso semanal remunerado (para jornaleros)
    - Deducciones activas (IPS, préstamos, adelantos, retiros de mercadería, ausencias injustificadas)
-   - Bonificación familiar IPS
+   - Bonificación familiar IPS (solo hijos menores de 18 años al fin del período, con cédula del menor o certificado cargado)
 
 **Revisar antes de generar:** el cuadro de confirmación de **Generar Recibos** muestra, cuando corresponde, una lista de avisos con la cantidad de casos. No bloquean la generación; sirven para corregir antes de calcular:
 
