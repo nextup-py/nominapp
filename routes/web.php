@@ -20,6 +20,7 @@ use App\Http\Controllers\MerchandiseWithdrawalController;
 use App\Http\Controllers\MobileLinkController;
 use App\Http\Controllers\OrgChartController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\PayrollSimulationController;
 use App\Http\Controllers\SalaryReportController;
 use App\Http\Controllers\ScheduleEmployeeController;
 use App\Http\Controllers\ShiftPlannerController;
@@ -154,6 +155,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/retiros-mercaderia/{merchandiseWithdrawal}/pdf', [MerchandiseWithdrawalController::class, 'show'])->middleware('can:view,merchandiseWithdrawal')->name('merchandise-withdrawals.pdf');
     Route::get('/adelantos/pdf/masivo', [AdvanceController::class, 'bulkPdf'])->middleware('can:viewAny,App\\Models\\Advance')->name('advances.pdf.bulk');
     Route::get('/adelantos/reporte/pdf', [AdvanceReportController::class, 'pdf'])->middleware('can:viewAny,App\\Models\\Advance')->name('advances.report.pdf');
+    Route::get('/nominas/simulacion/excel', [PayrollSimulationController::class, 'excel'])->middleware('can:viewAny,App\\Models\\PayrollPeriod')->name('payroll-simulation.excel');
     Route::get('/nominas/reporte/salarios/pdf', [SalaryReportController::class, 'pdf'])->middleware('can:viewAny,App\\Models\\Payroll')->name('salary-report.pdf');
     Route::get('/asistencia/reporte/asistencias/pdf', [AttendancePdfReportController::class, 'attendance'])->middleware('can:viewAny,App\\Models\\AttendanceDay')->name('attendance.report.attendance.pdf');
     Route::get('/asistencia/reporte/ausencias/pdf', [AttendancePdfReportController::class, 'absence'])->middleware('can:viewAny,App\\Models\\AttendanceDay')->name('attendance.report.absence.pdf');

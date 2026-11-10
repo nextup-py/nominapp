@@ -49,6 +49,7 @@ Además de los módulos, estas pantallas y descargas también dependen del rol:
 |---------------------|-----------------|
 | **Configuración de nómina**, **Configuración general** y **Registros del sistema** (logs) | Solo el rol **Super Admin** |
 | **Reportes** (Salarios, Empleados, Préstamos, Adelantos, Retiros de Mercadería, Contratos, Asistencia, Vacaciones) y sus PDF o Excel | **Ver listado** del módulo correspondiente (por ejemplo, el Reporte de Salarios pide **Ver listado** de Nóminas) |
+| **Simulación de Nómina** y su descarga en Excel | **Ver listado** de Períodos de Nómina |
 | **Modos de marcación** | **Ver listado** de Terminales |
 | **Planificador de turnos** | **Ver listado** de Horarios; **Editar Horario** para modificar turnos |
 | Tarjetas del **Escritorio** | Cada tarjeta se muestra solo si el usuario tiene **Ver listado** del módulo que resume |
