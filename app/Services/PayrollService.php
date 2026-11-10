@@ -37,11 +37,12 @@ class PayrollService
     /**
      * Genera recibos de nómina para todos los empleados elegibles del período.
      *
+     * @param  bool  $withPdf  false para no generar los PDF (lo usa la simulación, que revierte todo y no debe dejar archivos).
      * @return array{generated: int, skipped: list<array{name: string, ci: int|string, reason: string}>}
      *
      * @throws \InvalidArgumentException si el período no está en estado draft o processing
      */
-    public function generateForPeriod(PayrollPeriod $period): array
+    public function generateForPeriod(PayrollPeriod $period, bool $withPdf = true): array
     {
         // Validar estado del período
         if (! in_array($period->status, ['draft', 'processing'])) {
@@ -228,7 +229,9 @@ class PayrollService
 
                 // El PDF se genera fuera de la transacción: si falla, la nómina ya
                 // commiteada sigue siendo válida y el PDF es regenerable después.
-                $this->generatePdfSafely($payroll);
+                if ($withPdf) {
+                    $this->generatePdfSafely($payroll);
+                }
 
                 Log::info("Nómina generada — CI {$employee->ci} {$employee->first_name} {$employee->last_name}: Gs. {$netSalary} neto (período {$period->start_date} - {$period->end_date})", [
                     'payroll_id' => $payroll->id,

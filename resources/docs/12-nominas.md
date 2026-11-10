@@ -66,6 +66,19 @@ Para agregar manualmente un empleado que no fue incluido: clic en **Agregar Reci
 
 **Regenerar recibos:** para recalcular todos los recibos de la planilla de una sola vez (por ejemplo, tras corregir una asistencia o un contrato), usar **Regenerar Recibos** en el menú de acciones — revierte a Borrador cualquier recibo ya aprobado y vuelve a calcular percepciones, deducciones, horas extra, ausencias y cuotas. También se puede regenerar un recibo individual desde su propia fila (ver más abajo).
 
+### Simular la nómina sin guardar
+
+Para ensayar un mes, o compararlo contra un cálculo manual, ir a **Nóminas → Simulación de Nómina**:
+
+1. Elegir la **empresa**, la **frecuencia de pago** y el rango de fechas (**Desde** y **Hasta**); por defecto trae el mes en curso.
+2. Clic en **Simular**.
+
+La simulación usa el mismo cálculo que **Generar Recibos**, con la asistencia tal como está hoy, pero **no guarda nada**: no crea recibos ni planillas y no marca cuotas, adelantos ni vacaciones como pagados. Muestra los avisos previos (los de **Revisar antes de generar**), los totales (salario base, percepciones, IPS, otros descuentos, neto por transferencia y en efectivo), los empleados omitidos con su motivo y el resumen por empleado.
+
+**Descargar Excel** trae dos hojas: **Resumen** (una fila por empleado, con la cédula para cruzar con el cálculo del cliente) y **Detalle** (cada percepción y deducción de cada recibo).
+
+> A mitad de mes la simulación es parcial: toma las asistencias registradas hasta hoy. Un período que ya tiene recibos generados no se puede simular. Quien tiene **Ver listado** de Períodos de Nómina puede simular.
+
 ### Cerrar una planilla
 
 El botón **Cerrar Planilla** solo está habilitado cuando **no** quedan recibos en estado Borrador o Aprobado (el botón muestra un tooltip explicando qué falta si está deshabilitado). Al cerrar, los recibos quedan bloqueados y no se pueden generar más. El aviso de confirmación también indica cuántos recibos faltan y cuántas jornadas del período se registraron **sin horario esperado** (sin tardanza ni horas extra calculadas), para revisarlas antes de cerrar; no bloquea el cierre.
