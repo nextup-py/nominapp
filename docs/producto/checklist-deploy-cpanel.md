@@ -54,9 +54,10 @@ ls -lh ~/respaldo-*.sql
 - [ ] `$PHP $(which composer) install --no-dev --optimize-autoloader`
 - [ ] Subir el build desde el **Administrador de archivos** de cPanel: subir `build.zip` a `public/`, borrar `public/build` y extraer el zip.
 - [ ] Comprobar que existe `public/build/manifest.json`.
+- [ ] **Motor de las tablas.** Antes de migrar, comprobar el motor por defecto del servidor: `$PHP artisan tinker --execute='echo DB::selectOne("select @@default_storage_engine e")->e;'`. Si dice `MyISAM` (habitual en cPanel), agregar `DB_ENGINE=InnoDB` al `.env` y correr `$PHP artisan config:clear`. Sin eso, las tablas nuevas se crean en MyISAM: la migración falla por el límite de 1000 bytes de los índices (`Specified key was too long`) y, si no fallara, las claves foráneas se ignorarían en silencio. Si una migración ya falló, borrar la tabla que quedó a medias antes de reintentar (MySQL no deshace el `create table`).
 - [ ] `$PHP artisan migrate --force`
 - [ ] Seeders si el release los requiere (`PermissionSeeder`, `BusinessActionPermissionSeeder`, `RoleSeeder`).
-- [ ] Si hay migraciones que generan archivos de respaldo (por ejemplo CSV en `storage/app/`), anotar el nombre y entregarlo al cliente.
+- [ ] Si hay migraciones que generan archivos de respaldo (por ejemplo CSV en `storage/app/private/`), anotar el nombre y entregarlo al cliente.
 - [ ] Scripts de limpieza: solo con confirmación escrita y respaldo del mismo día; primero `--dry-run`, revisar los conteos con el cliente, luego la corrida real.
 - [ ] `$PHP artisan livewire:publish --assets`
 - [ ] `$PHP artisan filament:assets`
@@ -68,17 +69,19 @@ ls -lh ~/respaldo-*.sql
 
 ## 4. Verificación inmediata
 
-- [ ] El panel abre y se puede iniciar sesión.
+- [ ] El panel abre y se puede iniciar sesión (la ruta del panel puede ser `/login` o `/admin/login` según la instalación: `$PHP artisan route:list --path=login`).
 - [ ] Los listados principales (empleados, contratos) cargan.
 - [ ] Los terminales registrados aparecen como **Sin vincular** si todavía no se vincularon.
 - [ ] `tail -n 20 storage/logs/cron.log` muestra el programador corriendo.
-- [ ] Sin errores nuevos en `storage/logs/laravel-AAAA-MM-DD.log`.
+- [ ] Sin errores nuevos en `storage/logs/laravel-AAAA-MM-DD.log`. Los errores del propio proceso (por ejemplo, del programador entre `git pull` y `composer install`) son esperables. **Las horas del log usan la zona del sistema (`APP_TIMEZONE`), que puede diferir de la del servidor (`date`, `ls`, `uptime`)**: al comparar, usar siempre la del log.
+- [ ] Probar cada pestaña de los listados con pestañas (por ejemplo Contratos → Vencidos) y ordenar por una columna: una consulta que falla solo se ve al usarla.
 - [ ] `public/.htaccess` y `public/.user.ini` conservan la configuración de PHP del hosting.
 
 ## 5. Proceso de cola
 
-- [ ] Agregar al cron del servidor: `* * * * * cd <RUTA_APP> && <PHP> artisan queue:work --stop-when-empty --max-time=55 >> storage/logs/queue.log 2>&1`
-- [ ] A los 2 minutos, comprobar que la tabla `jobs` quedó en 0.
+**No hace falta.** Ninguna notificación ni proceso del sistema usa la cola (no hay clases `ShouldQueue` ni envíos con `dispatch`), así que un `queue:work` por cron solo arranca la aplicación cada minuto para no encontrar nada. Basta con el cron del programador (`schedule:run`). Si en el futuro se agregan trabajos en cola, actualizar esta sección.
+
+- [ ] Comprobar que está el cron del programador: `* * * * * cd <RUTA_APP> && <PHP> artisan schedule:run >> /dev/null 2>&1` (redirigir a `/dev/null` evita que `cron.log` crezca sin límite).
 
 ## 6. Configuración posterior (misma noche, antes del primer uso)
 
@@ -87,6 +90,7 @@ ls -lh ~/respaldo-*.sql
 - [ ] Roles: asignar RR.HH. a quienes aprueban vinculaciones y limitar al resto.
 - [ ] Habilitar marcación por celular solo a quienes corresponda.
 - [ ] Datos de hijos: RR.HH. completa e importa la plantilla.
+- [ ] El correo del servidor suele quedar en `MAIL_MAILER=log`: los avisos por correo no salen, solo la campanita. Decidir con el cliente si se configura un envío real.
 - [ ] Marcar como entregados los préstamos ya entregados, antes de la primera nómina oficial.
 - [ ] Terminales: **Asistencias → Terminales** → abrir cada uno → **Generar enlace de configuración** (vigencia de 24 h) y copiar la URL de inmediato (se muestra una sola vez). Enviarla por mensaje privado solo al responsable de esa sucursal y anotar qué enlace corresponde a qué equipo.
 
