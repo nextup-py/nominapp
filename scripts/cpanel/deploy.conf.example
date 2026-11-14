@@ -1,0 +1,22 @@
+# Configuracion de deploy.sh. Copiar a ~/deploy-nominapp.conf en el servidor y completar.
+# Este archivo NO se guarda en el repositorio con valores reales.
+
+# Carpeta de la aplicacion (donde estan artisan y .env).
+APP_DIR="/home/USUARIO/ruta/de/nominapp"
+
+# Binario de PHP del hosting (cPanel: /opt/cpanel/ea-phpXX/root/usr/bin/php).
+PHP_BIN="/opt/cpanel/ea-php82/root/usr/bin/php"
+
+# URL publica de la aplicacion, sin barra final. Se usa para comprobar que /up responde 200 al terminar.
+APP_URL="https://nominapp.ejemplo.com"
+
+# Rama a desplegar.
+BRANCH="main"
+
+# Opcionales (valores por defecto entre parentesis):
+# COMPOSER_BIN=""                                   # (el composer del PATH)
+# BACKUP_DIR="$HOME/respaldos-deploy"               # carpeta de respaldos de la base
+# BACKUP_KEEP=5                                     # cuantos respaldos se conservan
+# STATE_DIR="$HOME/deploy-state"                    # commit y build anteriores, para "restaurar"
+# BUILD_FILE=""                                     # (autodetecta ~/build.tar.gz o ~/build.zip)
+# ALLOWED_LOCAL="public/.htaccess public/.user.ini" # archivos con cambios locales que no bloquean el pull

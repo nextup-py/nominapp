@@ -2,6 +2,8 @@
 
 Plantilla genérica para instalaciones sin automatización (hosting compartido, Node viejo, sin SSH desde la PC del desarrollador). Reemplazar los marcadores `<...>` por los valores de la instalación; esos valores **no se guardan en el repositorio**.
 
+> **Automatizado:** los pasos 1 a 3 los ejecutan `scripts/cpanel/Preparar-Build.ps1` (PC) y `scripts/cpanel/deploy.sh` (servidor); ver `docs/deploy-cpanel.md`. Este checklist queda como referencia manual y para lo que el script no cubre (avisos, limpiezas, terminales).
+
 Variables: `<RUTA_APP>` = carpeta de la aplicación en el servidor, `<PHP>` = binario de PHP del hosting (por ejemplo `/opt/cpanel/ea-phpXX/root/usr/bin/php`).
 
 ## Antes del día
