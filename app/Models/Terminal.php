@@ -80,6 +80,7 @@ class Terminal extends Model implements AuthenticatableContract
         'link_window_until',
         'link_window_opened_by_id',
         'stale_after_minutes',
+        'confirm_exit',
         'watch_days',
         'watch_from',
         'watch_to',
@@ -106,6 +107,7 @@ class Terminal extends Model implements AuthenticatableContract
         'setup_token_consumed_at' => 'datetime',
         'link_window_until' => 'datetime',
         'stale_after_minutes' => 'integer',
+        'confirm_exit' => 'boolean',
         'watch_days' => 'array',
         'device_report' => 'array',
         'device_report_at' => 'datetime',
@@ -711,6 +713,48 @@ class Terminal extends Model implements AuthenticatableContract
     {
         return $this->device_report_at !== null
             && $this->device_report_at->gte(now()->subMinutes($this->effectiveStaleMinutes()));
+    }
+
+    /**
+     * Si este terminal pide confirmar la salida y los descansos: el valor propio, o el de Configuración General
+     * (`terminal_confirm_exit`) cuando no tiene (`confirm_exit` en null). La entrada siempre es automática.
+     */
+    public function confirmExitEnabled(?GeneralSettings $settings = null): bool
+    {
+        return $this->confirm_exit ?? (bool) ($settings ?? app(GeneralSettings::class))->terminal_confirm_exit;
+    }
+
+    /** Mediana de identificación (ms) a partir de la cual se considera lento el reconocimiento de un equipo. */
+    public const SLOW_IDENTIFICATION_MS = 8000;
+
+    /**
+     * Cuánto tarda este equipo en reconocer a una persona, según su último reporte: mediana y percentil 90 de las
+     * últimas identificaciones exitosas, medidas por el navegador. Null si todavía no informó ninguna.
+     *
+     * @return array{median_ms: int, p90_ms: int, samples: int}|null
+     */
+    public function identificationTiming(): ?array
+    {
+        $report = $this->device_report ?? [];
+        $median = $report['identification_median_ms'] ?? null;
+
+        if (! is_numeric($median)) {
+            return null;
+        }
+
+        return [
+            'median_ms' => (int) $median,
+            'p90_ms' => (int) ($report['identification_p90_ms'] ?? $median),
+            'samples' => (int) ($report['identification_samples'] ?? 0),
+        ];
+    }
+
+    /** El equipo tarda en reconocer: la mediana de sus últimas identificaciones supera `SLOW_IDENTIFICATION_MS`. */
+    public function isIdentificationSlow(): bool
+    {
+        $timing = $this->identificationTiming();
+
+        return $timing !== null && $timing['median_ms'] >= self::SLOW_IDENTIFICATION_MS;
     }
 
     /**

@@ -136,4 +136,18 @@ describe('collectDeviceReport', () => {
             expect(await collectDeviceReport({ nav: {}, win: win() })).not.toHaveProperty('visible');
         });
     });
+    it('incluye el tiempo de identificación cuando hay muestras', async () => {
+        const report = await collectDeviceReport({ nav: {}, win: {}, identification: { samples: 12, median_ms: 2100.4, p90_ms: 4800 } });
+
+        expect(report).toMatchObject({ identification_median_ms: 2100, identification_p90_ms: 4800, identification_samples: 12 });
+    });
+
+    it('omite el tiempo de identificación si todavía no hubo ninguna o llega incompleto', async () => {
+        for (const identification of [null, undefined, { samples: 0 }, { samples: 3, median_ms: NaN, p90_ms: 10 }]) {
+            const report = await collectDeviceReport({ nav: {}, win: {}, identification });
+
+            expect(report).not.toHaveProperty('identification_median_ms');
+            expect(report).not.toHaveProperty('identification_samples');
+        }
+    });
 });

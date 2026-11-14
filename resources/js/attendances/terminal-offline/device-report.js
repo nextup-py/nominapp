@@ -99,6 +99,7 @@ export function detectDisplayMode(win, nav = globalThis.navigator) {
  * @param {number|null} [options.clockOffsetMs] - diferencia servidor − dispositivo del último heartbeat.
  * @param {boolean|null} [options.wakeLock] - si el terminal logró mantener la pantalla encendida (Wake Lock); null si no se sabe.
  * @param {string|null} [options.wakeLockError] - motivo del último intento fallido de Wake Lock; solo viaja si `wakeLock` es false.
+ * @param {{samples: number, median_ms: number, p90_ms: number}|null} [options.identification] - tiempo de identificación de las últimas marcaciones (ver identification-stats.js); null si todavía no hubo ninguna.
  * @returns {Promise<Record<string, string|number|boolean>>}
  */
 export async function collectDeviceReport({
@@ -109,6 +110,7 @@ export async function collectDeviceReport({
     clockOffsetMs = null,
     wakeLock = null,
     wakeLockError = null,
+    identification = null,
 } = {}) {
     const report = {};
 
@@ -129,6 +131,12 @@ export async function collectDeviceReport({
     if (Number.isFinite(clockOffsetMs)) report.clock_skew_seconds = Math.round(clockOffsetMs / 1000);
     if (typeof wakeLock === 'boolean') report.wake_lock = wakeLock;
     if (wakeLock === false && wakeLockError) report.wake_lock_error = String(wakeLockError).slice(0, 40);
+
+    if (identification && Number.isFinite(identification.median_ms) && Number.isFinite(identification.p90_ms)) {
+        report.identification_median_ms = Math.round(identification.median_ms);
+        report.identification_p90_ms = Math.round(identification.p90_ms);
+        report.identification_samples = Math.round(identification.samples);
+    }
 
     const [battery, camera, storage] = await Promise.all([readBattery(nav), readCameraState(nav), readStorage(nav)]);
     Object.assign(report, battery, storage);

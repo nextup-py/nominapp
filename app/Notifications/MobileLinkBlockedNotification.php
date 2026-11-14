@@ -26,11 +26,11 @@ class MobileLinkBlockedNotification extends Notification
     {
         return FilamentNotification::make()
             ->title('Intento de vincular un celular sin permiso')
-            ->body("{$this->employee->full_name} intentó vincular su celular, pero no está habilitado para marcar desde el celular. Si corresponde, habilítelo en su ficha.")
+            ->body("{$this->employee->full_name} intentó vincular su celular, pero no está habilitado para marcar desde el celular. Si corresponde, abra su ficha y use «Habilitar celular».")
             ->icon('heroicon-o-device-phone-mobile')
             ->warning()
             ->actions([
-                Action::make('view')->label('Ver empleado')->url(EmployeeResource::getUrl('view', ['record' => $this->employee])),
+                Action::make('view')->label('Ver empleado y habilitar')->url(EmployeeResource::getUrl('view', ['record' => $this->employee])),
             ])
             ->getDatabaseMessage() + ['employee_id' => $this->employee->id];
     }

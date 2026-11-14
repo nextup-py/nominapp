@@ -14,6 +14,7 @@ use App\Filament\Resources\TerminalResource\RelationManagers\PairingRequestsRela
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
 use App\Models\Terminal;
+use App\Filament\Actions\MobileMarkingFields;
 use App\Settings\GeneralSettings;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Component;
@@ -33,8 +34,10 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
+use Illuminate\Support\Collection;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -149,6 +152,13 @@ class TerminalResource extends Resource
                             ->columnSpanFull(),
                     ])
                     ->columns(2),
+
+                Section::make('Marcación')
+                    ->description('Cómo se comporta la pantalla de este terminal al marcar. Sin definir, usa lo de Configuración General.')
+                    ->icon('heroicon-o-finger-print')
+                    ->compact()
+                    ->schema([static::confirmExitField()])
+                    ->columns(1),
 
                 Section::make('Monitoreo')
                     ->description('Cuándo se considera desconectado este terminal y en qué horario se vigila. Todo es opcional: sin horario propio, usa el horario de atención de su sucursal.')
@@ -345,6 +355,10 @@ class TerminalResource extends Resource
                                 ->label('Umbral de desconexión')
                                 ->getStateUsing(fn (Terminal $record) => $record->effectiveStaleMinutes().' minutos'.($record->stale_after_minutes ? '' : ' (general)')),
 
+                            TextEntry::make('_confirm_exit')
+                                ->label('Confirmar salida y descansos')
+                                ->getStateUsing(fn (Terminal $record) => static::describeConfirmExit($record)),
+
                             TextEntry::make('_watch_schedule')
                                 ->label('Horario de vigilancia')
                                 ->getStateUsing(fn (Terminal $record) => $record->watchScheduleLabel()),
@@ -398,6 +412,13 @@ class TerminalResource extends Resource
                                 ->label('Almacenamiento')
                                 ->getStateUsing(fn (Terminal $record) => static::describeStorage($record))
                                 ->placeholder('Sin dato'),
+
+                            TextEntry::make('_identification')
+                                ->label('Tiempo de identificación')
+                                ->getStateUsing(fn (Terminal $record) => static::describeIdentification($record))
+                                ->color(fn (Terminal $record) => $record->isIdentificationSlow() ? 'warning' : null)
+                                ->helperText('Cuánto tarda este equipo en reconocer a una persona. Pasa por completo en el navegador y no se ve de otro modo.')
+                                ->placeholder('Todavía no hubo marcaciones desde que se abrió'),
 
                             TextEntry::make('device_report_at')
                                 ->label('Último reporte')
@@ -731,6 +752,7 @@ class TerminalResource extends Resource
                     TerminalLinkActions::openLinkWindowBulk(),
                     TerminalCommandActions::bulk(),
                     TerminalMonitoringActions::bulk(),
+                    static::confirmExitBulkAction(),
                     DeleteBulkAction::make()
                         ->modalDescription('Esta acción no se puede deshacer. Las marcaciones ya registradas con los terminales seleccionados no se eliminan, pero perderán la referencia a qué dispositivo físico las generó.')
                         ->modalSubmitActionLabel('Sí, eliminar'),
@@ -875,6 +897,95 @@ class TerminalResource extends Resource
         $text = ($seconds > 0 ? '+' : '').$seconds.' s';
 
         return abs($seconds) > 60 ? $text.' — el reloj del dispositivo está desajustado' : $text;
+    }
+
+    /** Opciones del selector «Confirmar salida y descansos» (`inherit` = null, hereda Configuración General). */
+    public static function confirmExitOptions(): array
+    {
+        return [
+            'inherit' => 'Heredar (lo de Configuración General)',
+            'yes' => 'Sí, pedir confirmación',
+            'no' => 'No, registrar directamente',
+        ];
+    }
+
+    /** Selector Heredar/Sí/No de `terminals.confirm_exit`: si la salida y los descansos piden confirmar en este terminal. */
+    public static function confirmExitField(): Select
+    {
+        return Select::make('confirm_exit')
+            ->label('Confirmar salida y descansos')
+            ->options(static::confirmExitOptions())
+            ->default('inherit')
+            ->native(false)
+            ->selectablePlaceholder(false)
+            ->formatStateUsing(fn ($state): string => MobileMarkingFields::toOption($state))
+            ->dehydrateStateUsing(fn ($state): ?bool => MobileMarkingFields::fromOption($state))
+            ->helperText('Con «Sí», la salida y los descansos piden un toque para confirmar el tipo; con «No» se registran solos al reconocer a la persona, como antes. La entrada siempre es automática. «No» agiliza la fila pero permite marcar una salida por error.');
+    }
+
+    /** Texto del detalle: el valor efectivo y de dónde viene (propio o de Configuración General). */
+    public static function describeConfirmExit(Terminal $record): string
+    {
+        $effective = $record->confirmExitEnabled() ? 'Sí' : 'No';
+
+        return $record->confirm_exit === null ? "{$effective} (de Configuración General)" : $effective;
+    }
+
+    /** Acción masiva: fija si los terminales seleccionados piden confirmar la salida y los descansos. */
+    public static function confirmExitBulkAction(): BulkAction
+    {
+        return BulkAction::make('set_confirm_exit')
+            ->label('Confirmar salida y descansos')
+            ->icon('heroicon-o-finger-print')
+            ->color('info')
+            ->authorize(fn (): bool => auth()->user()?->can('update_terminal') ?? false)
+            ->form([
+                Select::make('value')
+                    ->label('Valor')
+                    ->options(static::confirmExitOptions())
+                    ->native(false)
+                    ->required()
+                    ->helperText('El cambio llega a cada terminal con su siguiente sincronización.'),
+            ])
+            ->requiresConfirmation()
+            ->modalHeading('Confirmar salida y descansos')
+            ->modalSubmitActionLabel('Sí, aplicar')
+            ->action(function (Collection $records, array $data): void {
+                $value = MobileMarkingFields::fromOption($data['value']);
+
+                $records->each(fn (Terminal $terminal) => $terminal->update(['confirm_exit' => $value]));
+
+                Notification::make()
+                    ->success()
+                    ->title('Terminales actualizados')
+                    ->body("{$records->count()} terminal(es) con «".static::confirmExitOptions()[MobileMarkingFields::toOption($value)].'».')
+                    ->send();
+            })
+            ->deselectRecordsAfterCompletion();
+    }
+
+    /**
+     * Tiempo de identificación del equipo: lo habitual (mediana) y lo que tarda el 10 % más lento, con la cantidad
+     * de identificaciones medidas. Avisa si el equipo es lento (`Terminal::SLOW_IDENTIFICATION_MS`).
+     */
+    public static function describeIdentification(Terminal $record): ?string
+    {
+        $timing = $record->identificationTiming();
+
+        if ($timing === null) {
+            return null;
+        }
+
+        $seconds = fn (int $ms): string => number_format($ms / 1000, 1, ',', '.').' s';
+        $text = "{$seconds($timing['median_ms'])} habitual · {$seconds($timing['p90_ms'])} el 10 % más lento";
+
+        if ($timing['samples'] > 0) {
+            $text .= " (últimas {$timing['samples']})";
+        }
+
+        return $record->isIdentificationSlow()
+            ? $text.' — lento: revisar el equipo (aceleración gráfica, memoria o navegador)'
+            : $text;
     }
 
     /** Almacenamiento usado del dispositivo. */

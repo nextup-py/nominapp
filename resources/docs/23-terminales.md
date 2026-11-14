@@ -226,6 +226,7 @@ El detalle incluye la sección **Estado del dispositivo** con lo que el terminal
 | **Pantalla encendida** | **Activa** si el terminal logró mantener la pantalla encendida; **Inactiva** si no (el equipo puede dormirse y dejar de marcar: revisar el ahorro de batería y el plan de energía). Cuando está inactiva se indica el **motivo** que informó el navegador: *no lo concedió* (ahorro de energía, pestaña oculta o falta una interacción), *no lo permite* (navegador sin soporte) o *lo interrumpió*; y *la pestaña del terminal está oculta o minimizada* cuando el navegador lo suelta por eso. Mientras el navegador todavía lo está concediendo (los primeros segundos tras cargar) no se informa nada en vez de mostrar «Inactiva». El terminal lo reintenta solo cada minuto |
 | **Desfase de reloj** | Diferencia entre el reloj del dispositivo y el del servidor; se advierte si pasa de un minuto |
 | **Almacenamiento** | Espacio usado del navegador en el dispositivo |
+| **Tiempo de identificación** | Cuánto tarda este equipo en reconocer a una persona, medido por su propio navegador en las últimas 20 identificaciones: el tiempo **habitual** (mediana) y el que tarda el **10 % más lento**. Es lo único que el servidor no puede ver, porque el reconocimiento pasa por completo en el equipo. Se pone en naranja y avisa *lento: revisar el equipo* cuando lo habitual llega a **8 segundos** (suele ser un equipo sin aceleración gráfica, con poca memoria o con otro navegador). Las medidas arrancan de cero cada vez que se recarga el terminal, así que al principio dice *Todavía no hubo marcaciones desde que se abrió* |
 
 ### Detalle del terminal
 
@@ -452,6 +453,7 @@ Al reconocer a un empleado, la **entrada** se registra sola, pero la **salida** 
 - La pantalla de selección muestra una cuenta regresiva (**Vuelve a la cámara en N s**). Si nadie toca nada, vuelve a la cámara **sin registrar nada**.
 - El botón **Cancelar** vuelve a la cámara de inmediato. El empleado cancelado o vencido no se vuelve a identificar durante unos segundos, para que quien sigue pasando frente a la cámara no reabra la pantalla.
 - Se configura en **Configuración → General → Terminales de Marcación**: **Confirmar la salida y los descansos en el terminal** (activado por defecto; apagado = la salida se registra sola como antes) y **Espera de la pantalla de selección** (15 segundos por defecto; **0** = sin límite). El cambio llega a los terminales con su siguiente sincronización.
+- **Por terminal:** el formulario del terminal (sección **Marcación**) y la acción masiva **Confirmar salida y descansos** del listado permiten fijar este valor en un terminal o en varios: **Heredar** (usa lo de Configuración General, el valor por defecto), **Sí, pedir confirmación** o **No, registrar directamente**. Sirve para probar sin confirmación en una sucursal sin cambiar las demás. El detalle del terminal indica el valor vigente y si viene de Configuración General. Con **No**, una salida o un descanso se registra apenas se reconoce a la persona: es más rápido, pero permite marcarlos por error.
 
 ### Controles de la cámara
 

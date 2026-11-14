@@ -71,6 +71,8 @@ En **Empleados** se ve la columna **Marca desde el celular** (con el nivel que l
 - Al **deshabilitar** a un empleado (o a su sucursal o empresa) se **revoca en el momento** su celular vinculado; el celular deja de marcar en su próxima conexión.
 - Si alguien sin permiso intenta vincular su celular, ve el mensaje «Tu usuario no está habilitado para marcar desde el celular» y RR.HH. recibe el aviso **Vinculación de celular sin permiso** (no se repite mientras no se lea).
 
+**Habilitar a una persona en pocos pasos:** desde el aviso de la campanita, **Ver empleado y habilitar** abre su ficha. Ahí, el botón **Habilitar celular** (arriba, junto a **Editar**) pide confirmación y le da el permiso solo a esa persona. Al terminar aparece el aviso **Celular habilitado** con el botón **Avisar por WhatsApp**, que abre un mensaje listo para enviarle con el enlace de vinculación y lo que tiene que hacer (cédula y fecha de nacimiento). El botón solo aparece si el empleado está activo, todavía no puede marcar desde el celular y quien mira tiene permiso para editar empleados. La ficha tiene además la sección **Marcación desde el celular**: si puede marcar (y de dónde sale ese permiso), si ya tiene un celular vinculado y cuándo se conectó por última vez.
+
 ### Cómo se vincula un empleado
 
 1. El empleado abre `/vincular-dispositivo` desde su celular
