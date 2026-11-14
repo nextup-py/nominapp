@@ -169,7 +169,7 @@ it('un envío real que falla llega hasta el aviso al Super Admin', function () {
         'mail.mailers.smtp.url' => null,
     ]);
 
-    expect(fn () => $recipient->notify(mailOnlyNotification()))->toThrow(Throwable::class);
+    expect(fn () => $recipient->notify(mailOnlyNotification()))->toThrow(Exception::class);
 
     expect($admin->unreadNotifications()->where('type', MailFailedNotification::class)->count())->toBe(1);
 });
