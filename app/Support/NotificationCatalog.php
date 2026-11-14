@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\MailConfigurator;
 
 /**
  * Catálogo único de los avisos que el sistema envía por la campanita o el correo. Cada
@@ -10,8 +11,8 @@ use App\Models\User;
  * permiso que habilita recibirla y los valores por defecto. Agregar un aviso nuevo = una
  * entrada acá y la clave en su clase de notificación (un test exige que coincidan).
  *
- * Cada entrada: `label`, `description`, `category`, `permission` (null = cualquier usuario),
- * `mandatory` (no se puede apagar ni diferir), `digestable` (false = ya llega una vez al día por sí mismo, solo se envía al instante), `enabled`, `channels` y `frequency` por defecto.
+ * Cada entrada: `label`, `description`, `category`, `permission` (null = cualquier usuario; una lista = alcanza con tener uno de esos permisos),
+ * `mandatory` (no se puede apagar ni diferir), `mail_when_configured` (suma el correo a los canales por defecto cuando el correo del panel está activo), `digestable` (false = ya llega una vez al día por sí mismo, solo se envía al instante), `enabled`, `channels` y `frequency` por defecto.
  */
 class NotificationCatalog
 {
@@ -38,6 +39,8 @@ class NotificationCatalog
             'terminal_linking' => 'Vinculación de terminales',
             'attendance' => 'Asistencia',
             'contracts_devices' => 'Contratos y dispositivos',
+            'approvals' => 'Aprobaciones',
+            'system' => 'Sistema',
         ];
     }
 
@@ -71,9 +74,9 @@ class NotificationCatalog
     public static function all(): array
     {
         $entries = [
-            'terminal.offline' => ['Terminal sin conexión', 'Un terminal dejó de reportar dentro de su horario de vigilancia (varios a la vez llegan en un solo aviso).', 'terminal_health', 'update_terminal'],
+            'terminal.offline' => ['Terminal sin conexión', 'Un terminal dejó de reportar dentro de su horario de vigilancia (varios a la vez llegan en un solo aviso).', 'terminal_health', 'update_terminal', ['mail_when_configured' => true]],
             'terminal.recovered' => ['Terminal reconectado', 'Un terminal que había avisado su desconexión volvió a reportar. Queda siempre en la bitácora del terminal.', 'terminal_health', 'update_terminal', ['enabled' => false]],
-            'terminal.unlinked' => ['Terminal sin vincular', 'Un terminal perdió su acceso y no puede marcar hasta volver a vincularlo.', 'terminal_health', 'update_terminal', ['mandatory' => true]],
+            'terminal.unlinked' => ['Terminal sin vincular', 'Un terminal perdió su acceso y no puede marcar hasta volver a vincularlo.', 'terminal_health', 'update_terminal', ['mandatory' => true, 'mail_when_configured' => true]],
             'terminal.queue_stuck' => ['Cola de marcaciones atascada', 'Un terminal tiene marcaciones pendientes que no se envían hace más del tiempo configurado.', 'terminal_health', 'update_terminal'],
             'terminal.battery_low' => ['Batería baja', 'Un terminal está por debajo del porcentaje configurado y sin cargador.', 'terminal_health', 'update_terminal'],
             'terminal.no_enrolled' => ['Sucursal sin empleados enrolados', 'La sucursal de un terminal no tiene ningún empleado activo con rostro registrado.', 'terminal_health', 'update_terminal'],
@@ -93,10 +96,12 @@ class NotificationCatalog
             'attendance.sync_conflict' => ['Conflicto de sincronización', 'Una marcación hecha sin conexión no pudo registrarse y necesita revisión.', 'attendance', 'update_attendance_mark_failure'],
             'attendance.face_enrollment' => ['Autoenrolamiento facial pendiente', 'Un empleado completó su registro facial y espera aprobación.', 'attendance', 'update_face_enrollment'],
 
-            'contract.alert' => ['Contratos por vencer o vencidos', 'Contratos que se acercan a su fecha de fin o ya vencieron.', 'contracts_devices', 'view_any_contract', ['digestable' => false]],
+            'contract.alert' => ['Contratos por vencer o vencidos', 'Contratos que se acercan a su fecha de fin o ya vencieron.', 'contracts_devices', 'view_any_contract', ['digestable' => false, 'mail_when_configured' => true]],
             'device.mobile_linked' => ['Celular vinculado', 'Un empleado vinculó su celular para marcar asistencia.', 'contracts_devices', 'view_any_employee_device'],
             'device.mobile_relinked' => ['Celular re-vinculado', 'Un empleado vinculó un celular nuevo y se revocó el anterior.', 'contracts_devices', 'view_any_employee_device', ['mandatory' => true, 'channels' => ['database', 'mail']]],
             'device.mobile_link_blocked' => ['Vinculación de celular sin permiso', 'Un empleado no habilitado para marcar desde el celular intentó vincularlo.', 'contracts_devices', 'update_employee'],
+            'approvals.pending' => ['Solicitudes pendientes de aprobar', 'Resumen diario de adelantos, préstamos, retiros de mercadería y permisos que esperan una decisión de quien los aprueba. Solo le llega a quien tiene permiso de aprobar alguno de ellos.', 'approvals', ['approve_advance', 'approve_loan', 'approve_merchandise_withdrawal', 'approve_employee_leave'], ['digestable' => false]],
+            'system.mail_failed' => ['Fallo del envío de correo', 'El servidor de correo no pudo enviar un mensaje: los avisos por correo no están llegando (clave vencida, servidor caído). Solo para el Super Admin; no se repite mientras el anterior siga sin leer.', 'system', 'super-admin', ['mandatory' => true, 'digestable' => false]],
             'device.link_throttled' => ['Límite de vinculación agotado', 'Se agotaron los intentos diarios de vinculación de celular desde una IP.', 'contracts_devices', 'view_any_employee_device'],
         ];
 
@@ -115,11 +120,50 @@ class NotificationCatalog
                 'digestable' => $overrides['digestable'] ?? true,
                 'enabled' => $overrides['enabled'] ?? true,
                 'channels' => $overrides['channels'] ?? [self::CHANNEL_DATABASE],
+                'mail_when_configured' => $overrides['mail_when_configured'] ?? false,
                 'frequency' => self::FREQUENCY_INSTANT,
             ];
         }
 
         return $catalog;
+    }
+
+    /**
+     * El usuario tiene el permiso que habilita un aviso: `null` = cualquiera; una lista = alcanza con tener uno.
+     *
+     * @param  string|array<int, string>|null  $permission
+     */
+    public static function userCan(User $user, string|array|null $permission): bool
+    {
+        if ($permission === null) {
+            return true;
+        }
+
+        foreach ((array) $permission as $name) {
+            if ($user->can($name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Canales por defecto de una entrada: los del catálogo y, si la entrada lo pide (`mail_when_configured`) y el
+     * correo del panel está activo, también el correo. Sin el correo configurado nada cambia (la campanita de siempre).
+     *
+     * @param  array<string, mixed>  $entry
+     * @return array<int, string>
+     */
+    public static function effectiveChannels(array $entry): array
+    {
+        $channels = $entry['channels'];
+
+        if (($entry['mail_when_configured'] ?? false) && MailConfigurator::isEnabled() && ! in_array(self::CHANNEL_MAIL, $channels, true)) {
+            $channels[] = self::CHANNEL_MAIL;
+        }
+
+        return $channels;
     }
 
     /**
@@ -142,7 +186,7 @@ class NotificationCatalog
     {
         return array_filter(
             self::all(),
-            fn (array $entry) => $entry['permission'] === null || $user->can($entry['permission']),
+            fn (array $entry) => self::userCan($user, $entry['permission']),
         );
     }
 }

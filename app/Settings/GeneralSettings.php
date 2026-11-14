@@ -61,6 +61,35 @@ class GeneralSettings extends Settings
     /** Meses de retención del historial de auditoría; 0 = conservar siempre. */
     public int $audit_retention_months;
 
+    /** Envío de correo configurado desde el panel; si es false rige el `.env` (ver `MailConfigurator`). */
+    public bool $mail_enabled;
+
+    public string $mail_host;
+
+    public int $mail_port;
+
+    /** `tls` (STARTTLS, puerto 587 habitual) o `ssl` (conexión cifrada desde el inicio, puerto 465). */
+    public string $mail_encryption;
+
+    public string $mail_username;
+
+    /** Se guarda cifrada (ver `encrypted()`) y nunca se envía al navegador. */
+    public string $mail_password;
+
+    public string $mail_from_address;
+
+    public string $mail_from_name;
+
+    /**
+     * Propiedades que Spatie guarda cifradas en la base.
+     *
+     * @return array<int, string>
+     */
+    public static function encrypted(): array
+    {
+        return ['mail_password'];
+    }
+
     public static function group(): string
     {
         return 'general';

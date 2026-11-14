@@ -26,6 +26,7 @@ import { showTypeSelectionForEmployee, registerMark, clearPendingEmployee } from
 import { identifyEmployee as matchDescriptor } from '../offline-shared/matcher.js';
 import { getCachedEmployees, getMeta } from '../terminal-offline/db.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
+import { recordIdentification } from '../terminal-offline/identification-stats.js';
 import { getEmployeeStatus, getExpectedShift } from '../terminal-offline/queue.js';
 import { shouldAskEntryOrExit } from './missing-entry.js';
 import { setTerminalVideoState, setIdStatusDot, showCaptureProgress, updateCaptureProgress, finishCaptureProgress } from './ui-feedback.js';
@@ -338,6 +339,7 @@ export async function startAutoIdentification(refs) {
             updateStatus(refs.identificationStatus, 'Analizando rostro, mantenga la posición...');
             showCaptureProgress();
 
+            const startedAt = performance.now();
             const descriptor = await camera.captureDescriptor(refs.video, 5, 150, (count) => updateCaptureProgress(count));
             const result = await identifyEmployeeFromDescriptor(descriptor, manualCandidate);
 
@@ -363,6 +365,8 @@ export async function startAutoIdentification(refs) {
                 consecutiveFailures = 0;
                 manualCandidate = null;
                 hideManualSearchLink();
+                // Cuánto tardó este equipo en reconocer a la persona: viaja en el heartbeat (ver identification-stats.js).
+                recordIdentification(performance.now() - startedAt);
 
                 if (hasUserInteracted()) navigator.vibrate?.(80);
                 stopAutoIdentification(refs.video);

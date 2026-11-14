@@ -760,6 +760,32 @@ class EmployeeResource extends Resource
                         ->getStateUsing(fn (Employee $record) => $record->updated_at->format('d/m/Y H:i').' · '.$record->updated_at_since),
                 ])
                 ->collapsible(),
+
+            InfoSection::make('Marcación desde el celular')
+                ->description('Por defecto se marca solo desde el terminal. Si el empleado necesita su celular, se habilita con «Habilitar celular» (arriba) o desde Editar.')
+                ->icon('heroicon-o-device-phone-mobile')
+                ->columns(3)
+                ->schema([
+                    TextEntry::make('_mobile_marking')
+                        ->label('Puede marcar desde el celular')
+                        ->getStateUsing(fn (Employee $record) => $record->mobileMarkingLabel())
+                        ->badge()
+                        ->color(fn (Employee $record) => $record->canMarkFromMobile() ? 'success' : 'gray'),
+
+                    TextEntry::make('mobile_linked_at')
+                        ->label('Celular vinculado')
+                        ->getStateUsing(fn (Employee $record) => $record->hasMobileLinked()
+                            ? 'Sí, desde el '.$record->mobile_linked_at->format('d/m/Y H:i')
+                            : 'No')
+                        ->badge()
+                        ->color(fn (Employee $record) => $record->hasMobileLinked() ? 'success' : 'gray'),
+
+                    TextEntry::make('mobile_last_heartbeat_at')
+                        ->label('Última conexión del celular')
+                        ->since()
+                        ->placeholder('Nunca se conectó'),
+                ])
+                ->collapsible(),
         ]);
     }
 
@@ -852,12 +878,7 @@ class EmployeeResource extends Resource
 
                 TextColumn::make('mobile_marking_allowed')
                     ->label('Marca desde el celular')
-                    ->getStateUsing(function (Employee $record): string {
-                        $info = $record->mobileMarkingSource();
-                        $origin = $info['source'] === 'employee' ? '' : ' ('.Employee::getMobileMarkingSourceLabels()[$info['source']].')';
-
-                        return ($info['allowed'] ? 'Sí' : 'No').$origin;
-                    })
+                    ->getStateUsing(fn (Employee $record): string => $record->mobileMarkingLabel())
                     ->badge()
                     ->color(fn (Employee $record): string => $record->canMarkFromMobile() ? 'success' : 'gray')
                     ->toggleable(),

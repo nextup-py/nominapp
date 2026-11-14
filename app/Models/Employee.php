@@ -1442,6 +1442,36 @@ class Employee extends Model implements AuthenticatableContract
         return ['employee' => 'propio', 'branch' => 'de la sucursal', 'company' => 'de la empresa', 'general' => 'general'];
     }
 
+    /** Permiso de marcación desde el celular con su origen, por ejemplo «Sí» o «No (de la sucursal)». */
+    public function mobileMarkingLabel(): string
+    {
+        $info = $this->mobileMarkingSource();
+        $origin = $info['source'] === 'employee' ? '' : ' ('.self::getMobileMarkingSourceLabels()[$info['source']].')';
+
+        return ($info['allowed'] ? 'Sí' : 'No').$origin;
+    }
+
+    /** Habilita la marcación desde el celular para este empleado (valor propio: gana sobre sucursal, empresa y general). */
+    public function enableMobileMarking(): void
+    {
+        $this->update(['mobile_marking_allowed' => true]);
+    }
+
+    /**
+     * Enlace de WhatsApp con el mensaje para que el empleado vincule su celular (`/vincular-dispositivo`, con su
+     * cédula y fecha de nacimiento), o null si no tiene teléfono cargado.
+     */
+    public function mobileLinkWhatsappUrl(): ?string
+    {
+        if (blank($this->phone)) {
+            return null;
+        }
+
+        $message = "Hola {$this->first_name}, ya podés marcar tu asistencia desde el celular. Abrí este enlace, ingresá tu cédula y tu fecha de nacimiento y seguí los pasos para vincularlo: ".route('device-link.show');
+
+        return 'https://api.whatsapp.com/send?phone=595'.ltrim($this->phone, '0').'&text='.urlencode($message);
+    }
+
     /**
      * Filtra por el permiso de marcación móvil efectivo (misma cadena que `canMarkFromMobile()`),
      * resuelta en SQL para el filtro del listado y la revocación masiva.

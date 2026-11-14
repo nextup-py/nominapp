@@ -121,6 +121,14 @@ Schedule::command('attendance:notify-no-schedule')
     ->withoutOverlapping();
 
 /**
+ * Avisar a quienes aprueban de las solicitudes pendientes (adelantos, préstamos, retiros de mercadería y permisos).
+ * Una vez al día; no repite si el aviso sigue sin leer.
+ */
+Schedule::command('approvals:notify-pending')
+    ->dailyAt('08:50')
+    ->withoutOverlapping();
+
+/**
  * Resumen diario de avisos: entrega a cada usuario, a la hora que eligió en «Mis notificaciones»,
  * lo que dejó para el resumen. Corre cada hora y solo procesa a quienes les toca esa hora.
  */

@@ -13,7 +13,7 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 - **Email**
 - **Sucursal** a la que pertenece
 - **Estado:** Activo o Inactivo
-- **Marcación desde el celular:** Heredar, Sí o No (por defecto se marca solo desde el terminal). Ver **Quién puede marcar desde el celular** en el capítulo de Asistencias.
+- **Marcación desde el celular:** Heredar, Sí o No (por defecto se marca solo desde el terminal). También se puede habilitar con el botón **Habilitar celular** de la ficha del empleado. Ver **Quién puede marcar desde el celular** en el capítulo de Asistencias.
 
 ![Formulario de creación de empleado](/docs-images/04-empleado-nuevo.png)
 

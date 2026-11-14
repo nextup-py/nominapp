@@ -41,6 +41,7 @@ Quien nunca tocó su configuración recibe los avisos como siempre, por la campa
 
 - **Terminal reconectado** viene **desactivado**. La reconexión queda siempre en la **Bitácora** del terminal, y cuando un terminal vuelve a reportar, su aviso de **Terminal sin conexión** se marca como leído automáticamente: la campanita muestra solo lo que sigue caído. Quien quiera el aviso de reconexión puede activarlo.
 - **Terminal provisionado** y **Celular re-vinculado** llegan además por **correo**.
+- Si el correo del panel está configurado (**Configuración General → Correo**), **Terminal sin conexión**, **Terminal sin vincular** y **Contratos por vencer o vencidos** llegan también por correo. Quien ya eligió sus canales los conserva.
 - **Terminal provisionado** no le llega a quien generó el enlace de configuración, abrió la ventana de vinculación o aprobó la solicitud: ya sabe que lo hizo.
 
 El botón **Restablecer valores** (arriba a la derecha) borra las elecciones del usuario y vuelve a estos valores y a la hora de resumen de las 08:00.
@@ -92,8 +93,15 @@ Requieren el permiso **Editar Terminal**.
 | **Contratos por vencer o vencidos** | Ver contratos | Aviso diario (08:00) según los días configurados |
 | **Celular vinculado** | Ver dispositivos de empleados | Un empleado vinculó su celular |
 | **Celular re-vinculado** | Ver dispositivos de empleados | Un empleado vinculó un celular nuevo (obligatorio) |
-| **Vinculación de celular sin permiso** | Editar empleados | Un empleado no habilitado intentó vincular su celular |
+| **Vinculación de celular sin permiso** | Editar empleados | Un empleado no habilitado intentó vincular su celular. El botón **Ver empleado y habilitar** abre su ficha, donde está **Habilitar celular** |
 | **Límite de vinculación agotado** | Ver dispositivos de empleados | Se agotaron los intentos diarios de vinculación desde una IP |
+
+### Aprobaciones y sistema
+
+| Aviso | Permiso necesario | Cuándo llega |
+|-------|-------------------|--------------|
+| **Solicitudes pendientes de aprobar** | Aprobar adelantos, préstamos, retiros de mercadería o permisos | Resumen diario (08:50) con el conteo de lo pendiente que ese usuario puede aprobar. No se repite mientras el anterior esté sin leer |
+| **Fallo en el envío de correo** | Solo Super Admin | Un correo no pudo enviarse; incluye el motivo. Obligatorio |
 
 > **Quién recibe qué:** además de la elección de cada usuario, un aviso solo llega a quien tiene el permiso del módulo. Si a un usuario le cambian el rol, la lista de su pantalla se ajusta sola.
 

@@ -29,8 +29,9 @@ class NotificationPreferenceService
 
         $stored = NotificationPreference::query()->where('user_id', $user->id)->where('key', $key)->first();
 
+        $defaultChannels = NotificationCatalog::effectiveChannels($entry);
         $enabled = $stored?->enabled ?? $entry['enabled'];
-        $channels = $this->validChannels($stored?->channels ?? $entry['channels']) ?: $entry['channels'];
+        $channels = $this->validChannels($stored?->channels ?? $defaultChannels) ?: $defaultChannels;
         $frequency = $stored?->frequency ?? $entry['frequency'];
 
         if (! array_key_exists($frequency, NotificationCatalog::frequencyOptions())) {
@@ -63,7 +64,7 @@ class NotificationPreferenceService
 
         $entry = NotificationCatalog::get($key);
 
-        if ($entry !== null && $entry['permission'] !== null && ! $notifiable->can($entry['permission'])) {
+        if ($entry !== null && ! NotificationCatalog::userCan($notifiable, $entry['permission'])) {
             return [];
         }
 
@@ -94,7 +95,8 @@ class NotificationPreferenceService
             return;
         }
 
-        $channels = $this->validChannels($channels) ?: $entry['channels'];
+        $defaultChannels = NotificationCatalog::effectiveChannels($entry);
+        $channels = $this->validChannels($channels) ?: $defaultChannels;
 
         if ($entry['mandatory']) {
             $enabled = true;
@@ -106,7 +108,7 @@ class NotificationPreferenceService
 
         $isDefault = $enabled === $entry['enabled']
             && $frequency === $entry['frequency']
-            && $this->sameChannels($channels, $entry['channels']);
+            && $this->sameChannels($channels, $defaultChannels);
 
         if ($isDefault) {
             NotificationPreference::query()->where('user_id', $user->id)->where('key', $key)->delete();

@@ -2170,6 +2170,16 @@ Cada usuario elige qué avisos recibe, por qué canal (campanita, correo) y con 
 - **Resumen diario:** `DigestChannel` no entrega: guarda el aviso en `notification_digest_items` (con los canales resueltos). `notifications:send-digests` (cada hora, `--hour=`/`--force`) junta por usuario, a la hora que eligió, una sola `NotificationDigestNotification` (campanita con «N × etiqueta» por tipo; correo con una línea por aviso) y vacía la cola; descarta lo que lleva más de `RETENTION_DAYS` = 14 días sin entregarse. Si el envío falla se registra y la cola se conserva.
 - **Formulario:** las claves del catálogo llevan punto, que chocaría con la ruta de estado de Filament: `MyNotifications::stateKey()` los cambia por `__` (`rows.terminal__offline.enabled`). Se lee `$this->data` tras `$this->form->validate()`; los campos de un aviso obligatorio van `disabled()` + `dehydrated()`.
 
+### Correo configurable desde el panel (`MailConfigurator`)
+
+Configuración General → Correo (solo Super Admin): `mail_enabled`, host, puerto, cifrado, usuario, clave (propiedad **cifrada** de Spatie, `encrypted()` + `addEncrypted`; el formulario nunca la muestra y vacía = conservar) y remitente. `MailConfigurator::applyRuntime()` se engancha en `AppServiceProvider` al resolver `mail.manager` (no lee la base en peticiones sin correo) y pisa el `.env` solo si `isEnabled()` (activo + host + remitente); nunca debe tirar la app. La acción `sendTestMail` prueba con los datos del formulario, guardados o no. Con el correo activo, los avisos con flag `mail_when_configured` en `NotificationCatalog` (`terminal.offline`, `terminal.unlinked`, `contract.alert`) suman el canal `mail` por defecto (`effectiveChannels()`); quien eligió canales los conserva. `ReportMailFailure` escucha `NotificationFailed` del canal `mail` y avisa a los Super Admin (`MailFailedNotification`, sin repetir mientras haya uno sin leer). `approvals:notify-pending` (08:50) manda `PendingApprovalsNotification` a quien puede aprobar (permiso = lista, `NotificationCatalog::userCan()`).
+
+### Terminal: tiempo de identificación, confirmar salida por terminal y Habilitar celular
+
+- El cliente mide cada identificación (`identification-stats.js`, últimas 20) y la manda en el reporte del dispositivo; `Terminal::identificationTiming()`/`isIdentificationSlow()` (> `SLOW_IDENTIFICATION_MS`) alimentan «Tiempo de identificación» del detalle.
+- `terminals.confirm_exit` (null = heredar `terminal_confirm_exit`): `Terminal::confirmExitEnabled()`, selector Heredar/Sí/No y acción masiva `set_confirm_exit`.
+- Ficha del empleado: acción **Habilitar celular** (`Employee::enableMobileMarking()`, permiso `update_employee`) con enlace de WhatsApp (`mobileLinkWhatsappUrl()`).
+
 ### Deduplicación de notificaciones de campanita
 
 Cuando un comando diario envía notificaciones (ej. contratos por vencer), evitar duplicados verificando las notificaciones no leídas existentes antes de enviar:

@@ -50,7 +50,7 @@ class TerminalHeartbeatController extends Controller
     private const DEVICE_REPORT_KEYS = [
         'app_version', 'standalone', 'sw_active', 'battery_level', 'battery_charging',
         'camera', 'cached_employees', 'clock_skew_seconds', 'storage_used_mb', 'storage_quota_mb', 'wake_lock', 'wake_lock_error',
-        'display_mode', 'visible',
+        'display_mode', 'visible', 'identification_median_ms', 'identification_p90_ms', 'identification_samples',
     ];
 
     public function store(Request $request, GeneralSettings $settings): JsonResponse
@@ -75,6 +75,9 @@ class TerminalHeartbeatController extends Controller
             'device.clock_skew_seconds' => ['nullable', 'integer', 'between:-31536000,31536000'],
             'device.wake_lock' => ['nullable', 'boolean'],
             'device.wake_lock_error' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9_.-]+$/'],
+            'device.identification_median_ms' => ['nullable', 'integer', 'min:0', 'max:600000'],
+            'device.identification_p90_ms' => ['nullable', 'integer', 'min:0', 'max:600000'],
+            'device.identification_samples' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'device.storage_used_mb' => ['nullable', 'integer', 'min:0'],
             'device.storage_quota_mb' => ['nullable', 'integer', 'min:0'],
         ]);
@@ -109,7 +112,7 @@ class TerminalHeartbeatController extends Controller
             'config' => [
                 'overnight_max_hours' => (int) $settings->attendance_overnight_max_hours,
                 'camera_resume_minutes' => (int) $settings->terminal_camera_resume_minutes,
-                'confirm_exit' => (bool) $settings->terminal_confirm_exit,
+                'confirm_exit' => $terminal->confirmExitEnabled($settings),
                 'selection_timeout_seconds' => (int) $settings->terminal_selection_timeout_seconds,
                 'face_threshold' => (float) $settings->face_threshold,
                 'face_min_confidence_gap' => (float) $settings->face_min_confidence_gap,
