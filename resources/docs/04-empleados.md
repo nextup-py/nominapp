@@ -8,7 +8,7 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 
 - **Nombre y apellido**, foto
 - **Cédula de identidad (CI):** solo dígitos, sin puntos ni guiones (ej: `4567890`)
-- **Fecha de nacimiento**, sexo (`Masculino` / `Femenino`)
+- **Fecha de nacimiento**, sexo (`Masculino` / `Femenino`). El empleado debe ser mayor de 18 años: el calendario abre en una fecha de ejemplo (hace 30 años), y el año se puede cambiar escribiéndolo en la cabecera del calendario
 - **Teléfono:** con 0 inicial, sin espacios (ej: `0981123456`)
 - **Email**
 - **Sucursal** a la que pertenece

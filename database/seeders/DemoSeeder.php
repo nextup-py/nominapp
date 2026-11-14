@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Schema;
  * Limpia la base de datos, crea el usuario administrador y siembra
  * todos los datos de ejemplo (empresa, sucursales, empleados, nómina, etc.).
  *
- * Es seguro correrlo múltiples veces: trunca las tablas antes de insertar.
+ * Es seguro correrlo múltiples veces: trunca las tablas antes de insertar (menos `settings`, que
+ * crean las migraciones; ver `truncateTables()`). Borra también los usuarios: tras sembrar hay que
+ * volver a crear los de la demo.
  * NO usar en producción — contiene datos ficticios.
  *
  * Uso:
@@ -199,7 +201,9 @@ class DemoSeeder extends Seeder
             // Otros
             'holidays',
             'terminals',
-            'settings',
+            // `settings` NO se trunca: la crean las migraciones de `database/settings` (todos los grupos y
+            // propiedades), y `SettingsSeeder` solo pisa los valores de demo de general/payroll. Truncarla dejaba
+            // sin cargar los módulos y las propiedades nuevas, y la app caía con `MissingSettings` al iniciar sesión.
             'users',
         ];
 

@@ -165,6 +165,9 @@ class EmployeeResource extends Resource
                                                     ->native(false)
                                                     ->displayFormat('d/m/Y')
                                                     ->maxDate(now()->subYears(18))
+                                                    // Sin esto el calendario abre en el mes actual, donde todos los días están
+                                                    // deshabilitados por la regla de mayoría de edad, y parece un campo bloqueado.
+                                                    ->defaultFocusedDate(now()->subYears(30))
                                                     ->closeOnDateSelection()
                                                     ->required()
                                                     ->placeholder('Seleccionar fecha')
@@ -789,7 +792,19 @@ class EmployeeResource extends Resource
                 TextColumn::make('activeContract.position.name')
                     ->label('Cargo')
                     ->icon('heroicon-o-briefcase')
-                    ->sortable()
+                    // Filament ordenaría con una subconsulta sobre todos los contratos del empleado: con más de uno
+                    // (uno vencido y otro vigente, renovaciones) MySQL falla con «Subquery returns more than 1 row».
+                    // Se ordena por el cargo del contrato vigente más reciente, el mismo que muestra la columna.
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy(
+                        Contract::query()
+                            ->select('positions.name')
+                            ->join('positions', 'positions.id', '=', 'contracts.position_id')
+                            ->whereColumn('contracts.employee_id', 'employees.id')
+                            ->whereIn('contracts.status', ['active', 'suspended'])
+                            ->orderByDesc('contracts.start_date')
+                            ->limit(1),
+                        $direction,
+                    ))
                     ->searchable()
                     ->toggleable()
                     ->wrap()
