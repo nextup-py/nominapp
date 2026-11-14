@@ -122,6 +122,24 @@ class ManageGeneralSettings extends SettingsPage
     }
 
     /**
+     * Los campos de texto vacíos llegan como null y las propiedades de correo son string: sin esto, guardar la página
+     * con el correo sin configurar lanza un TypeError.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        foreach (['mail_host', 'mail_username', 'mail_from_address', 'mail_from_name'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = trim((string) $data[$field]);
+            }
+        }
+
+        return $data;
+    }
+
+    /**
      * La clave de correo nunca se manda al navegador: el campo se muestra vacío y, si se deja así al guardar, se conserva.
      *
      * @param  array<string, mixed>  $data

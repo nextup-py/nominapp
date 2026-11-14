@@ -207,3 +207,15 @@ it('el correo de prueba avisa si faltan servidor o remitente', function () {
         ->callAction('sendTestMail', ['to' => 'prueba@ejemplo.com.py'])
         ->assertNotified('Faltan datos');
 });
+
+it('guardar Configuración General con el correo sin configurar no falla', function () {
+    mailSuperAdmin();
+
+    Livewire::test(ManageGeneralSettings::class)
+        ->fillForm(['audit_retention_months' => 12])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect(app(GeneralSettings::class)->audit_retention_months)->toBe(12)
+        ->and(app(GeneralSettings::class)->mail_host)->toBe('');
+});
