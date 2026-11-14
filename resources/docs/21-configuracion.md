@@ -41,6 +41,18 @@ Acceder desde **Configuración → Configuración General**.
 - **Reencendido de la cámara apagada:** minutos que tarda en volver a encenderse sola la cámara de un terminal que alguien apagó a mano desde su menú **⋮** (por defecto 2; entre 0 y 240; **0** = queda apagada hasta encenderla a mano). Evita dejar el terminal inutilizado por un olvido.
 - **Retención de la bitácora de terminales:** días que se conservan los eventos de la bitácora y los comandos remotos de cada terminal antes de eliminarse automáticamente (por defecto 90; **0** = conservar siempre).
 
+### Correo
+
+Datos del servidor que envía los correos del sistema (avisos, pruebas). Solo lo ve y edita el **Super Admin**.
+
+- **Enviar correos desde el panel:** apagado de fábrica, rige la configuración del servidor (`.env`). Al encenderlo, los datos de abajo reemplazan a esa configuración.
+- **Servidor SMTP**, **Puerto** y **Cifrado** (TLS puerto 587 o SSL puerto 465): los datos que da el proveedor de correo (cPanel, Google, etc.).
+- **Usuario** y **Clave:** la clave se guarda cifrada y **nunca se vuelve a mostrar**. Dejar el campo vacío al guardar conserva la clave guardada; escribir una nueva la reemplaza.
+- **Correo remitente** y **Nombre del remitente:** obligatorios al encender el correo (junto con el servidor).
+- **Enviar correo de prueba** (arriba a la derecha): manda un mensaje con los datos del formulario, **guardados o no**, y muestra el motivo si el servidor falla. Conviene probar antes de guardar.
+
+Con el correo del panel activo, los avisos **Terminal sin conexión**, **Terminal sin vincular** y **Contratos por vencer o vencidos** llegan también por correo a quien no eligió otra cosa (ver **Mis notificaciones**). Si un correo no puede enviarse, el Super Admin recibe un aviso en la campanita con el motivo.
+
 ---
 
 ## Configuración de Nómina

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\ReportMailFailure;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\Company;
@@ -17,8 +18,11 @@ use App\Observers\ContractObserver;
 use App\Observers\EmployeeObserver;
 use App\Observers\TerminalObserver;
 use App\Observers\WarningObserver;
+use App\Services\MailConfigurator;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Events\NotificationFailed;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -30,7 +34,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // El correo configurado en el panel (Configuración General → Correo) reemplaza al del `.env` recién cuando se usa el
+        // envío, así las peticiones que no mandan correo no leen la base por esto.
+        $this->app->resolving('mail.manager', fn () => MailConfigurator::applyRuntime());
     }
 
     /**
@@ -45,6 +51,9 @@ class AppServiceProvider extends ServiceProvider
         Employee::observe(EmployeeObserver::class);
         Terminal::observe(TerminalObserver::class);
         Warning::observe(WarningObserver::class);
+
+        // Un correo que no sale se avisa al Super Admin por la campanita (antes solo quedaba en el log).
+        Event::listen(NotificationFailed::class, ReportMailFailure::class);
 
         Gate::before(fn (User $user) => $user->hasRole('Super Admin') ? true : null);
 

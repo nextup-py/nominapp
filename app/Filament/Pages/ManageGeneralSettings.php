@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Services\MailConfigurator;
 use App\Settings\GeneralSettings;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Section;
@@ -9,7 +10,11 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Notifications\Notification;
 use Filament\Pages\SettingsPage;
+use Illuminate\Support\Facades\Auth;
+use Throwable;
 
 class ManageGeneralSettings extends SettingsPage
 {
@@ -51,7 +56,82 @@ class ManageGeneralSettings extends SettingsPage
                 ->modalDescription('Podrás revisar y ajustar empresa, módulos y parámetros de nómina. Esto no bloqueará el acceso al resto del panel.')
                 ->modalSubmitActionLabel('Sí, abrir asistente')
                 ->url(fn () => SetupWizardPage::getUrl()),
+
+            Action::make('sendTestMail')
+                ->label('Enviar correo de prueba')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('gray')
+                ->visible(fn () => auth()->user()?->hasRole('Super Admin') ?? false)
+                ->modalHeading('Enviar correo de prueba')
+                ->modalDescription('Se envía con los datos que ves en la sección Correo, estén guardados o no, así se puede probar antes de guardar. La clave guardada se usa si el campo está vacío.')
+                ->modalSubmitActionLabel('Enviar')
+                ->form([
+                    TextInput::make('to')
+                        ->label('Enviar a')
+                        ->email()
+                        ->required()
+                        ->default(fn () => Auth::user()?->email),
+                ])
+                ->action(fn (array $data) => $this->sendTestMail($data['to'])),
         ];
+    }
+
+    /**
+     * Envía un correo de prueba con los datos del formulario (la clave guardada si el campo está vacío) y muestra el
+     * resultado: llegó al servidor o el motivo del error. No guarda nada.
+     */
+    protected function sendTestMail(string $to): void
+    {
+        $state = $this->form->getRawState();
+        $settings = app(GeneralSettings::class);
+
+        $values = [
+            'host' => trim((string) ($state['mail_host'] ?? '')),
+            'port' => (int) ($state['mail_port'] ?? 587),
+            'encryption' => (string) ($state['mail_encryption'] ?? 'tls'),
+            'username' => trim((string) ($state['mail_username'] ?? '')),
+            'password' => filled($state['mail_password'] ?? null) ? (string) $state['mail_password'] : (string) $settings->mail_password,
+            'from_address' => trim((string) ($state['mail_from_address'] ?? '')),
+            'from_name' => trim((string) ($state['mail_from_name'] ?? '')),
+        ];
+
+        if ($values['host'] === '' || $values['from_address'] === '') {
+            Notification::make()->warning()->title('Faltan datos')->body('Completá el servidor y el correo remitente antes de probar.')->send();
+
+            return;
+        }
+
+        try {
+            MailConfigurator::sendTest($values, $to);
+        } catch (Throwable $e) {
+            Notification::make()
+                ->danger()
+                ->title('No se pudo enviar el correo de prueba')
+                ->body(str($e->getMessage())->limit(300)->toString())
+                ->persistent()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->success()
+            ->title('Correo de prueba enviado')
+            ->body("El servidor aceptó el mensaje para {$to}. Revisá la bandeja de entrada (y el spam).")
+            ->send();
+    }
+
+    /**
+     * La clave de correo nunca se manda al navegador: el campo se muestra vacío y, si se deja así al guardar, se conserva.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['mail_password'] = null;
+
+        return $data;
     }
 
     /**
@@ -263,6 +343,70 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('días')
                             ->helperText('Los eventos más antiguos se eliminan automáticamente. 0 = conservar siempre'),
                     ]),
+
+                Section::make('Correo')
+                    ->description('Servidor desde el que el sistema envía los avisos por correo. Apagado, el envío depende de la configuración del servidor (.env).')
+                    ->icon('heroicon-o-envelope')
+                    ->schema([
+                        Toggle::make('mail_enabled')
+                            ->label('Enviar correos con esta configuración')
+                            ->default(false)
+                            ->live()
+                            ->helperText('Antes de activarlo, usá «Enviar correo de prueba» (arriba). Si el servidor falla, los avisos siguen llegando a la campanita.'),
+
+                        TextInput::make('mail_host')
+                            ->label('Servidor SMTP')
+                            ->placeholder('Ej: mail.miempresa.com.py')
+                            ->maxLength(190)
+                            ->required(fn (Get $get): bool => (bool) $get('mail_enabled')),
+
+                        TextInput::make('mail_port')
+                            ->label('Puerto')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->maxValue(65535)
+                            ->default(587)
+                            ->required(),
+
+                        Select::make('mail_encryption')
+                            ->label('Cifrado')
+                            ->options(MailConfigurator::ENCRYPTIONS)
+                            ->default('tls')
+                            ->native(false)
+                            ->selectablePlaceholder(false)
+                            ->required(),
+
+                        TextInput::make('mail_username')
+                            ->label('Usuario')
+                            ->placeholder('Ej: avisos@miempresa.com.py')
+                            ->maxLength(190)
+                            ->autocomplete(false),
+
+                        TextInput::make('mail_password')
+                            ->label('Clave')
+                            ->password()
+                            ->revealable()
+                            ->autocomplete('new-password')
+                            ->maxLength(190)
+                            ->placeholder(fn (): string => filled(app(GeneralSettings::class)->mail_password) ? 'Guardada (dejar vacío para no cambiarla)' : 'Clave de la casilla')
+                            ->dehydrated(fn ($state): bool => filled($state))
+                            ->helperText('Se guarda cifrada y no se vuelve a mostrar.'),
+
+                        TextInput::make('mail_from_address')
+                            ->label('Correo remitente')
+                            ->email()
+                            ->placeholder('Ej: avisos@miempresa.com.py')
+                            ->maxLength(190)
+                            ->required(fn (Get $get): bool => (bool) $get('mail_enabled'))
+                            ->helperText('Debe ser una casilla que el servidor permita usar para enviar.'),
+
+                        TextInput::make('mail_from_name')
+                            ->label('Nombre del remitente')
+                            ->placeholder('Ej: Nominapp')
+                            ->maxLength(190),
+                    ])
+                    ->columns(2),
 
                 Section::make('Auditoría')
                     ->description('Retención del historial de cambios (tabla de auditoría)')
