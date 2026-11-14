@@ -61,7 +61,7 @@ Two separate axes that converge in `Contract`:
 | Extra hours | `ExtraHourCalculator` |
 | Rest day | `RestDayCalculator` — pago del día de descanso semanal remunerado |
 | Tardiness penalty | `AbsencePenaltyCalculator` — descuento por minutos de tardanza aprobados por RR.HH. (**no** procesa ausencias injustificadas — ver nota abajo) |
-| Family bonus | `FamilyBonusCalculator` — bonificación familiar IPS. Un hijo (`EmployeeChild::isEligibleAt($finDelPeríodo)`) cobra si es menor de 18 años **al fin del período** y tiene `ci` o certificado adjunto (`hasSupport()`); `Employee::eligibleChildrenAt()` filtra la relación `children` precargada. La columna `employees.children_count` y el comando de relleno de hijos se eliminaron (la migración `remove_children_placeholders_and_count` borra el relleno inequívoco y guarda un CSV de declarados en `storage/app`) |
+| Family bonus | `FamilyBonusCalculator` — bonificación familiar IPS. Un hijo (`EmployeeChild::isEligibleAt($finDelPeríodo)`) cobra si es menor de 18 años **al fin del período** y tiene `ci` o certificado adjunto (`hasSupport()`); `Employee::eligibleChildrenAt()` filtra la relación `children` precargada. La columna `employees.children_count` y el comando de relleno de hijos se eliminaron (la migración `remove_children_placeholders_and_count` borra el relleno inequívoco y guarda un CSV de declarados en `storage/app/private`, el disco `local` de Laravel 12) |
 | Loans | `Loan`, `LoanInstallment`, `LoanInstallmentCalculator` |
 | Advances | `Advance`, `AdvanceCalculator` |
 | Merchandise withdrawals | `MerchandiseWithdrawal`, `MerchandiseWithdrawalItem`, `MerchandiseWithdrawalInstallment`, `MerchandiseInstallmentCalculator` |
@@ -408,7 +408,7 @@ Control de acceso vía `spatie/laravel-permission`. Cubre permisos CRUD por mode
 
 **UI de administración:** `RoleResource` (grupo Configuración, solo visible/editable para Super Admin) permite crear/editar roles marcando permisos agrupados por módulo en checkboxes; `UserResource` incorpora un selector de roles (`Select` múltiple sobre la relación `roles`) visible únicamente para Super Admin.
 
-**Seeders:** `ProductionSeeder` y `DemoSeeder` siembran `PermissionSeeder` + `RoleSeeder` justo después de crear el usuario admin — así el admin queda con Super Admin automáticamente vía el mecanismo de "usuarios sin rol" de arriba.
+**Seeders:** `ProductionSeeder` y `DemoSeeder` siembran `PermissionSeeder` + `RoleSeeder` justo después de crear el usuario admin — así el admin queda con Super Admin automáticamente vía el mecanismo de "usuarios sin rol" de arriba. `DemoSeeder` trunca todo (usuarios incluidos) **menos `settings`**, que crean las migraciones de `database/settings`: truncarla dejaba la app sin `ModuleSettings` y caía con `MissingSettings`.
 
 ### Módulo de Asistencia — Marcación Offline (Terminal y Dispositivo Personal)
 
@@ -1626,6 +1626,7 @@ El `lockForUpdate()` serializa las transacciones concurrentes sobre esa fila —
 Al ser manual, no hay log ni rollback automático — si un paso falla, hay que diagnosticarlo y ejecutar `artisan up` a mano para restaurar el sitio antes de reintentar.
 
 **Antes de deployar manualmente a Macro verificar:**
+- El motor por defecto del servidor es **MyISAM**: poner `DB_ENGINE=InnoDB` en el `.env` **antes** de migrar (`config/database.php` lo lee; vacío o sin definir deja el del servidor). Sin eso la primera migración falla con «Specified key was too long» y deja la tabla a medias. No hace falta cron de cola (nada usa `ShouldQueue`): solo el del programador
 - Si hay nuevas variables de entorno (`.env`), agregarlas al servidor antes de correr el deploy
 - Si hay cambios en assets frontend (Blade, JS, CSS), buildear en local y subir via rsync antes del deploy:
 ```bash

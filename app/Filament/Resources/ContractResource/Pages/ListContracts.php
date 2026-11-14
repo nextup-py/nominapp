@@ -72,37 +72,37 @@ class ListContracts extends ListRecords
                 ->badge($counts['expiring'] ?: null)
                 ->badgeColor('warning')
                 ->icon('heroicon-o-clock')
-                ->modifyQueryUsing(fn (Builder $q) => $q->expiringSoon(app(GeneralSettings::class)->contract_alert_days)),
+                ->modifyQueryUsing(fn (Builder $query) => $query->expiringSoon(app(GeneralSettings::class)->contract_alert_days)),
 
             'draft' => Tab::make('Borrador')
                 ->badge($counts['draft'])
                 ->badgeColor(Contract::getStatusColor('draft'))
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', 'draft')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'draft')),
 
             'active' => Tab::make('Vigentes')
                 ->badge($counts['active'])
                 ->badgeColor(Contract::getStatusColor('active'))
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', 'active')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'active')),
 
             'suspended' => Tab::make('Suspendidos')
                 ->badge($counts['suspended'])
                 ->badgeColor(Contract::getStatusColor('suspended'))
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', 'suspended')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'suspended')),
 
             'expired' => Tab::make('Vencidos')
                 ->badge($counts['expired'])
                 ->badgeColor(Contract::getStatusColor('expired'))
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', 'expired')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'expired')),
 
             'terminated' => Tab::make('Terminados')
                 ->badge($counts['terminated'])
                 ->badgeColor(Contract::getStatusColor('terminated'))
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', 'terminated')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'terminated')),
 
             'renewed' => Tab::make('Renovados')
                 ->badge($counts['renewed'])
                 ->badgeColor(Contract::getStatusColor('renewed'))
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', 'renewed')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'renewed')),
         ];
     }
 

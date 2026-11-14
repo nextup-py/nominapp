@@ -130,7 +130,7 @@ class EmployeeDeduction extends Pivot
     /**
      * Marcar la asignación como inactiva estableciendo la fecha de fin.
      */
-    public function deactivate(Carbon $endDate = null, bool $bySystem = false): bool
+    public function deactivate(?Carbon $endDate = null, bool $bySystem = false): bool
     {
         return $this->update([
             'end_date'              => $endDate ?? now(),
@@ -141,7 +141,7 @@ class EmployeeDeduction extends Pivot
     /**
      * Reactivar una asignación con una nueva fecha de inicio y opcionalmente una fecha de fin.
      */
-    public function reactivate(Carbon $startDate = null, Carbon $endDate = null): bool
+    public function reactivate(?Carbon $startDate = null, ?Carbon $endDate = null): bool
     {
         return $this->update([
             'start_date' => $startDate ?? now(),
