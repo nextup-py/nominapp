@@ -17,7 +17,7 @@ uses(RefreshDatabase::class);
  * Habilitar el celular de un empleado desde su ficha, con aviso por WhatsApp: antes había que entrar a Editar y buscar
  * el selector entre los demás campos, y el empleado no se enteraba.
  */
-function mobileEmployee(array $attributes = []): Employee
+function enableMobileEmployee(array $attributes = []): Employee
 {
     static $n = 9900000;
     $n++;
@@ -37,13 +37,13 @@ function mobileEmployee(array $attributes = []): Employee
     ]);
 }
 
-function mobileSuperAdmin(): void
+function enableMobileSuperAdmin(): void
 {
     test()->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
 }
 
 /** Usuario que puede ver empleados pero no editarlos. */
-function mobileReadOnlyUser(): void
+function enableMobileReadOnlyUser(): void
 {
     $role = Role::firstOrCreate(['name' => 'Consulta Mobil', 'guard_name' => 'web']);
     $role->syncPermissions(collect(['view_any_employee', 'view_employee'])->map(fn (string $name) => Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'])));
@@ -52,9 +52,9 @@ function mobileReadOnlyUser(): void
 }
 
 it('el botón Habilitar celular lo habilita solo para ese empleado', function () {
-    mobileSuperAdmin();
-    $employee = mobileEmployee();
-    $otro = mobileEmployee();
+    enableMobileSuperAdmin();
+    $employee = enableMobileEmployee();
+    $otro = enableMobileEmployee();
 
     expect($employee->canMarkFromMobile())->toBeFalse();
 
@@ -69,27 +69,27 @@ it('el botón Habilitar celular lo habilita solo para ese empleado', function ()
 });
 
 it('el botón no aparece si el empleado ya puede marcar desde el celular', function () {
-    mobileSuperAdmin();
+    enableMobileSuperAdmin();
 
-    Livewire::test(ViewEmployee::class, ['record' => mobileEmployee(['mobile_marking_allowed' => true])->getKey()])
+    Livewire::test(ViewEmployee::class, ['record' => enableMobileEmployee(['mobile_marking_allowed' => true])->getKey()])
         ->assertActionHidden('enable_mobile');
 
     enableMobileMarking();
 
-    Livewire::test(ViewEmployee::class, ['record' => mobileEmployee()->getKey()])
+    Livewire::test(ViewEmployee::class, ['record' => enableMobileEmployee()->getKey()])
         ->assertActionHidden('enable_mobile');
 });
 
 it('el botón no aparece para un empleado inactivo', function () {
-    mobileSuperAdmin();
+    enableMobileSuperAdmin();
 
-    Livewire::test(ViewEmployee::class, ['record' => mobileEmployee(['status' => 'inactive'])->getKey()])
+    Livewire::test(ViewEmployee::class, ['record' => enableMobileEmployee(['status' => 'inactive'])->getKey()])
         ->assertActionHidden('enable_mobile');
 });
 
 it('quien no puede editar empleados no ve el botón ni puede ejecutarlo', function () {
-    mobileReadOnlyUser();
-    $employee = mobileEmployee();
+    enableMobileReadOnlyUser();
+    $employee = enableMobileEmployee();
 
     Livewire::test(ViewEmployee::class, ['record' => $employee->getKey()])
         ->assertActionHidden('enable_mobile');
@@ -98,8 +98,8 @@ it('quien no puede editar empleados no ve el botón ni puede ejecutarlo', functi
 });
 
 it('habilitar a un empleado cuya sucursal no puede marcar desde el celular le da un valor propio', function () {
-    mobileSuperAdmin();
-    $employee = mobileEmployee();
+    enableMobileSuperAdmin();
+    $employee = enableMobileEmployee();
     $employee->branch->update(['mobile_marking_allowed' => false]);
 
     expect($employee->fresh()->mobileMarkingLabel())->toBe('No (de la sucursal)');
@@ -110,27 +110,27 @@ it('habilitar a un empleado cuya sucursal no puede marcar desde el celular le da
 });
 
 it('arma el enlace de WhatsApp con el teléfono y el enlace de vinculación', function () {
-    $url = mobileEmployee(['phone' => '0981123456'])->mobileLinkWhatsappUrl();
+    $url = enableMobileEmployee(['phone' => '0981123456'])->mobileLinkWhatsappUrl();
 
     expect($url)->toStartWith('https://api.whatsapp.com/send?phone=595981123456&text=')
         ->and(urldecode($url))->toContain(route('device-link.show'))->toContain('Hola Ana');
 });
 
 it('sin teléfono no hay enlace de WhatsApp', function () {
-    expect(mobileEmployee(['phone' => null])->mobileLinkWhatsappUrl())->toBeNull();
+    expect(enableMobileEmployee(['phone' => null])->mobileLinkWhatsappUrl())->toBeNull();
 });
 
 it('la ficha muestra el estado del celular', function () {
-    mobileSuperAdmin();
+    enableMobileSuperAdmin();
 
-    Livewire::test(ViewEmployee::class, ['record' => mobileEmployee()->getKey()])
+    Livewire::test(ViewEmployee::class, ['record' => enableMobileEmployee()->getKey()])
         ->assertSee('Marcación desde el celular')
         ->assertSee('Puede marcar desde el celular')
         ->assertSee('Celular vinculado');
 });
 
 it('el aviso de intento bloqueado lleva a la ficha y explica cómo habilitar', function () {
-    $employee = mobileEmployee();
+    $employee = enableMobileEmployee();
     $data = (new MobileLinkBlockedNotification($employee))->toDatabase(User::factory()->create());
 
     expect($data['body'])->toContain('Habilitar celular')
