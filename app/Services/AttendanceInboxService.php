@@ -88,6 +88,13 @@ class AttendanceInboxService
                 null,
                 EmployeeResource::getUrl('index', ['activeTab' => 'active', 'tableFilters' => ['without_schedule' => ['isActive' => true]]]),
             );
+            $sections[] = self::section(
+                'expired_contract', 'Contratos vencidos sin renovar', 'Empleados activos cuyo contrato venció y no tienen otro vigente: siguen cobrando y marcando, pero hay que renovar o terminar su contrato.',
+                'heroicon-o-document-text', 'warning',
+                Employee::query()->active()->withExpiredContract(),
+                null,
+                EmployeeResource::getUrl('index', ['activeTab' => 'active', 'tableFilters' => ['expired_contract' => ['isActive' => true]]]),
+            );
         }
 
         return $sections;

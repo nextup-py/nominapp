@@ -451,6 +451,28 @@ class Employee extends Model implements AuthenticatableContract
     }
 
     /**
+     * Empleados con un contrato vencido y sin ningún contrato vigente (activo o suspendido): el vencimiento automático
+     * (`contracts:expire`) no los desactiva, así que quedan activos hasta que RR.HH. renueve o termine el contrato.
+     * Desactivarlos solos sería incorrecto: cierra el horario y da de baja percepciones y deducciones, y quien sigue
+     * trabajando tras el vencimiento de un plazo fijo pasa a ser indefinido.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeWithExpiredContract($query)
+    {
+        return $query
+            ->whereExists(fn ($sub) => $sub->select(DB::raw(1))
+                ->from('contracts as expired_contracts')
+                ->whereColumn('expired_contracts.employee_id', 'employees.id')
+                ->where('expired_contracts.status', 'expired'))
+            ->whereNotExists(fn ($sub) => $sub->select(DB::raw(1))
+                ->from('contracts as valid_contracts')
+                ->whereColumn('valid_contracts.employee_id', 'employees.id')
+                ->whereIn('valid_contracts.status', ['active', 'suspended']));
+    }
+
+    /**
      * Obtiene el contrato vigente del empleado (activo o suspendido).
      * Un contrato suspendido sigue siendo el contrato vigente — el vínculo laboral continúa.
      */

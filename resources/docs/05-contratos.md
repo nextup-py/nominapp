@@ -64,6 +64,18 @@ Borrador ──[Eliminar]──> (eliminado)
 
 Al pasar a **Terminado**, el empleado queda **Inactivo** automáticamente — salvo que tenga otro contrato activo. El vencimiento automático de las 00:05 cambia solo el estado del contrato, no el del empleado.
 
+### Qué pasa con el empleado cuando vence su contrato
+
+El vencimiento automático **cambia solo el estado del contrato**: el empleado **sigue Activo**, con su horario, percepciones y deducciones. No se lo desactiva solo porque desactivar a un empleado cierra su horario y da de baja sus percepciones y deducciones, y porque quien sigue trabajando tras el vencimiento de un contrato a plazo pasa a ser indefinido.
+
+Para que no queden olvidados, el sistema los hace visibles:
+
+- En **Empleados**, el filtro **Contrato vencido sin renovar** lista a los empleados con el contrato vencido y ningún otro vigente.
+- En **Asistencias → Por resolver**, la tarjeta **Contratos vencidos sin renovar** muestra cuántos son y abre ese listado.
+- La campanita diaria de las 08:00 avisa de los contratos vencidos (ver **Mis notificaciones**).
+
+Desde el contrato se resuelve cada caso: **Renovar** (o extender la fecha de fin) si la relación continúa, o **Terminar** si el empleado se va (eso lo pasa a Inactivo; luego se crea la **Liquidación**).
+
 ### Contrato vencido: renovar o extender la fecha
 
 Un contrato **Vencido** se puede continuar de dos maneras:
