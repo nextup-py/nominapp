@@ -68,7 +68,7 @@ class TerminalEmployeeSyncController extends Controller
         /** @var Terminal $terminal */
         $terminal = $request->user();
 
-        if ($employee->status !== 'active' || $employee->branch_id !== $terminal->branch_id) {
+        if ($employee->status !== 'active' || ! $employee->canMarkAtBranch($terminal->branch_id)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'Empleado no disponible para este terminal.',

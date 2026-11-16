@@ -83,9 +83,21 @@ Ir a **Asistencias → Terminales** para administrar los dispositivos físicos d
 
 > El detalle completo —paso a paso de la vinculación, estados de conectividad, solicitudes de vinculación y solución de problemas— está en el capítulo **Terminales de Marcación**.
 
-### Marcación en sucursal diferente
+### Marcar en el terminal de otra sucursal
 
-Si un empleado marca desde un terminal de una sucursal distinta a la suya, el sistema registra el evento igualmente pero lo marca internamente como **marcación en sucursal diferente** (`branch_mismatch`). Esto permite detectar situaciones atípicas sin bloquear al empleado.
+Cada terminal reconoce solo a los empleados de su propia sucursal. Para que quienes ocupan un cargo (por ejemplo, **Supervisor de Sucursal**) puedan marcar también en otros locales, ir a **Organización → Cargos**, editar el cargo y elegir en **Marcación en terminales**:
+
+| Opción | Dónde pueden marcar |
+|--------|--------------------|
+| **Solo en su sucursal** | Solo en el terminal de su sucursal (de fábrica) |
+| **En su sucursal y en las que se elijan** | En la propia más las que se agreguen en **Sucursales adicionales** |
+| **En cualquier sucursal** | En el terminal de cualquier sucursal |
+
+- Vale para todos los que ocupan el cargo, incluidos los futuros. Se toma el cargo de su contrato vigente; si cambia de cargo, se actualiza solo.
+- Los terminales incorporan o quitan a esas personas en su próxima sincronización (unos minutos). Para reconocerlas, **el rostro de quienes ocupan el cargo se copia a los terminales** de esas sucursales; por eso conviene mencionarlo en el aviso de privacidad de la empresa.
+- La marcación queda registrada como cualquier otra, con la sucursal donde se hizo, y **no** se señala como atípica.
+- Una marcación en el terminal de una sucursal donde la persona **no** tiene permiso sigue marcándose como **marcación en sucursal diferente** (se registra igual pero queda señalada, para detectar situaciones atípicas sin bloquear al empleado).
+- Si lo único que se necesita es que marquen desde su celular, alcanza con **Marcación desde el celular** (el celular no depende de la sucursal).
 
 ---
 

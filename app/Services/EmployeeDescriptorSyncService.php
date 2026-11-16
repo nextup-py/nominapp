@@ -8,7 +8,7 @@ use Carbon\Carbon;
 
 /**
  * Sincronización incremental (delta) de descriptores faciales de empleados
- * activos, scopeada por la sucursal del terminal — alimenta la caché offline
+ * activos que pueden marcar en la sucursal del terminal (los de la sucursal y los de cargos con acceso a otras) — alimenta la caché offline
  * del terminal (IndexedDB) para que el reconocimiento facial pueda correr
  * localmente sin conexión.
  */
@@ -30,7 +30,7 @@ class EmployeeDescriptorSyncService
         $queryStartedAt = now();
 
         $employees = Employee::query()
-            ->where('branch_id', $terminal->branch_id)
+            ->markableAtBranch($terminal->branch_id)
             ->where('status', 'active')
             ->whereNotNull('face_descriptor')
             ->when($since, fn ($query) => $query->where('updated_at', '>', $since))
@@ -72,11 +72,14 @@ class EmployeeDescriptorSyncService
      */
     private function tombstonesSince(Terminal $terminal, Carbon $since): array
     {
+        $markable = Employee::query()->markableAtBranch($terminal->branch_id)->select('employees.id');
+
         return Employee::query()
-            ->where('branch_id', $terminal->branch_id)
             ->where('updated_at', '>', $since)
-            ->where(function ($query) {
-                $query->where('status', '!=', 'active')->orWhereNull('face_descriptor');
+            ->where(function ($query) use ($markable) {
+                $query->where('status', '!=', 'active')
+                    ->orWhereNull('face_descriptor')
+                    ->orWhereNotIn('employees.id', $markable);
             })
             ->pluck('id')
             ->all();
@@ -101,10 +104,10 @@ class EmployeeDescriptorSyncService
         $today = now(config('app.timezone'));
 
         $employees = Employee::query()
-            ->where('branch_id', $terminal->branch_id)
+            ->markableAtBranch($terminal->branch_id)
             ->where('status', 'active')
             ->whereNotNull('face_descriptor')
-            ->get(['id', 'schedule_id']);
+            ->get(['employees.id', 'employees.schedule_id']);
 
         return AttendanceCalculator::hasScheduledBreakBatch($employees, $today);
     }

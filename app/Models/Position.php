@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\MobileMarkingService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Collection;
 
@@ -14,7 +15,14 @@ class Position extends Model
         'department_id',
         'parent_id',
         'mobile_marking_allowed',
+        'terminal_access',
     ];
+
+    public const TERMINAL_OWN = 'own';
+
+    public const TERMINAL_ALL = 'all';
+
+    public const TERMINAL_SELECTED = 'selected';
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -25,12 +33,43 @@ class Position extends Model
     protected static function booted(): void
     {
         static::updated(function (Position $position): void {
+            if ($position->wasChanged('terminal_access')) {
+                $position->touchEmployees();
+            }
+
             if ($position->wasChanged('mobile_marking_allowed')) {
                 MobileMarkingService::revokeDisallowed(
                     Employee::query()->whereHas('activeContract', fn ($q) => $q->where('position_id', $position->id))
                 );
             }
         });
+    }
+
+    /** @return array<string, string> Dónde pueden marcar en terminal quienes ocupan el cargo. */
+    public static function getTerminalAccessOptions(): array
+    {
+        return [
+            self::TERMINAL_OWN => 'Solo en su sucursal',
+            self::TERMINAL_SELECTED => 'En su sucursal y en las que se elijan',
+            self::TERMINAL_ALL => 'En cualquier sucursal',
+        ];
+    }
+
+    /** Sucursales extra donde pueden marcar en terminal (solo con `terminal_access = selected`). */
+    public function terminalBranches(): BelongsToMany
+    {
+        return $this->belongsToMany(Branch::class, 'position_terminal_branch');
+    }
+
+    /**
+     * Marca como modificados a los empleados que ocupan el cargo: la sincronización de los terminales es incremental
+     * por `updated_at`, así que sin esto no se enterarían de que ahora (o ya no) deben reconocerlos.
+     */
+    public function touchEmployees(): void
+    {
+        Employee::query()
+            ->whereHas('activeContract', fn ($q) => $q->where('position_id', $this->id))
+            ->update(['updated_at' => now()]);
     }
 
     public function department()

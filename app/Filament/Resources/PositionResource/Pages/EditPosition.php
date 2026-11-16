@@ -47,6 +47,12 @@ class EditPosition extends EditRecord
         return $data;
     }
 
+    /** Tras guardar (ya con las sucursales elegidas), avisa a los terminales de que cambió quién puede marcar en ellos. */
+    protected function afterSave(): void
+    {
+        $this->record->touchEmployees();
+    }
+
     /**
      * Definir la URL a la que se redirigirá después de guardar los cambios.
      */

@@ -10,6 +10,14 @@ use App\Models\Contract;
  */
 class ContractObserver
 {
+    /** Cambiar el cargo o crear el contrato cambia en qué terminales se reconoce al empleado: se toca para el sync incremental. */
+    public function saved(Contract $contract): void
+    {
+        if ($contract->wasRecentlyCreated || $contract->wasChanged(['position_id', 'status'])) {
+            $contract->employee?->touch();
+        }
+    }
+
     public function updated(Contract $contract): void
     {
         if (! $contract->isDirty('status')) {

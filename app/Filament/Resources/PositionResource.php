@@ -96,6 +96,27 @@ class PositionResource extends Resource
 
                         MobileMarkingFields::select('Valor para quienes ocupan este cargo y no tengan el suyo propio. «Heredar» usa el de la sucursal, la empresa o el valor general. Ej.: «Sí» para Supervisores y Gerentes.')
                             ->columnSpan(1),
+
+                        Select::make('terminal_access')
+                            ->label('Marcación en terminales')
+                            ->options(Position::getTerminalAccessOptions())
+                            ->default(Position::TERMINAL_OWN)
+                            ->native(false)
+                            ->selectablePlaceholder(false)
+                            ->live()
+                            ->helperText('Dónde pueden marcar en el terminal quienes ocupan este cargo. Para reconocerlos en otras sucursales, su rostro se copia a los terminales de esas sucursales.')
+                            ->columnSpan(1),
+
+                        Select::make('terminalBranches')
+                            ->label('Sucursales adicionales')
+                            ->relationship('terminalBranches', 'name')
+                            ->multiple()
+                            ->preload()
+                            ->searchable()
+                            ->visible(fn (Get $get): bool => $get('terminal_access') === Position::TERMINAL_SELECTED)
+                            ->required(fn (Get $get): bool => $get('terminal_access') === Position::TERMINAL_SELECTED)
+                            ->helperText('Además de su propia sucursal, que siempre entra.')
+                            ->columnSpan(1),
                     ])
                     ->columns(2),
             ]);

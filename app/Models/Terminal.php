@@ -699,13 +699,13 @@ class Terminal extends Model implements AuthenticatableContract
      */
     public function enrolledEmployeesCount(): int
     {
-        return Employee::query()->active()->withFace()->where('branch_id', $this->branch_id)->count();
+        return Employee::query()->active()->withFace()->markableAtBranch($this->branch_id)->count();
     }
 
     /** Empleados activos de la sucursal del terminal, con o sin rostro registrado (contexto del conteo de enrolados). */
     public function activeEmployeesCount(): int
     {
-        return Employee::query()->active()->where('branch_id', $this->branch_id)->count();
+        return Employee::query()->active()->markableAtBranch($this->branch_id)->count();
     }
 
     /** El último reporte llegó dentro del umbral de desconexión: sus datos (batería, caché, reloj) son confiables. */

@@ -1519,6 +1519,41 @@ class Employee extends Model implements AuthenticatableContract
         );
     }
 
+    /**
+     * Empleados que pueden marcar en el terminal de una sucursal: los de esa sucursal más los que ocupan un cargo
+     * con acceso a cualquier sucursal (`all`) o a esa en particular (`selected`).
+     * Mantener en sincronía con `canMarkAtBranch()`.
+     */
+    public function scopeMarkableAtBranch(Builder $query, int $branchId): Builder
+    {
+        return $query->where(function (Builder $q) use ($branchId) {
+            $q->where('employees.branch_id', $branchId)
+                ->orWhereRaw(
+                    'EXISTS (SELECT 1 FROM contracts ct JOIN positions p ON p.id = ct.position_id '
+                    ."WHERE ct.employee_id = employees.id AND ct.status IN ('active', 'suspended') AND ("
+                    ."p.terminal_access = 'all' OR (p.terminal_access = 'selected' AND EXISTS ("
+                    .'SELECT 1 FROM position_terminal_branch ptb WHERE ptb.position_id = p.id AND ptb.branch_id = ?))))',
+                    [$branchId],
+                );
+        });
+    }
+
+    /** Si el empleado puede marcar en el terminal de la sucursal (propia o permitida por su cargo). */
+    public function canMarkAtBranch(?int $branchId): bool
+    {
+        if ($branchId === null || $branchId === $this->branch_id) {
+            return true;
+        }
+
+        $position = $this->activeContract?->position;
+
+        return match ($position?->terminal_access) {
+            Position::TERMINAL_ALL => true,
+            Position::TERMINAL_SELECTED => $position->terminalBranches()->whereKey($branchId)->exists(),
+            default => false,
+        };
+    }
+
     /** Indica si el empleado tiene un dispositivo vinculado actualmente. */
     public function hasMobileLinked(): bool
     {
