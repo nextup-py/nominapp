@@ -31,6 +31,11 @@ class AttendanceEvent extends Model
         'terminal_id',
         'branch_mismatch',
         'client_event_id',
+        'location_distance_m',
+        'location_flag',
+        'location_review',
+        'location_reviewed_by_id',
+        'location_reviewed_at',
     ];
 
     protected $casts = [
@@ -38,6 +43,7 @@ class AttendanceEvent extends Model
         'synced_at' => 'datetime',
         'location' => 'array',
         'branch_mismatch' => 'boolean',
+        'location_reviewed_at' => 'datetime',
     ];
 
     /**

@@ -30,6 +30,8 @@ class Branch extends Model implements Auditable
         'watch_from',
         'watch_to',
         'mobile_marking_allowed',
+        'location_control',
+        'location_radius_m',
     ];
 
     protected $fillable = [
@@ -45,6 +47,8 @@ class Branch extends Model implements Auditable
         'watch_from',
         'watch_to',
         'mobile_marking_allowed',
+        'location_control',
+        'location_radius_m',
     ];
 
     /** @var array<string, mixed> Las sucursales nuevas nacen activas (igual que el default de la base). */
@@ -57,6 +61,7 @@ class Branch extends Model implements Auditable
         'is_active' => 'boolean',
         'watch_days' => 'array',
         'mobile_marking_allowed' => 'boolean',
+        'location_control' => 'boolean',
     ];
 
     /** Red de seguridad: ninguna ruta puede borrar una sucursal con empleados, terminales o fallas de marcación asociadas. */
