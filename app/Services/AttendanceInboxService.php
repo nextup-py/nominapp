@@ -89,6 +89,13 @@ class AttendanceInboxService
                 EmployeeResource::getUrl('index', ['activeTab' => 'active', 'tableFilters' => ['without_schedule' => ['isActive' => true]]]),
             );
             $sections[] = self::section(
+                'mobile_pending_link', 'Celulares habilitados sin vincular', 'Empleados activos habilitados para marcar desde el celular que todavía no vincularon el suyo: no pueden marcar hasta que lo hagan.',
+                'heroicon-o-device-phone-mobile', 'warning',
+                Employee::query()->active()->mobileStatus('pending_link'),
+                null,
+                EmployeeResource::getUrl('index', ['activeTab' => 'active', 'tableFilters' => ['mobile_status' => ['value' => 'pending_link']]]),
+            );
+            $sections[] = self::section(
                 'expired_contract', 'Contratos vencidos sin renovar', 'Empleados activos cuyo contrato venció y no tienen otro vigente: siguen cobrando y marcando, pero hay que renovar o terminar su contrato.',
                 'heroicon-o-document-text', 'warning',
                 Employee::query()->active()->withExpiredContract(),
