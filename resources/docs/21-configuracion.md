@@ -18,6 +18,7 @@ Acceder desde **Configuración → Configuración General**.
 - **Mínimo entre entrada y salida:** minutos que deben pasar después de marcar la entrada para poder marcar la salida (por defecto 2 minutos; 0 = sin mínimo). Evita salidas por un toque equivocado; una salida que llega al sincronizar antes de ese mínimo queda como conflicto en **Fallos de Marcación**.
 - **Límite de jornada nocturna abierta:** horas desde la última marcación de la jornada de ayer durante las cuales una salida nueva se le sigue asignando como turno nocturno en curso (por defecto 16 horas; 0 = sin límite). Pasado ese tiempo la jornada de ayer queda en **Sin salida registrada** para corregirla a mano y el terminal ofrece solo la entrada.
 - **Permitir marcar desde el celular por defecto:** valor para los empleados que no lo tienen definido en su ficha, su sucursal ni su empresa. Apagado de fábrica (solo terminal). Ver **Quién puede marcar desde el celular** en el capítulo de Asistencias.
+- **Radio de marcación desde el celular:** distancia máxima (25 a 2000 m, 150 de fábrica) al punto de trabajo del empleado o de su sucursal para marcar desde el celular. Fuera de ella la marcación se acepta pero queda señalada para revisión. Ver **Control de ubicación del celular** en el capítulo de Asistencias.
 
 ### Configuración de Contratos
 

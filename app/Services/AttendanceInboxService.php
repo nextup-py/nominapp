@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Filament\Resources\AbsenceResource;
 use App\Filament\Resources\AttendanceDayResource;
+use App\Filament\Resources\AttendanceEventResource;
 use App\Filament\Resources\AttendanceMarkFailureResource;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Absence;
 use App\Models\AttendanceDay;
+use App\Models\AttendanceEvent;
 use App\Models\AttendanceMarkFailure;
 use App\Models\Employee;
 use Carbon\Carbon;
@@ -67,6 +69,16 @@ class AttendanceInboxService
                 Absence::query()->where('status', 'pending'),
                 'created_at',
                 AbsenceResource::getUrl('index', ['activeTab' => 'pending']),
+            );
+        }
+
+        if (AttendanceEventResource::canViewAny()) {
+            $sections[] = self::section(
+                'location_review', 'Marcaciones fuera de radio', 'Marcaciones desde el celular hechas lejos de su lugar de trabajo o sin ubicación: RR.HH. decide si son válidas.',
+                'heroicon-o-map-pin', 'warning',
+                AttendanceEvent::query()->where('location_review', LocationRadiusService::REVIEW_PENDING),
+                'recorded_at',
+                AttendanceEventResource::getUrl('index', ['tableFilters' => ['location_review' => ['value' => LocationRadiusService::REVIEW_PENDING]]]),
             );
         }
 

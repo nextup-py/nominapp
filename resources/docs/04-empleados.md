@@ -14,6 +14,7 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 - **Sucursal** a la que pertenece
 - **Estado:** Activo o Inactivo
 - **Marcación desde el celular:** Heredar, Sí o No (por defecto se marca solo desde el terminal). También se puede habilitar con el botón **Habilitar celular** de la ficha del empleado. Ver **Quién puede marcar desde el celular** en el capítulo de Asistencias, donde también se explica el **Estado del celular** (columna **Celular** y filtro del listado).
+- **Lugar de trabajo y Radio de marcación:** solo para quien trabaja en un lugar fijo propio; la marcación desde el celular se compara con ese punto. Vacíos = usa el de su sucursal (si controla la ubicación) o es «de campo». Ver **Control de ubicación del celular** en Asistencias.
 
 ![Formulario de creación de empleado](/docs-images/04-empleado-nuevo.png)
 

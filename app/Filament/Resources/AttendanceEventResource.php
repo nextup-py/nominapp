@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AttendanceEventResource\Pages;
 use App\Models\AttendanceEvent;
 use App\Services\AttendanceEventCorrectionService;
+use App\Services\LocationRadiusService;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -135,8 +136,29 @@ class AttendanceEventResource extends Resource
                     ->openUrlInNewTab()
                     ->placeholder('Sin ubicación')
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('location_flag')
+                    ->label('Control de ubicación')
+                    ->badge()
+                    ->formatStateUsing(fn ($state, AttendanceEvent $record): string => LocationRadiusService::getFlagLabels()[$state] ?? $state)
+                    ->description(fn (AttendanceEvent $record): ?string => $record->location_distance_m !== null ? "A {$record->location_distance_m} m del punto" : null)
+                    ->color(fn (AttendanceEvent $record): string => LocationRadiusService::getReviewColors()[$record->location_review] ?? 'gray')
+                    ->placeholder('Sin control')
+                    ->toggleable(),
+
+                TextColumn::make('location_review')
+                    ->label('Revisión de ubicación')
+                    ->badge()
+                    ->formatStateUsing(fn ($state): string => LocationRadiusService::getReviewLabels()[$state] ?? $state)
+                    ->color(fn ($state): string => LocationRadiusService::getReviewColors()[$state] ?? 'gray')
+                    ->placeholder('—')
+                    ->toggleable(),
             ])
             ->filters([
+                SelectFilter::make('location_review')
+                    ->label('Control de ubicación')
+                    ->options(LocationRadiusService::getReviewLabels()),
+
                 SelectFilter::make('employee_id')
                     ->label('Empleado')
                     ->placeholder('Todos los empleados')
@@ -216,6 +238,28 @@ class AttendanceEventResource extends Resource
 
             ])
             ->actions([
+                Action::make('approve_location')
+                    ->label('Aprobar ubicación')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn (AttendanceEvent $record): bool => $record->location_review === LocationRadiusService::REVIEW_PENDING && self::canReviewLocation())
+                    ->requiresConfirmation()
+                    ->modalHeading('Aprobar la ubicación de la marcación')
+                    ->modalDescription('La marcación se considera válida. Queda registrado quién la revisó y cuándo.')
+                    ->modalSubmitActionLabel('Sí, aprobar')
+                    ->action(fn (AttendanceEvent $record) => self::reviewLocation($record, LocationRadiusService::REVIEW_APPROVED)),
+
+                Action::make('discard_location')
+                    ->label('Descartar ubicación')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (AttendanceEvent $record): bool => $record->location_review === LocationRadiusService::REVIEW_PENDING && self::canReviewLocation())
+                    ->requiresConfirmation()
+                    ->modalHeading('Descartar la ubicación de la marcación')
+                    ->modalDescription('Queda registrado que la ubicación no fue válida. La marcación no se elimina: para corregirla usar «Corregir marcaciones» en la jornada.')
+                    ->modalSubmitActionLabel('Sí, descartar')
+                    ->action(fn (AttendanceEvent $record) => self::reviewLocation($record, LocationRadiusService::REVIEW_DISCARDED)),
+
                 Action::make('view_day')
                     ->label('Ver jornada')
                     ->icon('heroicon-o-calendar-days')
@@ -342,5 +386,27 @@ class AttendanceEventResource extends Resource
         return [
             'index' => Pages\ManageAttendanceEvents::route('/'),
         ];
+    }
+
+    /** Quién puede aprobar o descartar la ubicación de una marcación (las acciones personalizadas no consultan la policy). */
+    public static function canReviewLocation(): bool
+    {
+        return auth()->user()?->can('update_attendance_event') ?? false;
+    }
+
+    /** Registra la decisión de RR.HH. sobre una marcación señalada por el control de ubicación. */
+    public static function reviewLocation(AttendanceEvent $record, string $decision): void
+    {
+        if (! self::canReviewLocation() || $record->location_review !== LocationRadiusService::REVIEW_PENDING) {
+            return;
+        }
+
+        $record->forceFill([
+            'location_review' => $decision,
+            'location_reviewed_by_id' => auth()->id(),
+            'location_reviewed_at' => now(),
+        ])->save();
+
+        Notification::make()->success()->title($decision === LocationRadiusService::REVIEW_APPROVED ? 'Ubicación aprobada' : 'Ubicación descartada')->send();
     }
 }
