@@ -85,7 +85,9 @@ En unos segundos el dispositivo recibe su acceso y recarga la página. Hay que t
 
 ### Si ya había un dispositivo vinculado
 
-La solicitud aparece marcada como **Reemplaza dispositivo** y el cuadro de aprobación lo advierte, con la fecha del último latido del dispositivo actual. Aprobarla **revoca el acceso del dispositivo anterior**. Aprobar solo si realmente se quiere cambiar el equipo.
+La solicitud aparece marcada como **Reemplaza dispositivo** y el cuadro de aprobación muestra el **dispositivo vinculado hoy** (marca y modelo, IP, cuándo se vinculó y su último latido). Si ese dispositivo está en línea, el cuadro agrega una advertencia: *este terminal está en línea en otro dispositivo*. Aprobarla **revoca el acceso del dispositivo anterior**, que vuelve a pedir un código. Aprobar solo si realmente se quiere cambiar el equipo.
+
+> **Un terminal admite un solo dispositivo.** Si dos equipos tienen abierta la misma URL, cada código aprobado deja sin acceso al otro y los dos se la pasan pidiendo códigos. Antes de aprobar, comparar la **IP** y el **tipo de dispositivo** de la solicitud con los del dispositivo vinculado, y dejar un solo equipo por terminal.
 
 ---
 
@@ -255,6 +257,7 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Dispositivo vinculado** | Vía enlace o código, e IP |
 | **Dispositivo desvinculado** | Quién lo desvinculó |
 | **El dispositivo perdió el vínculo** | El servidor todavía tenía el acceso vigente y el terminal, sin latir hace más de 3 minutos, pidió vincularse de nuevo: el navegador perdió su copia local. El detalle indica el motivo informado, si el navegador no conserva datos y hace cuánto fue el último latido. Se registra una vez cada 30 minutos por terminal |
+| **Dispositivo reemplazado** | Un dispositivo nuevo se vinculó sobre uno que ya tenía acceso. El detalle indica la IP del dispositivo anterior y si estaba en línea |
 | **Sin conexión** / **Reconectado** | El sistema detectó que pasó a Desconectado o que volvió a reportar |
 | **Quedó sin vincular** | Un terminal vinculado perdió su acceso |
 | **Cola de marcaciones atascada** / **normalizada** | La cola dejó de vaciarse o volvió a la normalidad |
@@ -479,6 +482,7 @@ El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: 
 | Un terminal figura **Sin vincular** pero "andaba" | Alguien lo desvinculó, lo desactivó o vinculó otro dispositivo | Revisar con quién gestiona los terminales y volver a vincular |
 | Un terminal pide vincularse una y otra vez aunque se aprobó hace minutos | El navegador **no conserva sus datos**: ventana privada o de invitado, «borrar datos al cerrar», perfil que se restaura en cada arranque, equipo con congelado o un limpiador automático. El servidor no lo desvinculó (no hay un evento **Dispositivo desvinculado**; sí **El dispositivo perdió el vínculo** en la bitácora y un aviso **Terminal perdió el vínculo**) | Vincular y recargar la página con **F5**: si vuelve a pedir vínculo, el navegador no guarda datos. Usar un navegador o perfil exclusivo que sí los guarde, sin modo privado ni borrado al cerrar (ver **PC con Windows**) |
 | Aparece el aviso **Este navegador no conserva los datos del terminal** | El terminal hizo una prueba de escritura y lectura y el navegador no devolvió lo guardado | Es una advertencia: el terminal sigue funcionando y se puede vincular, pero se desvinculará solo. Corregir el navegador como en la fila anterior |
+| Un terminal pide vincularse una y otra vez desde dos equipos distintos (por ejemplo una PC y un celular) | Hay **dos dispositivos abiertos en la misma URL del terminal**. Cada vez que uno se vincula, el otro queda sin acceso y vuelve a pedir un código. En la **Bitácora** aparece **Dispositivo reemplazado** y llega el aviso **Dispositivo reemplazado en un terminal** | Elegir qué equipo es el terminal, cerrar o desinstalar la app en el otro y aprobar un solo código. Si se necesitan los dos equipos, crear otro terminal para el segundo |
 | Aviso **Terminal perdió el vínculo** y el dispositivo correcto sigue funcionando | Otro dispositivo abrió la URL del terminal mientras el verdadero seguía en línea | Si el terminal sigue latiendo el sistema no lo toma como pérdida: aparece como una **Solicitud de vinculación** común (con *Reemplaza al dispositivo actual*). Rechazarla y cerrar la página del otro dispositivo |
 | Aparece un aviso de que el navegador pertenece a **otro terminal** | Ese navegador ya estaba vinculado a un terminal distinto | Cancelar el aviso y abrir la URL correcta. Aceptar borra los datos locales del terminal anterior, **incluidas sus marcaciones pendientes de enviar**. Usar un navegador o perfil exclusivo para cada terminal |
 | Dice **Sin empleados sincronizados** | El terminal todavía no descargó rostros | Verificar conexión y tocar **Sincronizar ahora**. Solo se descargan los empleados **activos** de la **sucursal del terminal** que tengan su **registro facial** completo |

@@ -108,8 +108,10 @@ class TerminalPairingActions
         ];
 
         if ($record->replaces_active_device) {
-            $lastHeartbeat = $terminal->last_heartbeat_at?->diffForHumans() ?? 'nunca';
-            $lines[] = '⚠️ <strong>Reemplazará al dispositivo vinculado actualmente</strong> (último heartbeat: '.e($lastHeartbeat).'); su acceso se revocará.';
+            $lines[] = '<strong>Dispositivo vinculado hoy:</strong> '.e($terminal->currentDeviceSummary());
+            $lines[] = $terminal->isReportingNow()
+                ? '<strong>Atención: este terminal está en línea en otro dispositivo.</strong> Aprobar este código lo dejará sin vínculo y volverá a pedir uno nuevo. Si hay dos equipos abiertos en la misma URL, dejar uno solo.'
+                : '<strong>Reemplazará al dispositivo vinculado actualmente</strong>; su acceso se revocará.';
         }
 
         return new HtmlString(implode('<br>', $lines));

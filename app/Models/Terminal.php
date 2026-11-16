@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\TerminalDeviceReplacedNotification;
 use App\Notifications\TerminalLinkWindowExpiredNotification;
 use App\Notifications\TerminalProvisionedNotification;
 use App\Services\DeviceHintsParser;
@@ -1221,6 +1222,10 @@ class Terminal extends Model implements AuthenticatableContract
      */
     public function claimSanctumToken(?string $userAgent = null, ?string $clientHintModel = null, ?string $ip = null, string $via = 'setup'): string
     {
+        $replacedDevice = $this->tokens()->where('name', 'like', 'kiosk:%')->exists()
+            ? ['previous_ip' => $this->linked_ip, 'previous_online' => $this->isReportingNow(), 'seconds_since_heartbeat' => $this->last_heartbeat_at?->diffInSeconds(now(), true)]
+            : null;
+
         $this->tokens()->where('name', 'like', 'kiosk:%')->delete();
 
         $attributes = [
@@ -1272,7 +1277,66 @@ class Terminal extends Model implements AuthenticatableContract
 
         TerminalEvent::record($this, 'linked', ['via' => $via, 'ip' => $ip]);
 
+        if ($replacedDevice) {
+            $this->recordDeviceReplaced($replacedDevice, $ip, $preparedById);
+        }
+
         return $this->createToken('kiosk:'.$this->code, [self::SYNC_ABILITY])->plainTextToken;
+    }
+
+    /** Segundos desde el último latido por debajo de los cuales el dispositivo vinculado se considera en línea (late cada ~90 s). */
+    public const HEARTBEAT_ACTIVE_SECONDS = 180;
+
+    /** Indica si el dispositivo vinculado está en línea ahora (último latido de hace menos de `HEARTBEAT_ACTIVE_SECONDS`). */
+    public function isReportingNow(): bool
+    {
+        return $this->last_heartbeat_at instanceof Carbon
+            && $this->last_heartbeat_at->gt(now()->subSeconds(self::HEARTBEAT_ACTIVE_SECONDS));
+    }
+
+    /**
+     * Resumen en texto del dispositivo vinculado hoy (marca y modelo, IP y cuándo se vinculó y lateó por última vez),
+     * para decidir con datos antes de reemplazarlo. Sin escapar: quien lo muestre como HTML debe aplicar `e()`.
+     */
+    public function currentDeviceSummary(): string
+    {
+        $device = trim(($this->device_brand ?? '').' '.($this->device_model ?? ''));
+
+        return implode(' — ', array_filter([
+            $device !== '' ? $device : 'dispositivo sin identificar',
+            $this->linked_ip ? 'IP '.$this->linked_ip : null,
+            $this->linked_at ? 'vinculado '.$this->linked_at->diffForHumans() : null,
+            'último latido '.($this->last_heartbeat_at?->diffForHumans() ?? 'nunca'),
+        ]));
+    }
+
+    /**
+     * Deja en la bitácora que un dispositivo nuevo reemplazó al anterior y, si el anterior seguía en línea, avisa a
+     * quienes administran terminales (menos a quien dejó listo el vínculo, que ya lo sabe). Best-effort: un fallo del
+     * mailer no debe invalidar una vinculación ya persistida.
+     *
+     * @param  array{previous_ip: string|null, previous_online: bool, seconds_since_heartbeat: int|float|null}  $previous
+     */
+    private function recordDeviceReplaced(array $previous, ?string $newIp, ?int $preparedById): void
+    {
+        TerminalEvent::record($this, 'device_replaced', array_filter([
+            'ip' => $newIp,
+            'previous_ip' => $previous['previous_ip'],
+            'previous_online' => $previous['previous_online'],
+            'seconds_since_heartbeat' => $previous['seconds_since_heartbeat'] !== null ? (int) $previous['seconds_since_heartbeat'] : null,
+        ], fn ($value) => $value !== null));
+
+        if (! $previous['previous_online']) {
+            return;
+        }
+
+        try {
+            static::managers()
+                ->reject(fn (User $user) => $user->id === $preparedById)
+                ->each(fn (User $user) => $user->notify(new TerminalDeviceReplacedNotification($this, $previous['previous_ip'], $newIp)));
+        } catch (\Throwable $e) {
+            Log::warning("No se pudo notificar el reemplazo de dispositivo del terminal '{$this->code}': {$e->getMessage()}", ['terminal_id' => $this->id]);
+        }
     }
 
     /**
