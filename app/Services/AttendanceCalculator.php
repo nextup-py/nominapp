@@ -243,7 +243,7 @@ class AttendanceCalculator
             [$totalHours, $netHours] = self::calculateWorkedHours($checkIn, $checkOut, $breakMinutes);
         }
         $day->total_hours = $totalHours;
-        $day->net_hours = $netHours;
+        $day->net_hours = self::deductUnmarkedBreak($day, $netHours, $breakMinutes);
 
         // Calcular horas extra (basado en expected_hours guardadas).
         // Si el día tiene ajuste manual, respetar los valores cargados por el supervisor.
@@ -386,6 +386,21 @@ class AttendanceCalculator
         $netMinutes = max(0, $totalMinutes - $breakMinutes);
 
         return [round($totalMinutes / 60, 2), round($netMinutes / 60, 2)];
+    }
+
+    /**
+     * Cargos que no marcan descanso: si no hay descanso real ese día, las horas netas descuentan el descanso del
+     * horario (`expected_break_minutes`). Solo afecta `net_hours`; las horas extra y la nómina usan el tiempo corrido.
+     */
+    private static function deductUnmarkedBreak(AttendanceDay $day, ?float $netHours, int $breakMinutes): ?float
+    {
+        $scheduled = (int) $day->expected_break_minutes;
+
+        if ($netHours === null || $breakMinutes > 0 || $scheduled <= 0 || $day->employee?->marksBreaks() !== false) {
+            return $netHours;
+        }
+
+        return max(0, round($netHours - $scheduled / 60, 2));
     }
 
     /**
@@ -591,6 +606,10 @@ class AttendanceCalculator
      */
     public static function hasScheduledBreak(Employee $employee, \Carbon\Carbon $date): bool
     {
+        if (! $employee->marksBreaks()) {
+            return false;
+        }
+
         $shift = self::resolveShiftDataFor($employee, $date);
 
         return $shift['check_in'] === null || (int) ($shift['break_minutes'] ?? 0) > 0;
@@ -682,8 +701,15 @@ class AttendanceCalculator
 
         $dayOfWeek = $date->dayOfWeekIso;
         $result = [];
+        $withoutBreaks = Employee::query()->whereIn('employees.id', $employeeIds)->cargoWithoutBreaks()->pluck('employees.id')->flip();
 
         foreach ($employees as $employee) {
+            if ($withoutBreaks->has($employee->id)) {
+                $result[$employee->id] = false;
+
+                continue;
+            }
+
             $override = $overrides->get($employee->id);
             if ($override) {
                 $shift = $override->shift;

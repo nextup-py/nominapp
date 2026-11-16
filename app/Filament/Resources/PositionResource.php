@@ -9,6 +9,7 @@ use App\Models\Position;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Infolists\Components\Section as InfoSection;
@@ -95,6 +96,12 @@ class PositionResource extends Resource
                             ->columnSpan(1),
 
                         MobileMarkingFields::select('Valor para quienes ocupan este cargo y no tengan el suyo propio. «Heredar» usa el de la sucursal, la empresa o el valor general. Ej.: «Sí» para Supervisores y Gerentes.')
+                            ->columnSpan(1),
+
+                        Toggle::make('marks_breaks')
+                            ->label('Marca descanso')
+                            ->default(true)
+                            ->helperText('Desactivar para cargos que no marcan descanso (ej. repartidores en ruta): no se les ofrece «Inicio descanso» y las horas netas descuentan el descanso de su horario.')
                             ->columnSpan(1),
 
                         Select::make('terminal_access')
