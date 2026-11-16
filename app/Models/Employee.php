@@ -1444,12 +1444,13 @@ class Employee extends Model implements AuthenticatableContract
     /**
      * Permiso efectivo de marcación móvil y el nivel que lo define.
      *
-     * @return array{allowed: bool, source: 'employee'|'branch'|'company'|'general'}
+     * @return array{allowed: bool, source: 'employee'|'position'|'branch'|'company'|'general'}
      */
     public function mobileMarkingSource(): array
     {
         foreach ([
             'employee' => $this,
+            'position' => $this->activeContract?->position,
             'branch' => $this->branch,
             'company' => $this->branch?->company,
         ] as $source => $model) {
@@ -1464,7 +1465,7 @@ class Employee extends Model implements AuthenticatableContract
     /** @return array<string, string> Nivel que define el permiso → etiqueta para mostrar «(de la sucursal)», etc. */
     public static function getMobileMarkingSourceLabels(): array
     {
-        return ['employee' => 'propio', 'branch' => 'de la sucursal', 'company' => 'de la empresa', 'general' => 'general'];
+        return ['employee' => 'propio', 'position' => 'del cargo', 'branch' => 'de la sucursal', 'company' => 'de la empresa', 'general' => 'general'];
     }
 
     /** Permiso de marcación desde el celular con su origen, por ejemplo «Sí» o «No (de la sucursal)». */
@@ -1510,6 +1511,7 @@ class Employee extends Model implements AuthenticatableContract
 
         return $query->whereRaw(
             'COALESCE(employees.mobile_marking_allowed, '
+            .'(SELECT p.mobile_marking_allowed FROM contracts ct JOIN positions p ON p.id = ct.position_id WHERE ct.employee_id = employees.id AND ct.status IN (\'active\', \'suspended\') ORDER BY ct.start_date DESC, ct.id DESC LIMIT 1), '
             .'(SELECT b.mobile_marking_allowed FROM branches b WHERE b.id = employees.branch_id), '
             .'(SELECT c.mobile_marking_allowed FROM branches b2 JOIN companies c ON c.id = b2.company_id WHERE b2.id = employees.branch_id), '
             .'?) = ?',
