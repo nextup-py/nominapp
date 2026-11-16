@@ -252,7 +252,7 @@ class AttendanceEventSyncService
 
         $branchMismatch = $terminal->branch_id
             && $employee->branch_id
-            && $terminal->branch_id !== $employee->branch_id;
+            && ! $employee->canMarkAtBranch($terminal->branch_id);
 
         $event = $day->events()->create([
             'client_event_id' => $clientEventId,
