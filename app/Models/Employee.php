@@ -1462,6 +1462,23 @@ class Employee extends Model implements AuthenticatableContract
         return ['allowed' => (bool) app(GeneralSettings::class)->attendance_mobile_marking_default, 'source' => 'general'];
     }
 
+    /**
+     * Indica si el empleado marca descanso: false cuando el cargo de su contrato vigente tiene `marks_breaks = false`
+     * (ej. repartidores en ruta). Sin cargo o sin contrato, marca. Mantener en sincronía con `scopeCargoWithoutBreaks()`.
+     */
+    public function marksBreaks(): bool
+    {
+        return $this->activeContract?->position?->marks_breaks !== false;
+    }
+
+    /** Empleados cuyo cargo (contrato vigente: activo o suspendido, el más reciente) no marca descanso. */
+    public function scopeCargoWithoutBreaks(Builder $query): Builder
+    {
+        return $query->whereRaw(
+            '(SELECT p.marks_breaks FROM contracts ct JOIN positions p ON p.id = ct.position_id WHERE ct.employee_id = employees.id AND ct.status IN (\'active\', \'suspended\') ORDER BY ct.start_date DESC, ct.id DESC LIMIT 1) = 0'
+        );
+    }
+
     /** @return array<string, string> Nivel que define el permiso → etiqueta para mostrar «(de la sucursal)», etc. */
     public static function getMobileMarkingSourceLabels(): array
     {

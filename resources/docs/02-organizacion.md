@@ -134,6 +134,7 @@ Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse
 **Permisos de marcación por cargo:** el formulario del cargo tiene dos campos que se aplican a todos los que lo ocupan, incluidos los que se incorporen después:
 
 - **Marcación desde el celular** (Heredar / Sí / No): ver **Quién puede marcar desde el celular** en el capítulo de Asistencias.
+- **Marca descanso**: activado de fábrica. Se desactiva para los cargos que no marcan descanso (por ejemplo, repartidores en ruta): al terminal y al celular ya no les aparece **Inicio descanso**, aunque el horario del empleado tenga descanso, y las **horas netas** de los reportes descuentan el descanso del horario cuando ese día no marcó uno real. Las horas extra y la nómina no cambian.
 - **Marcación en terminales**: **Solo en su sucursal** (de fábrica), **En su sucursal y en las que se elijan** (aparece el campo **Sucursales adicionales**) o **En cualquier sucursal**. Sirve, por ejemplo, para que los Supervisores marquen en el terminal de cualquier local. Ver **Marcar en el terminal de otra sucursal** en el capítulo de Asistencias.
 
 > Departamentos y cargos también pueden crearse directamente desde el formulario de contrato del empleado, sin salir de la pantalla.

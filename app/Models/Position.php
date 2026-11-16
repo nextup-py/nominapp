@@ -16,6 +16,7 @@ class Position extends Model
         'parent_id',
         'mobile_marking_allowed',
         'terminal_access',
+        'marks_breaks',
     ];
 
     public const TERMINAL_OWN = 'own';
@@ -27,7 +28,7 @@ class Position extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['mobile_marking_allowed' => 'boolean'];
+        return ['mobile_marking_allowed' => 'boolean', 'marks_breaks' => 'boolean'];
     }
 
     protected static function booted(): void
