@@ -45,6 +45,16 @@ it('deploy.sh ofrece los tres modos y la copia a temporal', function () {
         ->and($content)->toContain('RESTAURAR');
 });
 
+it('deploy.sh rota cron.log y avisa de los logs y del modo debug', function () {
+    $content = file_get_contents(dirname(__DIR__, 2).'/scripts/cpanel/deploy.sh');
+
+    expect($content)->toContain('verificar|actualizar|restaurar|logs')
+        ->and($content)->toContain('rotate_logs()')
+        ->and($content)->toContain('check_logs()')
+        ->and($content)->toContain('LOG_LEVEL=debug')
+        ->and($content)->toContain('APP_DEBUG=true');
+});
+
 it('el archivo de configuración de ejemplo define lo obligatorio', function () {
     $content = file_get_contents(dirname(__DIR__, 2).'/'.'scripts/cpanel/deploy.conf.example');
 

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Resources\PositionResource\Pages;
 use App\Filament\Resources\PositionResource\RelationManagers;
 use App\Models\Position;
@@ -91,6 +92,9 @@ class PositionResource extends Resource
                             ->searchable()
                             ->native(false)
                             ->helperText('Seleccione el cargo al que este puesto reporta directamente')
+                            ->columnSpan(1),
+
+                        MobileMarkingFields::select('Valor para quienes ocupan este cargo y no tengan el suyo propio. «Heredar» usa el de la sucursal, la empresa o el valor general. Ej.: «Sí» para Supervisores y Gerentes.')
                             ->columnSpan(1),
                     ])
                     ->columns(2),

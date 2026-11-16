@@ -764,8 +764,14 @@ class EmployeeResource extends Resource
             InfoSection::make('Marcación desde el celular')
                 ->description('Por defecto se marca solo desde el terminal. Si el empleado necesita su celular, se habilita con «Habilitar celular» (arriba) o desde Editar.')
                 ->icon('heroicon-o-device-phone-mobile')
-                ->columns(3)
+                ->columns(4)
                 ->schema([
+                    TextEntry::make('_mobile_status')
+                        ->label('Estado del celular')
+                        ->getStateUsing(fn (Employee $record) => Employee::getMobileStatusLabels()[$record->mobileStatus()])
+                        ->badge()
+                        ->color(fn (Employee $record) => Employee::getMobileStatusColors()[$record->mobileStatus()]),
+
                     TextEntry::make('_mobile_marking')
                         ->label('Puede marcar desde el celular')
                         ->getStateUsing(fn (Employee $record) => $record->mobileMarkingLabel())
@@ -875,6 +881,16 @@ class EmployeeResource extends Resource
                     ->badge()
                     ->color('info')
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('mobile_status')
+                    ->label('Celular')
+                    ->getStateUsing(fn (Employee $record): string => Employee::getMobileStatusLabels()[$record->mobileStatus()])
+                    ->badge()
+                    ->color(fn (Employee $record): string => Employee::getMobileStatusColors()[$record->mobileStatus()])
+                    ->tooltip(fn (Employee $record): ?string => $record->mobile_last_heartbeat_at
+                        ? 'Última conexión: '.$record->mobile_last_heartbeat_at->format('d/m/Y H:i')
+                        : null)
+                    ->toggleable(),
 
                 TextColumn::make('mobile_marking_allowed')
                     ->label('Marca desde el celular')
@@ -1021,6 +1037,13 @@ class EmployeeResource extends Resource
                         blank: fn (Builder $query) => $query,
                     ),
 
+                SelectFilter::make('mobile_status')
+                    ->label('Estado del celular')
+                    ->options(Employee::getMobileStatusLabels())
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->mobileStatus($data['value'])
+                        : $query),
+
                 SelectFilter::make('privacy_consent')
                     ->label('Aviso de privacidad')
                     ->options([
@@ -1072,6 +1095,7 @@ class EmployeeResource extends Resource
             ->actions([
                 ActionGroup::make([
                     ScheduleAssignmentActions::row(),
+                    ...MobileMarkingFields::rowActions(),
 
                     Action::make('capture_face')
                         ->label(fn (Employee $record): string => $record->has_face ? 'Re-enrolar rostro' : 'Enrolar rostro')

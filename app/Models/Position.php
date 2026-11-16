@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\MobileMarkingService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Collection;
 
 class Position extends Model
 {
@@ -11,7 +13,25 @@ class Position extends Model
         'name',
         'department_id',
         'parent_id',
+        'mobile_marking_allowed',
     ];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['mobile_marking_allowed' => 'boolean'];
+    }
+
+    protected static function booted(): void
+    {
+        static::updated(function (Position $position): void {
+            if ($position->wasChanged('mobile_marking_allowed')) {
+                MobileMarkingService::revokeDisallowed(
+                    Employee::query()->whereHas('activeContract', fn ($q) => $q->where('position_id', $position->id))
+                );
+            }
+        });
+    }
 
     public function department()
     {
@@ -49,7 +69,7 @@ class Position extends Model
     /**
      * Obtiene todos los descendientes de forma recursiva.
      */
-    public function getAllDescendants(): \Illuminate\Support\Collection
+    public function getAllDescendants(): Collection
     {
         $descendants = collect();
 
@@ -103,8 +123,9 @@ class Position extends Model
             ->mapWithKeys(function ($position) {
                 $label = $position->name;
                 if ($position->department) {
-                    $label .= ' - ' . $position->department->name;
+                    $label .= ' - '.$position->department->name;
                 }
+
                 return [$position->id => $label];
             })
             ->toArray();

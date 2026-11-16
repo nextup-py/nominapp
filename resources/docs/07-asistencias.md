@@ -19,6 +19,7 @@ Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que 
 | **Ausencias por revisar** | Ausencias en estado *Pendiente* | **Ausencias**, pestaña *Pendientes* |
 | **Fallos de marcación** | Fallos *Pendientes* que se pueden resolver (no cuenta los rostros no reconocidos) | **Fallos de marcación**, pestaña *Para revisar* |
 | **Empleados sin horario** | Empleados activos sin horario fijo, rotación ni turnos planificados (no se les calculan horas, tardanzas ni ausencias) | **Empleados**, filtro *Sin horario asignado* (acción **Asignar horario**) |
+| **Celulares habilitados sin vincular** | Empleados activos habilitados para marcar desde el celular que todavía no vincularon el suyo (no pueden marcar hasta que lo hagan) | **Empleados**, filtro *Estado del celular* = *Habilitado, sin vincular* (acción **Avisar por WhatsApp** al habilitar, o pedirles que abran el enlace de vinculación) |
 | **Contratos vencidos sin renovar** | Empleados activos cuyo contrato venció y que no tienen otro vigente (siguen cobrando y marcando hasta que se renueve o termine el contrato) | **Empleados**, filtro *Contrato vencido sin renovar* (acciones **Renovar** o **Terminar** desde el contrato) |
 
 - Las tres primeras tarjetas consideran solo los últimos 30 días; lo más viejo se revisa desde el listado completo.
@@ -94,16 +95,29 @@ A diferencia de la terminal compartida, el dispositivo personal (celular o table
 
 ### Quién puede marcar desde el celular
 
-El campo **Marcación desde el celular** tiene tres valores: **Heredar**, **Sí, puede marcar desde el celular** y **No, solo desde el terminal**. Se define en cuatro niveles y gana el más específico:
+El campo **Marcación desde el celular** tiene tres valores: **Heredar**, **Sí, puede marcar desde el celular** y **No, solo desde el terminal**. Se define en cinco niveles y gana el más específico (**Heredar** significa «que decida el nivel siguiente»):
 
 1. La ficha del **empleado** (sección **Asignación Laboral**).
-2. La **sucursal** (sección **Información general**).
-3. La **empresa** (sección **Configuración**).
-4. **Configuración → Configuración General → Configuración Laboral → Permitir marcar desde el celular por defecto** (apagado de fábrica: solo terminal).
+2. El **cargo** (**Organización → Cargos**, campo **Marcación desde el celular**): sirve para habilitar de una vez a todos los Supervisores o Gerentes, incluidos los que se incorporen después. Se toma el cargo del contrato vigente del empleado.
+3. La **sucursal** (sección **Información general**).
+4. La **empresa** (sección **Configuración**).
+5. **Configuración → Configuración General → Configuración Laboral → Permitir marcar desde el celular por defecto** (apagado de fábrica: solo terminal).
 
-En **Empleados** se ve la columna **Marca desde el celular** (con el nivel que la define, por ejemplo «No (de la sucursal)») y el filtro **Marcación desde el celular**. Para cambiar varios a la vez: seleccionar y usar la acción masiva **Marcación desde el celular**.
+En **Empleados** se ve la columna **Marca desde el celular** (con el nivel que la define, por ejemplo «No (de la sucursal)») y el filtro **Marcación desde el celular**. Para cambiar varios a la vez: seleccionar y usar la acción masiva **Marcación desde el celular**. Para una sola persona, sin abrir la ficha: en el menú de acciones de la fila, **Habilitar celular** / **Deshabilitar celular** (pide confirmación) y, cuando ya puede marcar pero todavía no vinculó su celular, **Avisar por WhatsApp (vincular celular)**.
 
-- Al **deshabilitar** a un empleado (o a su sucursal o empresa) se **revoca en el momento** su celular vinculado; el celular deja de marcar en su próxima conexión.
+**Estado del celular.** La columna **Celular** del listado de Empleados (también en la ficha, como **Estado del celular**) y su filtro **Estado del celular** resumen en qué punto está cada persona:
+
+| Estado | Qué significa | Qué hacer |
+|--------|---------------|-----------|
+| **No habilitado** | No puede marcar desde el celular (solo desde el terminal) | Nada, salvo que lo necesite: **Habilitar celular** |
+| **Habilitado, sin vincular** | Tiene el permiso pero todavía no vinculó su celular | Pedirle que abra el enlace de vinculación (el botón **Avisar por WhatsApp** de **Habilitar celular** lo envía) |
+| **Vinculado, sin conexión** | Vinculó el celular pero todavía no se conectó | Pedirle que abra la app de marcación una vez |
+| **Activo** | Se conectó en los últimos 7 días | Nada |
+| **Sin uso reciente** | Lleva más de 7 días sin conectarse | Revisar si todavía lo usa; si perdió el celular, **Revocar** el dispositivo |
+
+Al pasar el cursor sobre el estado se ve la fecha de la última conexión. **Estos estados no generan avisos**: un celular duerme y solo informa mientras la app está abierta, así que «sin uso reciente» no es una falla. Los habilitados sin vincular aparecen en la tarjeta **Celulares habilitados sin vincular** de **Por resolver**.
+
+- Al **deshabilitar** a un empleado (o a su cargo, sucursal o empresa) se **revoca en el momento** su celular vinculado; el celular deja de marcar en su próxima conexión.
 - Si alguien sin permiso intenta vincular su celular, ve el mensaje «Tu usuario no está habilitado para marcar desde el celular» y RR.HH. recibe el aviso **Vinculación de celular sin permiso** (no se repite mientras no se lea).
 
 **Habilitar a una persona en pocos pasos:** desde el aviso de la campanita, **Ver empleado y habilitar** abre su ficha. Ahí, el botón **Habilitar celular** (arriba, junto a **Editar**) pide confirmación y le da el permiso solo a esa persona. Al terminar aparece el aviso **Celular habilitado** con el botón **Avisar por WhatsApp**, que abre un mensaje listo para enviarle con el enlace de vinculación y lo que tiene que hacer (cédula y fecha de nacimiento). El botón solo aparece si el empleado está activo, todavía no puede marcar desde el celular y quien mira tiene permiso para editar empleados. La ficha tiene además la sección **Marcación desde el celular**: si puede marcar (y de dónde sale ese permiso), si ya tiene un celular vinculado y cuándo se conectó por última vez.

@@ -1441,12 +1441,13 @@ class Employee extends Model implements AuthenticatableContract
     /**
      * Permiso efectivo de marcación móvil y el nivel que lo define.
      *
-     * @return array{allowed: bool, source: 'employee'|'branch'|'company'|'general'}
+     * @return array{allowed: bool, source: 'employee'|'position'|'branch'|'company'|'general'}
      */
     public function mobileMarkingSource(): array
     {
         foreach ([
             'employee' => $this,
+            'position' => $this->activeContract?->position,
             'branch' => $this->branch,
             'company' => $this->branch?->company,
         ] as $source => $model) {
@@ -1461,7 +1462,7 @@ class Employee extends Model implements AuthenticatableContract
     /** @return array<string, string> Nivel que define el permiso → etiqueta para mostrar «(de la sucursal)», etc. */
     public static function getMobileMarkingSourceLabels(): array
     {
-        return ['employee' => 'propio', 'branch' => 'de la sucursal', 'company' => 'de la empresa', 'general' => 'general'];
+        return ['employee' => 'propio', 'position' => 'del cargo', 'branch' => 'de la sucursal', 'company' => 'de la empresa', 'general' => 'general'];
     }
 
     /** Permiso de marcación desde el celular con su origen, por ejemplo «Sí» o «No (de la sucursal)». */
@@ -1507,6 +1508,7 @@ class Employee extends Model implements AuthenticatableContract
 
         return $query->whereRaw(
             'COALESCE(employees.mobile_marking_allowed, '
+            .'(SELECT p.mobile_marking_allowed FROM contracts ct JOIN positions p ON p.id = ct.position_id WHERE ct.employee_id = employees.id AND ct.status IN (\'active\', \'suspended\') ORDER BY ct.start_date DESC, ct.id DESC LIMIT 1), '
             .'(SELECT b.mobile_marking_allowed FROM branches b WHERE b.id = employees.branch_id), '
             .'(SELECT c.mobile_marking_allowed FROM branches b2 JOIN companies c ON c.id = b2.company_id WHERE b2.id = employees.branch_id), '
             .'?) = ?',
@@ -1518,5 +1520,71 @@ class Employee extends Model implements AuthenticatableContract
     public function hasMobileLinked(): bool
     {
         return $this->mobile_linked_at !== null;
+    }
+
+    /** Días sin conectarse a partir de los cuales un celular vinculado se considera sin uso reciente. */
+    public const MOBILE_INACTIVE_DAYS = 7;
+
+    /**
+     * Estado del celular personal: no habilitado, habilitado sin vincular, vinculado sin conexión todavía, activo
+     * (se conectó en los últimos `MOBILE_INACTIVE_DAYS` días) o sin uso reciente. No hay alertas: un celular duerme
+     * y solo informa mientras la app está abierta, así que "sin conexión" es lo normal y no una falla.
+     *
+     * @return 'not_enabled'|'pending_link'|'never_connected'|'active'|'inactive'
+     */
+    public function mobileStatus(): string
+    {
+        if (! $this->hasMobileLinked()) {
+            return $this->canMarkFromMobile() ? 'pending_link' : 'not_enabled';
+        }
+
+        if ($this->mobile_last_heartbeat_at === null) {
+            return 'never_connected';
+        }
+
+        return $this->mobile_last_heartbeat_at->lt(now()->subDays(self::MOBILE_INACTIVE_DAYS)) ? 'inactive' : 'active';
+    }
+
+    /** @return array<string, string> */
+    public static function getMobileStatusLabels(): array
+    {
+        return [
+            'not_enabled' => 'No habilitado',
+            'pending_link' => 'Habilitado, sin vincular',
+            'never_connected' => 'Vinculado, sin conexión',
+            'active' => 'Activo',
+            'inactive' => 'Sin uso reciente',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function getMobileStatusColors(): array
+    {
+        return [
+            'not_enabled' => 'gray',
+            'pending_link' => 'warning',
+            'never_connected' => 'warning',
+            'active' => 'success',
+            'inactive' => 'info',
+        ];
+    }
+
+    /**
+     * Filtra por el estado del celular (misma definición que `mobileStatus()`, resuelta en SQL).
+     *
+     * @param  Builder<Employee>  $query
+     * @return Builder<Employee>
+     */
+    public function scopeMobileStatus(Builder $query, string $status): Builder
+    {
+        $cutoff = now()->subDays(self::MOBILE_INACTIVE_DAYS);
+
+        return match ($status) {
+            'pending_link' => $query->whereNull('employees.mobile_linked_at')->mobileMarking(true),
+            'never_connected' => $query->whereNotNull('employees.mobile_linked_at')->whereNull('employees.mobile_last_heartbeat_at'),
+            'active' => $query->whereNotNull('employees.mobile_linked_at')->where('employees.mobile_last_heartbeat_at', '>=', $cutoff),
+            'inactive' => $query->whereNotNull('employees.mobile_linked_at')->where('employees.mobile_last_heartbeat_at', '<', $cutoff),
+            default => $query->whereNull('employees.mobile_linked_at')->mobileMarking(false),
+        };
     }
 }

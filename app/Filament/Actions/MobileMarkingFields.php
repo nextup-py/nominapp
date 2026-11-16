@@ -8,6 +8,7 @@ use App\Services\MobileMarkingService;
 use App\Settings\GeneralSettings;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkAction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -66,13 +67,59 @@ class MobileMarkingFields
     public static function inheritedLabel(?Model $model): string
     {
         $parent = match (true) {
-            $model instanceof Employee => $model->branch?->mobile_marking_allowed
+            $model instanceof Employee => $model->activeContract?->position?->mobile_marking_allowed
+                ?? $model->branch?->mobile_marking_allowed
                 ?? $model->branch?->company?->mobile_marking_allowed,
             $model instanceof Branch => $model->company?->mobile_marking_allowed,
             default => null,
         };
 
         return ($parent ?? app(GeneralSettings::class)->attendance_mobile_marking_default) ? 'Sí' : 'No';
+    }
+
+    /**
+     * Acciones de fila de Empleados: alternar el permiso propio con un clic y avisar por WhatsApp a quien
+     * ya puede marcar pero todavía no vinculó su celular.
+     *
+     * @return array<int, Action>
+     */
+    public static function rowActions(): array
+    {
+        return [
+            Action::make('toggle_mobile_marking')
+                ->label(fn (Employee $record): string => $record->canMarkFromMobile() ? 'Deshabilitar celular' : 'Habilitar celular')
+                ->icon('heroicon-o-device-phone-mobile')
+                ->color(fn (Employee $record): string => $record->canMarkFromMobile() ? 'gray' : 'info')
+                ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
+                ->visible(fn (Employee $record): bool => $record->status === 'active')
+                ->requiresConfirmation()
+                ->modalHeading(fn (Employee $record): string => $record->canMarkFromMobile() ? 'Deshabilitar la marcación desde el celular' : 'Habilitar la marcación desde el celular')
+                ->modalDescription(fn (Employee $record): string => $record->canMarkFromMobile()
+                    ? "{$record->full_name} hoy puede marcar desde el celular ({$record->mobileMarkingLabel()}). Se le pondrá «No» y, si ya vinculó su celular, se revocará."
+                    : "Hoy {$record->full_name} no puede marcar desde el celular ({$record->mobileMarkingLabel()}). Se habilitará solo para esta persona.")
+                ->modalSubmitActionLabel('Sí, aplicar')
+                ->action(function (Employee $record): void {
+                    $enable = ! $record->canMarkFromMobile();
+                    $record->update(['mobile_marking_allowed' => $enable]);
+
+                    Notification::make()
+                        ->success()
+                        ->title($enable ? 'Celular habilitado' : 'Celular deshabilitado')
+                        ->body($enable ? "{$record->full_name} ya puede vincular su celular." : "{$record->full_name} ya no puede marcar desde el celular.")
+                        ->send();
+                }),
+
+            Action::make('whatsapp_mobile_link')
+                ->label('Avisar por WhatsApp (vincular celular)')
+                ->icon('heroicon-o-chat-bubble-left-right')
+                ->color('success')
+                ->visible(fn (Employee $record): bool => $record->status === 'active'
+                    && $record->canMarkFromMobile()
+                    && ! $record->hasMobileLinked()
+                    && filled($record->mobileLinkWhatsappUrl()))
+                ->url(fn (Employee $record): ?string => $record->mobileLinkWhatsappUrl())
+                ->openUrlInNewTab(),
+        ];
     }
 
     /** Acción masiva de Empleados: fija el permiso de los seleccionados y revoca los celulares que dejan de estar habilitados. */
