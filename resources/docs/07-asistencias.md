@@ -60,16 +60,17 @@ A diferencia de la terminal compartida, el dispositivo personal (celular o table
 
 ### Quién puede marcar desde el celular
 
-El campo **Marcación desde el celular** tiene tres valores: **Heredar**, **Sí, puede marcar desde el celular** y **No, solo desde el terminal**. Se define en cuatro niveles y gana el más específico:
+El campo **Marcación desde el celular** tiene tres valores: **Heredar**, **Sí, puede marcar desde el celular** y **No, solo desde el terminal**. Se define en cinco niveles y gana el más específico (**Heredar** significa «que decida el nivel siguiente»):
 
 1. La ficha del **empleado** (sección **Asignación Laboral**).
-2. La **sucursal** (sección **Información general**).
-3. La **empresa** (sección **Configuración**).
-4. **Configuración → Configuración General → Configuración Laboral → Permitir marcar desde el celular por defecto** (apagado de fábrica: solo terminal).
+2. El **cargo** (**Organización → Cargos**, campo **Marcación desde el celular**): sirve para habilitar de una vez a todos los Supervisores o Gerentes, incluidos los que se incorporen después. Se toma el cargo del contrato vigente del empleado.
+3. La **sucursal** (sección **Información general**).
+4. La **empresa** (sección **Configuración**).
+5. **Configuración → Configuración General → Configuración Laboral → Permitir marcar desde el celular por defecto** (apagado de fábrica: solo terminal).
 
-En **Empleados** se ve la columna **Marca desde el celular** (con el nivel que la define, por ejemplo «No (de la sucursal)») y el filtro **Marcación desde el celular**. Para cambiar varios a la vez: seleccionar y usar la acción masiva **Marcación desde el celular**.
+En **Empleados** se ve la columna **Marca desde el celular** (con el nivel que la define, por ejemplo «No (de la sucursal)») y el filtro **Marcación desde el celular**. Para cambiar varios a la vez: seleccionar y usar la acción masiva **Marcación desde el celular**. Para una sola persona, sin abrir la ficha: en el menú de acciones de la fila, **Habilitar celular** / **Deshabilitar celular** (pide confirmación) y, cuando ya puede marcar pero todavía no vinculó su celular, **Avisar por WhatsApp (vincular celular)**.
 
-- Al **deshabilitar** a un empleado (o a su sucursal o empresa) se **revoca en el momento** su celular vinculado; el celular deja de marcar en su próxima conexión.
+- Al **deshabilitar** a un empleado (o a su cargo, sucursal o empresa) se **revoca en el momento** su celular vinculado; el celular deja de marcar en su próxima conexión.
 - Si alguien sin permiso intenta vincular su celular, ve el mensaje «Tu usuario no está habilitado para marcar desde el celular» y RR.HH. recibe el aviso **Vinculación de celular sin permiso** (no se repite mientras no se lea).
 
 **Habilitar a una persona en pocos pasos:** desde el aviso de la campanita, **Ver empleado y habilitar** abre su ficha. Ahí, el botón **Habilitar celular** (arriba, junto a **Editar**) pide confirmación y le da el permiso solo a esa persona. Al terminar aparece el aviso **Celular habilitado** con el botón **Avisar por WhatsApp**, que abre un mensaje listo para enviarle con el enlace de vinculación y lo que tiene que hacer (cédula y fecha de nacimiento). El botón solo aparece si el empleado está activo, todavía no puede marcar desde el celular y quien mira tiene permiso para editar empleados. La ficha tiene además la sección **Marcación desde el celular**: si puede marcar (y de dónde sale ese permiso), si ya tiene un celular vinculado y cuándo se conectó por última vez.

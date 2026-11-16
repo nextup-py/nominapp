@@ -1072,6 +1072,7 @@ class EmployeeResource extends Resource
             ->actions([
                 ActionGroup::make([
                     ScheduleAssignmentActions::row(),
+                    ...MobileMarkingFields::rowActions(),
 
                     Action::make('capture_face')
                         ->label(fn (Employee $record): string => $record->has_face ? 'Re-enrolar rostro' : 'Enrolar rostro')
