@@ -7,6 +7,7 @@ use App\Models\Terminal;
 use App\Models\TerminalEvent;
 use App\Models\TerminalPairingRequest;
 use App\Models\User;
+use App\Notifications\TerminalLinkLostNotification;
 use App\Notifications\TerminalPairingRequestedNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +24,12 @@ use Illuminate\Support\Str;
  */
 class TerminalPairingService
 {
+    /** Minutos durante los cuales una pérdida de vínculo del mismo terminal no se vuelve a registrar ni avisar. */
+    public const LINK_LOST_DEDUPE_MINUTES = 30;
+
+    /** Segundos sin latido a partir de los cuales una solicitud con acceso vigente se toma como pérdida de vínculo (el terminal late cada ~90 s; menos que eso es otro dispositivo pidiendo mientras el verdadero sigue en línea). */
+    public const LINK_LOST_MIN_SILENCE_SECONDS = 180;
+
     /**
      * Crea una solicitud de vinculación para el terminal.
      *
@@ -30,13 +37,18 @@ class TerminalPairingService
      * pendientes sin carreras: si ya hay `MAX_PENDING_PER_TERMINAL`, vence la
      * más antigua. Notifica a los admins después de confirmar la transacción.
      *
+     * Si el terminal todavía tiene un acceso vigente en el servidor, el dispositivo perdió su copia local (datos
+     * borrados, ventana privada, otro perfil): se registra `link_lost` en la bitácora y se avisa por la campanita.
+     *
+     * @param  array{reason?: string, had_marker?: bool, storage_available?: bool, storage_persisted?: bool|null, storage_quota_mb?: int|null}  $context  Motivo y estado del almacenamiento que informa el dispositivo (opcional).
      * @return array{request: TerminalPairingRequest, poll_secret: string}
      */
-    public function request(Terminal $terminal, ?string $ip, ?string $userAgent, ?string $deviceModelHint): array
+    public function request(Terminal $terminal, ?string $ip, ?string $userAgent, ?string $deviceModelHint, array $context = []): array
     {
         $secret = Str::random(40);
+        $linkLost = false;
 
-        $request = DB::transaction(function () use ($terminal, $ip, $userAgent, $deviceModelHint, $secret) {
+        $request = DB::transaction(function () use ($terminal, $ip, $userAgent, $deviceModelHint, $secret, $context, &$linkLost) {
             $locked = Terminal::query()->whereKey($terminal->id)->lockForUpdate()->firstOrFail();
 
             $pending = $locked->pairingRequests()->pending()->orderBy('created_at')->get();
@@ -62,6 +74,8 @@ class TerminalPairingService
                 'replaces_active_device' => $request->replaces_active_device,
             ]);
 
+            $linkLost = $request->replaces_active_device && $this->recordLinkLost($locked, $ip, $context);
+
             if ($locked->hasOpenLinkWindow()) {
                 $this->autoApprove($request, $locked);
             }
@@ -73,7 +87,51 @@ class TerminalPairingService
             $this->notifyManagers($request);
         }
 
+        if ($linkLost) {
+            $this->notifyLinkLost($terminal, $context);
+        }
+
         return ['request' => $request, 'poll_secret' => $secret];
+    }
+
+    /**
+     * Registra en la bitácora que el dispositivo perdió el vínculo (el servidor sigue con un acceso vigente y aun
+     * así el navegador pide uno nuevo). Un dispositivo en bucle pide un código tras otro: solo cuenta uno por
+     * `LINK_LOST_DEDUPE_MINUTES` para no llenar la bitácora ni la campanita.
+     *
+     * @param  array<string, mixed>  $context
+     * @return bool true si se registró (hay que avisar). False si ya había uno reciente o si el terminal sigue
+     *              latiendo: entonces el dispositivo vinculado está bien y quien pide es otro dispositivo.
+     */
+    private function recordLinkLost(Terminal $terminal, ?string $ip, array $context): bool
+    {
+        $stillReporting = $terminal->last_heartbeat_at !== null
+            && $terminal->last_heartbeat_at->gt(now()->subSeconds(self::LINK_LOST_MIN_SILENCE_SECONDS));
+
+        if ($stillReporting) {
+            return false;
+        }
+
+        $recent = $terminal->events()
+            ->where('type', 'link_lost')
+            ->where('created_at', '>=', now()->subMinutes(self::LINK_LOST_DEDUPE_MINUTES))
+            ->exists();
+
+        if ($recent) {
+            return false;
+        }
+
+        TerminalEvent::record($terminal, 'link_lost', array_filter([
+            'ip' => $ip,
+            'lost_reason' => $context['reason'] ?? null,
+            'had_marker' => $context['had_marker'] ?? null,
+            'storage_available' => $context['storage_available'] ?? null,
+            'storage_persisted' => $context['storage_persisted'] ?? null,
+            'storage_quota_mb' => $context['storage_quota_mb'] ?? null,
+            'seconds_since_heartbeat' => $terminal->last_heartbeat_at ? (int) $terminal->last_heartbeat_at->diffInSeconds(now(), true) : null,
+        ], fn ($value) => $value !== null));
+
+        return true;
     }
 
     /**
@@ -243,6 +301,21 @@ class TerminalPairingService
      * Best-effort: la solicitud ya está persistida, un fallo al notificar no
      * debe romper el endpoint (mismo criterio que `claimSanctumToken()`).
      */
+    /**
+     * Avisa a quienes administran terminales que el dispositivo perdió el vínculo. Best-effort: un fallo del mailer
+     * no debe invalidar la solicitud de vinculación ya creada.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function notifyLinkLost(Terminal $terminal, array $context): void
+    {
+        try {
+            Terminal::managers()->each(fn (User $user) => $user->notify(new TerminalLinkLostNotification($terminal, $context)));
+        } catch (\Throwable $e) {
+            Log::warning("No se pudo notificar la pérdida de vínculo del terminal #{$terminal->id}: {$e->getMessage()}", ['terminal_id' => $terminal->id]);
+        }
+    }
+
     private function notifyManagers(TerminalPairingRequest $request): void
     {
         try {

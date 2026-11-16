@@ -24,6 +24,11 @@
                 <span id="unlinkedLinkHint">Pedí un nuevo enlace de configuración al administrador.</span>
             </div>
 
+            {{-- Aviso cuando el navegador no conserva datos: explica por qué el terminal vuelve a pedir vínculo --}}
+            <div id="unlinkedStorageNotice" class="error-message hidden" role="alert">
+                <span data-storage-notice-text></span>
+            </div>
+
             {{-- Código de emparejamiento: el admin lo tipea al aprobar la vinculación. --}}
             <div id="pairingBlock" class="pairing-block hidden">
                 <p class="pairing-label">Código de vinculación</p>

@@ -49,14 +49,16 @@ function throwIfFailed(response, data) {
  * Crea una solicitud de vinculación para el terminal.
  * @param {string} terminalCode - Código público del terminal (el de la URL /terminal/{code}).
  * @param {string|null} [deviceModelHint] - Modelo detectado vía Client Hints (opcional).
+ * @param {{reason?: string, had_marker?: boolean, storage_available?: boolean, storage_persisted?: boolean|null, storage_quota_mb?: number|null}|null} [context] -
+ *        Por qué el dispositivo está sin vincular y cómo está su almacenamiento (opcional; el servidor lo guarda en la bitácora).
  * @returns {Promise<{ok: boolean, pairing_code: string, poll_secret: string, expires_at: string, poll_interval_seconds: number}>}
  * @throws {PairingError}
  */
-export async function requestPairing(terminalCode, deviceModelHint = null) {
+export async function requestPairing(terminalCode, deviceModelHint = null, context = null) {
     const response = await fetch(API_BASE, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ terminal_code: terminalCode, device_model_hint: deviceModelHint }),
+        body: JSON.stringify({ terminal_code: terminalCode, device_model_hint: deviceModelHint, ...(context ? { context } : {}) }),
     });
     const data = await response.json().catch(() => ({}));
 

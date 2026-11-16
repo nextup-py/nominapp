@@ -26,6 +26,12 @@ class TerminalPairingController extends Controller
         $data = $request->validate([
             'terminal_code' => ['required', 'string', 'max:12'],
             'device_model_hint' => ['nullable', 'string', 'max:100'],
+            'context' => ['nullable', 'array'],
+            'context.reason' => ['nullable', 'string', 'in:no_token,revoked,other_terminal'],
+            'context.had_marker' => ['nullable', 'boolean'],
+            'context.storage_available' => ['nullable', 'boolean'],
+            'context.storage_persisted' => ['nullable', 'boolean'],
+            'context.storage_quota_mb' => ['nullable', 'integer', 'min:0', 'max:100000000'],
         ]);
 
         $terminal = Terminal::where('code', $data['terminal_code'])->first();
@@ -38,7 +44,7 @@ class TerminalPairingController extends Controller
             return $this->inactiveResponse();
         }
 
-        $result = $this->pairing->request($terminal, $request->ip(), $request->userAgent(), $data['device_model_hint'] ?? null);
+        $result = $this->pairing->request($terminal, $request->ip(), $request->userAgent(), $data['device_model_hint'] ?? null, $data['context'] ?? []);
 
         return response()->json([
             'ok' => true,

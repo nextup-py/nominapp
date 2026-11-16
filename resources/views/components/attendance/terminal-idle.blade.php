@@ -30,6 +30,10 @@
                     Actualizar app
                 </button>
             </div>
+            {{-- Aviso cuando el navegador no conserva los datos del terminal (ver terminal/storage-probe.js) --}}
+            <div id="storageNotice" class="idle-install-notice hidden" role="alert">
+                <span data-storage-notice-text></span>
+            </div>
             {{-- Aviso discreto cuando el terminal corre en una pestaña del navegador (ver terminal/install-notice.js) --}}
             <div id="installNotice" class="idle-install-notice hidden" role="note">
                 <span id="installNoticeText"></span>
