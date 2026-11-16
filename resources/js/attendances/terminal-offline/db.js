@@ -259,6 +259,11 @@ export async function countConflictEvents() {
     return genericDb.countConflictEvents(await getDb());
 }
 
+/** Elimina de la cola local los eventos marcados 'conflict' (el servidor ya los tiene como fallo para RR.HH.). */
+export async function dismissConflictEvents() {
+    return genericDb.dismissConflictEvents(await getDb());
+}
+
 // =========================================================================
 // CACHÉ DE ESTADO POR EMPLEADO (employee_status_cache) — delegado
 // =========================================================================

@@ -14,6 +14,7 @@
 
 import {
     getMeta,
+    setMeta,
     queueEvent,
     getPendingEvents,
     getEventsForEmployeeOnDate,
@@ -23,6 +24,7 @@ import {
     incrementQueuedEventAttempts,
     countPendingEvents,
     countConflictEvents,
+    dismissConflictEvents,
     getEmployeeStatusCache,
     setEmployeeStatusCache,
 } from './db.js';
@@ -282,20 +284,25 @@ export async function getExpectedShift(employeeId) {
  * `conflict`, que no cuenta como "pending"). Se espera (await) para que el
  * caller de flushQueue() vea siempre el caché ya corregido, pero nunca deja
  * que un fallo acá tumbe el loop de sincronización de los demás eventos.
- * Las marcaciones «solo para revisión» (`review_only`, ver `enqueueMark()`) no se marcan como conflicto: el servidor ya
- * las dejó como fallo para RR.HH. y conservarlas aquí solo dejaría un aviso permanente en el terminal.
+ * Las marcaciones «solo para revisión» (`review_only`, ver `enqueueMark()`) y las que el servidor responde `conflict`
+ * (secuencia inválida: ya quedaron como fallo `sync_conflict` para RR.HH.) no se marcan como conflicto local: el terminal
+ * no puede resolverlas y conservarlas solo dejaría un aviso permanente de «requieren revisión» que nunca se va.
  * @param {Map<string, number>} employeeIdByClientEventId
  * @param {Set<string>} [reviewOnlyIds]
- * @returns {(clientEventId: string, message?: string) => Promise<void>}
+ * @returns {(clientEventId: string, message?: string, result?: {status: string}) => Promise<void>}
  */
 function onQueuedEventConflict(employeeIdByClientEventId, reviewOnlyIds = new Set()) {
-    return async (clientEventId, message) => {
+    return async (clientEventId, message, result) => {
         if (reviewOnlyIds.has(clientEventId)) {
             await removeQueuedEvent(clientEventId);
             return;
         }
 
-        await markQueuedEventConflict(clientEventId, message);
+        if (result?.status === 'conflict') {
+            await removeQueuedEvent(clientEventId);
+        } else {
+            await markQueuedEventConflict(clientEventId, message);
+        }
 
         const employeeId = employeeIdByClientEventId.get(clientEventId);
         if (employeeId) {
@@ -306,6 +313,25 @@ function onQueuedEventConflict(employeeIdByClientEventId, reviewOnlyIds = new Se
             }
         }
     };
+}
+
+/** Clave de `terminal_meta` que marca que ya se limpiaron los conflictos viejos guardados en este dispositivo. */
+const LEGACY_CONFLICTS_PURGED_KEY = 'legacy_conflicts_purged';
+
+/**
+ * Limpieza única de los conflictos que versiones anteriores dejaban en la cola local para siempre: el servidor ya
+ * los tiene como fallo para RR.HH. y el terminal no puede resolverlos, así que solo mostraban un cartel permanente.
+ * Best-effort: un fallo acá nunca interrumpe la sincronización.
+ * @returns {Promise<void>}
+ */
+async function purgeLegacyConflicts() {
+    try {
+        if (await getMeta(LEGACY_CONFLICTS_PURGED_KEY)) return;
+        await dismissConflictEvents();
+        await setMeta(LEGACY_CONFLICTS_PURGED_KEY, true);
+    } catch {
+        // se reintenta en la próxima sincronización
+    }
 }
 
 /** @type {boolean} Evita que dos flush corran en simultáneo (ej. click manual + timer de fondo). */
@@ -342,6 +368,8 @@ export async function flushQueue() {
     flushInProgress = true;
 
     try {
+        await purgeLegacyConflicts();
+
         const pending = await getPendingEvents();
         if (pending.length === 0) return { synced: 0, conflicts: 0, stillPending: 0, results: [] };
 

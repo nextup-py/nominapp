@@ -212,7 +212,7 @@ Complementa a la conectividad: un terminal puede verse **En línea** y tener mar
 |--------|-------------|
 | **Sin pendientes** | Todas las marcaciones se enviaron |
 | **Con pendientes** | Hay marcaciones guardadas en el dispositivo esperando conexión |
-| **Con conflictos** | Alguna marcación hecha sin conexión fue rechazada al sincronizar. Revisar en **Asistencias → Fallos de Marcación** |
+| **Con conflictos** | Alguna marcación hecha sin conexión fue rechazada al sincronizar por un motivo de formato o de empleado. Revisar en **Asistencias → Fallos de Marcación**. Las que el servidor rechaza porque la secuencia ya no es válida (por ejemplo, un segundo «Inicio descanso» guardado por otro equipo) **no** quedan contadas acá: el terminal las quita de su cola apenas el servidor las registra, y RR.HH. las resuelve en **Fallos de Marcación** |
 
 ### Estado del dispositivo
 
@@ -468,7 +468,7 @@ El terminal se sincroniza solo, pero también se puede forzar desde tres lugares
 | **Sincronizando…** | Hay una sincronización en curso; los botones quedan deshabilitados |
 | **Al día · hace N min** | Todo enviado; indica hace cuánto fue el último contacto con el servidor |
 | **N pendientes de enviar** | Hay marcaciones guardadas en el dispositivo que todavía no llegaron al servidor (punto ámbar en el ícono). Se envían solas al volver la conexión |
-| **N marcaciones requieren revisión** | Hubo conflictos que RR.HH. debe resolver en **Fallos de marcación** (punto rojo) |
+| **N marcaciones requieren revisión** | Hubo marcaciones rechazadas por datos inválidos o empleado no encontrado, que RR.HH. debe resolver en **Fallos de marcación** (punto rojo). Los rechazos por secuencia inválida ya no dejan este aviso fijo en el terminal: quedan solo en **Fallos de marcación** |
 | **No se pudo sincronizar: …** | Indica el motivo: *sin conexión*, *el servidor no respondió* o *el terminal ya no está vinculado* (punto rojo). El aviso se limpia solo cuando vuelve a haber contacto con el servidor |
 
 En el menú **⋮**, debajo del resultado, se ve cuántos empleados tiene descargados el terminal y cuántas marcaciones están pendientes de enviar.
