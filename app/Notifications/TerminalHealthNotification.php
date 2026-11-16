@@ -42,7 +42,7 @@ class TerminalHealthNotification extends Notification
         match ($this->alert) {
             'offline' => $notification
                 ->title('Terminal sin conexión')
-                ->body("El terminal {$name} no reporta hace más de {$this->terminal->effectiveStaleMinutes()} minutos. Causa probable: ".implode(' ', $this->terminal->offlineHints()))
+                ->body("El terminal {$name} no reporta hace más de {$this->terminal->effectiveStaleMinutes()} minutos. Causa probable: ".implode(' ', $this->terminal->offlineHints()).$this->responsibleLine())
                 ->icon('heroicon-o-signal-slash')
                 ->danger(),
             'recovered' => $notification
@@ -103,6 +103,14 @@ class TerminalHealthNotification extends Notification
             'terminal_id' => $this->terminal->id,
             'alert' => $this->alert,
         ];
+    }
+
+    /** Frase final del aviso de desconexión con a quién llamar, vacía si el terminal no tiene responsable cargado. */
+    private function responsibleLine(): string
+    {
+        $contact = $this->terminal->responsibleContact();
+
+        return $contact ? " Responsable del equipo: {$contact}." : '';
     }
 
     /** Clave de este aviso en `NotificationCatalog`. */

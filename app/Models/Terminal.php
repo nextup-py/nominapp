@@ -52,6 +52,9 @@ class Terminal extends Model implements AuthenticatableContract
      */
     public const WATCH_DAY_OPTIONS = [1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo'];
 
+    /** Días de anticipación con los que una garantía se considera «por vencer». */
+    public const WARRANTY_EXPIRING_DAYS = 60;
+
     /** Ability Sanctum requerida para consumir la API de sincronización de terminales. */
     public const SYNC_ABILITY = 'terminal:sync';
 
@@ -65,6 +68,10 @@ class Terminal extends Model implements AuthenticatableContract
         'device_serial',
         'device_mac',
         'device_notes',
+        'responsible_name',
+        'responsible_phone',
+        'purchased_at',
+        'warranty_until',
         'user_agent',
         'installed_at',
         'installed_by_id',
@@ -98,6 +105,8 @@ class Terminal extends Model implements AuthenticatableContract
 
     protected $casts = [
         'installed_at' => 'date',
+        'purchased_at' => 'date',
+        'warranty_until' => 'date',
         'last_seen_at' => 'datetime',
         'last_heartbeat_at' => 'datetime',
         'linked_at' => 'datetime',
@@ -259,6 +268,36 @@ class Terminal extends Model implements AuthenticatableContract
             'stale' => 'danger',
             'off_hours' => 'gray',
             'never_connected' => 'gray',
+        ];
+    }
+
+    /**
+     * Opciones del filtro de garantía del equipo.
+     *
+     * @return array<string, string>
+     */
+    public static function getWarrantyStatusOptions(): array
+    {
+        return [
+            'active' => 'Vigente',
+            'expiring' => 'Por vencer',
+            'expired' => 'Vencida',
+            'unknown' => 'Sin datos de garantía',
+        ];
+    }
+
+    /**
+     * Colores de badge por estado de garantía.
+     *
+     * @return array<string, string>
+     */
+    public static function getWarrantyStatusColors(): array
+    {
+        return [
+            'active' => 'success',
+            'expiring' => 'warning',
+            'expired' => 'danger',
+            'unknown' => 'gray',
         ];
     }
 
@@ -1017,6 +1056,59 @@ class Terminal extends Model implements AuthenticatableContract
     public function getUrlAttribute(): string
     {
         return route('terminal.show', $this->code);
+    }
+
+    /**
+     * Estado de la garantía del equipo: `active`, `expiring` (vence en `WARRANTY_EXPIRING_DAYS` o menos), `expired`
+     * o `unknown` si nunca se cargó la fecha. Es el único lugar que lo define; `scopeWithWarrantyStatus()` lo replica en SQL.
+     */
+    public function warrantyStatus(): string
+    {
+        if (! $this->warranty_until) {
+            return 'unknown';
+        }
+
+        $today = today();
+
+        if ($this->warranty_until->lt($today)) {
+            return 'expired';
+        }
+
+        return $this->warranty_until->lte($today->copy()->addDays(self::WARRANTY_EXPIRING_DAYS)) ? 'expiring' : 'active';
+    }
+
+    /**
+     * Filtra por estado de garantía (misma definición que `warrantyStatus()`; mantener ambos en sincronía).
+     *
+     * @param  Builder<Terminal>  $query
+     * @return Builder<Terminal>
+     */
+    public function scopeWithWarrantyStatus(Builder $query, string $status): Builder
+    {
+        $today = today();
+        $limit = $today->copy()->addDays(self::WARRANTY_EXPIRING_DAYS);
+
+        return match ($status) {
+            'unknown' => $query->whereNull('terminals.warranty_until'),
+            'expired' => $query->where('terminals.warranty_until', '<', $today),
+            'expiring' => $query->whereBetween('terminals.warranty_until', [$today, $limit]),
+            'active' => $query->where('terminals.warranty_until', '>', $limit),
+            default => $query,
+        };
+    }
+
+    /** «Nombre (teléfono)» de quien responde por el equipo, o null si no se cargó ninguno de los dos. */
+    public function responsibleContact(): ?string
+    {
+        $name = trim((string) $this->responsible_name);
+        $phone = trim((string) $this->responsible_phone);
+
+        return match (true) {
+            $name !== '' && $phone !== '' => "{$name} ({$phone})",
+            $name !== '' => $name,
+            $phone !== '' => $phone,
+            default => null,
+        };
     }
 
     /**
