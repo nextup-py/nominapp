@@ -27,6 +27,7 @@ import { runRemoteCommands } from '../terminal-offline/remote-commands.js';
 import { flushQueue } from '../terminal-offline/queue.js';
 import { updateIdleSyncStatus, refreshIdleSyncStatus, refreshLastSyncLabel } from './sync-status-ui.js';
 import { markUserInteracted } from '../../shared/audio-feedback.js';
+import { rememberLinked } from './storage-probe.js';
 
 let backgroundSyncStarted = false;
 
@@ -254,6 +255,7 @@ export async function initializeOfflineSync({ onUnlinked, confirmSwitch = true }
     }
 
     startBackgroundSync({ onUnlinked });
+    rememberLinked(window.terminalData?.code);
     return { linked: true };
 }
 

@@ -21,6 +21,7 @@
 
 import { getMeta, setMeta } from '../terminal-offline/db.js';
 import { requestPairing, pollPairing, PairingError } from '../terminal-offline/pairing-api.js';
+import { rememberLinked } from './storage-probe.js';
 
 /** Se consulta el estado cada N ticks de 1 s (3 s en total). */
 const POLL_EVERY_TICKS = 3;
@@ -84,10 +85,10 @@ export async function getClientHintModel() {
  * ya hay un flujo activo no hace nada (showUnlinked() puede dispararse varias
  * veces, ej. por el sync de fondo).
  * @param {PairingUi} ui
- * @param {{terminalCode: string, deviceModelHint?: string|null}} options
+ * @param {{terminalCode: string, deviceModelHint?: string|null, context?: object|null}} options - `context`: motivo y estado del almacenamiento que se informan al servidor
  * @returns {Promise<void>}
  */
-export async function startPairing(ui, { terminalCode, deviceModelHint = null }) {
+export async function startPairing(ui, { terminalCode, deviceModelHint = null, context = null }) {
     if (active) return;
     active = true;
 
@@ -95,9 +96,9 @@ export async function startPairing(ui, { terminalCode, deviceModelHint = null })
     ui.setStatus('Solicitando código…');
 
     try {
-        session = await loadOrCreateSession(terminalCode, deviceModelHint);
+        session = await loadOrCreateSession(terminalCode, deviceModelHint, context);
     } catch (error) {
-        handleStartError(ui, error, { terminalCode, deviceModelHint });
+        handleStartError(ui, error, { terminalCode, deviceModelHint, context });
         return;
     }
 
@@ -112,7 +113,7 @@ export async function startPairing(ui, { terminalCode, deviceModelHint = null })
 /**
  * Descarta el código actual y pide uno nuevo (botón "Pedir código nuevo").
  * @param {PairingUi} ui
- * @param {{terminalCode: string, deviceModelHint?: string|null}} options
+ * @param {{terminalCode: string, deviceModelHint?: string|null, context?: object|null}} options
  * @returns {Promise<void>}
  */
 export async function restartPairing(ui, options) {
@@ -130,15 +131,16 @@ function secondsLeft() {
 /**
  * @param {string} terminalCode
  * @param {string|null} deviceModelHint
+ * @param {object|null} context
  * @returns {Promise<NonNullable<typeof session>>}
  */
-async function loadOrCreateSession(terminalCode, deviceModelHint) {
+async function loadOrCreateSession(terminalCode, deviceModelHint, context) {
     const saved = await getMeta(SESSION_KEY);
     if (saved && saved.terminal_code === terminalCode && saved.expires_at - Date.now() > MIN_REMAINING_MS) {
         return saved;
     }
 
-    const data = await requestPairing(terminalCode, deviceModelHint);
+    const data = await requestPairing(terminalCode, deviceModelHint, context);
     const created = {
         terminal_code: terminalCode,
         code: data.pairing_code,
@@ -159,7 +161,7 @@ async function loadOrCreateSession(terminalCode, deviceModelHint) {
 /**
  * @param {PairingUi} ui
  * @param {unknown} error
- * @param {{terminalCode: string, deviceModelHint?: string|null}} options
+ * @param {{terminalCode: string, deviceModelHint?: string|null, context?: object|null}} options
  */
 function handleStartError(ui, error, options) {
     active = false;
@@ -209,6 +211,7 @@ async function handlePoll(ui, data) {
                 await setMeta('terminal_id', data.terminal.id);
                 await setMeta('terminal_code', data.terminal.code);
                 await setMeta(SESSION_KEY, null);
+                rememberLinked(data.terminal.code);
                 stopPairing();
                 ui.setStatus('Terminal vinculado. Iniciando…');
                 ui.onLinked();

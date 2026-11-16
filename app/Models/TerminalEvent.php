@@ -68,6 +68,7 @@ class TerminalEvent extends Model
             'setup_link_generated' => 'Enlace de configuración generado',
             'linked' => 'Dispositivo vinculado',
             'revoked' => 'Dispositivo desvinculado',
+            'link_lost' => 'El dispositivo perdió el vínculo',
             'health_offline' => 'Sin conexión',
             'health_recovered' => 'Reconectado',
             'health_unlinked' => 'Quedó sin vincular',
@@ -113,6 +114,7 @@ class TerminalEvent extends Model
             'setup_link_generated' => 'info',
             'linked' => 'success',
             'revoked' => 'danger',
+            'link_lost' => 'danger',
             'health_offline' => 'danger',
             'health_recovered' => 'success',
             'health_unlinked' => 'danger',
@@ -163,6 +165,18 @@ class TerminalEvent extends Model
         }
         if (! empty($payload['late'])) {
             $parts[] = 'Confirmado con retraso';
+        }
+        if (isset($payload['lost_reason'])) {
+            $parts[] = 'Motivo informado: '.(['no_token' => 'sin token en el navegador', 'revoked' => 'acceso rechazado por el servidor', 'other_terminal' => 'el navegador pertenecía a otro terminal'][$payload['lost_reason']] ?? $payload['lost_reason']);
+        }
+        if (($payload['storage_available'] ?? null) === false) {
+            $parts[] = 'El navegador no conserva datos';
+        }
+        if (! empty($payload['had_marker'])) {
+            $parts[] = 'El navegador recordaba haber estado vinculado';
+        }
+        if (isset($payload['seconds_since_heartbeat'])) {
+            $parts[] = 'Último latido hace '.max(1, (int) round($payload['seconds_since_heartbeat'] / 60)).' min';
         }
         if (! empty($payload['replaces_active_device'])) {
             $parts[] = 'Reemplaza al dispositivo actual';

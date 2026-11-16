@@ -75,6 +75,7 @@ class NotificationCatalog
     {
         $entries = [
             'terminal.offline' => ['Terminal sin conexión', 'Un terminal dejó de reportar dentro de su horario de vigilancia (varios a la vez llegan en un solo aviso).', 'terminal_health', 'update_terminal', ['mail_when_configured' => true]],
+            'terminal.link_lost' => ['Terminal perdió el vínculo', 'Un terminal que seguía vinculado en el servidor pidió vincularse de nuevo: el navegador del dispositivo perdió el acceso guardado (datos borrados, ventana privada, otro perfil). Queda siempre en la bitácora del terminal.', 'terminal_health', 'update_terminal', ['mail_when_configured' => true]],
             'terminal.recovered' => ['Terminal reconectado', 'Un terminal que había avisado su desconexión volvió a reportar. Queda siempre en la bitácora del terminal.', 'terminal_health', 'update_terminal', ['enabled' => false]],
             'terminal.unlinked' => ['Terminal sin vincular', 'Un terminal perdió su acceso y no puede marcar hasta volver a vincularlo.', 'terminal_health', 'update_terminal', ['mandatory' => true, 'mail_when_configured' => true]],
             'terminal.queue_stuck' => ['Cola de marcaciones atascada', 'Un terminal tiene marcaciones pendientes que no se envían hace más del tiempo configurado.', 'terminal_health', 'update_terminal'],

@@ -12,6 +12,7 @@ import { createSyncControl } from './terminal/sync-control.js';
 import { initManualSearch } from './terminal/manual-search.js';
 import { createCameraControl } from './terminal/camera-control.js';
 import { createInstallNotice } from './terminal/install-notice.js';
+import { probeStorage, describeStorageNotice, hasLinkMarker } from './terminal/storage-probe.js';
 import { createPrivacyNotice } from './terminal/privacy-notice.js';
 import { getCameraPrefs, setCameraPrefs, listVideoInputs } from './terminal/camera-prefs.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
@@ -20,7 +21,7 @@ import { createMenuSheet } from '../shared/menu-sheet.js';
 import { heartbeat, syncEmployees, TerminalAuthError } from './terminal-offline/sync.js';
 import { detectDisplayMode } from './terminal-offline/device-report.js';
 import { flushQueue, countPendingEvents, countConflictEvents } from './terminal-offline/queue.js';
-import { getMeta, countCachedEmployees } from './terminal-offline/db.js';
+import { getMeta, setMeta, countCachedEmployees } from './terminal-offline/db.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // ============================================================================
@@ -217,6 +218,22 @@ document.addEventListener('DOMContentLoaded', () => {
         onLinked: () => window.location.reload(),
     };
 
+    /** Prueba de almacenamiento del navegador (una sola vez por carga): ver terminal/storage-probe.js. */
+    let storageProbePromise = null;
+    const getStorageProbe = () => (storageProbePromise ??= probeStorage({ getMeta, setMeta }));
+
+    /** Muestra u oculta el aviso de «el navegador no conserva datos» en reposo y en la pantalla sin vincular. */
+    function renderStorageNotice(probe) {
+        const text = describeStorageNotice(probe);
+        ['storageNotice', 'unlinkedStorageNotice'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('hidden', !text);
+            const span = el.querySelector('[data-storage-notice-text]');
+            if (span && text) span.textContent = text;
+        });
+    }
+
     /**
      * Bloquea la marcación: detiene cámara, presencia, timers y countdowns, y
      * deja la pantalla "sin vincular". El latch vive en identification-flow
@@ -258,8 +275,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (canPair && !pairingAutoStarted) {
             pairingAutoStarted = true;
-            pairingFlow.getClientHintModel().then((deviceModelHint) => {
-                pairingFlow.startPairing(pairingUi, { terminalCode: terminalData.code, deviceModelHint });
+            Promise.all([pairingFlow.getClientHintModel(), getStorageProbe()]).then(([deviceModelHint, probe]) => {
+                const context = {
+                    reason,
+                    had_marker: hasLinkMarker(terminalData.code),
+                    storage_available: probe.available,
+                    storage_persisted: probe.persisted,
+                    storage_quota_mb: probe.quota_mb,
+                };
+                pairingFlow.startPairing(pairingUi, { terminalCode: terminalData.code, deviceModelHint, context });
             });
         }
     }
@@ -618,6 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     captureInstallPrompt(() => installNotice.setCanInstall(true));
     installNotice.render();
+    getStorageProbe().then(renderStorageNotice).catch(() => {});
 
     // ============================================================================
     // TEMA CLARO / OSCURO

@@ -59,6 +59,18 @@ describe('pairing-flow', () => {
         vi.useRealTimers();
     });
 
+    it('informa al servidor el motivo y el estado del almacenamiento al pedir el código', async () => {
+        const { flow, db, api } = await loadFresh();
+        db.getMeta.mockResolvedValue(null);
+        api.requestPairing.mockResolvedValue(created());
+        const context = { reason: 'no_token', had_marker: true, storage_available: false, storage_persisted: false, storage_quota_mb: 120 };
+
+        await flow.startPairing(makeUi(), { terminalCode: 'abc12345', deviceModelHint: null, context });
+
+        expect(api.requestPairing).toHaveBeenCalledWith('abc12345', null, context);
+        flow.stopPairing();
+    });
+
     it('sin sesión guardada: pide un código, lo muestra y lo persiste', async () => {
         const { flow, db, api } = await loadFresh();
         const ui = makeUi();
@@ -67,7 +79,7 @@ describe('pairing-flow', () => {
 
         await flow.startPairing(ui, { terminalCode: 'abc12345', deviceModelHint: 'Pixel 7' });
 
-        expect(api.requestPairing).toHaveBeenCalledWith('abc12345', 'Pixel 7');
+        expect(api.requestPairing).toHaveBeenCalledWith('abc12345', 'Pixel 7', null);
         expect(ui.showCode).toHaveBeenCalledWith('K7M2QX');
         expect(db.setMeta).toHaveBeenCalledWith('pairing_session', expect.objectContaining({ code: 'K7M2QX', secret: 'secreto-de-polling', terminal_code: 'abc12345' }));
         expect(flow.isPairingActive()).toBe(true);
