@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Services\LocationRadiusService;
 use App\Services\MailConfigurator;
 use App\Settings\GeneralSettings;
 use Filament\Actions\Action;
@@ -223,6 +224,16 @@ class ManageGeneralSettings extends SettingsPage
                         Toggle::make('attendance_mobile_marking_default')
                             ->label('Permitir marcar desde el celular por defecto')
                             ->helperText('Valor para los empleados que no lo tienen definido ni en su ficha, ni en su sucursal ni en su empresa. Apagado = solo desde el terminal. Los celulares ya vinculados de quienes dejen de estar habilitados se desvinculan solos en su próxima conexión.'),
+
+                        TextInput::make('attendance_location_default_radius')
+                            ->label('Radio de marcación desde el celular')
+                            ->numeric()
+                            ->minValue(LocationRadiusService::MIN_RADIUS)
+                            ->maxValue(LocationRadiusService::MAX_RADIUS)
+                            ->default(150)
+                            ->required()
+                            ->suffix('metros')
+                            ->helperText('Distancia máxima al punto de trabajo (del empleado o de su sucursal con control de ubicación) para marcar desde el celular. Fuera de ella la marcación se acepta pero queda señalada para revisión. Cada empleado o sucursal puede tener el suyo.'),
                     ]),
 
                 Section::make('Configuración de Contratos')

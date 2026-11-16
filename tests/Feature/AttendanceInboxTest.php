@@ -87,6 +87,7 @@ it('cuenta cada tipo de pendiente por separado', function () {
         'overtime' => 1,
         'no_expected_shift' => 1,
         'absences' => 1,
+        'location_review' => 0,
         'mark_failures' => 1,
         'no_schedule' => 1,
         'mobile_pending_link' => 0,

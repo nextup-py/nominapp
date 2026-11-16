@@ -170,7 +170,7 @@
                         @endif
                         @foreach ($snapshot['alerts'] as $alert)
                             <li class="text-sm" wire:key="alert-{{ $loop->index }}">
-                                <x-filament::badge :color="$alert['color']">{{ $alert['type'] === 'missing' ? 'Sin marcar' : 'Descanso largo' }}</x-filament::badge>
+                                <x-filament::badge :color="$alert['color']">{{ ['missing' => 'Sin marcar', 'long_break' => 'Descanso largo', 'outside_radius' => 'Fuera de radio'][$alert['type']] ?? $alert['type'] }}</x-filament::badge>
                                 <span class="font-medium text-gray-950 dark:text-white">{{ $alert['employee'] }}</span>
                                 <span class="text-gray-600 dark:text-gray-300">— {{ $alert['text'] }}</span>
                             </li>

@@ -164,3 +164,18 @@ it('alterna el filtro de estado al tocar una tarjeta', function () {
         ->call('toggleState', 'missing')->assertSet('state', 'missing')
         ->call('toggleState', 'missing')->assertSet('state', null);
 });
+
+it('avisa de las marcaciones de hoy fuera de radio que siguen sin revisar', function () {
+    $employee = liveEmployee('Lejos');
+    $day = liveDay($employee, [['check_in', '07:00:00']]);
+    AttendanceEvent::where('attendance_day_id', $day->id)->update(['location_flag' => 'outside_radius', 'location_distance_m' => 850, 'location_review' => 'pending']);
+
+    $alerts = collect(LiveAttendanceMonitor::snapshot()['alerts'])->where('type', 'outside_radius');
+
+    expect($alerts)->toHaveCount(1)
+        ->and($alerts->first()['text'])->toContain('850 m');
+
+    AttendanceEvent::where('attendance_day_id', $day->id)->update(['location_review' => 'approved']);
+
+    expect(collect(LiveAttendanceMonitor::snapshot()['alerts'])->where('type', 'outside_radius'))->toHaveCount(0);
+});

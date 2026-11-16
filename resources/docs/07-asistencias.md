@@ -37,7 +37,7 @@ Ir a **Asistencias → Monitor en vivo** para ver, mientras ocurre, qué pasa ho
 |------|-----------|
 | **Tarjetas** | Presentes ahora, Con retraso, Sin marcar, Ausentes, En descanso, Aún no inician, Terminaron y De permiso. Un clic en una tarjeta filtra la lista por ese estado; otro clic lo quita |
 | **Empleados hoy** | Una fila por empleado activo con su estado, horario de hoy, última marcación y detalle (minutos de retraso, tiempo en descanso, cuánto falta para que entre). Lo que requiere atención aparece primero. El nombre abre la ficha mensual del empleado |
-| **Alertas del momento** | Quien debía entrar y no marcó, descansos de más de 60 minutos y terminales sin conexión |
+| **Alertas del momento** | Quien debía entrar y no marcó, descansos de más de 60 minutos, marcaciones de hoy fuera de radio o sin ubicación que siguen sin revisar y terminales sin conexión |
 | **Últimas marcaciones** | Las 15 marcaciones más recientes de hoy |
 
 **Estados:**
@@ -291,6 +291,26 @@ Si el empleado después marca una **salida** y la jornada abierta es de hace 2 o
 | **Manual (admin)** | Ingresado manualmente por el administrador |
 
 ---
+
+## Control de ubicación del celular
+
+Cuando alguien marca desde su celular, el sistema guarda dónde estaba. Según cómo se configure, esa ubicación solo se registra o además se compara con su lugar de trabajo.
+
+| Caso | Cómo se configura | Qué pasa al marcar |
+|------|-------------------|--------------------|
+| **De campo** (sin lugar fijo) | No cargar nada | Solo se registra la ubicación de cada marcación. Si el celular no la entrega, no deja marcar hasta activar la ubicación |
+| **Lugar fijo propio** (casa, oficina de un cliente) | En la ficha del empleado: **Lugar de trabajo** (latitud y longitud) y, si hace falta, **Radio de marcación** | Se compara con su punto |
+| **Sucursal** | En la sucursal: activar **Controlar la ubicación del celular** (usa las coordenadas de la sucursal) y, si hace falta, **Radio de la sucursal** | Se compara con la sucursal. Un empleado con su propio punto usa el suyo |
+
+El radio sale, en este orden, del empleado, de la sucursal o de **Configuración → Configuración General → Configuración Laboral → Radio de marcación desde el celular** (150 metros de fábrica). Se acepta entre 25 y 2000 metros.
+
+**Qué pasa fuera del radio:** la marcación **se acepta igual** (así un GPS impreciso no bloquea a nadie) pero queda señalada. La comparación se hace en el servidor al sincronizar, por lo que funciona también si el celular marcó sin conexión.
+
+**Dónde se revisa:**
+- **Asistencias → Marcaciones**: columnas **Control de ubicación** (con la distancia en metros) y **Revisión de ubicación**, y el filtro **Control de ubicación**. Con permiso para editar marcaciones, la fila ofrece **Aprobar ubicación** o **Descartar ubicación**; queda registrado quién decidió y cuándo. Descartar no elimina la marcación: para corregirla usar **Corregir marcaciones** en la jornada. El detalle de la marcación (**Ver**) muestra el mapa, la distancia al punto de trabajo, el radio permitido, un enlace al punto y quién revisó la ubicación y cuándo (el punto y el radio son los vigentes hoy).
+- **Por resolver**: tarjeta **Marcaciones fuera de radio** con las que siguen sin revisar.
+
+> La ubicación es un dato personal: el aviso de privacidad que carga la empresa (**Empresas → Aviso de privacidad**) debe mencionarla. Se acepta al vincular el celular.
 
 ## Marcaciones manuales
 

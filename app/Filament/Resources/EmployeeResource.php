@@ -15,6 +15,7 @@ use App\Models\Employee;
 use App\Models\FaceEnrollment;
 use App\Models\Position;
 use App\Models\Schedule;
+use App\Services\LocationRadiusService;
 use App\Settings\GeneralSettings;
 use Carbon\Carbon;
 use Filament\Forms\Components\CheckboxList;
@@ -298,6 +299,32 @@ class EmployeeResource extends Resource
                             ->helperText('Seleccioná el estado del empleado.'),
 
                         MobileMarkingFields::select('Por defecto se marca solo desde el terminal. «Sí» permite vincular su celular; «No» lo bloquea y revoca el vinculado. «Heredar» usa lo definido en la sucursal, la empresa o Configuración General.'),
+
+                        TextInput::make('work_location.lat')
+                            ->label('Lugar de trabajo: latitud')
+                            ->numeric()
+                            ->minValue(-90)
+                            ->maxValue(90)
+                            ->placeholder('-25.286700')
+                            ->required(fn (Get $get): bool => filled($get('work_location.lng')))
+                            ->helperText('Solo para quien trabaja en un lugar fijo propio (casa, oficina de un cliente). Vacío = usa el de su sucursal si controla la ubicación; si no, es «de campo» y solo se registra dónde marca.'),
+
+                        TextInput::make('work_location.lng')
+                            ->label('Lugar de trabajo: longitud')
+                            ->numeric()
+                            ->minValue(-180)
+                            ->maxValue(180)
+                            ->placeholder('-57.647800')
+                            ->required(fn (Get $get): bool => filled($get('work_location.lat'))),
+
+                        TextInput::make('location_radius_m')
+                            ->label('Radio de marcación')
+                            ->numeric()
+                            ->minValue(LocationRadiusService::MIN_RADIUS)
+                            ->maxValue(LocationRadiusService::MAX_RADIUS)
+                            ->suffix('metros')
+                            ->placeholder('Usar el general')
+                            ->helperText('Vacío = el radio de la sucursal o el de Configuración General.'),
 
                         Select::make('initial_schedule_id')
                             ->label('Horario Inicial')

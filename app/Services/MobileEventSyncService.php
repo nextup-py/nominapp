@@ -203,6 +203,7 @@ class MobileEventSyncService
             'synced_at' => now(),
             'source' => 'mobile',
             'location' => $eventData['location'] ?? null,
+            ...LocationRadiusService::evaluate($employee, $eventData['location'] ?? null),
         ]);
 
         return [

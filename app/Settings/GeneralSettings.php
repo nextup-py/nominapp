@@ -53,6 +53,9 @@ class GeneralSettings extends Settings
     /** Permiso de marcación desde el celular cuando ni el empleado, ni su sucursal ni su empresa lo definen. */
     public bool $attendance_mobile_marking_default;
 
+    /** Radio (m) de marcación desde el celular cuando el empleado o la sucursal no definen el suyo. */
+    public int $attendance_location_default_radius;
+
     /** Días de retención de la bitácora de terminales; 0 = conservar siempre. */
     public int $terminal_events_retention_days;
 

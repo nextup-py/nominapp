@@ -11,6 +11,7 @@ use App\Filament\Resources\BranchResource\RelationManagers\TerminalsRelationMana
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\PyDepartment;
+use App\Services\LocationRadiusService;
 use Cheesegrits\FilamentGoogleMaps\Fields\Map;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -121,6 +122,21 @@ class BranchResource extends Resource
                         ->hiddenOn('create'),
 
                     MobileMarkingFields::select('Valor para los empleados de la sucursal que no tengan el suyo. «Heredar» usa el de la empresa o Configuración General (por defecto, solo terminal).'),
+
+                    Toggle::make('location_control')
+                        ->label('Controlar la ubicación del celular')
+                        ->helperText('Con coordenadas cargadas, las marcaciones desde el celular de sus empleados se comparan con la ubicación de la sucursal; fuera del radio quedan señaladas para revisión. Un empleado con su propio punto usa el suyo.')
+                        ->live(),
+
+                    TextInput::make('location_radius_m')
+                        ->label('Radio de la sucursal')
+                        ->numeric()
+                        ->minValue(LocationRadiusService::MIN_RADIUS)
+                        ->maxValue(LocationRadiusService::MAX_RADIUS)
+                        ->suffix('metros')
+                        ->placeholder('Usar el general')
+                        ->helperText('Vacío = el radio de Configuración General.')
+                        ->visible(fn (Get $get): bool => (bool) $get('location_control')),
                 ])
                 ->columns(2)
                 ->collapsible(),

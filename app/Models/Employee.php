@@ -46,6 +46,8 @@ class Employee extends Model implements AuthenticatableContract
     public static bool $skipMandatoryDeductions = false;
 
     protected $fillable = [
+        'work_location',
+        'location_radius_m',
         'photo',
         'photo_thumbnail',
         'first_name',
@@ -69,6 +71,7 @@ class Employee extends Model implements AuthenticatableContract
     ];
 
     protected $casts = [
+        'work_location' => 'array',
         'birth_date' => 'date',
         'maternity_protection_until' => 'date',
         'face_descriptor' => 'array',
