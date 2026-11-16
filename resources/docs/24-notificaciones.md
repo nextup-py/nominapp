@@ -67,6 +67,7 @@ Requieren el permiso **Editar Terminal**. Detalle en el capítulo **Terminales d
 | **App del terminal desactualizada** | El terminal sigue con una versión anterior tras un despliegue |
 | **Terminal en una pestaña del navegador** | Un terminal lleva horas funcionando en una pestaña, sin instalar como app ni en modo kiosko |
 | **Pestaña del terminal oculta** | La pestaña de un terminal lleva horas oculta o minimizada: el equipo puede suspenderse |
+| **Terminales con poca disponibilidad** | Resumen semanal (lunes) de los terminales que estuvieron en línea menos del mínimo configurado. Llega al instante: no se difiere al resumen diario |
 
 ### Vinculación de terminales
 

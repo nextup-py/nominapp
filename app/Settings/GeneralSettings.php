@@ -59,6 +59,12 @@ class GeneralSettings extends Settings
     /** Días de retención de la bitácora de terminales; 0 = conservar siempre. */
     public int $terminal_events_retention_days;
 
+    /** Días de retención del resumen diario de confiabilidad de los terminales; 0 = conservar siempre. */
+    public int $terminal_stats_retention_days;
+
+    /** Disponibilidad semanal (%) por debajo de la cual se avisa de un terminal; 0 = no avisar. */
+    public int $terminal_min_availability_percent;
+
     public bool $setup_completed;
 
     /** Meses de retención del historial de auditoría; 0 = conservar siempre. */

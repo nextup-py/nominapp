@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Terminal;
+use App\Services\TerminalReliabilityService;
 use App\Settings\GeneralSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,6 +52,7 @@ class TerminalHeartbeatController extends Controller
         'app_version', 'standalone', 'sw_active', 'battery_level', 'battery_charging',
         'camera', 'cached_employees', 'clock_skew_seconds', 'storage_used_mb', 'storage_quota_mb', 'wake_lock', 'wake_lock_error',
         'display_mode', 'visible', 'identification_median_ms', 'identification_p90_ms', 'identification_samples',
+        'identification_attempts', 'identification_failures', 'identification_successes', 'identification_ms_total',
         'device_memory_gb', 'cpu_cores', 'connection_type', 'screen', 'language', 'timezone', 'platform',
     ];
 
@@ -79,6 +81,10 @@ class TerminalHeartbeatController extends Controller
             'device.identification_median_ms' => ['nullable', 'integer', 'min:0', 'max:600000'],
             'device.identification_p90_ms' => ['nullable', 'integer', 'min:0', 'max:600000'],
             'device.identification_samples' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'device.identification_attempts' => ['nullable', 'integer', 'min:0', 'max:100000000'],
+            'device.identification_failures' => ['nullable', 'integer', 'min:0', 'max:100000000'],
+            'device.identification_successes' => ['nullable', 'integer', 'min:0', 'max:100000000'],
+            'device.identification_ms_total' => ['nullable', 'integer', 'min:0', 'max:100000000000'],
             'device.device_id' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
             'device.device_memory_gb' => ['nullable', 'numeric', 'min:0', 'max:1024'],
             'device.cpu_cores' => ['nullable', 'integer', 'min:1', 'max:512'],
@@ -94,10 +100,18 @@ class TerminalHeartbeatController extends Controller
         /** @var Terminal $terminal */
         $terminal = $request->user();
 
+        $deviceReport = isset($data['device']) ? array_intersect_key($data['device'], array_flip(self::DEVICE_REPORT_KEYS)) : null;
+
+        // Antes de guardar el reporte nuevo se compara con el anterior: la diferencia de los contadores acumulados
+        // son las identificaciones de este intervalo (ver TerminalReliabilityService::recordIdentification()).
+        if ($deviceReport !== null) {
+            app(TerminalReliabilityService::class)->recordIdentification($terminal, $terminal->device_report, $deviceReport);
+        }
+
         $terminal->recordHeartbeat(
             $data['pending_events'] ?? null,
             $data['conflict_events'] ?? null,
-            isset($data['device']) ? array_intersect_key($data['device'], array_flip(self::DEVICE_REPORT_KEYS)) : null,
+            $deviceReport,
         );
 
         // Un dispositivo vinculado antes de que existiera el identificador lo aprende del primer latido: así el

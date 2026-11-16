@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+    COUNTED_FAILURE_REASONS,
     MAX_PLAUSIBLE_MS,
     MAX_SAMPLES,
     getIdentificationStats,
+    getIdentificationTotals,
     recordIdentification,
+    recordIdentificationFailure,
     resetIdentificationStats,
 } from './identification-stats.js';
 
@@ -56,5 +59,47 @@ describe('identification-stats', () => {
         recordIdentification(1234.6);
 
         expect(getIdentificationStats().median_ms).toBe(1235);
+    });
+
+    describe('contadores acumulados', () => {
+        it('sin intentos no informa nada', () => {
+            expect(getIdentificationTotals()).toBeNull();
+        });
+
+        it('cuenta aciertos con su tiempo y fallos por rostro no reconocido o ambiguo', () => {
+            recordIdentification(2000);
+            recordIdentification(3000);
+            recordIdentificationFailure('no_match');
+            recordIdentificationFailure('ambiguous');
+
+            expect(getIdentificationTotals()).toEqual({ attempts: 4, failures: 2, successes: 2, msTotal: 5000 });
+        });
+
+        it('los fallos que no hablan de la cámara no cuentan', () => {
+            ['no_candidates', 'invalid_descriptor', undefined, null, ''].forEach(recordIdentificationFailure);
+
+            expect(getIdentificationTotals()).toBeNull();
+            expect(COUNTED_FAILURE_REASONS).toEqual(['no_match', 'ambiguous']);
+        });
+
+        it('una medición inválida no cuenta como intento', () => {
+            [NaN, -1, MAX_PLAUSIBLE_MS + 1].forEach(recordIdentification);
+
+            expect(getIdentificationTotals()).toBeNull();
+        });
+
+        it('los contadores no se acotan a las últimas muestras', () => {
+            for (let i = 0; i < MAX_SAMPLES + 10; i++) recordIdentification(1000);
+
+            expect(getIdentificationTotals().successes).toBe(MAX_SAMPLES + 10);
+            expect(getIdentificationStats().samples).toBe(MAX_SAMPLES);
+        });
+
+        it('devuelve una copia: modificarla no altera los contadores', () => {
+            recordIdentification(1000);
+            getIdentificationTotals().attempts = 99;
+
+            expect(getIdentificationTotals().attempts).toBe(1);
+        });
     });
 });

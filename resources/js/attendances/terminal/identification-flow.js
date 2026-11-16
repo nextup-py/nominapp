@@ -26,7 +26,7 @@ import { showTypeSelectionForEmployee, registerMark, clearPendingEmployee } from
 import { identifyEmployee as matchDescriptor } from '../offline-shared/matcher.js';
 import { getCachedEmployees, getMeta } from '../terminal-offline/db.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
-import { recordIdentification } from '../terminal-offline/identification-stats.js';
+import { recordIdentification, recordIdentificationFailure } from '../terminal-offline/identification-stats.js';
 import { getEmployeeStatus, getExpectedShift } from '../terminal-offline/queue.js';
 import { shouldAskEntryOrExit } from './missing-entry.js';
 import { setTerminalVideoState, setIdStatusDot, showCaptureProgress, updateCaptureProgress, finishCaptureProgress } from './ui-feedback.js';
@@ -430,6 +430,8 @@ export async function startAutoIdentification(refs) {
                 };
                 updateStatus(refs.identificationStatus, idleStatusMessages[result.reason] || result.message || 'Rostro no reconocido. Mantenga el rostro quieto frente a la cámara.');
                 console.log('No se pudo identificar', result.reason);
+                // Cuenta los intentos que no reconocieron a nadie para la tasa de fallos del equipo (ver identification-stats.js).
+                recordIdentificationFailure(result.reason);
 
                 consecutiveFailures++;
                 if (consecutiveFailures >= CONSECUTIVE_FAILURES_FOR_MANUAL_SEARCH) {

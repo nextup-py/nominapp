@@ -216,3 +216,25 @@ Schedule::command('terminals:purge-events')
     ->onFailure(function () {
         Log::error('Falló la purga automática de la bitácora de terminales');
     });
+
+/**
+ * Purgar el resumen diario de confiabilidad de terminales más antiguo que la retención configurada
+ * Se ejecuta a las 03:40 (retención en Configuración General; 0 = conservar siempre)
+ */
+Schedule::command('terminals:purge-stats')
+    ->dailyAt('03:40')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        Log::error('Falló la purga del historial de confiabilidad de terminales');
+    });
+
+/**
+ * Avisar de los terminales con poca disponibilidad en la semana anterior
+ * Se ejecuta los lunes a las 08:20 (mínimo en Configuración General; 0 = no avisar)
+ */
+Schedule::command('terminals:evaluate-availability')
+    ->weeklyOn(1, '08:20')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        Log::error('Falló la evaluación semanal de disponibilidad de terminales');
+    });

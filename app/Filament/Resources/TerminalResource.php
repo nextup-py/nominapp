@@ -13,6 +13,7 @@ use App\Filament\Resources\TerminalResource\RelationManagers\CommandsRelationMan
 use App\Filament\Resources\TerminalResource\RelationManagers\DevicesRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\PairingRequestsRelationManager;
+use App\Filament\Resources\TerminalResource\RelationManagers\ReliabilityRelationManager;
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
 use App\Models\Terminal;
@@ -1188,6 +1189,7 @@ class TerminalResource extends Resource
         return [
             PairingRequestsRelationManager::class,
             DevicesRelationManager::class,
+            ReliabilityRelationManager::class,
             EventsRelationManager::class,
             CommandsRelationManager::class,
             AttendanceEventsRelationManager::class,

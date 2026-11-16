@@ -20,6 +20,12 @@ export const MAX_PLAUSIBLE_MS = 120_000;
 /** @type {number[]} */
 let samples = [];
 
+/** Contadores acumulados desde que se cargó la página (no se acotan a las últimas muestras). */
+let totals = { attempts: 0, failures: 0, successes: 0, msTotal: 0 };
+
+/** Motivos de fallo que sí cuentan como «no reconoció a nadie» (los demás no hablan de la calidad del equipo). */
+export const COUNTED_FAILURE_REASONS = ['no_match', 'ambiguous'];
+
 /**
  * Valor en la posición `fraction` (0–1) de una lista ya ordenada, por rango más cercano.
  * @param {number[]} sorted
@@ -42,6 +48,31 @@ export function recordIdentification(durationMs) {
 
     samples.push(Math.round(durationMs));
     if (samples.length > MAX_SAMPLES) samples = samples.slice(-MAX_SAMPLES);
+
+    totals.attempts += 1;
+    totals.successes += 1;
+    totals.msTotal += Math.round(durationMs);
+}
+
+/**
+ * Registra un intento que no reconoció a nadie (rostro sin coincidencia o ambiguo). Otros motivos —sin empleados en
+ * caché, descriptor inválido— no cuentan: no dependen de la cámara ni del reconocimiento.
+ * @param {string} reason - motivo que devolvió el matching.
+ * @returns {void}
+ */
+export function recordIdentificationFailure(reason) {
+    if (!COUNTED_FAILURE_REASONS.includes(reason)) return;
+
+    totals.attempts += 1;
+    totals.failures += 1;
+}
+
+/**
+ * Contadores acumulados de la sesión actual, o null si todavía no hubo ningún intento.
+ * @returns {{attempts: number, failures: number, successes: number, msTotal: number}|null}
+ */
+export function getIdentificationTotals() {
+    return totals.attempts > 0 ? { ...totals } : null;
 }
 
 /**
@@ -66,4 +97,5 @@ export function getIdentificationStats() {
  */
 export function resetIdentificationStats() {
     samples = [];
+    totals = { attempts: 0, failures: 0, successes: 0, msTotal: 0 };
 }
