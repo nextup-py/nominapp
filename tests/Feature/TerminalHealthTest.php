@@ -3,14 +3,18 @@
 use App\Filament\Resources\TerminalResource\Pages\EditTerminal;
 use App\Filament\Resources\TerminalResource\Pages\ListTerminals;
 use App\Filament\Resources\TerminalResource\Pages\ViewTerminal;
+use App\Filament\Widgets\TerminalHealthBoardWidget;
 use App\Filament\Widgets\TerminalHealthWidget;
+use App\Models\AttendanceMarkFailure;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Terminal;
+use App\Models\TerminalDailyStat;
 use App\Models\TerminalEvent;
 use App\Models\User;
 use App\Notifications\TerminalHealthNotification;
 use App\Notifications\TerminalOfflineGroupNotification;
+use App\Services\TerminalHealthBoard;
 use App\Services\TerminalHealthService;
 use App\Settings\GeneralSettings;
 use Illuminate\Console\Scheduling\Schedule;
@@ -755,4 +759,50 @@ it('evaluateAll con una sola desconexión envía el aviso individual de siempre'
 
     Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 1);
     Notification::assertNotSentTo($manager, TerminalOfflineGroupNotification::class);
+});
+
+// ─── Tabla de salud con semáforo ────────────────────────────────────────────
+
+it('la tabla de salud aplica el semáforo con la peor señal y ordena de más a menos grave', function () {
+    $ok = makeHealthTerminal(['name' => 'Verde', 'last_heartbeat_at' => now()->subMinute()]);
+    $amber = makeHealthTerminal(['name' => 'Ambar', 'last_heartbeat_at' => now()->subMinute(), 'warranty_until' => today()->subDay()]);
+    $down = makeHealthTerminal(['name' => 'Rojo', 'stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subHour()]);
+    makeHealthTerminal(['name' => 'Inactivo', 'status' => 'inactive', 'last_heartbeat_at' => now()->subHour(), 'stale_after_minutes' => 10]);
+
+    $rows = app(TerminalHealthBoard::class)->rows();
+
+    expect($rows->pluck('terminal.name')->all())->toBe(['Rojo', 'Ambar', 'Verde'])
+        ->and($rows->pluck('level')->all())->toBe(['danger', 'warning', 'success'])
+        ->and($rows[0]['reasons'])->toContain('Desconectado')
+        ->and($rows[1]['reasons'])->toContain('Garantía vencida')
+        ->and($rows[2]['reasons'])->toBe([]);
+});
+
+it('la tabla de salud marca en rojo la disponibilidad baja y suma los conflictos de la semana', function () {
+    $terminal = makeHealthTerminal(['last_heartbeat_at' => now()->subMinute()]);
+    app(GeneralSettings::class)->terminal_min_availability_percent = 95;
+
+    TerminalDailyStat::create(['terminal_id' => $terminal->id, 'date' => today()->toDateString(), 'expected_minutes' => 600, 'online_minutes' => 300]);
+    AttendanceMarkFailure::create([
+        'failure_type' => 'sync_conflict', 'mode' => 'terminal', 'occurred_at' => now(), 'failure_message' => 'x',
+        'metadata' => ['terminal_id' => $terminal->id],
+    ]);
+
+    $row = app(TerminalHealthBoard::class)->rows()->first();
+
+    expect($row['level'])->toBe('danger')
+        ->and($row['availability'])->toBe(50.0)
+        ->and($row['conflicts'])->toBe(1)
+        ->and(implode(' ', $row['reasons']))->toContain('Disponibilidad')->toContain('1 conflicto');
+});
+
+it('el widget de la tabla de salud se muestra solo a quien puede ver terminales', function () {
+    makeHealthTerminal(['name' => 'Terminal Visible', 'last_heartbeat_at' => now()->subMinute()]);
+
+    $this->actingAs(User::factory()->create());
+    expect(TerminalHealthBoardWidget::canView())->toBeFalse();
+
+    $this->actingAs(healthSuperAdmin());
+    expect(TerminalHealthBoardWidget::canView())->toBeTrue();
+    Livewire::test(TerminalHealthBoardWidget::class)->assertSee('Terminal Visible')->assertSee('Sin alertas');
 });
