@@ -58,6 +58,7 @@ Requieren el permiso **Editar Terminal**. Detalle en el capítulo **Terminales d
 | **Terminal reconectado** | Un terminal que había avisado su desconexión volvió a reportar (desactivado por defecto) |
 | **Terminal sin vincular** | Un terminal perdió su acceso (obligatorio) |
 | **Terminal perdió el vínculo** | Un terminal que seguía vinculado en el servidor pidió vincularse de nuevo porque el navegador perdió su acceso guardado (datos borrados, ventana privada, otro perfil). Se avisa una vez cada 30 minutos por terminal |
+| **Dispositivo reemplazado en un terminal** | Un dispositivo nuevo se vinculó a un terminal cuyo dispositivo anterior seguía en línea, que quedó sin acceso. No le llega a quien dejó listo el vínculo |
 | **Cola de marcaciones atascada** | Marcaciones pendientes que no se envían hace más del tiempo configurado |
 | **Batería baja** | El terminal bajó del porcentaje configurado y no está cargando |
 | **Sucursal sin empleados enrolados** | Nadie en la sucursal tiene rostro registrado |

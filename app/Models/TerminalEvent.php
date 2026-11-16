@@ -69,6 +69,7 @@ class TerminalEvent extends Model
             'linked' => 'Dispositivo vinculado',
             'revoked' => 'Dispositivo desvinculado',
             'link_lost' => 'El dispositivo perdió el vínculo',
+            'device_replaced' => 'Dispositivo reemplazado',
             'health_offline' => 'Sin conexión',
             'health_recovered' => 'Reconectado',
             'health_unlinked' => 'Quedó sin vincular',
@@ -115,6 +116,7 @@ class TerminalEvent extends Model
             'linked' => 'success',
             'revoked' => 'danger',
             'link_lost' => 'danger',
+            'device_replaced' => 'warning',
             'health_offline' => 'danger',
             'health_recovered' => 'success',
             'health_unlinked' => 'danger',
@@ -165,6 +167,12 @@ class TerminalEvent extends Model
         }
         if (! empty($payload['late'])) {
             $parts[] = 'Confirmado con retraso';
+        }
+        if (! empty($payload['previous_ip'])) {
+            $parts[] = 'Dispositivo anterior: IP '.$payload['previous_ip'];
+        }
+        if (array_key_exists('previous_online', $payload)) {
+            $parts[] = $payload['previous_online'] ? 'El anterior estaba en línea' : 'El anterior no estaba en línea';
         }
         if (isset($payload['lost_reason'])) {
             $parts[] = 'Motivo informado: '.(['no_token' => 'sin token en el navegador', 'revoked' => 'acceso rechazado por el servidor', 'other_terminal' => 'el navegador pertenecía a otro terminal'][$payload['lost_reason']] ?? $payload['lost_reason']);

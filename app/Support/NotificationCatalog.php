@@ -88,6 +88,7 @@ class NotificationCatalog
             'terminal.tab_hidden' => ['Pestaña del terminal oculta', 'La pestaña de un terminal lleva horas oculta o minimizada: el navegador la frena y el equipo puede suspenderse.', 'terminal_health', 'update_terminal'],
 
             'terminal.pairing_requested' => ['Solicitud de vinculación', 'Un dispositivo pidió vincularse a un terminal con un código y espera aprobación.', 'terminal_linking', 'update_terminal'],
+            'terminal.device_replaced' => ['Dispositivo reemplazado en un terminal', 'Un dispositivo nuevo se vinculó a un terminal cuyo dispositivo anterior seguía en línea: el anterior quedó sin acceso. Suele indicar dos equipos abiertos en la misma URL. Queda siempre en la bitácora del terminal.', 'terminal_linking', 'update_terminal'],
             'terminal.provisioned' => ['Terminal provisionado', 'Un dispositivo completó su vinculación. No llega a quien generó el enlace o abrió la ventana.', 'terminal_linking', 'update_terminal', ['channels' => ['database', 'mail']]],
             'terminal.link_window_expired' => ['Ventana de vinculación vencida', 'La ventana que abriste venció sin que ningún dispositivo la usara.', 'terminal_linking', 'update_terminal'],
             'terminal.command_expired' => ['Comando remoto vencido', 'Un comando que enviaste a un terminal venció sin aplicarse.', 'terminal_linking', 'update_terminal'],

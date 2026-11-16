@@ -28,7 +28,7 @@ class TerminalPairingService
     public const LINK_LOST_DEDUPE_MINUTES = 30;
 
     /** Segundos sin latido a partir de los cuales una solicitud con acceso vigente se toma como pérdida de vínculo (el terminal late cada ~90 s; menos que eso es otro dispositivo pidiendo mientras el verdadero sigue en línea). */
-    public const LINK_LOST_MIN_SILENCE_SECONDS = 180;
+    public const LINK_LOST_MIN_SILENCE_SECONDS = Terminal::HEARTBEAT_ACTIVE_SECONDS;
 
     /**
      * Crea una solicitud de vinculación para el terminal.
@@ -105,10 +105,7 @@ class TerminalPairingService
      */
     private function recordLinkLost(Terminal $terminal, ?string $ip, array $context): bool
     {
-        $stillReporting = $terminal->last_heartbeat_at !== null
-            && $terminal->last_heartbeat_at->gt(now()->subSeconds(self::LINK_LOST_MIN_SILENCE_SECONDS));
-
-        if ($stillReporting) {
+        if ($terminal->isReportingNow()) {
             return false;
         }
 
