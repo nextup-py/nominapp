@@ -37,7 +37,7 @@ Ir a **Asistencias → Monitor en vivo** para ver, mientras ocurre, qué pasa ho
 |------|-----------|
 | **Tarjetas** | Presentes ahora, Con retraso, Sin marcar, Ausentes, En descanso, Aún no inician, Terminaron y De permiso. Un clic en una tarjeta filtra la lista por ese estado; otro clic lo quita |
 | **Empleados hoy** | Una fila por empleado activo con su estado, horario de hoy, última marcación y detalle (minutos de retraso, tiempo en descanso, cuánto falta para que entre). Lo que requiere atención aparece primero. El nombre abre la ficha mensual del empleado |
-| **Alertas del momento** | Quien debía entrar y no marcó, descansos de más de 60 minutos y terminales sin conexión |
+| **Alertas del momento** | Quien debía entrar y no marcó, descansos de más de 60 minutos, marcaciones de hoy fuera de radio o sin ubicación que siguen sin revisar y terminales sin conexión |
 | **Últimas marcaciones** | Las 15 marcaciones más recientes de hoy |
 
 **Estados:**

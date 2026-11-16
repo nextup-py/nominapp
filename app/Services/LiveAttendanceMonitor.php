@@ -116,7 +116,7 @@ class LiveAttendanceMonitor
         }
 
         $counts = self::countRows($rows);
-        $alerts = self::alerts($rows);
+        $alerts = [...self::alerts($rows), ...self::locationAlerts($ids, $today)];
 
         if (filled($filters['state'] ?? null)) {
             $rows = array_values(array_filter($rows, fn (array $row) => self::matchesStateFilter($row, (string) $filters['state'])));
@@ -428,6 +428,34 @@ class LiveAttendanceMonitor
         usort($alerts, fn (array $a, array $b) => $b['minutes'] <=> $a['minutes']);
 
         return array_slice($alerts, 0, 20);
+    }
+
+    /**
+     * Marcaciones de hoy desde el celular fuera de radio (o sin ubicación) que RR.HH. todavía no revisó.
+     *
+     * @param  array<int, int>  $ids
+     * @return array<int, array<string, mixed>>
+     */
+    private static function locationAlerts(array $ids, Carbon $today): array
+    {
+        return AttendanceEvent::query()
+            ->whereIn('employee_id', $ids)
+            ->where('recorded_at', '>=', $today)
+            ->where('location_review', LocationRadiusService::REVIEW_PENDING)
+            ->latest('recorded_at')
+            ->limit(10)
+            ->get(['id', 'employee_name', 'branch_name', 'location_flag', 'location_distance_m', 'recorded_at'])
+            ->map(fn (AttendanceEvent $e) => [
+                'type' => 'outside_radius',
+                'color' => 'warning',
+                'employee' => $e->employee_name,
+                'branch' => $e->branch_name,
+                'text' => $e->location_flag === LocationRadiusService::FLAG_NO_LOCATION
+                    ? 'Marcó a las '.$e->recorded_at->format('H:i').' sin ubicación'
+                    : 'Marcó a las '.$e->recorded_at->format('H:i')." a {$e->location_distance_m} m de su punto",
+                'minutes' => 0,
+            ])
+            ->all();
     }
 
     /**
