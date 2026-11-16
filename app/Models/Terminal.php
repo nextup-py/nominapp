@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -1218,9 +1219,10 @@ class Terminal extends Model implements AuthenticatableContract
      *                                        ver DeviceHintsParser para el detalle de qué navegadores lo soportan.
      * @param  string|null  $ip  IP desde la que se vinculó el dispositivo (se guarda en `linked_ip`).
      * @param  string  $via  Cómo se vinculó (`setup` = enlace de un solo uso, `pairing` = código aprobado por un admin) — queda en la bitácora.
+     * @param  string|null  $deviceId  Identificador aleatorio que genera y guarda el propio dispositivo (`terminal-offline/device-identity.js`), para distinguir equipos que comparten IP y navegador.
      * @return string Token Sanctum en texto plano — solo se retorna una vez, nunca se persiste en claro.
      */
-    public function claimSanctumToken(?string $userAgent = null, ?string $clientHintModel = null, ?string $ip = null, string $via = 'setup'): string
+    public function claimSanctumToken(?string $userAgent = null, ?string $clientHintModel = null, ?string $ip = null, string $via = 'setup', ?string $deviceId = null): string
     {
         $replacedDevice = $this->tokens()->where('name', 'like', 'kiosk:%')->exists()
             ? ['previous_ip' => $this->linked_ip, 'previous_online' => $this->isReportingNow(), 'seconds_since_heartbeat' => $this->last_heartbeat_at?->diffInSeconds(now(), true)]
@@ -1277,8 +1279,10 @@ class Terminal extends Model implements AuthenticatableContract
 
         TerminalEvent::record($this, 'linked', ['via' => $via, 'ip' => $ip]);
 
+        $previousDevice = $this->registerDevice($userAgent, $clientHintModel, $ip, $via, $deviceId);
+
         if ($replacedDevice) {
-            $this->recordDeviceReplaced($replacedDevice, $ip, $preparedById);
+            $this->recordDeviceReplaced([...$replacedDevice, 'previous_device_id' => $previousDevice?->device_id], $ip, $preparedById, $deviceId);
         }
 
         return $this->createToken('kiosk:'.$this->code, [self::SYNC_ABILITY])->plainTextToken;
@@ -1310,17 +1314,90 @@ class Terminal extends Model implements AuthenticatableContract
         ]));
     }
 
+    /** Historial de dispositivos que estuvieron vinculados a este terminal (el más reciente primero). */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(TerminalDevice::class)->latest('linked_at')->latest('id');
+    }
+
+    /** Dispositivo que hoy tiene acceso al terminal (a lo sumo uno), o null si está sin vincular. */
+    public function activeDevice(): HasOne
+    {
+        return $this->hasOne(TerminalDevice::class)->whereNull('unlinked_at')->latest('linked_at')->latest('id');
+    }
+
+    /**
+     * Cierra el registro del dispositivo activo (si lo hay) con el motivo indicado y la hora del último latido, para
+     * que el historial diga hasta cuándo estuvo en línea.
+     *
+     * @param  int|null  $replacedById  Id del registro que lo reemplaza, cuando el motivo es un reemplazo.
+     * @param  int|null  $userId  Usuario del panel que lo desvinculó, si fue manual.
+     * @return TerminalDevice|null El registro cerrado, o null si no había uno activo.
+     */
+    public function closeActiveDevice(string $reason, ?int $replacedById = null, ?int $userId = null): ?TerminalDevice
+    {
+        $device = $this->devices()->whereNull('unlinked_at')->first();
+
+        $device?->forceFill([
+            'unlinked_at' => now(),
+            'unlink_reason' => $reason,
+            'unlinked_by_id' => $userId,
+            'replaced_by_id' => $replacedById,
+            'last_seen_at' => $this->last_heartbeat_at,
+        ])->save();
+
+        return $device;
+    }
+
+    /**
+     * Registra el dispositivo que acaba de vincularse y cierra el anterior como reemplazado. Es el único punto que
+     * crea registros activos, para que nunca haya dos a la vez.
+     *
+     * @return TerminalDevice|null El dispositivo anterior (ya cerrado), si lo había.
+     */
+    private function registerDevice(?string $userAgent, ?string $clientHintModel, ?string $ip, string $via, ?string $deviceId): ?TerminalDevice
+    {
+        $previous = $this->devices()->whereNull('unlinked_at')->first();
+        $described = DeviceHintsParser::describe($userAgent);
+        $guess = DeviceHintsParser::guess($userAgent, $clientHintModel);
+
+        $new = $this->devices()->create([
+            'device_id' => $deviceId,
+            'ip_address' => $ip,
+            'user_agent' => $userAgent,
+            'device_brand' => $guess['brand'],
+            'device_model' => $guess['model'],
+            'os' => $described['os'],
+            'browser' => $described['browser'],
+            'linked_via' => $via === 'setup' ? 'setup' : 'pairing',
+            'linked_at' => now(),
+        ]);
+
+        if ($previous) {
+            $previous->forceFill([
+                'unlinked_at' => now(),
+                'unlink_reason' => TerminalDevice::REASON_REPLACED,
+                'replaced_by_id' => $new->id,
+                'last_seen_at' => $this->last_heartbeat_at,
+            ])->save();
+        }
+
+        return $previous;
+    }
+
     /**
      * Deja en la bitácora que un dispositivo nuevo reemplazó al anterior y, si el anterior seguía en línea, avisa a
      * quienes administran terminales (menos a quien dejó listo el vínculo, que ya lo sabe). Best-effort: un fallo del
      * mailer no debe invalidar una vinculación ya persistida.
      *
-     * @param  array{previous_ip: string|null, previous_online: bool, seconds_since_heartbeat: int|float|null}  $previous
+     * @param  array{previous_ip: string|null, previous_online: bool, seconds_since_heartbeat: int|float|null, previous_device_id?: string|null}  $previous
      */
-    private function recordDeviceReplaced(array $previous, ?string $newIp, ?int $preparedById): void
+    private function recordDeviceReplaced(array $previous, ?string $newIp, ?int $preparedById, ?string $newDeviceId = null): void
     {
         TerminalEvent::record($this, 'device_replaced', array_filter([
             'ip' => $newIp,
+            'device_id' => $newDeviceId ? substr($newDeviceId, 0, 8) : null,
+            'previous_device_id' => ! empty($previous['previous_device_id']) ? substr($previous['previous_device_id'], 0, 8) : null,
             'previous_ip' => $previous['previous_ip'],
             'previous_online' => $previous['previous_online'],
             'seconds_since_heartbeat' => $previous['seconds_since_heartbeat'] !== null ? (int) $previous['seconds_since_heartbeat'] : null,
@@ -1346,6 +1423,8 @@ class Terminal extends Model implements AuthenticatableContract
     public function revokeSyncTokens(): void
     {
         $revoked = $this->tokens()->delete();
+
+        $this->closeActiveDevice(TerminalDevice::REASON_REVOKED, null, Auth::id());
 
         if ($revoked > 0) {
             TerminalEvent::record($this, 'revoked', ['tokens' => $revoked], Auth::id());

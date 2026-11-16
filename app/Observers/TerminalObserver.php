@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Terminal;
+use App\Models\TerminalDevice;
 
 /**
  * Revoca los tokens Sanctum del terminal al desactivarlo.
@@ -23,6 +24,7 @@ class TerminalObserver
 
         if ($terminal->status === 'inactive') {
             $terminal->tokens()->delete();
+            $terminal->closeActiveDevice(TerminalDevice::REASON_DEACTIVATED);
         }
     }
 }

@@ -51,6 +51,7 @@ class TerminalHeartbeatController extends Controller
         'app_version', 'standalone', 'sw_active', 'battery_level', 'battery_charging',
         'camera', 'cached_employees', 'clock_skew_seconds', 'storage_used_mb', 'storage_quota_mb', 'wake_lock', 'wake_lock_error',
         'display_mode', 'visible', 'identification_median_ms', 'identification_p90_ms', 'identification_samples',
+        'device_memory_gb', 'cpu_cores', 'connection_type', 'screen', 'language', 'timezone', 'platform',
     ];
 
     public function store(Request $request, GeneralSettings $settings): JsonResponse
@@ -78,6 +79,14 @@ class TerminalHeartbeatController extends Controller
             'device.identification_median_ms' => ['nullable', 'integer', 'min:0', 'max:600000'],
             'device.identification_p90_ms' => ['nullable', 'integer', 'min:0', 'max:600000'],
             'device.identification_samples' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'device.device_id' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
+            'device.device_memory_gb' => ['nullable', 'numeric', 'min:0', 'max:1024'],
+            'device.cpu_cores' => ['nullable', 'integer', 'min:1', 'max:512'],
+            'device.connection_type' => ['nullable', 'string', 'in:slow-2g,2g,3g,4g'],
+            'device.screen' => ['nullable', 'string', 'regex:/^\d{2,5}x\d{2,5}$/'],
+            'device.language' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'device.timezone' => ['nullable', 'string', 'max:60', 'regex:/^[A-Za-z0-9_\/+-]+$/'],
+            'device.platform' => ['nullable', 'string', 'max:40'],
             'device.storage_used_mb' => ['nullable', 'integer', 'min:0'],
             'device.storage_quota_mb' => ['nullable', 'integer', 'min:0'],
         ]);
@@ -90,6 +99,12 @@ class TerminalHeartbeatController extends Controller
             $data['conflict_events'] ?? null,
             isset($data['device']) ? array_intersect_key($data['device'], array_flip(self::DEVICE_REPORT_KEYS)) : null,
         );
+
+        // Un dispositivo vinculado antes de que existiera el identificador lo aprende del primer latido: así el
+        // historial y la comparación «mismo dispositivo» funcionan sin tener que volver a vincularlo.
+        if (! empty($data['device']['device_id'])) {
+            $terminal->activeDevice()->whereNull('device_id')->update(['device_id' => $data['device']['device_id']]);
+        }
 
         // `command_acks` (aunque vacío) indica que el cliente entiende comandos remotos: los
         // clientes viejos no lo envían y por eso nunca reciben uno que no podrían ejecutar.

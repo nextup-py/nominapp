@@ -6,6 +6,20 @@
  * módulo compartido de instalación (ver resources/js/shared/install-prompt.js).
  */
 import { captureInstallPrompt, triggerInstallPrompt, isStandalone, isIOS } from '../shared/install-prompt.js';
+import { resolveDeviceId } from './terminal-offline/device-identity.js';
+
+/**
+ * Identificador de este dispositivo para el servidor. La pantalla de configuración no abre IndexedDB (el token se guarda
+ * en localStorage y `terminal.js` lo migra), así que acá se usa solo localStorage; `terminal.js` lo copia a IndexedDB.
+ * @returns {Promise<string|null>}
+ */
+async function getDeviceIdSafe() {
+    try {
+        return await resolveDeviceId({ getMeta: async () => null, setMeta: async () => {} });
+    } catch {
+        return null;
+    }
+}
 
 const btn = document.getElementById('btnClaim');
 const btnLabel = btn.querySelector('.btn-label');
@@ -80,7 +94,7 @@ btn.addEventListener('click', async () => {
         const response = await fetch(window.location.pathname.replace(/\/$/, '') + '/claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-            body: JSON.stringify({ token, device_model_hint: await getClientHintModel() }),
+            body: JSON.stringify({ token, device_model_hint: await getClientHintModel(), device_id: await getDeviceIdSafe() }),
         });
         const data = await response.json();
 

@@ -13,6 +13,7 @@
 import { getMeta, setMeta, clearRebuildableCaches, applyEmployeesDelta, applyBreakFlags, logSync, countPendingEvents, countConflictEvents, countCachedEmployees } from './db.js';
 import { collectDeviceReport } from './device-report.js';
 import { getIdentificationStats } from './identification-stats.js';
+import { getDeviceId } from './device-identity.js';
 
 const API_BASE = '/api/v1/terminal';
 
@@ -170,6 +171,7 @@ async function buildDeviceReport() {
             wakeLock: readWakeLock(),
             wakeLockError: wakeLockErrorProbe ? wakeLockErrorProbe() : null,
             identification: getIdentificationStats(),
+            deviceId: await getDeviceId({ getMeta, setMeta }),
         });
     } catch {
         return {};

@@ -22,6 +22,7 @@ import { heartbeat, syncEmployees, TerminalAuthError } from './terminal-offline/
 import { detectDisplayMode } from './terminal-offline/device-report.js';
 import { flushQueue, countPendingEvents, countConflictEvents } from './terminal-offline/queue.js';
 import { getMeta, setMeta, countCachedEmployees } from './terminal-offline/db.js';
+import { getDeviceId } from './terminal-offline/device-identity.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // ============================================================================
@@ -275,9 +276,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (canPair && !pairingAutoStarted) {
             pairingAutoStarted = true;
-            Promise.all([pairingFlow.getClientHintModel(), getStorageProbe()]).then(([deviceModelHint, probe]) => {
+            Promise.all([pairingFlow.getClientHintModel(), getStorageProbe(), getDeviceId({ getMeta, setMeta })]).then(([deviceModelHint, probe, deviceId]) => {
                 const context = {
                     reason,
+                    device_id: deviceId,
                     had_marker: hasLinkMarker(terminalData.code),
                     storage_available: probe.available,
                     storage_persisted: probe.persisted,
