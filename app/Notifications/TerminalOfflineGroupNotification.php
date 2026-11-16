@@ -33,7 +33,9 @@ class TerminalOfflineGroupNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         $names = $this->terminals
-            ->map(fn (Terminal $terminal) => $terminal->name.($terminal->branch ? " ({$terminal->branch->name})" : ''))
+            ->map(fn (Terminal $terminal) => $terminal->name
+                .($terminal->branch ? " ({$terminal->branch->name})" : '')
+                .($terminal->responsibleContact() ? " - responsable: {$terminal->responsibleContact()}" : ''))
             ->implode(', ');
 
         $commonHint = $this->terminals

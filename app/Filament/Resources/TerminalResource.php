@@ -154,6 +154,42 @@ class TerminalResource extends Resource
                     ])
                     ->columns(2),
 
+                Section::make('Responsable y garantía')
+                    ->description('Datos de gestión que el navegador no puede detectar: a quién llamar si el equipo falla y hasta cuándo tiene garantía.')
+                    ->icon('heroicon-o-user-circle')
+                    ->compact()
+                    ->collapsible()
+                    ->schema([
+                        TextInput::make('responsible_name')
+                            ->label('Responsable del equipo')
+                            ->placeholder('Ej: Richard Sánchez')
+                            ->helperText('Quien se encarga del equipo en la sucursal o en el soporte. Aparece en el aviso de desconexión.')
+                            ->maxLength(100),
+
+                        TextInput::make('responsible_phone')
+                            ->label('Teléfono del responsable')
+                            ->maxLength(10)
+                            ->regex('/^0\d{8,9}$/')
+                            ->validationMessages(['regex' => 'Ingrese un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).'])
+                            ->helperText('Número sin espacios ni guiones. Ej: 0981123456'),
+
+                        DatePicker::make('purchased_at')
+                            ->label('Fecha de compra')
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->closeOnDateSelection()
+                            ->maxDate(now()),
+
+                        DatePicker::make('warranty_until')
+                            ->label('Garantía hasta')
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->closeOnDateSelection()
+                            ->afterOrEqual('purchased_at')
+                            ->validationMessages(['after_or_equal' => 'La garantía no puede vencer antes de la fecha de compra.']),
+                    ])
+                    ->columns(2),
+
                 Section::make('Marcación')
                     ->description('Cómo se comporta la pantalla de este terminal al marcar. Sin definir, usa lo de Configuración General.')
                     ->icon('heroicon-o-finger-print')
@@ -296,6 +332,37 @@ class TerminalResource extends Resource
                             ->columnSpanFull(),
                     ])
                     ->visible(fn (Terminal $record) => $record->device_brand || $record->device_model || $record->device_serial || $record->device_mac || $record->device_notes || $record->user_agent),
+
+                InfoSection::make('Responsable y garantía')
+                    ->collapsible()
+                    ->schema([
+                        InfoGrid::make(2)->schema([
+                            TextEntry::make('responsible_name')
+                                ->label('Responsable del equipo')
+                                ->icon('heroicon-o-user-circle')
+                                ->placeholder('Sin responsable'),
+
+                            TextEntry::make('responsible_phone')
+                                ->label('Teléfono del responsable')
+                                ->icon('heroicon-o-phone')
+                                ->copyable()
+                                ->placeholder('Sin teléfono'),
+
+                            TextEntry::make('purchased_at')
+                                ->label('Fecha de compra')
+                                ->date('d/m/Y')
+                                ->placeholder('Sin fecha de compra'),
+
+                            TextEntry::make('warranty_until')
+                                ->label('Garantía hasta')
+                                ->date('d/m/Y')
+                                ->placeholder('Sin garantía cargada')
+                                ->badge()
+                                ->color(fn (Terminal $record) => Terminal::getWarrantyStatusColors()[$record->warrantyStatus()] ?? 'gray')
+                                ->helperText(fn (Terminal $record) => $record->warranty_until ? Terminal::getWarrantyStatusOptions()[$record->warrantyStatus()] : null),
+                        ]),
+                    ])
+                    ->visible(fn (Terminal $record) => $record->responsible_name || $record->responsible_phone || $record->purchased_at || $record->warranty_until),
 
                 InfoSection::make('Conectividad')
                     ->description('Marcación offline vía PWA — heartbeat y sincronización con la API de terminales')
@@ -628,6 +695,22 @@ class TerminalResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                TextColumn::make('responsible_name')
+                    ->label('Responsable')
+                    ->description(fn (Terminal $record) => $record->responsible_phone)
+                    ->placeholder('Sin responsable')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('warranty_until')
+                    ->label('Garantía')
+                    ->date('d/m/Y')
+                    ->placeholder('Sin datos')
+                    ->badge()
+                    ->color(fn (Terminal $record) => Terminal::getWarrantyStatusColors()[$record->warrantyStatus()] ?? 'gray')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('installed_at')
                     ->label('Instalada')
                     ->date('d/m/Y')
@@ -689,6 +772,14 @@ class TerminalResource extends Resource
                     ->native(false)
                     ->query(fn (Builder $query, array $data) => filled($data['value'] ?? null)
                         ? $query->whereIn('terminals.id', Terminal::idsByDisplayKind($data['value']))
+                        : $query),
+
+                SelectFilter::make('warranty_status')
+                    ->label('Garantía')
+                    ->options(Terminal::getWarrantyStatusOptions())
+                    ->native(false)
+                    ->query(fn (Builder $query, array $data) => filled($data['value'] ?? null)
+                        ? $query->withWarrantyStatus($data['value'])
                         : $query),
 
                 Filter::make('link_window_open')

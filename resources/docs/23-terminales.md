@@ -34,6 +34,7 @@ Ir a **Asistencias → Terminales**.
    - **Sucursal** — sucursal a la que pertenece. Solo se ofrecen sucursales de empresas activas
    - **Estado** — Activo (por defecto) o Inactivo
    - **Dispositivo** — marca, modelo, número de serie, MAC y notas (todo opcional, sirve para inventario). Marca y modelo se completan solos al vincular cuando el navegador los informa
+   - **Responsable y garantía** — **Responsable del equipo** y su **teléfono** (a quién llamar si falla), **Fecha de compra** y **Garantía hasta**. Es todo opcional y lo carga una persona: ningún navegador puede detectarlo. El teléfono va sin espacios ni guiones (ej: 0981123456)
    - **Fecha de instalación** e **Instalado por** (opcional)
 3. Guardar
 
@@ -304,8 +305,8 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 
 | Aviso | Cuándo |
 |-------|--------|
-| **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia). El aviso incluye la **causa probable** según el último reporte del dispositivo (pantalla que no se mantenía encendida, abierto en el navegador, sin cargador, reloj desajustado, app vieja); también queda en la bitácora |
-| **N terminales sin conexión** | Si varios terminales pasan a Desconectado en la misma revisión (por ejemplo al abrir el horario de vigilancia) llega **un solo aviso** con la lista y la causa probable más frecuente, en vez de uno por terminal |
+| **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia). El aviso incluye la **causa probable** según el último reporte del dispositivo (pantalla que no se mantenía encendida, abierto en el navegador, sin cargador, reloj desajustado, app vieja) y, si el terminal tiene **Responsable del equipo**, su nombre y teléfono para llamarlo; también queda en la bitácora |
+| **N terminales sin conexión** | Si varios terminales pasan a Desconectado en la misma revisión (por ejemplo al abrir el horario de vigilancia) llega **un solo aviso** con la lista (con el responsable de cada terminal que lo tenga) y la causa probable más frecuente, en vez de uno por terminal |
 | **Terminal reconectado** | Volvió a reportar después de haber avisado la desconexión. **Desactivado por defecto**: la reconexión queda en la bitácora y el aviso de desconexión de ese terminal se marca como leído solo |
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
 | **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones **pendientes** no se envían hace más del tiempo configurado. Las marcaciones **en conflicto** no cuentan: el servidor ya las rechazó y quedan en **Fallos de Marcación** para revisar |
@@ -327,7 +328,7 @@ El **Escritorio** muestra la tarjeta **Salud de los terminales** para quien pued
 
 ### Filtros del listado
 
-**Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad** (incluye **Fuera de horario**), **Modo de ejecución** (**App o kiosko** o **Pestaña**, según el último reporte), **Ventana de vinculación abierta** y **Cola de sync**. La columna **Modo** del listado muestra lo mismo de un vistazo: un terminal en **Pestaña** puede quedar oculto detrás de otras ventanas y dejar que el equipo se suspenda. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
+**Empresa** (si hay más de una), **Sucursal**, **Estado**, **Conectividad** (incluye **Fuera de horario**), **Modo de ejecución** (**App o kiosko** o **Pestaña**, según el último reporte), **Ventana de vinculación abierta**, **Cola de sync** y **Garantía** (**Vigente**, **Por vencer** —vence en 60 días o menos—, **Vencida** o **Sin datos de garantía**). Las columnas **Responsable** y **Garantía** del listado están ocultas por defecto y se activan desde el selector de columnas. La columna **Modo** del listado muestra lo mismo de un vistazo: un terminal en **Pestaña** puede quedar oculto detrás de otras ventanas y dejar que el equipo se suspenda. Por ejemplo, filtrar por *Conectividad: Sin vincular* lista de una vez los terminales que no pueden marcar.
 
 ---
 
