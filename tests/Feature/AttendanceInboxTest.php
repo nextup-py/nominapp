@@ -89,6 +89,7 @@ it('cuenta cada tipo de pendiente por separado', function () {
         'absences' => 1,
         'mark_failures' => 1,
         'no_schedule' => 1,
+        'expired_contract' => 0,
     ]);
 });
 

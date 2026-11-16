@@ -1037,6 +1037,11 @@ class EmployeeResource extends Resource
                     ->toggle()
                     ->query(fn (Builder $query) => $query->withoutSchedule()),
 
+                Filter::make('expired_contract')
+                    ->label('Contrato vencido sin renovar')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->withExpiredContract()),
+
                 SelectFilter::make('birthday_month')
                     ->label('Mes de cumpleaños')
                     ->options([
