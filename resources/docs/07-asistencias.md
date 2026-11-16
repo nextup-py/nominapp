@@ -307,7 +307,7 @@ El radio sale, en este orden, del empleado, de la sucursal o de **Configuración
 **Qué pasa fuera del radio:** la marcación **se acepta igual** (así un GPS impreciso no bloquea a nadie) pero queda señalada. La comparación se hace en el servidor al sincronizar, por lo que funciona también si el celular marcó sin conexión.
 
 **Dónde se revisa:**
-- **Asistencias → Marcaciones**: columnas **Control de ubicación** (con la distancia en metros) y **Revisión de ubicación**, y el filtro **Control de ubicación**. Con permiso para editar marcaciones, la fila ofrece **Aprobar ubicación** o **Descartar ubicación**; queda registrado quién decidió y cuándo. Descartar no elimina la marcación: para corregirla usar **Corregir marcaciones** en la jornada.
+- **Asistencias → Marcaciones**: columnas **Control de ubicación** (con la distancia en metros) y **Revisión de ubicación**, y el filtro **Control de ubicación**. Con permiso para editar marcaciones, la fila ofrece **Aprobar ubicación** o **Descartar ubicación**; queda registrado quién decidió y cuándo. Descartar no elimina la marcación: para corregirla usar **Corregir marcaciones** en la jornada. El detalle de la marcación (**Ver**) muestra el mapa, la distancia al punto de trabajo, el radio permitido, un enlace al punto y quién revisó la ubicación y cuándo (el punto y el radio son los vigentes hoy).
 - **Por resolver**: tarjeta **Marcaciones fuera de radio** con las que siguen sin revisar.
 
 > La ubicación es un dato personal: el aviso de privacidad que carga la empresa (**Empresas → Aviso de privacidad**) debe mencionarla. Se acepta al vincular el celular.

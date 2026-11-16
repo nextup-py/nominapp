@@ -170,3 +170,21 @@ it('el radio por defecto se edita en Configuración General dentro de los límit
 
     expect(app(GeneralSettings::class)->attendance_location_default_radius)->toBe(300);
 });
+
+it('el detalle de la marcación muestra la distancia, el radio y quién la revisó', function () {
+    $admin = User::factory()->create(['name' => 'Revisora Uno']);
+    $admin->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']));
+    test()->actingAs($admin);
+
+    $employee = locationEmployee(employee: ['work_location' => ['lat' => LOC_LAT, 'lng' => LOC_LNG], 'location_radius_m' => 200]);
+    $event = locationFlaggedEvent($employee);
+    $event->update(['location' => ['lat' => LOC_LAT + 0.008, 'lng' => LOC_LNG], 'location_review' => 'approved', 'location_reviewed_by_id' => $admin->id, 'location_reviewed_at' => now()]);
+
+    Livewire::test(ManageAttendanceEvents::class)
+        ->mountTableAction('view', $event)
+        ->assertSee('900 m')
+        ->assertSee('radio permitido: 200 m')
+        ->assertSee('Fuera de radio')
+        ->assertSee('Revisora Uno')
+        ->assertSee('Ver el punto de trabajo (del empleado)');
+});
