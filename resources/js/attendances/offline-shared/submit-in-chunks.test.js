@@ -70,7 +70,7 @@ describe('submitInChunks', () => {
 
         const result = await submitInChunks(events, submitFn, { onSynced, onConflict });
 
-        expect(onConflict).toHaveBeenCalledWith('e0', 'Secuencia inválida');
+        expect(onConflict).toHaveBeenCalledWith('e0', 'Secuencia inválida', { client_event_id: 'e0', status: 'rejected', message: 'Secuencia inválida' });
         expect(onSynced).not.toHaveBeenCalled();
         expect(result.conflicts).toBe(1);
     });

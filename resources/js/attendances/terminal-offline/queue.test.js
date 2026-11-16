@@ -9,6 +9,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./db.js', () => ({
     getMeta: vi.fn(),
+    setMeta: vi.fn(),
+    dismissConflictEvents: vi.fn(),
     queueEvent: vi.fn(),
     getPendingEvents: vi.fn(),
     getEventsForEmployeeOnDate: vi.fn(),
@@ -27,7 +29,7 @@ vi.mock('./sync.js', () => {
 });
 
 import {
-    getMeta, queueEvent, getPendingEvents, getEventsForEmployeeOnDate, getCachedEmployee,
+    getMeta, setMeta, dismissConflictEvents, queueEvent, getPendingEvents, getEventsForEmployeeOnDate, getCachedEmployee,
     removeQueuedEvent, markQueuedEventConflict, incrementQueuedEventAttempts,
     countPendingEvents, getEmployeeStatusCache, setEmployeeStatusCache,
 } from './db.js';
@@ -350,7 +352,53 @@ describe('flushQueue', () => {
         const result = await flushQueue();
 
         expect(result.conflicts).toBe(1);
-        expect(markQueuedEventConflict).toHaveBeenCalledWith('e1', 'Secuencia inválida');
+        expect(removeQueuedEvent).toHaveBeenCalledWith('e1');
+    });
+
+    it('un conflict de secuencia (ya registrado como fallo en el servidor) se quita de la cola y no deja el aviso «requieren revisión»', async () => {
+        getPendingEvents.mockResolvedValue([
+            { client_event_id: 'e1', employee_id: 7, event_type: 'break_start', recorded_at: '2026-01-01T10:00:00Z' },
+        ]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'e1', status: 'conflict', message: 'Secuencia inválida' }]);
+        countPendingEvents.mockResolvedValue(0);
+        fetchEmployeeStatus.mockResolvedValue({ last_event: 'break_start', allowed_events: ['break_end'] });
+
+        await flushQueue();
+
+        expect(removeQueuedEvent).toHaveBeenCalledWith('e1');
+        expect(markQueuedEventConflict).not.toHaveBeenCalled();
+    });
+
+    it('limpia una sola vez los conflictos viejos que quedaron guardados en el dispositivo', async () => {
+        getPendingEvents.mockResolvedValue([]);
+        getMeta.mockImplementation(async (key) => (key === 'legacy_conflicts_purged' ? undefined : 0));
+
+        await flushQueue();
+
+        expect(dismissConflictEvents).toHaveBeenCalledTimes(1);
+        expect(setMeta).toHaveBeenCalledWith('legacy_conflicts_purged', true);
+
+        vi.clearAllMocks();
+        getPendingEvents.mockResolvedValue([]);
+        getMeta.mockImplementation(async (key) => (key === 'legacy_conflicts_purged' ? true : 0));
+
+        await flushQueue();
+
+        expect(dismissConflictEvents).not.toHaveBeenCalled();
+    });
+
+    it('si la limpieza de conflictos viejos falla, no interrumpe el flush', async () => {
+        getMeta.mockImplementation(async (key) => (key === 'legacy_conflicts_purged' ? undefined : 0));
+        dismissConflictEvents.mockRejectedValue(new Error('idb down'));
+        getPendingEvents.mockResolvedValue([
+            { client_event_id: 'e1', employee_id: 1, event_type: 'check_in', recorded_at: '2026-01-01T10:00:00Z' },
+        ]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'e1', status: 'synced' }]);
+        countPendingEvents.mockResolvedValue(0);
+
+        const result = await flushQueue();
+
+        expect(result.synced).toBe(1);
     });
 
     it('si un lote falla por red, ese lote y los siguientes quedan pending (incrementa attempts)', async () => {
@@ -426,6 +474,8 @@ describe('flushQueue', () => {
         const secondResult = await secondCall;
         expect(secondResult.results).toEqual([]); // el segundo no reintentó nada, solo devolvió el estado actual
 
+        // el primero todavía está limpiando conflictos viejos antes de enviar: esperar a que llegue al envío
+        await vi.waitFor(() => expect(resolveFirst).toBeTypeOf('function'));
         resolveFirst([{ client_event_id: 'e1', status: 'synced' }]);
         await firstCall;
     });

@@ -33,7 +33,7 @@
  * reintentable, no tiene sentido contarlo como intento). Ver Steps 3 y 4.
  * @param {Array<object>} events - Eventos pendientes a enviar.
  * @param {(batch: Array<object>) => Promise<Array<{client_event_id: string, status: string, message?: string}>>} submitFn - Envía un lote, retorna los resultados del servidor.
- * @param {{onSynced: (clientEventId: string) => Promise<void>, onConflict: (clientEventId: string, message?: string) => Promise<void>}} callbacks
+ * @param {{onSynced: (clientEventId: string) => Promise<void>, onConflict: (clientEventId: string, message?: string, result?: {status: string, conflict_reason?: string}) => Promise<void>}} callbacks
  * @param {number} [chunkSize]
  * @returns {Promise<{synced: number, conflicts: number, results: Array<object>}>}
  */
@@ -62,7 +62,7 @@ export async function submitInChunks(events, submitFn, { onSynced, onConflict },
                 await onSynced(result.client_event_id);
                 synced++;
             } else {
-                await onConflict(result.client_event_id, result.message);
+                await onConflict(result.client_event_id, result.message, result);
                 conflicts++;
             }
         }

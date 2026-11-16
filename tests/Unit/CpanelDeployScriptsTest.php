@@ -60,3 +60,41 @@ it('el archivo de configuración de ejemplo define lo obligatorio', function () 
 
     expect($content)->toContain('APP_DIR=')->toContain('PHP_BIN=')->toContain('APP_URL=');
 });
+
+it('deploy.sh no corta la lista de commits con head (pipefail aborta con 141 si hay mas de 15)', function () {
+    $content = file_get_contents(dirname(__DIR__, 2).'/scripts/cpanel/deploy.sh');
+
+    expect($content)->toContain('git log --oneline -15')
+        ->and($content)->not->toContain('| head -15');
+});
+
+it('deploy.sh comprueba que PHP_BIN cumpla lo que exigen vendor/ y el composer.json a desplegar', function () {
+    $content = file_get_contents(dirname(__DIR__, 2).'/scripts/cpanel/deploy.sh');
+
+    expect($content)->toContain('check_php_requirements()')
+        ->and($content)->toContain('vendor/composer/platform_check.php')
+        ->and($content)->toContain('composer.json')
+        ->and($content)->toContain('check_php_requirements || problems=');
+});
+
+it('composer.lock esta al dia con composer.json (si no, composer install avisa en cada deploy)', function () {
+    $root = dirname(__DIR__, 2);
+    $lock = json_decode((string) file_get_contents($root.'/composer.lock'), true);
+    $composer = json_decode((string) file_get_contents($root.'/composer.json'), true);
+
+    $relevant = [];
+    foreach (['name', 'version', 'require', 'require-dev', 'conflict', 'replace', 'provide', 'minimum-stability', 'prefer-stable', 'repositories', 'extra'] as $key) {
+        if (isset($composer[$key])) {
+            $relevant[$key] = $composer[$key];
+        }
+    }
+    if (isset($composer['config']['platform'])) {
+        $relevant['config']['platform'] = $composer['config']['platform'];
+    }
+
+    // Replica Composer\Package\Locker::getContentHash(): md5 del JSON de las claves relevantes ordenadas por clave.
+    ksort($relevant);
+    $hash = md5(json_encode($relevant));
+
+    expect($lock['content-hash'])->toBe($hash);
+});

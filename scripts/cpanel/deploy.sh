@@ -140,6 +140,27 @@ db_default_engine() {
 
 # ---------------------------------------------------------------- verificacion previa
 
+# El PHP configurado debe cumplir lo que exigen las dependencias instaladas (vendor/) y el composer.json que se va a
+# desplegar. Sin esto, un PHP_BIN viejo pasa la verificacion y "artisan down" falla con el sitio sin tocar.
+check_php_requirements() {
+    local failed=0 min
+
+    if [ -f vendor/composer/platform_check.php ] && ! "$PHP_BIN" -r 'require "vendor/composer/platform_check.php";' >/dev/null 2>&1; then
+        warn "PHP_BIN no cumple lo que exigen las dependencias instaladas (vendor/): usar el mismo PHP que usa el sitio y el cron."
+        failed=1
+    fi
+
+    if git rev-parse -q --verify "origin/$BRANCH" >/dev/null 2>&1; then
+        min="$(git show "origin/$BRANCH:composer.json" 2>/dev/null | "$PHP_BIN" -r '$c = json_decode((string) stream_get_contents(STDIN), true); $v = (string) ($c["require"]["php"] ?? ""); echo preg_match("/(\\d+\\.\\d+(\\.\\d+)?)/", $v, $m) ? $m[1] : "";' 2>/dev/null || true)"
+        if [ -n "$min" ] && ! "$PHP_BIN" -r 'exit(version_compare(PHP_VERSION, $argv[1], ">=") ? 0 : 1);' "$min" >/dev/null 2>&1; then
+            warn "El release exige PHP >= $min y PHP_BIN es $("$PHP_BIN" -r 'echo PHP_VERSION;'): corregir PHP_BIN en $CONF."
+            failed=1
+        fi
+    fi
+
+    return "$failed"
+}
+
 preflight() {
     say "Verificacion previa"
     local problems=0
@@ -198,7 +219,10 @@ preflight() {
     local pending
     pending="$(git log --oneline "HEAD..origin/$BRANCH" 2>/dev/null | wc -l | tr -d ' ')"
     ok "Commits por aplicar desde origin/$BRANCH: $pending"
-    [ "$pending" -gt 0 ] && git log --oneline "HEAD..origin/$BRANCH" | head -15 | sed 's/^/        /'
+    # -15 de git y no un head por tuberia: con pipefail, head cierra la tuberia y el script aborta (codigo 141) si hay mas de 15 commits.
+    [ "$pending" -gt 0 ] && git log --oneline -15 "HEAD..origin/$BRANCH" | sed 's/^/        /'
+
+    check_php_requirements || problems=$((problems+1))
 
     check_logs
 

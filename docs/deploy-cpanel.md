@@ -20,7 +20,7 @@ Para el checklist completo previo al día del deploy (avisos al cliente, limpiez
 
 ## Primera vez en un servidor (una sola vez)
 
-1. Entrar por SSH al servidor.
+1. Entrar por SSH al servidor. Si no hay SSH desde fuera del hosting, sirve la **terminal web de cPanel**: todos los comandos de esta guía se corren ahí.
 
 2. Bajar el script y el modelo de configuración desde el repositorio (no hace falta que el servidor ya los tenga):
 
@@ -76,7 +76,9 @@ El script:
 - guarda el commit en `public\build\commit.txt`;
 - comprime a `build.tar.gz` en tu carpeta de usuario y lo sube por `scp` a la carpeta personal del servidor (pide la contraseña de tu clave SSH).
 
-Opciones: `-Puerto 22`, `-Rama main`, `-SinSubir` (solo arma el archivo, para subirlo a mano con el Administrador de archivos de cPanel).
+Opciones: `-Puerto 22`, `-Rama main`, `-SinSubir` (solo arma el archivo, para subirlo a mano con el Administrador de archivos de cPanel, en la carpeta personal del usuario).
+
+> `-Servidor` necesita un host que **tu PC pueda resolver** (dominio o IP con la que entrás por SSH). El nombre que muestra el prompt del servidor (`usuario@nombre-interno`) casi nunca sirve y el `scp` falla con *Could not resolve hostname*. Si no hay SSH externo, usar `-SinSubir` y subir `build.tar.gz` por el Administrador de archivos.
 
 Si el release **no cambia** JS, CSS ni vistas Blade, se puede omitir este paso y usar `--sin-build` en el servidor.
 
@@ -156,6 +158,8 @@ Los logs diarios de Laravel (`laravel-AAAA-MM-DD.log`) ya los rota la aplicació
 
 | Síntoma | Causa | Solución |
 |---------|-------|----------|
+| `artisan down` falla con *Your Composer dependencies require a PHP version >= 8.x* | `PHP_BIN` de `~/deploy-nominapp.conf` apunta a un PHP más viejo que el que usa el sitio y el cron | `verificar` lo detecta (compara con `vendor/` y con el `composer.json` a desplegar). Poner en `PHP_BIN` el mismo binario que usa el cron (`crontab -l`) |
+| `verificar` termina con código 141 | Versiones anteriores del script cortaban la lista de commits con `head` y `pipefail` abortaba si había más de 15 pendientes | Actualizar el script (`git show origin/main:scripts/cpanel/deploy.sh > ~/deploy-nominapp.sh`) |
 | La migración falla con *Specified key was too long* y deja una tabla a medias | El motor por defecto del servidor es MyISAM | `DB_ENGINE=InnoDB` en el `.env` **antes** de migrar (`verificar` lo comprueba). Si ya falló: borrar la tabla que quedó a medias antes de reintentar (MySQL no deshace el `create table`) |
 | `git pull` se niega a continuar | Hay archivos modificados a mano en el servidor | `verificar` los lista. Si el cambio ya está resuelto en `main`: `git checkout -- <archivo>`. Si es propio del servidor, agregarlo a `ALLOWED_LOCAL` |
 | `npm run build` falla en el servidor con *Out of memory* | Node viejo y poca memoria | Por eso el build se compila en tu PC (`Preparar-Build.ps1`) |
