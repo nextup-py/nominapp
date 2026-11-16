@@ -266,6 +266,26 @@ El filtro **Vinculación** separa el vinculado ahora de los anteriores. Sirve, p
 
 > **Privacidad:** el **ID del dispositivo** identifica al **equipo**, no a una persona. Lo genera el propio dispositivo de forma aleatoria (no sale de la huella del navegador ni del número de serie) y se guarda en el navegador. Si se borran los datos del navegador, el equipo pasa a ser un dispositivo nuevo para el sistema. Los datos del equipo (memoria, núcleos, conexión, pantalla, idioma) son los que el navegador entrega por sí solo; el número de serie y la MAC nunca se pueden leer desde un navegador y se cargan a mano.
 
+### Confiabilidad
+
+La pestaña **Confiabilidad** del detalle muestra cómo le fue al terminal día por día, para ver si un equipo se cae seguido o si tarda en reconocer. Por defecto abre los últimos 30 días; el filtro **Período** permite elegir cualquier rango con **Desde** y **Hasta**. Sobre la tabla hay un resumen de todo el período.
+
+| Columna | Qué muestra |
+|---------|-------------|
+| **Disponibilidad** | Porcentaje de su **horario de vigilancia** en que el terminal estuvo en línea (verde: igual o por encima del mínimo configurado; amarillo: hasta 10 puntos por debajo; rojo: menos). Usa la misma definición de **En línea** que la columna *Conectividad*; los minutos fuera de horario no cuentan |
+| **Cortes** | Cuántas veces pasó a **Desconectado** y volvió. Un corte se cuenta el día en que termina |
+| **Tiempo sin conexión** y **Corte más largo** | Suma de los minutos desconectado y duración del corte más largo del día |
+| **Marcaciones** | Marcaciones registradas desde este terminal ese día |
+| **Conflictos** | Marcaciones de este terminal que el servidor rechazó al sincronizar (quedan en **Fallos de Marcación**) |
+| **No reconocidos** | Porcentaje de intentos de identificación en que la cámara no reconoció a nadie (rostro sin coincidencia o ambiguo), sobre el total de intentos |
+| **Tiempo de identificación** | Promedio de lo que tarda el equipo en reconocer a una persona |
+
+Los datos se acumulan **desde que se instala esta versión**: no hay historial de antes. Un día sin datos muestra *Sin datos*, no 0%. Si el equipo no informa identificaciones (versión vieja de la app abierta), esas dos columnas quedan vacías.
+
+**Exportar a Excel.** En el listado de terminales, el botón **Exportar confiabilidad** pide un período y descarga una fila por terminal (empresa, sucursal, responsable, disponibilidad, cortes, marcaciones, conflictos e identificación). Respeta los filtros que tenga el listado.
+
+**Aviso semanal.** Cada lunes, quien gestiona terminales recibe un único aviso con los terminales que estuvieron en línea menos del mínimo durante la semana anterior (se ignoran los que tuvieron muy pocas horas medidas). El mínimo y la retención del historial se configuran en **Configuración General → Terminales de Marcación** (ver el capítulo de Configuración); con el mínimo en **0** no se avisa.
+
 ### Bitácora
 
 La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nuevo a lo más viejo, cada cambio de vinculación del terminal: **fecha**, **evento**, **usuario** que lo provocó (si lo hizo el dispositivo o el sistema figura *Dispositivo o sistema*) y **detalle** (IP, vigencia del enlace, motivo del cierre de una ventana...). Se puede filtrar por tipo de evento.
@@ -317,6 +337,7 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 | **Reloj del terminal desajustado** | El reloj del dispositivo difiere del servidor por más del valor tolerado en tres reportes seguidos. Activar la fecha y hora automáticas del dispositivo |
 | **Terminal en una pestaña del navegador** | El terminal en línea, dentro de su horario de vigilancia, lleva más de 2 horas abierto en una pestaña del navegador, sin instalar como app ni en modo kiosko: puede quedar oculto o suspenderse. Instalarlo o usar el modo kiosko (ver **Modo kiosko en Windows**) |
 | **Pestaña del terminal oculta** | La pestaña del terminal lleva más de 2 horas oculta o minimizada: el navegador la frena y suelta el bloqueo de pantalla. Dejarlo a la vista o usar el modo kiosko |
+| **Terminales con poca disponibilidad** | Resumen semanal (lunes) de los terminales que estuvieron en línea menos del mínimo durante la semana anterior, con su porcentaje y sus cortes. Ver *Confiabilidad* |
 
 Los umbrales de la cola atascada, la batería baja y el desfase de reloj tolerado se editan en **Configuración General → Terminales de Marcación**. Los terminales **inactivos** no se evalúan, y al aplicar esta función por primera vez el sistema solo toma una foto del estado actual, sin avisar de lo que ya estaba así. Que la cola se normalice o que la batería se recupere queda en la **Bitácora**, sin notificación.
 

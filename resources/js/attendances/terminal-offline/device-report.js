@@ -137,6 +137,7 @@ export function detectDisplayMode(win, nav = globalThis.navigator) {
  * @param {string|null} [options.wakeLockError] - motivo del último intento fallido de Wake Lock; solo viaja si `wakeLock` es false.
  * @param {string|null} [options.deviceId] - identificador aleatorio de este equipo (ver device-identity.js); el servidor lo usa para aprender el del dispositivo vinculado.
  * @param {{samples: number, median_ms: number, p90_ms: number}|null} [options.identification] - tiempo de identificación de las últimas marcaciones (ver identification-stats.js); null si todavía no hubo ninguna.
+ * @param {{attempts: number, failures: number, successes: number, msTotal: number}|null} [options.identificationTotals] - contadores acumulados de identificación desde que se cargó la página; el servidor suma la diferencia entre reportes.
  * @returns {Promise<Record<string, string|number|boolean>>}
  */
 export async function collectDeviceReport({
@@ -148,6 +149,7 @@ export async function collectDeviceReport({
     wakeLock = null,
     wakeLockError = null,
     identification = null,
+    identificationTotals = null,
     deviceId = null,
 } = {}) {
     const report = {};
@@ -172,6 +174,13 @@ export async function collectDeviceReport({
     if (Number.isFinite(clockOffsetMs)) report.clock_skew_seconds = Math.round(clockOffsetMs / 1000);
     if (typeof wakeLock === 'boolean') report.wake_lock = wakeLock;
     if (wakeLock === false && wakeLockError) report.wake_lock_error = String(wakeLockError).slice(0, 40);
+
+    if (identificationTotals && Number.isFinite(identificationTotals.attempts)) {
+        report.identification_attempts = Math.round(identificationTotals.attempts);
+        report.identification_failures = Math.round(identificationTotals.failures);
+        report.identification_successes = Math.round(identificationTotals.successes);
+        report.identification_ms_total = Math.round(identificationTotals.msTotal);
+    }
 
     if (identification && Number.isFinite(identification.median_ms) && Number.isFinite(identification.p90_ms)) {
         report.identification_median_ms = Math.round(identification.median_ms);

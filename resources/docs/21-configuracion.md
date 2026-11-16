@@ -41,6 +41,8 @@ Acceder desde **Configuración → Configuración General**.
 - **Desfase de reloj tolerado:** segundos de diferencia entre el reloj del terminal y el del servidor a partir de los cuales se avisa (por defecto 120; entre 30 y 3600). Se avisa solo si el desfase se repite en tres reportes seguidos. Las marcaciones ya se corrigen con ese desfase; el aviso sirve para que alguien revise la fecha y hora del dispositivo.
 - **Reencendido de la cámara apagada:** minutos que tarda en volver a encenderse sola la cámara de un terminal que alguien apagó a mano desde su menú **⋮** (por defecto 2; entre 0 y 240; **0** = queda apagada hasta encenderla a mano). Evita dejar el terminal inutilizado por un olvido.
 - **Retención de la bitácora de terminales:** días que se conservan los eventos de la bitácora y los comandos remotos de cada terminal antes de eliminarse automáticamente (por defecto 90; **0** = conservar siempre).
+- **Retención del historial de confiabilidad:** días que se conserva el resumen diario de disponibilidad, cortes e identificaciones de cada terminal (por defecto 90; **0** = conservar siempre).
+- **Disponibilidad mínima semanal:** porcentaje por debajo del cual se avisa, cada lunes, de un terminal que estuvo poco en línea durante la semana anterior (por defecto 90; **0** = no avisar).
 
 ### Correo
 

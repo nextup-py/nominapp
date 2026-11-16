@@ -271,6 +271,12 @@ class Terminal extends Model implements AuthenticatableContract
         ];
     }
 
+    /** Resumen diario de confiabilidad (disponibilidad, cortes e identificaciones), un registro por día. */
+    public function dailyStats(): HasMany
+    {
+        return $this->hasMany(TerminalDailyStat::class);
+    }
+
     /**
      * Opciones del filtro de garantía del equipo.
      *

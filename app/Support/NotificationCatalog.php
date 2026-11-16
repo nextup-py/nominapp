@@ -85,6 +85,7 @@ class NotificationCatalog
             'terminal.clock_skew' => ['Reloj del terminal desajustado', 'La hora de un terminal difiere del servidor más de lo permitido.', 'terminal_health', 'update_terminal'],
             'terminal.app_outdated' => ['App del terminal desactualizada', 'Un terminal sigue con una versión anterior de la app tras un despliegue.', 'terminal_health', 'update_terminal'],
             'terminal.not_installed' => ['Terminal en una pestaña del navegador', 'Un terminal lleva horas funcionando en una pestaña del navegador, sin instalar como app ni en modo kiosko.', 'terminal_health', 'update_terminal'],
+            'terminal.low_availability' => ['Terminales con poca disponibilidad', 'Resumen semanal de los terminales que estuvieron en línea menos del mínimo configurado en Configuración General.', 'terminal_health', 'update_terminal', ['digestable' => false]],
             'terminal.tab_hidden' => ['Pestaña del terminal oculta', 'La pestaña de un terminal lleva horas oculta o minimizada: el navegador la frena y el equipo puede suspenderse.', 'terminal_health', 'update_terminal'],
 
             'terminal.pairing_requested' => ['Solicitud de vinculación', 'Un dispositivo pidió vincularse a un terminal con un código y espera aprobación.', 'terminal_linking', 'update_terminal'],

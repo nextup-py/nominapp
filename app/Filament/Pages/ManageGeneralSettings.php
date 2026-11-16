@@ -371,6 +371,28 @@ class ManageGeneralSettings extends SettingsPage
                             ->default(90)
                             ->suffix('días')
                             ->helperText('Los eventos más antiguos se eliminan automáticamente. 0 = conservar siempre'),
+
+                        TextInput::make('terminal_stats_retention_days')
+                            ->label('Retención del historial de confiabilidad')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(3650)
+                            ->default(90)
+                            ->suffix('días')
+                            ->helperText('Resumen diario de disponibilidad, cortes e identificaciones de cada terminal. 0 = conservar siempre'),
+
+                        TextInput::make('terminal_min_availability_percent')
+                            ->label('Disponibilidad mínima semanal')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->default(90)
+                            ->suffix('%')
+                            ->helperText('Cada lunes se avisa de los terminales que estuvieron en línea menos que esto durante la semana anterior. 0 = no avisar'),
                     ]),
 
                 Section::make('Correo')

@@ -145,6 +145,21 @@ describe('collectDeviceReport', () => {
         expect(report).toMatchObject({ identification_median_ms: 2100, identification_p90_ms: 4800, identification_samples: 12 });
     });
 
+    it('incluye los contadores acumulados de identificación cuando existen', async () => {
+        const report = await collectDeviceReport({ nav: {}, win: {}, identificationTotals: { attempts: 10, failures: 2, successes: 8, msTotal: 16000.4 } });
+
+        expect(report).toMatchObject({ identification_attempts: 10, identification_failures: 2, identification_successes: 8, identification_ms_total: 16000 });
+    });
+
+    it('sin contadores de identificación no manda ninguno', async () => {
+        for (const identificationTotals of [null, undefined, { attempts: NaN }]) {
+            const report = await collectDeviceReport({ nav: {}, win: {}, identificationTotals });
+
+            expect(report).not.toHaveProperty('identification_attempts');
+            expect(report).not.toHaveProperty('identification_ms_total');
+        }
+    });
+
     it('omite el tiempo de identificación si todavía no hubo ninguna o llega incompleto', async () => {
         for (const identification of [null, undefined, { samples: 0 }, { samples: 3, median_ms: NaN, p90_ms: 10 }]) {
             const report = await collectDeviceReport({ nav: {}, win: {}, identification });

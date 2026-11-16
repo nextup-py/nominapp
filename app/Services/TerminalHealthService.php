@@ -87,7 +87,10 @@ class TerminalHealthService
             'not_installed_since' => $previous['not_installed_since'] ?? null,
             'tab_hidden' => (bool) ($previous['tab_hidden'] ?? false),
             'tab_hidden_since' => $previous['tab_hidden_since'] ?? null,
+            'outage_run' => (int) ($previous['outage_run'] ?? 0),
         ];
+
+        app(TerminalReliabilityService::class)->sample($terminal, $connectivity, $snapshot);
 
         $alerts = [];
 
