@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # deploy.sh - Actualiza (o restaura) Nominapp en un servidor con cPanel.
 #
-# Uso:   deploy.sh [verificar|actualizar|restaurar] [opciones]
+# Uso:   deploy.sh [verificar|actualizar|restaurar|logs] [opciones]
 #
 #   verificar    Solo revisa que todo este listo; no cambia nada.
 #   actualizar   Respaldo, mantenimiento, git pull, composer, build, migraciones, caches y vuelta en linea.
 #   restaurar    Vuelve al codigo y al build anteriores (y a la base con --db).
+#   logs         Rota storage/logs/cron.log ahora (actualizar lo hace solo cuando supera LOG_MAX_MB).
 #
 # Opciones:
 #   --yes        No hacer pausas de confirmacion (solo para quien ya sabe lo que hace).
@@ -75,13 +76,13 @@ env_get() {
 
 run() { printf '   + %s\n' "$*"; "$@"; }
 
-usage() { sed -n '2,22p' "${NOMINAPP_DEPLOY_ORIG:-$0}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,23p' "${NOMINAPP_DEPLOY_ORIG:-$0}" | sed 's/^# \{0,1\}//'; }
 
 # ---------------------------------------------------------------- argumentos
 
 for arg in "$@"; do
     case "$arg" in
-        verificar|actualizar|restaurar) MODE="$arg" ;;
+        verificar|actualizar|restaurar|logs) MODE="$arg" ;;
         --yes) ASSUME_YES=1 ;;
         --sin-build) SKIP_BUILD=1 ;;
         --db) RESTORE_DB=1 ;;
@@ -107,6 +108,8 @@ APP_URL="${APP_URL:-}"
 COMPOSER_BIN="${COMPOSER_BIN:-$(command -v composer || true)}"
 ALLOWED_LOCAL="${ALLOWED_LOCAL:-public/.htaccess public/.user.ini}"
 BUILD_FILE="${BUILD_FILE:-}"
+LOG_MAX_MB="${LOG_MAX_MB:-10}"
+LOG_KEEP="${LOG_KEEP:-3}"
 
 [ -d "$APP_DIR/.git" ] || die "APP_DIR no es un repositorio git: $APP_DIR"
 cd "$APP_DIR"
@@ -197,10 +200,60 @@ preflight() {
     ok "Commits por aplicar desde origin/$BRANCH: $pending"
     [ "$pending" -gt 0 ] && git log --oneline "HEAD..origin/$BRANCH" | head -15 | sed 's/^/        /'
 
+    check_logs
+
     if [ "$problems" -gt 0 ]; then
         die "La verificacion encontro $problems problema(s). Resolverlos antes de actualizar."
     fi
     ok "Todo listo para actualizar"
+}
+
+# ---------------------------------------------------------------- logs
+
+# Avisos (no bloquean) sobre el tamano de los logs y su nivel de detalle.
+check_logs() {
+    local log=storage/logs/cron.log size_mb total_mb app_env log_level app_debug
+    if [ -f "$log" ]; then
+        size_mb=$(( $(stat -c %s "$log") / 1048576 ))
+        if [ "$size_mb" -ge "$LOG_MAX_MB" ]; then
+            warn "cron.log pesa ${size_mb} MB (limite ${LOG_MAX_MB} MB): 'actualizar' lo rota solo, o correr 'logs' para rotarlo ahora."
+        else
+            ok "cron.log: ${size_mb} MB"
+        fi
+    fi
+    total_mb="$(du -sm storage/logs 2>/dev/null | cut -f1)"
+    if [ "${total_mb:-0}" -ge 100 ]; then warn "storage/logs ocupa ${total_mb} MB: revisar LOG_LEVEL y LOG_DAILY_DAYS en el .env."; fi
+
+    app_env="$(env_get APP_ENV)"; log_level="$(env_get LOG_LEVEL)"; app_debug="$(env_get APP_DEBUG)"
+    if [ "$app_env" = "production" ] && [ "$(printf '%s' "$log_level" | tr '[:upper:]' '[:lower:]')" = "debug" ]; then
+        warn "LOG_LEVEL=debug en produccion: el log crece rapido y puede guardar datos de las peticiones. Usar warning o error."
+    fi
+    if [ "$app_env" = "production" ] && [ "$(printf '%s' "$app_debug" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
+        warn "APP_DEBUG=true en produccion: los errores muestran detalles internos a los usuarios. Ponerlo en false."
+    fi
+}
+
+# Rota storage/logs/cron.log si supera LOG_MAX_MB (o siempre con el modo "logs"): guarda una copia comprimida y
+# lo deja vacio. El cron lo abre en modo append en cada corrida, asi que truncarlo es seguro.
+rotate_logs() {
+    local log=storage/logs/cron.log size_mb i f idx
+    if [ ! -f "$log" ]; then ok "No hay cron.log para rotar"; return 0; fi
+    size_mb=$(( $(stat -c %s "$log") / 1048576 ))
+    if [ "$MODE" != "logs" ] && [ "$size_mb" -lt "$LOG_MAX_MB" ]; then
+        ok "cron.log: ${size_mb} MB (limite ${LOG_MAX_MB} MB), sin rotar"
+        return 0
+    fi
+    for ((i = LOG_KEEP; i >= 2; i--)); do
+        if [ -f "$log.$((i - 1)).gz" ]; then mv -f "$log.$((i - 1)).gz" "$log.$i.gz"; fi
+    done
+    gzip -c "$log" > "$log.1.gz"
+    : > "$log"
+    for f in "$log".*.gz; do
+        [ -e "$f" ] || continue
+        idx="${f#"$log".}"; idx="${idx%.gz}"
+        if [ "$idx" -gt "$LOG_KEEP" ] 2>/dev/null; then rm -f "$f"; fi
+    done
+    ok "cron.log rotado (${size_mb} MB): se conservan ${LOG_KEEP} copias comprimidas"
 }
 
 # ---------------------------------------------------------------- respaldo y estado
@@ -355,6 +408,7 @@ do_update() {
     STAGE="C"
     post_checks "$log_file" "$log_lines"
     rotate_backups
+    rotate_logs || warn "No se pudo rotar cron.log (no afecta la actualizacion)"
 
     say "Listo"
     echo "   Version:   $(git log --oneline -1)"
@@ -444,4 +498,5 @@ case "$MODE" in
     verificar)  preflight ;;
     actualizar) do_update ;;
     restaurar)  do_restore ;;
+    logs)       say "Logs"; check_logs; rotate_logs ;;
 esac
