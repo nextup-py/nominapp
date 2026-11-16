@@ -101,8 +101,25 @@ Si el release **no cambia** JS, CSS ni vistas Blade, se puede omitir este paso y
 | En línea | `artisan up` |
 | Comprobaciones | Build presente, `APP_URL/up` responde 200, el programador corrió hace poco, errores nuevos en el log |
 | Limpieza | Conserva solo los últimos respaldos (`BACKUP_KEEP`, 5 por defecto) |
+| Logs | Rota `storage/logs/cron.log` si supera `LOG_MAX_MB` (10 MB por defecto): guarda una copia comprimida y lo deja vacío; se conservan las últimas `LOG_KEEP` (3) |
 
 Opciones: `--yes` (sin pausas; solo para quien ya conoce el flujo), `--sin-build`.
+
+### Logs
+
+El cron del programador escribe cada minuto en `storage/logs/cron.log`, que sin rotación crece sin límite. `actualizar` lo rota solo cuando supera `LOG_MAX_MB`; para hacerlo en cualquier momento:
+
+```bash
+~/deploy-nominapp.sh logs
+```
+
+`verificar` y `logs` también **avisan, sin bloquear**, si:
+
+- `cron.log` supera el límite, o `storage/logs` ocupa 100 MB o más;
+- el `.env` de producción tiene `LOG_LEVEL=debug` (el log crece rápido y puede guardar datos de las peticiones): usar `warning` o `error`;
+- el `.env` de producción tiene `APP_DEBUG=true` (los errores muestran detalles internos a los usuarios): ponerlo en `false`.
+
+Los logs diarios de Laravel (`laravel-AAAA-MM-DD.log`) ya los rota la aplicación según `LOG_DAILY_DAYS` (14 por defecto).
 
 ### 3. Prueba manual (el script no la reemplaza)
 

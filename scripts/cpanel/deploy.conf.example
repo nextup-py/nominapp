@@ -20,3 +20,5 @@ BRANCH="main"
 # STATE_DIR="$HOME/deploy-state"                    # commit y build anteriores, para "restaurar"
 # BUILD_FILE=""                                     # (autodetecta ~/build.tar.gz o ~/build.zip)
 # ALLOWED_LOCAL="public/.htaccess public/.user.ini" # archivos con cambios locales que no bloquean el pull
+# LOG_MAX_MB=10                                     # tamano de storage/logs/cron.log a partir del cual se rota
+# LOG_KEEP=3                                        # copias comprimidas de cron.log que se conservan

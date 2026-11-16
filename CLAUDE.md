@@ -1634,7 +1634,7 @@ npm run build
 rsync -avz --delete public/build/ sedvouco@bh7104:/ruta/nominapp/public/build/
 ```
 
-**Script de deploy para servidores cPanel (`scripts/cpanel/`):** `deploy.sh` (servidor; modos `verificar`, `actualizar`, `restaurar [--db]`; se copia a un temporal antes de ejecutarse porque `git pull` puede reemplazarlo; lee `~/deploy-nominapp.conf`, fuera del repo; recupera solo el sitio si falla antes de migrar y lo deja en mantenimiento si falla después) y `Preparar-Build.ps1` (PC; arma `build.tar.gz` con `public/build/commit.txt` y lo sube por `scp`; va en ASCII). Guía: `docs/deploy-cpanel.md`. Mantenerlos en ASCII y sin nombres de clientes ni hosts.
+**Script de deploy para servidores cPanel (`scripts/cpanel/`):** `deploy.sh` (servidor; modos `verificar`, `actualizar`, `restaurar [--db]`, `logs` (rota `storage/logs/cron.log` por encima de `LOG_MAX_MB`; `actualizar` también lo hace y `verificar` avisa de `cron.log` grande, `LOG_LEVEL=debug` y `APP_DEBUG=true` en producción); se copia a un temporal antes de ejecutarse porque `git pull` puede reemplazarlo; lee `~/deploy-nominapp.conf`, fuera del repo; recupera solo el sitio si falla antes de migrar y lo deja en mantenimiento si falla después) y `Preparar-Build.ps1` (PC; arma `build.tar.gz` con `public/build/commit.txt` y lo sube por `scp`; va en ASCII). Guía: `docs/deploy-cpanel.md`. Mantenerlos en ASCII y sin nombres de clientes ni hosts.
 
 **Variables de entorno requeridas en producción:**
 - `GOOGLE_MAPS_API_KEY` — requerida por `cheesegrits/filament-google-maps` para el mapa de sucursales
