@@ -66,6 +66,42 @@ async function readStorage(nav) {
     }
 }
 
+/**
+ * Datos del equipo que el navegador entrega por sí solo: memoria, núcleos, tipo de conexión, pantalla, idioma, zona
+ * horaria y plataforma. Sirven para diagnosticar equipos lentos o poco aptos como terminal; ninguno identifica a una
+ * persona. Cada uno se omite si el navegador no lo informa (`deviceMemory` y `connection` solo existen en Chromium).
+ * @param {Navigator} nav
+ * @param {Window} win
+ * @returns {{device_memory_gb?: number, cpu_cores?: number, connection_type?: string, screen?: string, language?: string, timezone?: string, platform?: string}}
+ */
+export function readDeviceInfo(nav, win) {
+    const info = {};
+
+    if (Number.isFinite(nav?.deviceMemory) && nav.deviceMemory > 0) info.device_memory_gb = nav.deviceMemory;
+    if (Number.isFinite(nav?.hardwareConcurrency) && nav.hardwareConcurrency > 0) info.cpu_cores = Math.round(nav.hardwareConcurrency);
+
+    const connection = nav?.connection?.effectiveType;
+    if (['slow-2g', '2g', '3g', '4g'].includes(connection)) info.connection_type = connection;
+
+    const width = win?.screen?.width;
+    const height = win?.screen?.height;
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) info.screen = `${Math.round(width)}x${Math.round(height)}`;
+
+    if (typeof nav?.language === 'string' && /^[A-Za-z0-9_-]{1,20}$/.test(nav.language)) info.language = nav.language;
+
+    try {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (typeof timezone === 'string' && /^[A-Za-z0-9_/+-]{1,60}$/.test(timezone)) info.timezone = timezone;
+    } catch {
+        // Sin Intl: no viaja.
+    }
+
+    const platform = nav?.userAgentData?.platform;
+    if (typeof platform === 'string' && platform !== '') info.platform = platform.slice(0, 40);
+
+    return info;
+}
+
 /** Modos de visualización que no son una pestaña del navegador, en el orden en que se comprueban. */
 const DEDICATED_DISPLAY_MODES = ['fullscreen', 'standalone', 'minimal-ui', 'window-controls-overlay'];
 
@@ -99,6 +135,7 @@ export function detectDisplayMode(win, nav = globalThis.navigator) {
  * @param {number|null} [options.clockOffsetMs] - diferencia servidor − dispositivo del último heartbeat.
  * @param {boolean|null} [options.wakeLock] - si el terminal logró mantener la pantalla encendida (Wake Lock); null si no se sabe.
  * @param {string|null} [options.wakeLockError] - motivo del último intento fallido de Wake Lock; solo viaja si `wakeLock` es false.
+ * @param {string|null} [options.deviceId] - identificador aleatorio de este equipo (ver device-identity.js); el servidor lo usa para aprender el del dispositivo vinculado.
  * @param {{samples: number, median_ms: number, p90_ms: number}|null} [options.identification] - tiempo de identificación de las últimas marcaciones (ver identification-stats.js); null si todavía no hubo ninguna.
  * @returns {Promise<Record<string, string|number|boolean>>}
  */
@@ -111,8 +148,12 @@ export async function collectDeviceReport({
     wakeLock = null,
     wakeLockError = null,
     identification = null,
+    deviceId = null,
 } = {}) {
     const report = {};
+
+    if (deviceId) report.device_id = String(deviceId).slice(0, 64);
+    Object.assign(report, readDeviceInfo(nav, win));
 
     if (appVersion) report.app_version = String(appVersion).slice(0, 40);
 

@@ -40,7 +40,7 @@ class TerminalPairingService
      * Si el terminal todavía tiene un acceso vigente en el servidor, el dispositivo perdió su copia local (datos
      * borrados, ventana privada, otro perfil): se registra `link_lost` en la bitácora y se avisa por la campanita.
      *
-     * @param  array{reason?: string, had_marker?: bool, storage_available?: bool, storage_persisted?: bool|null, storage_quota_mb?: int|null}  $context  Motivo y estado del almacenamiento que informa el dispositivo (opcional).
+     * @param  array{device_id?: string, reason?: string, had_marker?: bool, storage_available?: bool, storage_persisted?: bool|null, storage_quota_mb?: int|null}  $context  Motivo y estado del almacenamiento que informa el dispositivo (opcional).
      * @return array{request: TerminalPairingRequest, poll_secret: string}
      */
     public function request(Terminal $terminal, ?string $ip, ?string $userAgent, ?string $deviceModelHint, array $context = []): array
@@ -57,6 +57,10 @@ class TerminalPairingService
                 $pending->take($overflow)->each(fn (TerminalPairingRequest $old) => $old->update(['status' => TerminalPairingRequest::STATUS_EXPIRED]));
             }
 
+            $deviceId = $context['device_id'] ?? null;
+            $activeDeviceId = $locked->hasActiveSyncToken() ? $locked->activeDevice?->device_id : null;
+            $sameDevice = $deviceId && $activeDeviceId ? hash_equals($activeDeviceId, $deviceId) : null;
+
             $request = $locked->pairingRequests()->create([
                 'code' => $this->uniqueCode($locked),
                 'poll_secret_hash' => TerminalPairingRequest::hashSecret($secret),
@@ -65,6 +69,8 @@ class TerminalPairingService
                 'device_model_hint' => $deviceModelHint,
                 'status' => TerminalPairingRequest::STATUS_PENDING,
                 'replaces_active_device' => $locked->hasActiveSyncToken(),
+                'device_id' => $deviceId,
+                'same_device' => $sameDevice,
                 'expires_at' => now()->addMinutes(TerminalPairingRequest::TTL_MINUTES),
             ]);
 
@@ -72,9 +78,11 @@ class TerminalPairingService
                 'request_id' => $request->id,
                 'ip' => $ip,
                 'replaces_active_device' => $request->replaces_active_device,
+                'device_id' => $deviceId ? substr($deviceId, 0, 8) : null,
+                'same_device' => $sameDevice,
             ]);
 
-            $linkLost = $request->replaces_active_device && $this->recordLinkLost($locked, $ip, $context);
+            $linkLost = $request->replaces_active_device && $this->recordLinkLost($locked, $ip, $context, $sameDevice);
 
             if ($locked->hasOpenLinkWindow()) {
                 $this->autoApprove($request, $locked);
@@ -100,12 +108,13 @@ class TerminalPairingService
      * `LINK_LOST_DEDUPE_MINUTES` para no llenar la bitácora ni la campanita.
      *
      * @param  array<string, mixed>  $context
+     * @param  bool|null  $sameDevice  true si quien pide es el mismo dispositivo que está vinculado (por su identificador): es una pérdida segura aunque el terminal siga latiendo; false si es otro: nunca es pérdida; null si no se puede comparar y se decide por el latido.
      * @return bool true si se registró (hay que avisar). False si ya había uno reciente o si el terminal sigue
      *              latiendo: entonces el dispositivo vinculado está bien y quien pide es otro dispositivo.
      */
-    private function recordLinkLost(Terminal $terminal, ?string $ip, array $context): bool
+    private function recordLinkLost(Terminal $terminal, ?string $ip, array $context, ?bool $sameDevice = null): bool
     {
-        if ($terminal->isReportingNow()) {
+        if ($sameDevice === false || ($sameDevice === null && $terminal->isReportingNow())) {
             return false;
         }
 
@@ -120,6 +129,7 @@ class TerminalPairingService
 
         TerminalEvent::record($terminal, 'link_lost', array_filter([
             'ip' => $ip,
+            'same_device' => $sameDevice,
             'lost_reason' => $context['reason'] ?? null,
             'had_marker' => $context['had_marker'] ?? null,
             'storage_available' => $context['storage_available'] ?? null,
@@ -262,7 +272,7 @@ class TerminalPairingService
      */
     private function claim(TerminalPairingRequest $request, Terminal $terminal, ?string $ip, ?string $userAgent): array
     {
-        $token = $terminal->claimSanctumToken($userAgent ?? $request->user_agent, $request->device_model_hint, $ip ?? $request->ip_address, 'pairing');
+        $token = $terminal->claimSanctumToken($userAgent ?? $request->user_agent, $request->device_model_hint, $ip ?? $request->ip_address, 'pairing', $request->device_id);
 
         $request->update([
             'status' => TerminalPairingRequest::STATUS_CLAIMED,

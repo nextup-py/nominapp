@@ -27,6 +27,7 @@ class TerminalPairingController extends Controller
             'terminal_code' => ['required', 'string', 'max:12'],
             'device_model_hint' => ['nullable', 'string', 'max:100'],
             'context' => ['nullable', 'array'],
+            'context.device_id' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
             'context.reason' => ['nullable', 'string', 'in:no_token,revoked,other_terminal'],
             'context.had_marker' => ['nullable', 'boolean'],
             'context.storage_available' => ['nullable', 'boolean'],

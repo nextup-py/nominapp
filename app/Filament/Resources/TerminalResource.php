@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Actions\TerminalCommandActions;
 use App\Filament\Actions\TerminalLinkActions;
 use App\Filament\Actions\TerminalMonitoringActions;
@@ -9,12 +10,12 @@ use App\Filament\Actions\TerminalPairingActions;
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\CommandsRelationManager;
+use App\Filament\Resources\TerminalResource\RelationManagers\DevicesRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\PairingRequestsRelationManager;
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
 use App\Models\Terminal;
-use App\Filament\Actions\MobileMarkingFields;
 use App\Settings\GeneralSettings;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Component;
@@ -37,12 +38,12 @@ use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
-use Illuminate\Support\Collection;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -425,6 +426,30 @@ class TerminalResource extends Resource
                                 ->dateTime('d/m/Y H:i')
                                 ->since()
                                 ->placeholder('Sin reporte'),
+                        ]),
+
+                        InfoGrid::make(4)->schema([
+                            TextEntry::make('_device_id')
+                                ->label('ID del dispositivo')
+                                ->getStateUsing(fn (Terminal $record) => $record->activeDevice?->shortDeviceId())
+                                ->helperText('Identificador aleatorio que genera el propio equipo; sirve para distinguirlo de otro con la misma IP.')
+                                ->fontFamily('mono')
+                                ->placeholder('Aún no informado'),
+
+                            TextEntry::make('_system')
+                                ->label('Sistema y navegador')
+                                ->getStateUsing(fn (Terminal $record) => static::describeSystem($record))
+                                ->placeholder('No detectado'),
+
+                            TextEntry::make('_hardware')
+                                ->label('Equipo')
+                                ->getStateUsing(fn (Terminal $record) => static::describeHardware($record))
+                                ->placeholder('El navegador no lo informa'),
+
+                            TextEntry::make('_connection_screen')
+                                ->label('Conexión y pantalla')
+                                ->getStateUsing(fn (Terminal $record) => static::describeConnection($record))
+                                ->placeholder('El navegador no lo informa'),
                         ]),
                     ])
                     ->visible(fn (Terminal $record) => $record->device_report !== null),
@@ -852,6 +877,42 @@ class TerminalResource extends Resource
     }
 
     /** Batería informada: nivel y si está cargando. */
+    /** Sistema operativo y navegador del dispositivo vinculado, a partir de su User-Agent. */
+    public static function describeSystem(Terminal $record): ?string
+    {
+        $device = $record->activeDevice;
+        $parts = array_filter([$device?->os, $device?->browser]);
+
+        return $parts ? implode(' · ', $parts) : null;
+    }
+
+    /** Memoria y núcleos del equipo, si el navegador los informa. */
+    public static function describeHardware(Terminal $record): ?string
+    {
+        $report = $record->device_report ?? [];
+        $parts = array_filter([
+            isset($report['device_memory_gb']) ? $report['device_memory_gb'].' GB de memoria (aprox.)' : null,
+            isset($report['cpu_cores']) ? $report['cpu_cores'].' núcleos' : null,
+            $report['platform'] ?? null,
+        ]);
+
+        return $parts ? implode(' · ', $parts) : null;
+    }
+
+    /** Tipo de conexión, resolución de pantalla, idioma y zona horaria que informa el navegador. */
+    public static function describeConnection(Terminal $record): ?string
+    {
+        $report = $record->device_report ?? [];
+        $parts = array_filter([
+            isset($report['connection_type']) ? 'Conexión '.strtoupper($report['connection_type']) : null,
+            $report['screen'] ?? null ? 'Pantalla '.$report['screen'] : null,
+            $report['language'] ?? null,
+            $report['timezone'] ?? null,
+        ]);
+
+        return $parts ? implode(' · ', $parts) : null;
+    }
+
     public static function describeBattery(Terminal $record): ?string
     {
         $level = $record->reportedBatteryLevel();
@@ -1035,6 +1096,7 @@ class TerminalResource extends Resource
     {
         return [
             PairingRequestsRelationManager::class,
+            DevicesRelationManager::class,
             EventsRelationManager::class,
             CommandsRelationManager::class,
             AttendanceEventsRelationManager::class,

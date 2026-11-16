@@ -66,6 +66,7 @@ class TerminalSetupController extends Controller
         $input = $request->validate([
             'token' => ['required', 'string', 'max:100'],
             'device_model_hint' => ['nullable', 'string', 'max:100'],
+            'device_id' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
         ]);
 
         $state = 'invalid';
@@ -101,7 +102,7 @@ class TerminalSetupController extends Controller
             ], 422);
         }
 
-        $plainTextToken = $terminal->claimSanctumToken($request->userAgent(), $input['device_model_hint'] ?? null, $request->ip());
+        $plainTextToken = $terminal->claimSanctumToken($request->userAgent(), $input['device_model_hint'] ?? null, $request->ip(), 'setup', $input['device_id'] ?? null);
 
         Log::info("Terminal '{$terminal->code}' ({$terminal->name}) provisionado para sincronización offline", [
             'terminal_id' => $terminal->id,

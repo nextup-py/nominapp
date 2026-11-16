@@ -87,6 +87,8 @@ En unos segundos el dispositivo recibe su acceso y recarga la página. Hay que t
 
 La solicitud aparece marcada como **Reemplaza dispositivo** y el cuadro de aprobación muestra el **dispositivo vinculado hoy** (marca y modelo, IP, cuándo se vinculó y su último latido). Si ese dispositivo está en línea, el cuadro agrega una advertencia: *este terminal está en línea en otro dispositivo*. Aprobarla **revoca el acceso del dispositivo anterior**, que vuelve a pedir un código. Aprobar solo si realmente se quiere cambiar el equipo.
 
+El cuadro también dice si quien pide es **el mismo dispositivo que está vinculado** (perdió su acceso, por ejemplo porque el navegador borró sus datos: es seguro aprobar) o **otro dispositivo distinto** (si los dos siguen en uso se dejan sin acceso uno al otro). Esa comparación se hace con el **ID del dispositivo**; en los equipos que todavía no lo informaron, el cuadro no la muestra.
+
 > **Un terminal admite un solo dispositivo.** Si dos equipos tienen abierta la misma URL, cada código aprobado deja sin acceso al otro y los dos se la pasan pidiendo códigos. Antes de aprobar, comparar la **IP** y el **tipo de dispositivo** de la solicitud con los del dispositivo vinculado, y dejar un solo equipo por terminal.
 
 ---
@@ -229,6 +231,10 @@ El detalle incluye la sección **Estado del dispositivo** con lo que el terminal
 | **Desfase de reloj** | Diferencia entre el reloj del dispositivo y el del servidor; se advierte si pasa de un minuto |
 | **Almacenamiento** | Espacio usado del navegador en el dispositivo |
 | **Tiempo de identificación** | Cuánto tarda este equipo en reconocer a una persona, medido por su propio navegador en las últimas 20 identificaciones: el tiempo **habitual** (mediana) y el que tarda el **10 % más lento**. Es lo único que el servidor no puede ver, porque el reconocimiento pasa por completo en el equipo. Se pone en naranja y avisa *lento: revisar el equipo* cuando lo habitual llega a **8 segundos** (suele ser un equipo sin aceleración gráfica, con poca memoria o con otro navegador). Las medidas arrancan de cero cada vez que se recarga el terminal, así que al principio dice *Todavía no hubo marcaciones desde que se abrió* |
+| **ID del dispositivo** | Identificador aleatorio que genera el propio equipo (se muestran los primeros 8 caracteres). Sirve para distinguir dos equipos con la misma IP y navegador |
+| **Sistema y navegador** | Sistema operativo y navegador del dispositivo vinculado (por ejemplo *Windows · Chrome 120*), tomados de lo que informa el navegador al vincularse |
+| **Equipo** | Memoria aproximada, núcleos y plataforma, para diagnosticar equipos lentos o poco aptos como terminal. Solo lo informan algunos navegadores |
+| **Conexión y pantalla** | Tipo de conexión (4G, 3G...), resolución de pantalla, idioma y zona horaria |
 
 ### Detalle del terminal
 
@@ -239,6 +245,25 @@ La sección **Conectividad** del detalle muestra el estado, el **último latido*
 La sección **Dispositivo vinculado** (solo si hay un acceso vigente) muestra desde cuándo está vinculado, **cómo se vinculó** (enlace de configuración, código aprobado por un usuario o ventana de vinculación), la IP desde la que se vinculó, el dispositivo y su último contacto.
 
 ![Dispositivo vinculado](/docs-images/23-terminal-dispositivo-vinculado.png)
+
+### Dispositivos
+
+La pestaña **Dispositivos** del detalle es de solo lectura y guarda el **historial** de los equipos que estuvieron vinculados al terminal, el más reciente primero. Cada vinculación crea un registro y cierra el anterior:
+
+| Columna | Qué indica |
+|---------|------------|
+| **Estado** | **Vinculado ahora**, **Reemplazado por otro dispositivo**, **Desvinculado desde el panel** o **Terminal desactivado** |
+| **Dispositivo** | Marca y modelo, si se detectaron (los celulares Android con Chrome los informan; las PC y los iPhone no) |
+| **Sistema** y **Navegador** | Lo que informó el navegador al vincularse |
+| **IP** | Desde qué IP se vinculó |
+| **ID** | Los primeros 8 caracteres del identificador del equipo; pasando el cursor se ve completo. *Aún no informado* en los equipos vinculados antes de que existiera, hasta su próximo latido |
+| **Vinculado** | Cuándo entró |
+| **Última vez en línea** | Su último latido antes de salir |
+| **Salió** | Cuándo dejó de estar vinculado y, si lo desvinculó una persona, quién |
+
+El filtro **Vinculación** separa el vinculado ahora de los anteriores. Sirve, por ejemplo, para ver que dos equipos se estaban reemplazando uno al otro.
+
+> **Privacidad:** el **ID del dispositivo** identifica al **equipo**, no a una persona. Lo genera el propio dispositivo de forma aleatoria (no sale de la huella del navegador ni del número de serie) y se guarda en el navegador. Si se borran los datos del navegador, el equipo pasa a ser un dispositivo nuevo para el sistema. Los datos del equipo (memoria, núcleos, conexión, pantalla, idioma) son los que el navegador entrega por sí solo; el número de serie y la MAC nunca se pueden leer desde un navegador y se cargan a mano.
 
 ### Bitácora
 
@@ -507,7 +532,7 @@ El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: 
 - Sin **aprobación explícita** de un usuario con permiso (o un enlace de un solo uso, o una ventana de vinculación abierta a propósito) no se entrega acceso: el terminal descarga rostros de empleados, que son datos sensibles.
 - El código de vinculación es de **un solo uso y vida corta** (10 minutos) y hay límites de intentos por IP y por terminal.
 - El código no se muestra en el panel ni en la notificación: se verifica contra la pantalla del dispositivo.
-- Cada terminal tiene **un solo dispositivo vinculado**; vincular otro revoca el anterior.
+- Cada terminal tiene **un solo dispositivo vinculado**; vincular otro revoca el anterior y queda en la pestaña **Dispositivos** y en la **Bitácora**.
 - Quién aprobó cada vinculación se ve en la columna **Aprobada por** de la bandeja (en las vinculadas por ventana figura quien la abrió); aprobaciones, rechazos, ventanas abiertas y cerradas, enlaces generados y desvinculaciones quedan además en la pestaña **Bitácora** del terminal.
 - El enlace de configuración viaja en el **fragmento** de la URL (lo que va después del `#`), que el navegador no envía al servidor al abrirla, así que no queda en los registros de acceso. En la base solo se guarda su huella (hash), nunca el enlace.
 - Los enlaces de configuración con el formato anterior (token en la ruta) ya no se aceptan: hay que generar uno nuevo.

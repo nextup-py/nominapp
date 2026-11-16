@@ -109,11 +109,16 @@ class TerminalPairingActions
 
         if ($record->replaces_active_device) {
             $lines[] = '<strong>Dispositivo vinculado hoy:</strong> '.e($terminal->currentDeviceSummary());
-            $lines[] = $terminal->isReportingNow()
+            $lines[] = match ($record->same_device) {
+                true => '<strong>Es el mismo dispositivo que está vinculado:</strong> perdió su acceso (por ejemplo, el navegador borró sus datos). Se puede aprobar.',
+                false => '<strong>Es otro dispositivo distinto del que está vinculado.</strong> Si los dos siguen en uso se van a dejar sin acceso uno al otro.',
+                default => null,
+            };
+            $lines[] = $terminal->isReportingNow() && $record->same_device !== true
                 ? '<strong>Atención: este terminal está en línea en otro dispositivo.</strong> Aprobar este código lo dejará sin vínculo y volverá a pedir uno nuevo. Si hay dos equipos abiertos en la misma URL, dejar uno solo.'
                 : '<strong>Reemplazará al dispositivo vinculado actualmente</strong>; su acceso se revocará.';
         }
 
-        return new HtmlString(implode('<br>', $lines));
+        return new HtmlString(implode('<br>', array_filter($lines)));
     }
 }

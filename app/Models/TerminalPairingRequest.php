@@ -48,6 +48,8 @@ class TerminalPairingRequest extends Model
         'status',
         'auto_approved',
         'replaces_active_device',
+        'device_id',
+        'same_device',
         'expires_at',
         'approved_by_id',
         'approved_at',
@@ -62,6 +64,7 @@ class TerminalPairingRequest extends Model
         return [
             'auto_approved' => 'boolean',
             'replaces_active_device' => 'boolean',
+            'same_device' => 'boolean',
             'expires_at' => 'datetime',
             'approved_at' => 'datetime',
             'claimed_at' => 'datetime',

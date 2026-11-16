@@ -96,6 +96,47 @@ class DeviceHintsParser
         return ['brand' => null, 'model' => null];
     }
 
+    /**
+     * Sistema operativo y navegador (con versión mayor) a partir del User-Agent. Best-effort: los navegadores
+     * reducen cada vez más el User-Agent (Windows siempre dice «10», Android una versión fija y el modelo «K»), así
+     * que sirve para distinguir una PC de un celular o Chrome de Edge, no para fijar versiones exactas.
+     *
+     * @return array{os: string|null, browser: string|null}
+     */
+    public static function describe(?string $userAgent): array
+    {
+        if (! $userAgent) {
+            return ['os' => null, 'browser' => null];
+        }
+
+        $os = match (true) {
+            str_contains($userAgent, 'iPhone'), str_contains($userAgent, 'iPad') => preg_match('/OS (\d+)[_\d]*/', $userAgent, $m) ? 'iOS '.$m[1] : 'iOS',
+            str_contains($userAgent, 'Android') => preg_match('/Android\s([\d.]+)/', $userAgent, $m) ? 'Android '.(int) $m[1] : 'Android',
+            str_contains($userAgent, 'Windows') => 'Windows',
+            str_contains($userAgent, 'Macintosh') => 'macOS',
+            str_contains($userAgent, 'CrOS') => 'ChromeOS',
+            str_contains($userAgent, 'Linux') => 'Linux',
+            default => null,
+        };
+
+        $browser = null;
+        foreach ([
+            '/Edg(?:e|A|iOS)?\/(\d+)/' => 'Edge',
+            '/OPR\/(\d+)/' => 'Opera',
+            '/SamsungBrowser\/(\d+)/' => 'Samsung Internet',
+            '/(?:Firefox|FxiOS)\/(\d+)/' => 'Firefox',
+            '/(?:Chrome|CriOS)\/(\d+)/' => 'Chrome',
+            '/Version\/(\d+)[\d.]*.*Safari/' => 'Safari',
+        ] as $pattern => $name) {
+            if (preg_match($pattern, $userAgent, $m)) {
+                $browser = $name.' '.$m[1];
+                break;
+            }
+        }
+
+        return ['os' => $os, 'browser' => $browser];
+    }
+
     private static function guessBrandFromModel(string $model): ?string
     {
         foreach (self::BRAND_PREFIXES as $prefix => $brand) {

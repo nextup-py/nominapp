@@ -6,6 +6,9 @@
 import { describe, it, expect } from 'vitest';
 import { collectDeviceReport } from './device-report.js';
 
+/** La zona horaria la informa cualquier entorno con Intl: estos tests exactos comparan el resto del reporte. */
+const withoutTimezone = ({ timezone, ...rest }) => rest;
+
 /** Ventana falsa en un modo de visualización dado (`browser` = pestaña) y, opcionalmente, con la visibilidad de la página. */
 const win = (mode = 'browser', visibility) => ({
     matchMedia: (query) => ({ matches: query === `(display-mode: ${mode})` }),
@@ -24,7 +27,7 @@ describe('collectDeviceReport', () => {
 
         const report = await collectDeviceReport({ nav, win: win('standalone'), appVersion: 'abc123', cachedEmployees: 12, clockOffsetMs: -4600 });
 
-        expect(report).toEqual({
+        expect(withoutTimezone(report)).toEqual({
             app_version: 'abc123',
             display_mode: 'standalone',
             standalone: true,
@@ -44,7 +47,7 @@ describe('collectDeviceReport', () => {
 
         const report = await collectDeviceReport({ nav, win: win() });
 
-        expect(report).toEqual({ display_mode: 'standalone', standalone: true });
+        expect(withoutTimezone(report)).toEqual({ display_mode: 'standalone', standalone: true });
         expect(report).not.toHaveProperty('battery_level');
         expect(report).not.toHaveProperty('storage_used_mb');
         expect(report).not.toHaveProperty('camera');
@@ -79,7 +82,7 @@ describe('collectDeviceReport', () => {
 
         const report = await collectDeviceReport({ nav, win: { matchMedia: () => { throw new Error('x'); } } });
 
-        expect(report).toEqual({});
+        expect(withoutTimezone(report)).toEqual({});
     });
 
     it('trunca la versión a 40 caracteres y descarta valores no numéricos', async () => {
@@ -149,5 +152,39 @@ describe('collectDeviceReport', () => {
             expect(report).not.toHaveProperty('identification_median_ms');
             expect(report).not.toHaveProperty('identification_samples');
         }
+    });
+});
+
+describe('datos del equipo (readDeviceInfo) y device_id', () => {
+    it('incluye memoria, núcleos, conexión, pantalla, idioma, zona y plataforma cuando el navegador los informa', async () => {
+        const nav = { deviceMemory: 8, hardwareConcurrency: 4, connection: { effectiveType: '4g' }, language: 'es-PY', userAgentData: { platform: 'Windows' } };
+        const win = { screen: { width: 1366, height: 768 } };
+
+        const report = await collectDeviceReport({ nav, win, deviceId: '3f2b8c1e-aaaa-bbbb-cccc-123456789012' });
+
+        expect(report).toMatchObject({
+            device_id: '3f2b8c1e-aaaa-bbbb-cccc-123456789012',
+            device_memory_gb: 8,
+            cpu_cores: 4,
+            connection_type: '4g',
+            screen: '1366x768',
+            language: 'es-PY',
+            platform: 'Windows',
+        });
+        expect(typeof report.timezone).toBe('string');
+    });
+
+    it('omite lo que el navegador no informa y descarta valores raros', async () => {
+        const nav = { connection: { effectiveType: 'wifi' }, language: '<script>', hardwareConcurrency: 0 };
+        const win = { screen: { width: 0, height: 0 } };
+
+        const report = await collectDeviceReport({ nav, win });
+
+        expect(report).not.toHaveProperty('device_id');
+        expect(report).not.toHaveProperty('device_memory_gb');
+        expect(report).not.toHaveProperty('cpu_cores');
+        expect(report).not.toHaveProperty('connection_type');
+        expect(report).not.toHaveProperty('screen');
+        expect(report).not.toHaveProperty('language');
     });
 });
