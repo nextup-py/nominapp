@@ -174,9 +174,20 @@ Acceder desde **Configuración → Usuarios**.
 
 1. Clic en **Nuevo usuario**
 2. Ingresar nombre completo, correo electrónico y contraseña (con confirmación)
-3. Guardar
+3. Opcional: vincular la ficha de empleado (**Ficha de empleado**), para que el perfil muestre cargo y sucursal
+4. Guardar
 
-Cada usuario puede gestionar su propio perfil (nombre, email, contraseña, foto) desde el menú de perfil en la esquina del panel.
+La contraseña debe tener al menos 10 caracteres, con mayúsculas, minúsculas y números.
+
+### Mi perfil
+
+Cada usuario abre su perfil desde el menú de la esquina superior del panel. Ahí puede:
+
+- Cambiar su **foto de perfil** y su **contraseña** (con la misma política de 10 caracteres).
+- Ver su **nombre**, **correo**, **ficha de empleado** y **roles**, que son solo de lectura: los cambia el Super Admin desde **Configuración → Usuarios**.
+- Revisar **Mis permisos** agrupados por módulo.
+- Ver sus **Sesiones abiertas** y cerrar las de otros dispositivos con **Cerrar las demás sesiones**.
+- Ver sus **Últimos ingresos** (fecha e IP). Si la cuenta ingresa desde una IP que nunca había usado, llega un aviso por la campanita.
 
 > Un usuario recién creado **no puede entrar al panel** hasta que se le asigne al menos un rol. Ver el capítulo **Roles y Permisos** para asignar roles y entender qué puede hacer cada uno.
 

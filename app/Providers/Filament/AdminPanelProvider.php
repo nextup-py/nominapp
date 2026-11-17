@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\MyNotifications;
 use App\Http\Middleware\EnsureSetupIsComplete;
 use App\Support\ThemeResolver;
@@ -33,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('')
             ->login()
-            ->profile(isSimple: false)
+            ->profile(EditProfile::class, isSimple: false)
             ->favicon(asset('icons/favicon.ico'))
             ->brandLogo(asset('images/branding/nominapp-isotipo.png'))
             ->darkModeBrandLogo(asset('images/branding/nominapp-isotipo.png'))

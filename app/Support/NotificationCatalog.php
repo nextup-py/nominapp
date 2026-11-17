@@ -107,6 +107,7 @@ class NotificationCatalog
             'device.mobile_link_blocked' => ['Vinculación de celular sin permiso', 'Un empleado no habilitado para marcar desde el celular intentó vincularlo.', 'contracts_devices', 'update_employee'],
             'approvals.pending' => ['Solicitudes pendientes de aprobar', 'Resumen diario de adelantos, préstamos, retiros de mercadería y permisos que esperan una decisión de quien los aprueba. Solo le llega a quien tiene permiso de aprobar alguno de ellos.', 'approvals', ['approve_advance', 'approve_loan', 'approve_merchandise_withdrawal', 'approve_employee_leave'], ['digestable' => false]],
             'system.mail_failed' => ['Fallo del envío de correo', 'El servidor de correo no pudo enviar un mensaje: los avisos por correo no están llegando (clave vencida, servidor caído). Solo para el Super Admin; no se repite mientras el anterior siga sin leer.', 'system', 'super-admin', ['mandatory' => true, 'digestable' => false]],
+            'system.new_login_location' => ['Ingreso desde un lugar nuevo', 'Tu cuenta ingresó desde una IP que no habías usado antes. Es un aviso de seguridad solo para vos.', 'system', null, ['mandatory' => true, 'digestable' => false]],
             'device.link_throttled' => ['Límite de vinculación agotado', 'Se agotaron los intentos diarios de vinculación de celular desde una IP.', 'contracts_devices', 'view_any_employee_device'],
         ];
 

@@ -134,8 +134,8 @@ it('solo ofrece los avisos de los módulos a los que el usuario tiene acceso', f
     $nobody = prefsUser();
 
     expect(array_keys(NotificationCatalog::forUser($terminals)))->toContain('terminal.offline')->not->toContain('contract.alert')
-        ->and(array_keys(NotificationCatalog::forUser($contracts)))->toBe(['contract.alert'])
-        ->and(NotificationCatalog::forUser($nobody))->toBe([]);
+        ->and(array_keys(NotificationCatalog::forUser($contracts)))->toBe(['contract.alert', 'system.new_login_location'])
+        ->and(array_keys(NotificationCatalog::forUser($nobody)))->toBe(['system.new_login_location']);
 
     $admin = User::factory()->create();
     $admin->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']));
@@ -340,9 +340,9 @@ it('restablecer vuelve a los valores por defecto y a las 08:00', function () {
         ->and($user->fresh()->notification_digest_hour)->toBe(NotificationCatalog::DEFAULT_DIGEST_HOUR);
 });
 
-it('el usuario sin avisos configurables ve un mensaje en lugar de categorías', function () {
+it('el usuario sin permisos de módulo solo ve el aviso de seguridad de su cuenta', function () {
     Livewire::actingAs(prefsUser())->test(MyNotifications::class)
-        ->assertSee('Tu rol no recibe avisos que se puedan configurar.');
+        ->assertSee('Ingreso desde un lugar nuevo')->assertDontSee('Terminal sin conexión');
 });
 
 it('la entrada «Mis notificaciones» está en el menú de usuario del panel', function () {

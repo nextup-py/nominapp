@@ -13,6 +13,7 @@ use App\Models\FaceEnrollment;
 use App\Models\Position;
 use App\Models\Terminal;
 use App\Models\User;
+use App\Notifications\Channels\DigestChannel;
 use App\Notifications\ContractAlertNotification;
 use App\Notifications\FaceEnrollmentPendingApprovalNotification;
 use App\Notifications\MobileDeviceLinkedNotification;
@@ -98,7 +99,7 @@ it('la notificación de terminal provisionado también se envía por email', fun
 
     $admin = adminWithPermission('admin-via@test.com', 'update_terminal');
 
-    expect($notification->via($admin))->toBe(['database', 'mail']);
+    expect($notification->via($admin))->toBe([DigestChannel::class]);
 
     $mail = $notification->toMail(new User);
 
@@ -209,7 +210,7 @@ it('la notificación de re-vinculación también se envía por email, la de prim
 
     $admin = adminWithPermission('admin-devices@test.com', 'view_any_employee_device');
 
-    expect($linked->via($admin))->toBe(['database'])
+    expect($linked->via($admin))->toBe([DigestChannel::class])
         ->and($relinked->via($admin))->toBe(['database', 'mail']);
 
     $mail = $relinked->toMail(new User);
