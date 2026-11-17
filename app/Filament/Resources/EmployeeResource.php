@@ -16,6 +16,7 @@ use App\Models\Employee;
 use App\Models\FaceEnrollment;
 use App\Models\Position;
 use App\Models\Schedule;
+use App\Services\EmployeeProfileCompleteness;
 use App\Services\LocationRadiusService;
 use App\Settings\GeneralSettings;
 use Carbon\Carbon;
@@ -524,6 +525,16 @@ class EmployeeResource extends Resource
     public static function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
+            InfoSection::make('Ficha incompleta')
+                ->icon('heroicon-o-exclamation-triangle')
+                ->iconColor('warning')
+                ->visible(fn (Employee $record): bool => EmployeeProfileCompleteness::missing($record) !== [])
+                ->schema([
+                    TextEntry::make('_profile_missing')
+                        ->hiddenLabel()
+                        ->getStateUsing(fn (Employee $record): string => 'Falta cargar: '.implode(', ', array_map(fn (string $key): string => EmployeeProfileCompleteness::labels()[$key], EmployeeProfileCompleteness::missing($record))).' ('.EmployeeProfileCompleteness::percent($record).'% completa).'),
+                ]),
+
             InfoSection::make('Datos Personales')
                 ->icon('heroicon-o-user')
                 ->schema([
@@ -830,7 +841,7 @@ class EmployeeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('branch.company')->withLatestConsentVersion())
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['branch.company', 'activeContract'])->withExists(['addresses', 'bankAccounts'])->withLatestConsentVersion())
             ->columns([
                 ImageColumn::make('photo')
                     ->label('Foto')
@@ -889,6 +900,17 @@ class EmployeeResource extends Resource
                     ->wrap()
                     ->badge()
                     ->color('info'),
+
+                TextColumn::make('profile_completeness')
+                    ->label('Ficha')
+                    ->state(fn (Employee $record): int => EmployeeProfileCompleteness::percent($record))
+                    ->formatStateUsing(fn (int $state): string => $state.'%')
+                    ->badge()
+                    ->color(fn (int $state): string => $state >= 100 ? 'success' : ($state >= 70 ? 'warning' : 'danger'))
+                    ->tooltip(fn (Employee $record): ?string => ($missing = EmployeeProfileCompleteness::missing($record))
+                        ? 'Falta: '.implode(', ', array_map(fn (string $key): string => EmployeeProfileCompleteness::labels()[$key], $missing))
+                        : 'Ficha completa')
+                    ->toggleable(),
 
                 TextColumn::make('status')
                     ->label('Estado')
@@ -1089,6 +1111,13 @@ class EmployeeResource extends Resource
                     ])
                     ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
                         ? $query->privacyConsentStatus($data['value'])
+                        : $query),
+
+                SelectFilter::make('profile_missing')
+                    ->label('Ficha: falta')
+                    ->options(EmployeeProfileCompleteness::labels())
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->missingProfileItem($data['value'])
                         : $query),
 
                 Filter::make('without_manager')
