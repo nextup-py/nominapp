@@ -218,3 +218,37 @@ it('cierra una entrada tardía dentro del margen, también en turnos que cruzan 
     expect($closer->evaluate($late)['skip'])->toBeNull()
         ->and($closer->evaluate($nightOk)['skip'])->toBeNull();
 });
+
+it('el comando cierra solo lo anterior a la fecha, cuenta los motivos y no guarda con --dry-run', function () {
+    $employee = closerEmployee();
+    $old = closerDay($employee, 5, [['check_in', '08:55']]);
+    $recent = closerDay($employee, 1, [['check_in', '08:55']]);
+    $onBreak = closerDay($employee, 6, [['check_in', '08:55'], ['break_start', '12:00']]);
+
+    $this->artisan('attendance:close-open-shifts', ['--before' => '2026-10-10', '--dry-run' => true])
+        ->expectsOutputToContain('[dry-run] Se cerrarían 1 jornada(s).')
+        ->expectsOutputToContain('hay que decidir cómo cerrarla)»: 1')
+        ->assertSuccessful();
+
+    expect($old->fresh()->events()->count())->toBe(1);
+
+    $this->artisan('attendance:close-open-shifts', ['--before' => '2026-10-10', '--force' => true])
+        ->expectsOutputToContain('Cerradas 1 jornada(s).')
+        ->assertSuccessful();
+
+    expect($old->fresh()->events()->where('event_type', 'check_out')->count())->toBe(1)
+        ->and($recent->fresh()->events()->count())->toBe(1)
+        ->and($onBreak->fresh()->events()->count())->toBe(2);
+});
+
+it('el comando exige la fecha límite y puede cancelarse', function () {
+    $day = closerDay(closerEmployee(), 5, [['check_in', '08:55']]);
+
+    $this->artisan('attendance:close-open-shifts')->assertFailed();
+
+    $this->artisan('attendance:close-open-shifts', ['--before' => '2026-10-10'])
+        ->expectsConfirmation('Se agregará la salida del horario a las jornadas abiertas anteriores al 10/10/2026. ¿Continuar?', 'no')
+        ->assertSuccessful();
+
+    expect($day->fresh()->events()->count())->toBe(1);
+});
