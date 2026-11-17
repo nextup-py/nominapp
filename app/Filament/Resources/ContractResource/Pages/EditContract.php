@@ -12,7 +12,6 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
-use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Storage;
@@ -185,14 +184,6 @@ class EditContract extends EditRecord
                         ->body("El contrato de {$record->employee->full_name} ha sido terminado.")
                         ->warning()
                         ->persistent()
-                        ->actions([
-                            NotificationAction::make('create_liquidacion')
-                                ->label('Crear Liquidación')
-                                ->url(route('filament.admin.resources.liquidaciones.create', [
-                                    'employee_id' => $record->employee_id,
-                                ]))
-                                ->button(),
-                        ])
                         ->send();
                 }),
 

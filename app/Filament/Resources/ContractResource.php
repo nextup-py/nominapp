@@ -32,7 +32,6 @@ use Filament\Infolists\Components\Actions as InfoActions;
 use Filament\Infolists\Components\Section as InfoSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
-use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
@@ -885,17 +884,9 @@ class ContractResource extends Resource
 
                             Notification::make()
                                 ->title('Contrato Terminado')
-                                ->body('El contrato de '.($record->employee?->full_name ?? 'empleado eliminado').' ha sido terminado. Puede crear una liquidación desde el módulo correspondiente.')
+                                ->body('El contrato de '.($record->employee?->full_name ?? 'empleado eliminado').' ha sido terminado. Si se liquida en el sistema, la liquidación se crea antes de terminar el contrato: usá «Dar de baja» desde la ficha del empleado.')
                                 ->warning()
                                 ->persistent()
-                                ->actions([
-                                    NotificationAction::make('create_liquidacion')
-                                        ->label('Crear Liquidación')
-                                        ->url(route('filament.admin.resources.liquidaciones.create', [
-                                            'employee_id' => $record->employee_id,
-                                        ]))
-                                        ->button(),
-                                ])
                                 ->send();
                         }),
                 ])

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\EmployeeTerminationAction;
 use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Actions\ReportingLineActions;
 use App\Filament\Actions\ScheduleAssignmentActions;
@@ -299,7 +300,10 @@ class EmployeeResource extends Resource
                             ->native(false)
                             ->required()
                             ->hiddenOn('create')
-                            ->helperText('Seleccioná el estado del empleado.'),
+                            ->disabled(fn (?Employee $record): bool => $record?->status === 'active' && $record->activeContract !== null)
+                            ->helperText(fn (?Employee $record): string => $record?->status === 'active' && $record->activeContract !== null
+                                ? 'Con contrato vigente, la baja se registra con «Dar de baja» desde la ficha.'
+                                : 'Seleccioná el estado del empleado.'),
 
                         MobileMarkingFields::select('Por defecto se marca solo desde el terminal. «Sí» permite vincular su celular; «No» lo bloquea y revoca el vinculado. «Heredar» usa lo definido en la sucursal, la empresa o Configuración General.'),
 
@@ -1210,11 +1214,13 @@ class EmployeeResource extends Resource
                                 ->send();
                         }),
 
+                    EmployeeTerminationAction::make(Action::class),
+
                     Action::make('change_status')
                         ->label('Cambiar estado')
                         ->icon('heroicon-o-arrow-path')
                         ->color('gray')
-                        ->tooltip('Cambiar el estado del empleado (activo, suspendido, inactivo)')
+                        ->tooltip('Cambiar el estado del empleado (activo o inactivo)')
                         ->modalSubmitActionLabel('Cambiar estado')
                         ->form([
                             Select::make('status')
@@ -1232,7 +1238,7 @@ class EmployeeResource extends Resource
                                 Notification::make()
                                     ->danger()
                                     ->title('No se puede desactivar')
-                                    ->body('El empleado tiene un contrato activo. Procesá una Liquidación primero para cerrar el contrato y liquidar los haberes correctamente.')
+                                    ->body('El empleado tiene un contrato vigente. Usá «Dar de baja» desde su ficha para terminar el contrato y registrar la baja.')
                                     ->send();
                                 $action->halt();
 
