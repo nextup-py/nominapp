@@ -52,7 +52,7 @@ Ir a **Reportes → Reporte de Vacaciones**.
 4. Elegir la **forma de pago**:
    - **Pago adelantado:** el empleado cobra la remuneración vacacional antes de salir
    - **Con próximo salario:** se incluye automáticamente en la nómina del período que contiene el inicio de las vacaciones
-5. Ingresar **fecha de inicio** y **fecha de fin** — el sistema calcula automáticamente los días hábiles, la fecha de reintegro y una estimación del monto a cobrar, y avisa si el período incluye feriados o si los días quedan por debajo del fraccionamiento mínimo legal (6 días hábiles)
+5. Ingresar **fecha de inicio** y **fecha de fin** — el sistema calcula automáticamente los días hábiles, la fecha de reintegro y una estimación del monto a cobrar, y avisa si el período incluye feriados o si los días quedan por debajo del fraccionamiento mínimo legal (6 días hábiles). El resumen muestra además cuántos días no se descuentan y por qué (sin turno según el horario, domingos u otros días no hábiles) y el **saldo que queda** después de la solicitud. Cómo se cuentan los días (ajuste global o según el horario de cada empleado) se define en **Configuración de Nómina → Vacaciones**
 6. Opcionalmente, cargar un motivo u observación
 7. Guardar
 

@@ -372,31 +372,64 @@ class VacationService
     }
 
     /**
-     * Calcula los días hábiles entre dos fechas.
-     * Usa vacation_business_days de la configuración (default: lunes a sábado), excluyendo feriados.
+     * Desglose día por día de un período de vacaciones: si cada fecha se descuenta y, si no, por qué (`holiday`,
+     * `day_off` según el horario del empleado, `not_working_day` según el ajuste global de días hábiles).
+     *
+     * @return list<array{date: Carbon, counts: bool, reason: ?string}>
+     */
+    public static function breakdown(Employee $employee, Carbon $startDate, Carbon $endDate): array
+    {
+        $settings = app(PayrollSettings::class);
+        $holidays = Holiday::whereBetween('date', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
+            ->pluck('date')
+            ->map(fn ($date) => $date->format('Y-m-d'))
+            ->all();
+        $days = [];
+
+        foreach (CarbonPeriod::create($startDate->copy()->startOfDay(), $endDate->copy()->startOfDay()) as $date) {
+            $date = Carbon::instance($date);
+            $days[] = ['date' => $date, ...self::classifyDay($employee, $date, $holidays, $settings)];
+        }
+
+        return $days;
+    }
+
+    /**
+     * Clasifica una fecha: ¿se descuenta?, y el motivo si no.
+     *
+     * @param  list<string>  $holidays  Feriados (Y-m-d) del período.
+     * @return array{counts: bool, reason: ?string}
+     */
+    private static function classifyDay(Employee $employee, Carbon $date, array $holidays, PayrollSettings $settings): array
+    {
+        if (in_array($date->format('Y-m-d'), $holidays, true)) {
+            return ['counts' => false, 'reason' => 'holiday'];
+        }
+
+        if ($settings->vacation_count_by_schedule && self::hasScheduleOn($employee, $date)) {
+            return AttendanceCalculator::resolveShiftDataFor($employee, $date)['check_in'] !== null
+                ? ['counts' => true, 'reason' => null]
+                : ['counts' => false, 'reason' => 'day_off'];
+        }
+
+        return in_array($date->dayOfWeekIso, $settings->vacation_business_days, true)
+            ? ['counts' => true, 'reason' => null]
+            : ['counts' => false, 'reason' => 'not_working_day'];
+    }
+
+    /** Si el empleado tiene algún horario fijo, rotación o turno puntual ese día (sin ninguno, se usa el ajuste global). */
+    private static function hasScheduleOn(Employee $employee, Carbon $date): bool
+    {
+        return RotationService::getShiftForDate($employee, $date) !== null || $employee->getScheduleForDate($date) !== null;
+    }
+
+    /**
+     * Calcula los días hábiles entre dos fechas: los del ajuste global (por defecto lunes a sábado) o, con
+     * `vacation_count_by_schedule`, los días con turno del empleado; los feriados nunca cuentan.
      */
     public static function calculateBusinessDays(Employee $employee, Carbon $startDate, Carbon $endDate): int
     {
-        $businessDays = 0;
-        $period = CarbonPeriod::create($startDate, $endDate);
-        $workingDays = app(PayrollSettings::class)->vacation_business_days;
-
-        $holidays = Holiday::whereBetween('date', [$startDate, $endDate])
-            ->pluck('date')
-            ->map(fn ($date) => $date->format('Y-m-d'))
-            ->toArray();
-
-        foreach ($period as $date) {
-            if (in_array($date->format('Y-m-d'), $holidays)) {
-                continue;
-            }
-
-            if (in_array($date->dayOfWeekIso, $workingDays)) {
-                $businessDays++;
-            }
-        }
-
-        return $businessDays;
+        return count(array_filter(self::breakdown($employee, $startDate, $endDate), fn (array $day): bool => $day['counts']));
     }
 
     /**
@@ -416,23 +449,22 @@ class VacationService
     }
 
     /**
-     * Calcula la fecha de reintegro (primer día hábil después de end_date).
-     * Usa vacation_business_days de la configuración, excluyendo feriados.
+     * Calcula la fecha de reintegro: el primer día después de `end_date` que no es feriado y cuenta como día hábil
+     * con el mismo criterio que el descuento de la vacación.
      */
     public static function calculateReturnDate(Employee $employee, Carbon $endDate): Carbon
     {
-        $returnDate = $endDate->copy()->addDay();
-        $workingDays = app(PayrollSettings::class)->vacation_business_days;
-        $maxIterations = 30;
-        $iterations = 0;
+        $settings = app(PayrollSettings::class);
+        $candidate = $endDate->copy()->addDay()->startOfDay();
 
-        while ($iterations < $maxIterations) {
-            if (! Holiday::isHoliday($returnDate) && in_array($returnDate->dayOfWeekIso, $workingDays)) {
-                return $returnDate;
+        for ($i = 0; $i < 30; $i++) {
+            $holidays = Holiday::isHoliday($candidate) ? [$candidate->format('Y-m-d')] : [];
+
+            if (self::classifyDay($employee, $candidate, $holidays, $settings)['counts']) {
+                return $candidate;
             }
 
-            $returnDate->addDay();
-            $iterations++;
+            $candidate->addDay();
         }
 
         return $endDate->copy()->addDay();

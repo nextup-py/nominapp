@@ -163,6 +163,7 @@ Los hijos se cargan en la pestaña **Hijos** del empleado. La columna **Bonifica
 - **Mínimo días consecutivos:** fraccionamiento mínimo por solicitud (por defecto 6).
 - **Años mínimos de servicio:** antigüedad requerida para tener derecho a vacaciones (por defecto 1).
 - **Días hábiles para vacaciones:** días de la semana que cuentan como hábiles al calcular el período — por defecto **Lunes a Sábado** (no lunes a viernes).
+- **Contar los días de vacaciones según el horario de cada empleado:** apagado por defecto. Encendido, un día solo se descuenta si el empleado tenía turno ese día (quien trabaja de lunes a viernes no gasta los sábados, y se respetan los francos de las rotaciones); quien no tiene horario ni rotación usa los días hábiles de arriba. Los feriados nunca se descuentan. Solo afecta a las vacaciones que se carguen desde ahora; las ya aprobadas conservan sus días.
 
 ---
 

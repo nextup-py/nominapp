@@ -11,7 +11,6 @@ use App\Models\VacationBalance;
 use App\Services\VacationService;
 use App\Settings\PayrollSettings;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -254,22 +253,18 @@ class VacationResource extends Resource
                                 $returnDate = $get('return_date');
                                 $start = Carbon::parse($startDate);
                                 $end = Carbon::parse($endDate);
-                                $workingDays = app(PayrollSettings::class)->vacation_business_days;
 
                                 $balance = $employeeId
                                     ? VacationBalance::where('employee_id', $employeeId)->where('year', $start->year)->first()
                                     : null;
                                 $available = $balance?->available_days ?? 0;
 
+                                $employeeForCount = $employeeId ? Employee::find($employeeId) : null;
+                                $breakdown = $employeeForCount instanceof Employee
+                                    ? VacationService::breakdown($employeeForCount, $start, $end)
+                                    : [];
+                                $skipped = collect($breakdown)->where('counts', false)->groupBy('reason')->map->count();
                                 $holidays = Holiday::whereBetween('date', [$start, $end])->orderBy('date')->get();
-
-                                $holidayDates = $holidays->pluck('date')->map(fn ($d) => $d->format('Y-m-d'))->toArray();
-                                $nonWorkingDays = 0;
-                                foreach (CarbonPeriod::create($start, $end) as $date) {
-                                    if (! in_array($date->dayOfWeekIso, $workingDays) && ! in_array($date->format('Y-m-d'), $holidayDates)) {
-                                        $nonWorkingDays++;
-                                    }
-                                }
 
                                 $daysColor = $businessDays > $available ? 'text-danger-600' : 'text-success-600';
                                 $returnFormatted = $returnDate ? Carbon::parse($returnDate)->format('d/m/Y') : '-';
@@ -302,8 +297,17 @@ class VacationResource extends Resource
                                     $holidaysHtml = "<p class='text-info-600 text-xs mt-1'>📅 {$label}: {$list}</p>";
                                 }
 
-                                $nonWorkingHtml = $nonWorkingDays > 0
-                                    ? "<p class='text-gray-500 text-xs mt-1'>🚫 ".($nonWorkingDays === 1 ? '1 día no hábil' : "{$nonWorkingDays} días no hábiles").' (domingos)</p>'
+                                $reasonLabels = ['day_off' => 'días sin turno según su horario', 'not_working_day' => 'días no hábiles (domingos u otros según el ajuste)'];
+                                $nonWorkingParts = collect($reasonLabels)
+                                    ->filter(fn ($label, $reason) => ($skipped[$reason] ?? 0) > 0)
+                                    ->map(fn ($label, $reason) => $skipped[$reason].' '.$label)
+                                    ->implode(', ');
+                                $nonWorkingHtml = $nonWorkingParts !== ''
+                                    ? "<p class='text-gray-500 text-xs mt-1'>No se descuentan: {$nonWorkingParts}.</p>"
+                                    : '';
+                                $remaining = $available - $businessDays;
+                                $remainingHtml = $employeeId
+                                    ? "<p class='text-xs mt-1 ".($remaining < 0 ? 'text-danger-600' : 'text-gray-500')."'>Saldo después de esta solicitud: {$remaining} días.</p>"
                                     : '';
 
                                 $warningHtml = ($businessDays > 0 && $businessDays < 6)
@@ -317,6 +321,7 @@ class VacationResource extends Resource
                                         {$amountHtml}
                                         {$holidaysHtml}
                                         {$nonWorkingHtml}
+                                        {$remainingHtml}
                                         {$warningHtml}
                                     </div>
                                 ");

@@ -57,6 +57,9 @@ class PayrollSettings extends Settings
 
     public array $vacation_business_days;
 
+    /** Cuenta los días de una vacación según el horario de cada empleado (sin horario, cae a `vacation_business_days`). */
+    public bool $vacation_count_by_schedule;
+
     // IRP — Impuesto a la Renta Personal (Ley 2421/04)
     public int $irp_annual_threshold;   // Umbral anual a partir del cual aplica IRP (Gs.)
 
