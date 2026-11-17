@@ -481,6 +481,39 @@ class ManagePayrollSettings extends SettingsPage
                         Toggle::make('vacation_count_by_schedule')
                             ->label('Contar los días de vacaciones según el horario de cada empleado')
                             ->helperText('Encendido: un día solo se descuenta si el empleado tenía turno ese día (un empleado de lunes a viernes no gasta los sábados; se respetan los francos de rotación). Quien no tiene horario ni rotación usa los días hábiles de arriba. Apagado: todos usan los días hábiles de arriba. Los feriados nunca se descuentan. Solo afecta a las vacaciones que se carguen desde ahora.'),
+
+                        Section::make('Avisos de vacaciones')
+                            ->description('Los recibe quien tiene permiso de editar vacaciones y cada uno puede apagarlos o pasarlos a resumen en «Mis notificaciones».')
+                            ->compact()
+                            ->schema([
+                                Grid::make(2)->schema([
+                                    TextInput::make('vacation_alert_pending_days')
+                                        ->label('Solicitudes pendientes de aprobar')
+                                        ->numeric()
+                                        ->minValue(0)
+                                        ->maxValue(60)
+                                        ->required()
+                                        ->suffix('días')
+                                        ->helperText('Avisa cuando una solicitud lleva más de estos días sin decisión. 0 = no avisar.'),
+
+                                    TextInput::make('vacation_alert_anniversary_days')
+                                        ->label('Cumple su primer año')
+                                        ->numeric()
+                                        ->minValue(0)
+                                        ->maxValue(120)
+                                        ->required()
+                                        ->suffix('días de anticipación')
+                                        ->helperText('Avisa de quienes cumplen el primer año de antigüedad (empiezan a tener derecho a vacaciones). 0 = no avisar.'),
+                                ]),
+
+                                Toggle::make('vacation_alert_unpaid_enabled')
+                                    ->label('Aprobadas sin marcar como pagadas')
+                                    ->helperText('Avisa de vacaciones aprobadas cuyo inicio fue hace más de 7 días y no figuran pagadas.'),
+
+                                Toggle::make('vacation_alert_unused_enabled')
+                                    ->label('Derecho anual sin tomar (cada lunes)')
+                                    ->helperText('Avisa de los empleados que tienen sin usar todo el derecho de un año, para programar sus vacaciones.'),
+                            ]),
                     ]),
             ]);
     }

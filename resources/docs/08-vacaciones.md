@@ -85,3 +85,7 @@ Ir a **Reportes → Reporte de Vacaciones**.
 - **Editar** ya no está disponible una vez aprobada la solicitud.
 
 **Con pago registrado ("Con próximo salario"):** el pago se marca automáticamente al procesar la nómina del período correspondiente — no requiere acción manual.
+
+## Avisos de vacaciones
+
+RR.HH. recibe avisos por la campanita (y por correo si está configurado) cuando hay vacaciones que requieren atención: solicitudes sin decidir, aprobadas sin marcar como pagadas, empleados con el derecho anual sin tomar (cada lunes) y quienes cumplen su primer año. Cada aviso se activa y se dimensiona en **Configuración de nómina → Vacaciones → Avisos de vacaciones**, y cada usuario elige cuáles recibir en **Mis notificaciones**. Detalle de cada aviso en el capítulo de notificaciones.

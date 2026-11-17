@@ -147,6 +147,14 @@ Schedule::command('approvals:notify-pending')
     ->withoutOverlapping();
 
 /**
+ * Avisos de vacaciones para RR.HH. (pendientes, sin pagar, derecho anual sin tomar los lunes, primer año).
+ * Se activan y se dimensionan en Configuración de nómina.
+ */
+Schedule::command('vacations:notify')
+    ->dailyAt('08:45')
+    ->withoutOverlapping();
+
+/**
  * Resumen diario de avisos: entrega a cada usuario, a la hora que eligió en «Mis notificaciones»,
  * lo que dejó para el resumen. Corre cada hora y solo procesa a quienes les toca esa hora.
  */

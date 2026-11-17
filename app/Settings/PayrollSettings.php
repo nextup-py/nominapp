@@ -60,6 +60,18 @@ class PayrollSettings extends Settings
     /** Cuenta los días de una vacación según el horario de cada empleado (sin horario, cae a `vacation_business_days`). */
     public bool $vacation_count_by_schedule;
 
+    /** Días que una solicitud puede esperar sin decisión antes de avisar (0 = no avisar). */
+    public int $vacation_alert_pending_days;
+
+    /** Avisa de vacaciones aprobadas, con inicio hace más de una semana, que no figuran pagadas. */
+    public bool $vacation_alert_unpaid_enabled;
+
+    /** Avisa cada lunes de los empleados con el derecho anual completo sin tomar. */
+    public bool $vacation_alert_unused_enabled;
+
+    /** Días de anticipación para avisar que alguien cumple su primer año (0 = no avisar). */
+    public int $vacation_alert_anniversary_days;
+
     // IRP — Impuesto a la Renta Personal (Ley 2421/04)
     public int $irp_annual_threshold;   // Umbral anual a partir del cual aplica IRP (Gs.)
 

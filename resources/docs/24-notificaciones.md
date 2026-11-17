@@ -101,6 +101,17 @@ Requieren el permiso **Editar Terminal**.
 | **Vinculación de celular sin permiso** | Editar empleados | Un empleado no habilitado intentó vincular su celular. El botón **Ver empleado y habilitar** abre su ficha, donde está **Habilitar celular** |
 | **Límite de vinculación agotado** | Ver dispositivos de empleados | Se agotaron los intentos diarios de vinculación desde una IP |
 
+### Vacaciones
+
+| Aviso | Permiso necesario | Cuándo llega |
+|-------|-------------------|--------------|
+| **Vacaciones pendientes de decidir** | Editar vacaciones | Solicitudes que llevan más días de los configurados sin aprobar ni rechazar. Se evalúa a diario (08:45); no se repite mientras el anterior esté sin leer |
+| **Vacaciones aprobadas sin marcar como pagadas** | Editar vacaciones | Aprobadas cuyo inicio fue hace más de 7 días y no figuran pagadas. Se resuelve con **Marcar como pagadas** en la lista de Vacaciones |
+| **Derecho anual de vacaciones sin tomar** | Editar vacaciones | Cada lunes, los empleados que tienen sin usar todo el derecho de un año |
+| **Empleados que cumplen su primer año** | Editar vacaciones | Quienes cumplen el primer año de antigüedad en los próximos días configurados |
+
+Los días y los interruptores de estos avisos se definen en **Configuración de nómina → Vacaciones → Avisos de vacaciones**.
+
 ### Aprobaciones y sistema
 
 | Aviso | Permiso necesario | Cuándo llega |
