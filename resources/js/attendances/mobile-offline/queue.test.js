@@ -210,3 +210,26 @@ describe('flushQueue', () => {
         expect(result.synced).toBe(250);
     });
 });
+
+describe('resolveOwnStatus con una salida cacheada de otro día', () => {
+    it('ofrece Entrada si la salida cacheada no es de hoy', async () => {
+        getEmployeeStatusCache.mockResolvedValue({ last_event: 'check_out', last_event_time: '17:02', last_event_at: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString() });
+        getEventsOnDate.mockResolvedValue([]);
+        getOwnEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        const result = await resolveOwnStatus();
+
+        expect(result.last_event).toBeNull();
+        expect(result.allowed_events).toEqual(['check_in']);
+    });
+
+    it('mantiene la salida marcada hoy', async () => {
+        getEmployeeStatusCache.mockResolvedValue({ last_event: 'check_out', last_event_time: '10:00', last_event_at: new Date().toISOString() });
+        getEventsOnDate.mockResolvedValue([]);
+        getOwnEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        const result = await resolveOwnStatus();
+
+        expect(result.last_event).toBe('check_out');
+    });
+});

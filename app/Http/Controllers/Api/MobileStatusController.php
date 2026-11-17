@@ -54,6 +54,7 @@ class MobileStatusController extends Controller
             'ok' => true,
             'last_event' => $state['last']?->event_type,
             'last_event_time' => $state['last']?->recorded_at?->format('H:i'),
+            'last_event_at' => $state['last']?->recorded_at?->toIso8601String(),
             'allowed_events' => $state['allowed'],
             // Hora de salida del horario de hoy ("HH:MM"): el celular deja de ofrecer «Inicio descanso» cerca de ella.
             'expected_check_out' => $this->expectedCheckOut($employee, $now),

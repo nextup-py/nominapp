@@ -480,3 +480,28 @@ describe('flushQueue', () => {
         await firstCall;
     });
 });
+
+describe('resolveEmployeeStatus con una salida cacheada de otro día', () => {
+    it('ofrece Entrada al empleado que se fue ayer (caso: «Hasta mañana» a todos por la mañana sin conexión)', async () => {
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'overnight_max_hours' ? 16 : 0));
+        getEmployeeStatusCache.mockResolvedValue({ last_event: 'check_out', last_event_time: '17:02', last_event_at: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(), shift_date: '2000-01-01' });
+        getEventsForEmployeeOnDate.mockResolvedValue([]);
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        const result = await resolveEmployeeStatus(1);
+
+        expect(result.last_event).toBeNull();
+        expect(result.allowed_events).toEqual(['check_in']);
+    });
+
+    it('mantiene la salida marcada hoy', async () => {
+        getMeta.mockImplementation((key) => Promise.resolve(key === 'overnight_max_hours' ? 16 : 0));
+        getEmployeeStatusCache.mockResolvedValue({ last_event: 'check_out', last_event_time: '10:00', last_event_at: new Date().toISOString() });
+        getEventsForEmployeeOnDate.mockResolvedValue([]);
+        getCachedEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        const result = await resolveEmployeeStatus(1);
+
+        expect(result.last_event).toBe('check_out');
+    });
+});

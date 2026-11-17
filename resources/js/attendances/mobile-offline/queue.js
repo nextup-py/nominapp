@@ -27,6 +27,7 @@ import {
     getEmployeeStatusCache,
     setEmployeeStatusCache,
 } from './db.js';
+import { isClosedStateFromAnotherDay } from '../offline-shared/stale-state.js';
 import { submitEvents, fetchStatus, MobileAuthError } from './sync.js';
 import { submitInChunks } from '../offline-shared/submit-in-chunks.js';
 
@@ -122,6 +123,12 @@ export async function resolveOwnStatus() {
     let lastEvent = cached?.last_event ?? null;
     let lastEventTime = cached?.last_event_time ?? null;
 
+    if (todayEvents.length === 0 && isClosedStateFromAnotherDay(cached, today)) {
+        // Una salida de otro día no cuenta: el empleado empieza de cero (ver offline-shared/stale-state.js).
+        lastEvent = null;
+        lastEventTime = null;
+    }
+
     if (todayEvents.length > 0) {
         for (const event of todayEvents) {
             lastEvent = event.event_type;
@@ -159,7 +166,7 @@ export async function getOwnStatus() {
     try {
         const status = await fetchStatus();
         const employeeId = await getMeta('employee_id');
-        if (employeeId) await setEmployeeStatusCache(employeeId, status);
+        if (employeeId) await setEmployeeStatusCache(employeeId, { ...status, shift_date: localDateString(await correctedNow()) });
         return status;
     } catch (error) {
         // Token revocado — no es un fallo de red recuperable con el estado local, el
@@ -206,6 +213,7 @@ export async function enqueueMark(eventType, location = null) {
         await setEmployeeStatusCache(employeeId, {
             last_event: eventType,
             last_event_time: recordedAt.toTimeString().slice(0, 5),
+            last_event_at: recordedAt.toISOString(),
             allowed_events: allowedNextEventTypes(eventType, ownEmployee?.has_scheduled_break ?? true),
         });
     }
