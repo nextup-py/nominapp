@@ -345,6 +345,16 @@ Los umbrales de la cola atascada, la batería baja y el desfase de reloj tolerad
 
 El **Escritorio** muestra la tarjeta **Salud de los terminales** para quien puede ver terminales: cuántos están **en línea**, **desconectados** y **sin vincular** (con los nombres de los que tienen problemas y un enlace al listado ya filtrado) y cuántos tienen **alertas del dispositivo** (cola atascada, batería baja, caché vacía, reloj desajustado o sucursal sin empleados enrolados). Solo cuenta terminales activos.
 
+Debajo de las tarjetas, la tabla **Salud de los terminales** muestra una fila por terminal activo con un semáforo, ordenada del más grave al menos grave:
+
+| Semáforo | Cuándo |
+|---|---|
+| **Con problemas** (rojo) | Sin vincular, desconectado o con disponibilidad por debajo del mínimo semanal |
+| **Con alertas** (ámbar) | Sin primer latido, cola atascada, conflictos de marcación en la semana, batería baja, sin empleados en caché o enrolados, reloj desajustado, app desactualizada, identificación lenta o garantía vencida o por vencer |
+| **Sin alertas** (verde) | Ninguna de las anteriores |
+
+Gana siempre la peor señal. Cada fila muestra la conectividad y el último latido, la disponibilidad y los conflictos de los últimos 7 días, la mediana de identificación, el responsable (con su teléfono) y el detalle de las alertas; el nombre del terminal abre su detalle. Una disponibilidad solo se evalúa con al menos 120 minutos medidos.
+
 ![Salud de los terminales en el panel de inicio](/docs-images/23-terminales-widget-dashboard.png)
 
 ### Filtros del listado
