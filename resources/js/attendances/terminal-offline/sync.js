@@ -215,6 +215,9 @@ export async function heartbeat() {
         if (Number.isFinite(data.config.camera_resume_minutes)) {
             await setMeta('camera_resume_minutes', data.config.camera_resume_minutes);
         }
+        if (Number.isFinite(data.config.no_charger_minutes)) {
+            await setMeta('no_charger_minutes', data.config.no_charger_minutes);
+        }
         if (typeof data.config.confirm_exit === 'boolean') {
             await setMeta('terminal_confirm_exit', data.config.confirm_exit);
         }

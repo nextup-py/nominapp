@@ -34,6 +34,13 @@
             <div id="storageNotice" class="idle-install-notice hidden" role="alert">
                 <span data-storage-notice-text></span>
             </div>
+            {{-- Aviso discreto cuando el equipo lleva un rato sin cargador (ver terminal/charger-notice.js) --}}
+            <div id="chargerNotice" class="idle-install-notice hidden" role="note">
+                <span id="chargerNoticeText"></span>
+                <span class="idle-install-notice-actions">
+                    <button type="button" id="btnChargerNoticeDismiss" class="idle-sync-btn" aria-label="Ocultar este aviso">Ocultar</button>
+                </span>
+            </div>
             {{-- Aviso discreto cuando el terminal corre en una pestaña del navegador (ver terminal/install-notice.js) --}}
             <div id="installNotice" class="idle-install-notice hidden" role="note">
                 <span id="installNoticeText"></span>

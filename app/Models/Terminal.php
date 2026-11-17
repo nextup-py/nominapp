@@ -964,6 +964,72 @@ class Terminal extends Model implements AuthenticatableContract
     }
 
     /**
+     * Qué conviene corregir en el equipo según lo que informó en su último reporte, para mostrarlo en el detalle del
+     * terminal. Pensado también para equipos que se usan para otra cosa (por ejemplo un celular de ventas): lo que
+     * importa es que esté enchufado, con la pantalla encendida y con esta app visible. Vacío si no hay nada que corregir
+     * o el equipo nunca informó su estado.
+     *
+     * @return list<array{title: string, text: string}>
+     */
+    public function recommendations(): array
+    {
+        $report = $this->device_report ?? [];
+
+        if ($report === []) {
+            return [];
+        }
+
+        $recommendations = [];
+
+        if ($this->reportedCharging() === false) {
+            $level = $this->reportedBatteryLevel();
+            $recommendations[] = [
+                'title' => 'Enchufar el equipo',
+                'text' => 'Funciona con batería'.($level !== null ? " (al {$level}%)" : '').'. Conectarlo al cargador y, en los ajustes del equipo, activar «mantener la pantalla encendida mientras carga» para que no se suspenda y deje de marcar.',
+            ];
+        }
+
+        if (array_key_exists('wake_lock', $report) && $report['wake_lock'] === false) {
+            $reason = $this->wakeLockErrorLabel();
+            $recommendations[] = [
+                'title' => 'Mantener la pantalla encendida',
+                'text' => 'El equipo no logra mantener la pantalla encendida'.($reason ? " ({$reason})" : '').'. Quitar el ahorro de energía para esta app, dejarla visible y, en una PC, configurar que nunca se suspenda.',
+            ];
+        }
+
+        if ($this->reportedHidden() === true) {
+            $recommendations[] = [
+                'title' => 'Dejar la app visible',
+                'text' => 'La pestaña o la app estaba oculta o minimizada: el navegador la frena y el equipo puede suspenderse. Si el equipo se usa para otra cosa, volver a esta app al terminar.',
+            ];
+        }
+
+        if ($this->displayKind() === 'browser') {
+            $recommendations[] = [
+                'title' => 'Abrir como app o en modo kiosko',
+                'text' => 'Está abierto en una pestaña del navegador. Instalarlo como app o usar el modo kiosko para que tenga su propia ventana.',
+            ];
+        }
+
+        $skew = $this->reportedClockSkewSeconds();
+        if ($skew !== null && abs($skew) > app(GeneralSettings::class)->terminal_clock_skew_max_seconds) {
+            $recommendations[] = [
+                'title' => 'Corregir la fecha y hora',
+                'text' => "El reloj del equipo difiere del servidor en {$skew} segundos. Activar la fecha y hora automáticas.",
+            ];
+        }
+
+        if ($this->isAppOutdated()) {
+            $recommendations[] = [
+                'title' => 'Actualizar la app',
+                'text' => 'El equipo tiene una versión anterior. Enviar el comando Recargar app o recargar su página.',
+            ];
+        }
+
+        return $recommendations;
+    }
+
+    /**
      * Indica si el terminal tiene un token Sanctum vigente con ability
      * `terminal:sync`. Usa el flag precargado por `scopeWithSyncTokenFlag()`
      * cuando está disponible (listados: evita una query por fila) y cae a una

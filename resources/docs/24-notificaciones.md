@@ -65,6 +65,7 @@ Requieren el permiso **Editar Terminal**. Detalle en el capítulo **Terminales d
 | **Dispositivo reemplazado en un terminal** | Un dispositivo nuevo se vinculó a un terminal cuyo dispositivo anterior seguía en línea, que quedó sin acceso. No le llega a quien dejó listo el vínculo |
 | **Cola de marcaciones atascada** | Marcaciones pendientes que no se envían hace más del tiempo configurado |
 | **Batería baja** | El terminal bajó del porcentaje configurado y no está cargando |
+| **Terminal sin cargador** | Un terminal en línea lleva más de los minutos configurados sin cargador (Configuración General), antes de que la batería esté baja. Una sola vez hasta que se enchufe |
 | **Sucursal sin empleados enrolados** | Nadie en la sucursal tiene rostro registrado |
 | **Terminal sin empleados en caché** | El terminal está en línea pero no tiene empleados cargados |
 | **Reloj del terminal desajustado** | La hora del dispositivo difiere del servidor |

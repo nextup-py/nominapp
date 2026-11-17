@@ -141,6 +141,7 @@ class TerminalHeartbeatController extends Controller
             'config' => [
                 'overnight_max_hours' => (int) $settings->attendance_overnight_max_hours,
                 'camera_resume_minutes' => (int) $settings->terminal_camera_resume_minutes,
+                'no_charger_minutes' => (int) $settings->terminal_no_charger_minutes,
                 'confirm_exit' => $terminal->confirmExitEnabled($settings),
                 'selection_timeout_seconds' => (int) $settings->terminal_selection_timeout_seconds,
                 'face_threshold' => (float) $settings->face_threshold,

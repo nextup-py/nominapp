@@ -434,6 +434,20 @@ class TerminalResource extends Resource
                         ]),
                     ]),
 
+                InfoSection::make('Recomendaciones')
+                    ->description('Qué conviene corregir en el equipo según su último reporte. Un equipo que también se usa para otra cosa (por ejemplo, un celular de ventas) puede ser terminal si se mantiene enchufado, con la pantalla encendida y con esta app visible.')
+                    ->icon('heroicon-o-light-bulb')
+                    ->collapsible()
+                    ->schema([
+                        TextEntry::make('_recommendations')
+                            ->label('')
+                            ->getStateUsing(fn (Terminal $record): array => collect($record->recommendations())->map(fn (array $item): string => "{$item['title']}: {$item['text']}")->all())
+                            ->listWithLineBreaks()
+                            ->bulleted()
+                            ->columnSpanFull(),
+                    ])
+                    ->visible(fn (Terminal $record): bool => $record->recommendations() !== []),
+
                 InfoSection::make('Estado del dispositivo')
                     ->description('Lo que el terminal informó en su último heartbeat. Cada dato depende de lo que el navegador permita leer.')
                     ->icon('heroicon-o-cpu-chip')

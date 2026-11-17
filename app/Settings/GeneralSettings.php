@@ -56,6 +56,9 @@ class GeneralSettings extends Settings
     /** Porcentaje de batería (sin cargador) por debajo del cual se avisa. */
     public int $terminal_low_battery_percent;
 
+    /** Minutos sin cargador a partir de los cuales se recomienda (en la pantalla del terminal y en el panel) y se avisa que se enchufe; 0 = apagado. */
+    public int $terminal_no_charger_minutes;
+
     /** Segundos de desfase del reloj de un terminal (respecto del servidor) a partir de los cuales se avisa. */
     public int $terminal_clock_skew_max_seconds;
 

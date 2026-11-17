@@ -92,6 +92,8 @@ class TerminalHealthService
             'not_installed_since' => $previous['not_installed_since'] ?? null,
             'tab_hidden' => (bool) ($previous['tab_hidden'] ?? false),
             'tab_hidden_since' => $previous['tab_hidden_since'] ?? null,
+            'no_charger' => (bool) ($previous['no_charger'] ?? false),
+            'no_charger_since' => $previous['no_charger_since'] ?? null,
             'outage_run' => (int) ($previous['outage_run'] ?? 0),
         ];
 
@@ -114,6 +116,7 @@ class TerminalHealthService
                 ...$this->evaluateClock($terminal, $snapshot),
                 ...$this->evaluateAppVersion($terminal, $connectivity, $snapshot),
                 ...$this->evaluateDisplay($terminal, $connectivity, $snapshot),
+                ...$this->evaluateCharger($terminal, $connectivity, $snapshot),
             ];
         }
 
@@ -472,6 +475,54 @@ class TerminalHealthService
         }
 
         return $alerts;
+    }
+
+    /**
+     * Terminal en línea que lleva `terminal_no_charger_minutes` o más sin cargador: avisa una vez, antes de que la
+     * batería esté baja (el equipo se apaga o se suspende y deja de marcar). Solo cuenta con el terminal en línea,
+     * dentro de su horario y con un reporte fresco que informe el estado de carga (la Battery API no existe en iOS
+     * ni en Firefox: sin dato no cambia nada). Al enchufarlo se reinicia y queda en la bitácora.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function evaluateCharger(Terminal $terminal, string $connectivity, array &$snapshot): array
+    {
+        $minutes = $this->settings->terminal_no_charger_minutes;
+
+        if ($connectivity !== 'online' || ! $terminal->hasFreshDeviceReport() || ! $terminal->isWithinWatchWindow()) {
+            return [];
+        }
+
+        $charging = $terminal->reportedCharging();
+
+        if ($charging === null) {
+            return [];
+        }
+
+        if ($charging === false && $minutes > 0) {
+            $snapshot['no_charger_since'] ??= now()->toIso8601String();
+
+            if (! $snapshot['no_charger'] && Carbon::parse($snapshot['no_charger_since'])->lte(now()->subMinutes($minutes))) {
+                $snapshot['no_charger'] = true;
+
+                return [$this->raise($terminal, 'no_charger', 'health_no_charger', [
+                    'minutes' => $minutes,
+                    'battery_level' => $terminal->reportedBatteryLevel(),
+                ])];
+            }
+
+            return [];
+        }
+
+        $snapshot['no_charger_since'] = null;
+
+        if ($snapshot['no_charger']) {
+            $snapshot['no_charger'] = false;
+            $this->record($terminal, 'health_charger_ok');
+        }
+
+        return [];
     }
 
     /**

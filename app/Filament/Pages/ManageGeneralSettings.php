@@ -373,6 +373,17 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('%')
                             ->helperText('Se avisa cuando un terminal sin cargador baja de este nivel (solo si el navegador informa la batería)'),
 
+                        TextInput::make('terminal_no_charger_minutes')
+                            ->label('Terminal sin cargador')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(1440)
+                            ->default(30)
+                            ->suffix('minutos')
+                            ->helperText('Tiempo sin cargador a partir del cual el terminal le recomienda a quien lo usa que lo enchufe y se avisa a quien gestiona terminales, antes de que la batería esté baja. 0 = apagado. Solo si el navegador informa la batería'),
+
                         TextInput::make('terminal_clock_skew_max_seconds')
                             ->label('Desfase de reloj tolerado')
                             ->numeric()

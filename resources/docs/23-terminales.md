@@ -310,6 +310,7 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Quedó sin vincular** | Un terminal vinculado perdió su acceso |
 | **Cola de marcaciones atascada** / **normalizada** | La cola dejó de vaciarse o volvió a la normalidad |
 | **Batería baja** / **recuperada** | El nivel cruzó el porcentaje configurado |
+| **Sin cargador** / **Cargador conectado** | El terminal lleva el tiempo configurado sin cargador (por defecto 30 minutos) / se enchufó de nuevo |
 | **Sucursal sin empleados enrolados** / **con empleados enrolados** | La sucursal del terminal se quedó sin ningún empleado activo con rostro registrado, o volvió a tenerlos |
 | **Caché de empleados vacía** / **normalizada** | El terminal en línea reportó 0 empleados en caché habiendo empleados enrolados, o volvió a tenerlos |
 | **Reloj desajustado** / **normalizado** | El reloj del dispositivo pasó (o dejó de pasar) el desfase tolerado |
@@ -334,6 +335,7 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
 | **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones **pendientes** no se envían hace más del tiempo configurado. Las marcaciones **en conflicto** no cuentan: el servidor ya las rechazó y quedan en **Fallos de Marcación** para revisar |
 | **Batería baja en terminal** | El nivel bajó del porcentaje configurado y no está cargando (solo si el navegador informa la batería) |
+| **Terminal sin cargador** | El terminal en línea lleva más de los minutos configurados sin cargador (por defecto 30), antes de que la batería esté baja. Dice cómo corregirlo: enchufarlo y dejar la pantalla encendida y la app visible. Una sola vez hasta que se enchufe (solo si el navegador informa la batería) |
 | **Terminal sin empleados enrolados** | La sucursal del terminal no tiene ningún empleado activo con rostro registrado: no podrá identificar a nadie. Enrolar a los empleados o revisar a qué sucursal pertenecen |
 | **Terminal sin empleados en caché** | El terminal está en línea pero reporta 0 empleados en su caché, aunque su sucursal tiene empleados enrolados. Enviar el comando remoto **Limpiar caché** o **Recargar app** |
 | **Terminal con la app desactualizada** | El terminal está en línea pero sigue con una versión anterior de la app más de 2 horas después de reportarla así. Enviar el comando remoto **Recargar app** |
@@ -474,6 +476,14 @@ El script usa Chrome (o Edge si no está Chrome), crea el acceso directo **Termi
 1. Instalar el sitio como aplicación desde el menú del navegador (en Chrome, el ícono de instalación de la barra de direcciones; en Edge, **Aplicaciones → Instalar este sitio como aplicación**; el nombre exacto varía según la versión). El detalle del terminal pasa a mostrar **Instalada como app**.
 2. Para que arranque con Windows: **Windows + R**, escribir `shell:startup` y copiar ahí el acceso directo de la aplicación.
 3. Ajustar la energía con los pasos de **PC con Windows**.
+
+### Recomendaciones
+
+En el detalle del terminal aparece la sección **Recomendaciones** cuando el último reporte del equipo muestra algo que corregir: **enchufar el equipo**, **mantener la pantalla encendida**, **dejar la app visible**, **abrir como app o en modo kiosko**, **corregir la fecha y hora** o **actualizar la app**. Desaparece sola cuando todo está bien.
+
+**Equipo que también se usa para otra cosa:** un celular de ventas, por ejemplo, puede ser terminal sin ser exclusivo. Lo que importa es que esté **enchufado**, con la **pantalla encendida** y con **esta app visible** cuando alguien tenga que marcar. Si queda desenchufado, el propio terminal muestra en reposo un aviso discreto (**Este equipo no está enchufado…**, con **Ocultar**, que vuelve a los 30 minutos) y nunca impide marcar.
+
+---
 
 ## Qué se ve en el dispositivo
 

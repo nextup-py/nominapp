@@ -6,6 +6,7 @@ use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
 use App\Notifications\Concerns\HonorsPreferences;
 use App\Services\TerminalHealthService;
+use App\Settings\GeneralSettings;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -93,6 +94,11 @@ class TerminalHealthNotification extends Notification
                 ->title('Terminal en una pestaña del navegador')
                 ->body("El terminal {$name} lleva horas abierto en una pestaña del navegador, sin instalar como app ni en modo kiosko: puede quedar oculto o suspenderse y dejar de marcar. Instalarlo como app o usar el modo kiosko (ver la guía de terminales).")
                 ->icon('heroicon-o-window')
+                ->warning(),
+            'no_charger' => $notification
+                ->title('Terminal sin cargador')
+                ->body("El terminal {$name} lleva más de ".app(GeneralSettings::class)->terminal_no_charger_minutes.' minutos sin cargador'.($this->terminal->reportedBatteryLevel() !== null ? " (batería al {$this->terminal->reportedBatteryLevel()}%)" : '').'. Enchufarlo y dejar la pantalla encendida y la app visible para que no se suspenda y deje de marcar.')
+                ->icon('heroicon-o-bolt-slash')
                 ->warning(),
             'tab_hidden' => $notification
                 ->title('Pestaña del terminal oculta')
