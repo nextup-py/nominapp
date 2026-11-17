@@ -522,6 +522,19 @@ class Employee extends Model implements AuthenticatableContract
     /**
      * Scope para filtrar empleados activos
      */
+    /**
+     * Motivo por el que no se puede (re)activar al empleado, o null si se puede: necesita un contrato vigente
+     * (activo o suspendido); sin él quedaría «activo sin contrato» y fuera de nómina y asistencia.
+     */
+    public function activationBlocker(): ?string
+    {
+        if ($this->contracts()->whereIn('status', ['active', 'suspended'])->exists()) {
+            return null;
+        }
+
+        return 'No tiene un contrato vigente: usá «Reingresar» si ya tuvo contratos, o cargá uno desde su ficha.';
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
