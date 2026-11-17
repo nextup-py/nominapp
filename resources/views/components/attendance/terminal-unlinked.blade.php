@@ -29,6 +29,17 @@
                 <span data-storage-notice-text></span>
             </div>
 
+            {{-- Este equipo ya funciona como OTRO terminal: se ofrece ir a su enlace; cambiarlo es deliberado. --}}
+            <div id="wrongTerminalBlock" class="pairing-block hidden">
+                <p class="pairing-label">Este equipo es el terminal</p>
+                <p id="wrongTerminalName" class="pairing-status"></p>
+                <p class="pairing-hint">Para seguir usándolo con ese terminal, abrí su enlace. Si querés usarlo en este terminal en su lugar, hay que cambiarlo (se pierde la caché del anterior).</p>
+                <div class="terminal-actions">
+                    <a id="btnGoToLinkedTerminal" href="#" class="terminal-btn terminal-btn-primary">Ir a mi terminal</a>
+                    <button type="button" id="btnSwitchTerminal" class="terminal-btn terminal-btn-ghost">Usar este equipo en este terminal</button>
+                </div>
+            </div>
+
             {{-- Código de emparejamiento: el admin lo tipea al aprobar la vinculación. --}}
             <div id="pairingBlock" class="pairing-block hidden">
                 <p class="pairing-label">Código de vinculación</p>

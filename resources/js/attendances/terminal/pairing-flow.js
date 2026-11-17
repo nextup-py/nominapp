@@ -210,6 +210,7 @@ async function handlePoll(ui, data) {
                 await setMeta('api_token', data.token);
                 await setMeta('terminal_id', data.terminal.id);
                 await setMeta('terminal_code', data.terminal.code);
+                if (data.terminal.name) await setMeta('terminal_name', data.terminal.name);
                 await setMeta(SESSION_KEY, null);
                 rememberLinked(data.terminal.code);
                 stopPairing();

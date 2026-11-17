@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         screens, video, overlay, ctx, identificationStatus,
         successDom, errorMessageEl, dayCompleteDom, typeSelectionDom,
         onIdleTimeout: enterIdle,
-        onUnlinked: (reason, storedCode) => showUnlinked(reason, storedCode),
+        onUnlinked: (reason, storedCode, storedName) => showUnlinked(reason, storedCode, storedName),
     };
 
     // ============================================================================
@@ -237,6 +237,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Muestra u oculta el bloque «este equipo ya es otro terminal»: el botón principal abre el enlace de ese terminal
+     * y el secundario (con confirmación) convierte este equipo en el terminal de la página actual.
+     * @param {{code: string|null, name: string|null}|null} stored - terminal al que ya pertenece el navegador, o null para ocultarlo
+     */
+    function showWrongTerminal(stored) {
+        const block = document.getElementById('wrongTerminalBlock');
+        if (!block) return;
+
+        block.classList.toggle('hidden', stored === null);
+        if (stored === null) return;
+
+        const nameEl = document.getElementById('wrongTerminalName');
+        if (nameEl) nameEl.textContent = stored.name ?? stored.code ?? 'otro terminal';
+
+        const go = document.getElementById('btnGoToLinkedTerminal');
+        if (go) {
+            go.classList.toggle('hidden', !stored.code);
+            if (stored.code) go.setAttribute('href', `/terminal/${encodeURIComponent(stored.code)}`);
+        }
+    }
+
+    /**
      * Bloquea la marcación: detiene cámara, presencia, timers y countdowns, y
      * deja la pantalla "sin vincular". El latch vive en identification-flow
      * (`blockIdentification`), así ningún countdown ni reset vuelve a arrancar
@@ -246,11 +268,13 @@ document.addEventListener('DOMContentLoaded', () => {
      * Sin token (`no_token`/`revoked`) y con código de terminal en la URL, además
      * pide un código de emparejamiento para que un admin lo apruebe — el terminal
      * no queda mudo esperando un enlace. Con `other_terminal` (el navegador
-     * pertenece a otro terminal) no se vincula nada: el usuario debe volver a esa URL.
+     * ya funciona como otro terminal) no se vincula nada: se ofrece ir al enlace de ese
+     * terminal y, solo con un cambio deliberado, usar este equipo en el actual.
      * @param {'no_token'|'other_terminal'|'revoked'|string} reason
      * @param {string|null} [storedCode] - code del terminal que tenía este navegador (reason 'other_terminal')
+     * @param {string|null} [storedName] - nombre de ese terminal, si se guardó al vincularlo
      */
-    function showUnlinked(reason, storedCode = null) {
+    function showUnlinked(reason, storedCode = null, storedName = null) {
         idleDetection.clearIdleTimer();
         idleDetection.stopPresenceCheck();
         screenState.stopCountdown();
@@ -264,15 +288,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const detail = document.getElementById('unlinkedDetail');
         if (detail) {
             detail.textContent = reason === 'other_terminal'
-                ? `Este navegador está configurado como otro terminal${storedCode ? ` ("${storedCode}")` : ''}. Abrí /terminal/${storedCode ?? '{código}'} o pedí un enlace para este.`
+                ? `Este equipo ya funciona como otro terminal${storedName || storedCode ? ` («${storedName ?? storedCode}»)` : ''}. Para seguir usándolo con ese terminal, abrí su enlace.`
                 : reason === 'revoked'
                     ? 'El acceso de este terminal fue revocado.'
                     : 'Este terminal no está vinculado.';
         }
 
+        showWrongTerminal(reason === 'other_terminal' ? { code: storedCode, name: storedName } : null);
+
         pairingBlock?.classList.toggle('hidden', !canPair);
         // Con código de emparejamiento a la vista, "pedí un enlace" sobra: el admin aprueba el código.
-        document.getElementById('unlinkedLinkHint')?.classList.toggle('hidden', canPair);
+        document.getElementById('unlinkedLinkHint')?.classList.toggle('hidden', canPair || reason === 'other_terminal');
         screenState.showScreen(screens, 'unlinked');
 
         if (canPair && !pairingAutoStarted) {
@@ -512,6 +538,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnRetry) btnRetry.addEventListener('click', () => resetTerminal());
     if (btnReload) btnReload.addEventListener('click', () => window.location.reload());
     document.getElementById('btnUnlinkedReload')?.addEventListener('click', () => window.location.reload());
+
+    // «Usar este equipo en este terminal»: cambio deliberado, con confirmación; borra el estado del terminal anterior.
+    document.getElementById('btnSwitchTerminal')?.addEventListener('click', async () => {
+        const current = terminalData?.name ?? terminalData?.code ?? 'este terminal';
+        const confirmed = window.confirm(
+            `¿Usar este equipo como «${current}»? Deja de ser el otro terminal y se pierde su caché local `
+            + '(empleados sincronizados y marcaciones pendientes de sincronizar). Después un administrador debe aprobar un código.',
+        );
+        if (!confirmed) return;
+
+        pairingAutoStarted = false;
+        const result = await bootstrap.switchToCurrentTerminal({ onUnlinked: showUnlinked });
+        if (result.linked) {
+            window.location.reload();
+            return;
+        }
+        showUnlinked(result.reason, result.storedCode, result.storedName);
+    });
     document.getElementById('btnPairingNew')?.addEventListener('click', async () => {
         if (!terminalData?.code) return;
         await pairingFlow.restartPairing(pairingUi, {
