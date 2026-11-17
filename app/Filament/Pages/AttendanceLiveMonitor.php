@@ -25,7 +25,7 @@ class AttendanceLiveMonitor extends Page
 
     protected static ?string $navigationGroup = 'Asistencias';
 
-    protected static ?int $navigationSort = -1;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $title = 'Monitor de asistencia en vivo';
 

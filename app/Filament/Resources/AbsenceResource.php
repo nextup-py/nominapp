@@ -54,7 +54,7 @@ class AbsenceResource extends Resource
 
     protected static ?string $navigationGroup = 'Asistencias';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     public static function form(Form $form): Form
     {

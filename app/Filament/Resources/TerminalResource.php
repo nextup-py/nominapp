@@ -67,9 +67,9 @@ class TerminalResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-computer-desktop';
 
-    protected static ?string $navigationGroup = 'Asistencias';
+    protected static ?string $navigationGroup = 'Terminales y dispositivos';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 1;
 
     /**
      * Formulario de creación y edición de terminales.

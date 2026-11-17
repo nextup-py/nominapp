@@ -45,9 +45,9 @@ class FaceEnrollmentResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-finger-print';
 
-    protected static ?string $navigationGroup = 'Asistencias';
+    protected static ?string $navigationGroup = 'Terminales y dispositivos';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     /**
      * Define la tabla del recurso, con columnas, filtros y acciones personalizadas para la gestión de registros faciales.

@@ -29,7 +29,7 @@ class ContractTemplateResource extends Resource
 {
     protected static ?string $model = ContractTemplate::class;
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static ?string $navigationGroup = 'Catálogos';
 
     protected static ?string $navigationIcon = 'heroicon-o-document-duplicate';
 
@@ -41,7 +41,7 @@ class ContractTemplateResource extends Resource
 
     protected static ?string $slug = 'plantillas-contratos';
 
-    protected static ?int $navigationSort = 50;
+    protected static ?int $navigationSort = 3;
 
     /** Botones comunes del RichEditor para todas las secciones. */
     private static function richEditorToolbar(): array
@@ -254,10 +254,10 @@ class ContractTemplateResource extends Resource
                     ->html()
                     ->getStateUsing(function (ContractTemplate $record): HtmlString {
                         $sections = [
-                            'Intro'     => filled($record->intro_text),
+                            'Intro' => filled($record->intro_text),
                             'Cláusulas' => filled($record->body),
-                            'Cierre'    => filled($record->closing_text),
-                            'Firmas'    => filled($record->signature_notes),
+                            'Cierre' => filled($record->closing_text),
+                            'Firmas' => filled($record->signature_notes),
                         ];
 
                         $badges = collect($sections)->map(function (bool $filled, string $label): string {
@@ -307,9 +307,9 @@ class ContractTemplateResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListContractTemplates::route('/'),
-            'view'   => Pages\ViewContractTemplate::route('/{record}'),
-            'edit'   => Pages\EditContractTemplate::route('/{record}/edit'),
+            'index' => Pages\ListContractTemplates::route('/'),
+            'view' => Pages\ViewContractTemplate::route('/{record}'),
+            'edit' => Pages\EditContractTemplate::route('/{record}/edit'),
         ];
     }
 }

@@ -44,7 +44,7 @@ class LogViewer extends Page implements HasTable
 
     protected static ?string $title = 'Visor de Logs';
 
-    protected static ?int $navigationSort = 9999;
+    protected static ?int $navigationSort = 5;
 
     protected static string $view = 'filament.pages.log-viewer';
 

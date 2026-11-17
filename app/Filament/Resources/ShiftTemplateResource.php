@@ -28,7 +28,7 @@ class ShiftTemplateResource extends Resource
 {
     protected static ?string $model = ShiftTemplate::class;
 
-    protected static ?string $navigationGroup = 'Organización';
+    protected static ?string $navigationGroup = 'Asistencias';
 
     protected static ?string $navigationLabel = 'Plantillas de turno';
 
@@ -40,7 +40,7 @@ class ShiftTemplateResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-table-cells';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 8;
 
     protected static ?string $recordTitleAttribute = 'name';
 

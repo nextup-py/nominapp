@@ -45,6 +45,9 @@ class LoanReport extends Page implements HasTable
 
     protected static ?string $navigationGroup = 'Reportes';
 
+    /** Se llega desde la página Reportes, no desde el sidebar. */
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?int $navigationSort = 7;
 
     protected static string $view = 'filament.pages.loan-report';

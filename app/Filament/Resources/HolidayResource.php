@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\HolidayResource\Pages;
 use App\Models\Holiday;
+use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
@@ -22,7 +23,7 @@ class HolidayResource extends Resource
 {
     protected static ?string $model = Holiday::class;
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static ?string $navigationGroup = 'Catálogos';
 
     protected static ?string $navigationLabel = 'Feriados';
 
@@ -34,7 +35,7 @@ class HolidayResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     public static function form(Form $form): Form
     {
@@ -84,9 +85,9 @@ class HolidayResource extends Resource
 
                 TextColumn::make('day_of_week')
                     ->label('Día')
-                    ->getStateUsing(fn ($record) => ucfirst(\Carbon\Carbon::parse($record->date)->locale('es')->dayName))
+                    ->getStateUsing(fn ($record) => ucfirst(Carbon::parse($record->date)->locale('es')->dayName))
                     ->badge()
-                    ->color(fn ($record) => \Carbon\Carbon::parse($record->date)->isWeekend() ? 'success' : 'gray'),
+                    ->color(fn ($record) => Carbon::parse($record->date)->isWeekend() ? 'success' : 'gray'),
 
                 TextColumn::make('created_at')
                     ->label('Creado')

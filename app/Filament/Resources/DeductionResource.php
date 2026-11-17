@@ -34,7 +34,7 @@ class DeductionResource extends Resource
 {
     protected static ?string $model = Deduction::class;
 
-    protected static ?string $navigationGroup = 'Nóminas';
+    protected static ?string $navigationGroup = 'Catálogos';
 
     protected static ?string $navigationLabel = 'Deducciones';
 
@@ -46,7 +46,7 @@ class DeductionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-minus-circle';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
     /**
      * Define el formulario para crear y editar deducciones.

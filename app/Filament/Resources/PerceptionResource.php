@@ -34,7 +34,7 @@ class PerceptionResource extends Resource
 {
     protected static ?string $model = Perception::class;
 
-    protected static ?string $navigationGroup = 'Nóminas';
+    protected static ?string $navigationGroup = 'Catálogos';
 
     protected static ?string $navigationLabel = 'Percepciones';
 
@@ -46,7 +46,7 @@ class PerceptionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-plus-circle';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     /**
      * Define el formulario para crear y editar percepciones.

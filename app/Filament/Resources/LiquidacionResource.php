@@ -51,7 +51,7 @@ class LiquidacionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-scale';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     public static function getNavigationBadge(): ?string
     {
