@@ -81,7 +81,7 @@ class CreateEmployee extends CreateRecord
         }
 
         // Crear contrato inicial si se completaron los campos mínimos
-        if (filled($state['ic_salary'] ?? null) && filled($state['ic_position_id'] ?? null)) {
+        if ((auth()->user()?->can('create_contract') ?? false) && filled($state['ic_salary'] ?? null) && filled($state['ic_position_id'] ?? null)) {
             Contract::create([
                 'employee_id' => $this->record->id,
                 'type' => $state['ic_type'] ?? 'indefinido',

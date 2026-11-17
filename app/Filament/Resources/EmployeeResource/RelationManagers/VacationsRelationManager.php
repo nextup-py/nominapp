@@ -171,6 +171,7 @@ class VacationsRelationManager extends RelationManager
             ])
             ->actions([
                 Action::make('approve')
+                    ->authorize(fn (): bool => auth()->user()?->can('update_vacation') ?? false)
                     ->label('Aprobar')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -193,6 +194,7 @@ class VacationsRelationManager extends RelationManager
                     }),
 
                 Action::make('reject')
+                    ->authorize(fn (): bool => auth()->user()?->can('update_vacation') ?? false)
                     ->label('Rechazar')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -212,6 +214,7 @@ class VacationsRelationManager extends RelationManager
                     }),
 
                 Action::make('mark_paid')
+                    ->authorize(fn (): bool => auth()->user()?->can('update_vacation') ?? false)
                     ->label('Marcar como pagado')
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
@@ -266,6 +269,7 @@ class VacationsRelationManager extends RelationManager
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve_selected')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_vacation') ?? false)
                         ->label('Aprobar')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
@@ -295,6 +299,7 @@ class VacationsRelationManager extends RelationManager
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('reject_selected')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_vacation') ?? false)
                         ->label('Rechazar')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')

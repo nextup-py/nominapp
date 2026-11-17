@@ -339,10 +339,12 @@
                     <span class="field-label">Tipo de Salario</span>
                     <span class="field-value normal">{{ $contract->salary_type === 'jornal' ? 'Jornalero' : 'Mensual' }}</span>
                 </div>
-                <div class="grid-cell">
-                    <span class="field-label">{{ $contract->salary_type === 'jornal' ? 'Tarifa Diaria' : 'Salario Base' }}</span>
-                    <span class="field-value">Gs. {{ number_format((int) $contract->salary, 0, '', '.') }}</span>
-                </div>
+                @if ($showSalary)
+                    <div class="grid-cell">
+                        <span class="field-label">{{ $contract->salary_type === 'jornal' ? 'Tarifa Diaria' : 'Salario Base' }}</span>
+                        <span class="field-value">Gs. {{ number_format((int) $contract->salary, 0, '', '.') }}</span>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -397,7 +399,7 @@
                     <tr>
                         <td>{{ $ed->deduction?->name ?? '—' }}</td>
                         <td>
-                            @if ($ed->custom_amount)
+                            @if ($showSalary && $ed->custom_amount)
                                 Gs. {{ number_format((int) $ed->custom_amount, 0, '', '.') }}
                             @else
                                 Por defecto
@@ -435,7 +437,7 @@
                     <tr>
                         <td>{{ $ep->perception?->name ?? '—' }}</td>
                         <td>
-                            @if ($ep->custom_amount)
+                            @if ($showSalary && $ep->custom_amount)
                                 Gs. {{ number_format((int) $ep->custom_amount, 0, '', '.') }}
                             @else
                                 Por defecto

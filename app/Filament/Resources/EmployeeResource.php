@@ -434,7 +434,7 @@ class EmployeeResource extends Resource
                     ->icon('heroicon-o-document-text')
                     ->collapsible()
                     ->collapsed()
-                    ->visibleOn('create')
+                    ->visible(fn (string $operation): bool => $operation === 'create' && (auth()->user()?->can('create_contract') ?? false))
                     ->schema([
                         Grid::make(3)->schema([
                             Select::make('ic_type')
@@ -766,6 +766,7 @@ class EmployeeResource extends Resource
                         ->hidden(fn (Employee $record) => $record->activeContract === null),
 
                     TextEntry::make('activeContract.salary')
+                        ->visible(fn (): bool => auth()->user()?->can('view_any_contract') ?? false)
                         ->label('Salario')
                         ->icon('heroicon-o-banknotes')
                         ->getStateUsing(

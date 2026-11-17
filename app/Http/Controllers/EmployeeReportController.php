@@ -38,9 +38,9 @@ class EmployeeReportController extends Controller
         $endDateUntil = $request->query('endDateUntil') ?: null;
 
         $columnsParam = $request->query('columns');
-        $selectedColumns = $columnsParam
+        $selectedColumns = EmployeeReportExport::visibleColumns($columnsParam
             ? explode(',', $columnsParam)
-            : array_keys(EmployeeReportExport::availableColumns());
+            : array_keys(EmployeeReportExport::availableColumns()));
 
         $orientation = in_array($request->query('orientation'), ['portrait', 'landscape'])
             ? $request->query('orientation')

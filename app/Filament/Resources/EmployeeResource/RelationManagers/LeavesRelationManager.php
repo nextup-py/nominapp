@@ -272,6 +272,7 @@ class LeavesRelationManager extends RelationManager
             ])
             ->actions([
                 Action::make('approve')
+                    ->authorize(fn (): bool => auth()->user()?->can('approve_employee_leave') ?? false)
                     ->label('Aprobar')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -315,6 +316,7 @@ class LeavesRelationManager extends RelationManager
                     }),
 
                 Action::make('reject')
+                    ->authorize(fn (): bool => auth()->user()?->can('reject_employee_leave') ?? false)
                     ->label('Rechazar')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -373,6 +375,7 @@ class LeavesRelationManager extends RelationManager
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve_selected')
+                        ->authorize(fn (): bool => auth()->user()?->can('approve_employee_leave') ?? false)
                         ->label('Aprobar')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
@@ -397,6 +400,7 @@ class LeavesRelationManager extends RelationManager
                         }),
 
                     BulkAction::make('reject_selected')
+                        ->authorize(fn (): bool => auth()->user()?->can('reject_employee_leave') ?? false)
                         ->label('Rechazar')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
