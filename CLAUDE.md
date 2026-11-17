@@ -28,6 +28,7 @@ php artisan attendance:check-missing          # flag missing clock-ins (every 15
 php artisan attendance:notify-open-shifts     # avisa a RR.HH. de jornadas con entrada y sin salida (daily 08:52)
 php artisan attendance:notify-no-schedule      # avisa a quienes asignan horarios de los empleados activos sin horario (daily 08:55)
 php artisan attendance:backfill --from=2026-09-01 --dry-run   # repara un rango pasado (scheduler apagado): crea ausencias pendientes y calcula jornadas sin calcular; no recalcula las ya calculadas (sin --dry-run guarda)
+php artisan attendance:close-open-shifts --before=2026-11-01 --dry-run  # cierra en bloque jornadas históricas sin salida con la hora del horario (misma regla que la acción masiva de Asistencias, vía OpenShiftCloser; --before obligatorio, sin --dry-run pide confirmación o usa --force)
 php artisan attendance:recalculate-overnight --dry-run  # corrige jornadas nocturnas con expected_hours negativas (manual, sin --dry-run guarda)
 php artisan face:expire-enrollments           # expire stale face enrollments (hourly)
 php artisan audits:purge                      # purge audit history older than the configured retention (daily 03:00)
