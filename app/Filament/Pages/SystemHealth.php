@@ -27,10 +27,10 @@ class SystemHealth extends Page
 
     protected static string $view = 'filament.pages.system-health';
 
-    /** Acceso solo para Super Admin (las páginas no consultan la policy por sí solas). */
+    /** Acceso con el permiso `view_system_health` (el Super Admin lo tiene siempre; las páginas no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasRole('Super Admin') ?? false;
+        return auth()->user()?->can('view_system_health') ?? false;
     }
 
     /** Insignia roja si algún chequeo está en estado crítico. */

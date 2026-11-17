@@ -263,7 +263,7 @@ Herramienta técnica de diagnóstico: muestra los registros de error y advertenc
 
 ## Salud del sistema
 
-Acceder desde **Configuración → Salud del sistema** (solo Super Admin). Resume en cinco tarjetas si el sistema está funcionando:
+Acceder desde **Configuración → Salud del sistema** (Super Admin y los roles con el permiso **Ver Salud del sistema y logs**, como Soporte TI). Resume en cinco tarjetas si el sistema está funcionando:
 
 | Tarjeta | Qué mira |
 |---------|----------|

@@ -26,10 +26,10 @@ use Livewire\Attributes\Url;
 /** Visor de logs de la aplicación con filtros, búsqueda y detalle de stack trace. */
 class LogViewer extends Page implements HasTable
 {
-    /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
+    /** Acceso con el permiso `view_system_health` (el Super Admin lo tiene siempre; las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {
-        return auth()->user()?->hasRole('Super Admin') ?? false;
+        return auth()->user()?->can('view_system_health') ?? false;
     }
 
     use InteractsWithTable;

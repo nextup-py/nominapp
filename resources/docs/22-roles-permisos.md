@@ -17,6 +17,7 @@ El sistema trae 4 roles ya configurados de fábrica, más 3 roles sugeridos (se 
 | **Jefe de equipo** *(sugerido)* | Ve en **Mi equipo** el monitor en vivo y las asistencias de las personas que le reportan, directa o indirectamente. No accede al resto del panel. |
 | **Supervisor de sucursal** *(sugerido)* | Igual que Jefe de equipo, y además ve a todo el personal de su sucursal. |
 | **Encargado de asistencia** *(sugerido)* | Aprueba tardanzas y horas extra, corrige marcaciones y resuelve ausencias de toda la empresa. No ve nómina ni salarios. |
+| **Soporte TI** *(sugerido)* | Gestiona terminales y su vinculación, dispositivos de empleados, enrolamiento facial y fallos de marcación, y ve **Salud del sistema** y los **logs**. Ve solo el listado de empleados (nombre, CI): no accede a contratos, salarios, nómina ni configuración. |
 
 > El primer usuario que se crea en una instalación nueva (vía `ProductionSeeder` o `DemoSeeder`) queda automáticamente como **Super Admin**. Cualquier usuario existente que se quede sin rol asignado también pasa a Super Admin automáticamente la próxima vez que corran los seeders — pensado para instalaciones que migran a este sistema de roles.
 
@@ -100,3 +101,10 @@ Además de los módulos, estas pantallas y descargas también dependen del rol:
 - Solo un usuario con rol **Super Admin** puede ver el módulo de Roles y asignar roles a otros usuarios — el resto de los usuarios ni siquiera ve esas pantallas en el menú.
 - Eliminar o vaciar los permisos de un rol afecta de inmediato a todos los usuarios que lo tengan asignado.
 - Este módulo cubre permisos de módulos y de acciones de negocio, pero **no** un registro completo de auditoría de quién hizo cada acción en el sistema — eso corresponde al historial de cambios de cada módulo individual (ver, por ejemplo, "Historial de cambios" en el capítulo **Contratos**), no a este módulo de Roles.
+
+---
+
+## Permisos especiales
+
+- **Ver Salud del sistema y logs** (grupo *Configuración*): abre **Configuración → Salud del sistema** y el visor de logs. Antes eran solo del Super Admin; ahora se puede dar a otros roles, como **Soporte TI**.
+- **Anular** licencias (módulo *Permiso/Licencia*): permite anular una licencia aprobada deshaciendo sus efectos. RR.HH. lo trae.

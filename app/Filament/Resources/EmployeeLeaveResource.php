@@ -7,6 +7,7 @@ use App\Filament\Resources\EmployeeLeaveResource\RelationManagers\AuditsRelation
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Absence;
 use App\Models\EmployeeLeave;
+use App\Services\EmployeeLeaveDeductionService;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -17,6 +18,7 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
@@ -93,6 +95,12 @@ class EmployeeLeaveResource extends Resource
                             ->native(false)
                             ->required()
                             ->live()
+                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                                // «Sin goce de sueldo» trae el descuento encendido; se puede apagar a mano.
+                                if ($state === 'unpaid_leave') {
+                                    $set('generates_deduction', true);
+                                }
+                            })
                             ->columnSpanFull(),
                     ])
                     ->columns(3),
@@ -177,16 +185,20 @@ class EmployeeLeaveResource extends Resource
                             ->required(fn (Get $get) => filled($get('start_time')))
                             ->columnSpan(1),
 
-                        Toggle::make('generates_deduction')
-                            ->label('Genera descuento en la próxima nómina')
-                            ->helperText('El monto se calcula automáticamente según el salario y las horas tomadas.')
-                            ->default(false)
-                            ->visible(fn (Get $get) => filled($get('start_time')) && filled($get('end_time')))
-                            ->columnSpanFull(),
                     ])
                     ->columns(2)
                     ->collapsible()
                     ->collapsed(fn (?EmployeeLeave $record) => ! $record?->isPartialDay()),
+
+                Section::make('Descuento de sueldo')
+                    ->schema([
+                        Toggle::make('generates_deduction')
+                            ->label('Genera descuento en la próxima nómina')
+                            ->helperText('Permiso por horas: se descuentan las horas tomadas. Licencia de días completos (por ejemplo, sin goce de sueldo): se descuenta cada día laborable del período, sin feriados. Se genera al aprobar y se deshace si la licencia se anula.')
+                            ->default(false)
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible(),
 
                 Section::make('Detalles')
                     ->schema([
@@ -206,6 +218,54 @@ class EmployeeLeaveResource extends Resource
                     ])
                     ->collapsible(),
             ]);
+    }
+
+    /**
+     * Frase para el modal de aprobación de una licencia de día completo con descuento ('' si no genera descuento).
+     */
+    public static function fullDayDeductionPreview(EmployeeLeave $record): string
+    {
+        if (! $record->generates_deduction || $record->isPartialDay()) {
+            return '';
+        }
+
+        $days = app(EmployeeLeaveDeductionService::class)->workingDates($record)->count();
+        $amount = number_format($days * $record->employee->getAbsenceDeductionAmount(), 0, ',', '.');
+
+        return $days === 0
+            ? ' El período no tiene días laborables: no se generará ningún descuento.'
+            : " Se generará un descuento de Gs. {$amount} ({$days} día(s) laborable(s)) en la próxima nómina.";
+    }
+
+    /**
+     * Texto de la notificación tras aprobar: qué se justificó, qué descuento se generó y, si no se pudo generar, por qué.
+     *
+     * @param  array{justified_count: int, justified_dates?: list<Carbon>, deduction_count: int, deduction_amount: float, deduction_warning: ?string}  $result
+     */
+    public static function approvalBody(EmployeeLeave $record, array $result): string
+    {
+        if ($record->isPartialDay()) {
+            $body = 'El permiso fue aprobado.';
+        } else {
+            $count = $result['justified_count'];
+            $dates = collect($result['justified_dates'] ?? [])->sortBy(fn ($d) => $d->timestamp)->map(fn ($d) => $d->translatedFormat('d/m'))->join(', ');
+
+            $body = match (true) {
+                $count === 0 => 'La licencia fue aprobada. No había ausencias pendientes en el período.',
+                $count <= 5 => "Se justificaron {$count} ausencia(s): {$dates}.",
+                default => "Se justificaron {$count} ausencias del período automáticamente.",
+            };
+        }
+
+        if ($result['deduction_count'] > 0) {
+            $body .= ' Se generó un descuento de Gs. '.number_format($result['deduction_amount'], 0, ',', '.').' para la próxima nómina.';
+        }
+
+        if (filled($result['deduction_warning'] ?? null)) {
+            $body .= ' '.$result['deduction_warning'];
+        }
+
+        return $body;
     }
 
     /**
@@ -338,7 +398,7 @@ class EmployeeLeaveResource extends Resource
                                 ->whereIn('status', ['pending', 'unjustified'])
                                 ->count();
 
-                            $base = 'Se aprobará la licencia del empleado.';
+                            $base = 'Se aprobará la licencia del empleado.'.self::fullDayDeductionPreview($record);
                             if ($count > 0) {
                                 $base .= " Se justificarán automáticamente {$count} ausencia(s) registrada(s) en el período.";
                             }
@@ -350,26 +410,7 @@ class EmployeeLeaveResource extends Resource
                         ->action(function (EmployeeLeave $record) {
                             $result = $record->approve(Auth::id());
 
-                            if ($record->isPartialDay()) {
-                                $body = $record->generates_deduction
-                                    ? 'El permiso fue aprobado. Se generó un descuento para la próxima nómina.'
-                                    : 'El permiso fue aprobado.';
-                            } else {
-                                $count = $result['justified_count'];
-                                $dates = $result['justified_dates'] ?? [];
-
-                                if ($count === 0) {
-                                    $body = 'La licencia fue aprobada. No había ausencias pendientes en el período.';
-                                } elseif ($count <= 5) {
-                                    $dateList = collect($dates)
-                                        ->sortBy(fn ($d) => $d->timestamp)
-                                        ->map(fn ($d) => $d->translatedFormat('d/m'))
-                                        ->join(', ');
-                                    $body = "Se justificaron {$count} ausencia(s): {$dateList}.";
-                                } else {
-                                    $body = "Se justificaron {$count} ausencias del período automáticamente.";
-                                }
-                            }
+                            $body = self::approvalBody($record, $result);
 
                             Notification::make()
                                 ->success()
@@ -557,6 +598,22 @@ class EmployeeLeaveResource extends Resource
                     ])
                     ->columns(4)
                     ->visible(fn (EmployeeLeave $record) => $record->isPartialDay()),
+
+                InfolistSection::make('Seguimiento')
+                    ->collapsible()
+                    ->schema([
+                        TextEntry::make('approvedBy.name')->label('Aprobada por')->placeholder('Sin registro'),
+                        TextEntry::make('approved_at')->label('Aprobada el')->dateTime('d/m/Y H:i')->placeholder('Sin registro'),
+                        TextEntry::make('cancelledBy.name')->label('Anulada por')->placeholder('Sin registro')->visible(fn (EmployeeLeave $record) => $record->status === 'cancelled'),
+                        TextEntry::make('cancelled_at')->label('Anulada el')->dateTime('d/m/Y H:i')->placeholder('Sin registro')->visible(fn (EmployeeLeave $record) => $record->status === 'cancelled'),
+                        TextEntry::make('cancel_reason')->label('Motivo de la anulación')->placeholder('Sin motivo')->columnSpanFull()->visible(fn (EmployeeLeave $record) => $record->status === 'cancelled'),
+                        TextEntry::make('_leave_deduction_days')
+                            ->label('Días descontados')
+                            ->getStateUsing(fn (EmployeeLeave $record): string => $record->deductionDays()->count().' día(s)')
+                            ->visible(fn (EmployeeLeave $record) => ! $record->isPartialDay() && $record->generates_deduction),
+                    ])
+                    ->columns(4)
+                    ->visible(fn (EmployeeLeave $record) => in_array($record->status, ['approved', 'cancelled'], true)),
             ]);
     }
 

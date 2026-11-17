@@ -11,6 +11,9 @@ class Deduction extends Model
     /** Código de la deducción generada por suspensiones disciplinarias. */
     public const CODE_DISCIPLINARY_SUSPENSION = 'SUS-DIS';
 
+    /** Código de la deducción generada por licencias con descuento (permisos parciales o días sin goce de sueldo). */
+    public const CODE_LEAVE = 'LIC001';
+
     /** Código de la deducción generada por ausencias injustificadas. */
     public const CODE_UNJUSTIFIED_ABSENCE = 'AUS-INJ';
 
@@ -24,6 +27,7 @@ class Deduction extends Model
     public const SYSTEM_CODES = [
         self::CODE_UNJUSTIFIED_ABSENCE,
         self::CODE_DISCIPLINARY_SUSPENSION,
+        self::CODE_LEAVE,
         'PRE001',
         'ADE001',
         'MER001',
@@ -217,5 +221,23 @@ class Deduction extends Model
         }
 
         return (float) ($this->amount ?? 0);
+    }
+
+    /** Obtiene (o crea a demanda) la deducción LIC001 de las licencias con descuento. */
+    public static function leaveDeduction(): self
+    {
+        return self::firstOrCreate(
+            ['code' => self::CODE_LEAVE],
+            [
+                'name' => 'Descuento por Licencia',
+                'type' => 'voluntary',
+                'description' => 'Descuento por permiso parcial o por días de licencia sin goce de sueldo. El monto se calcula automáticamente según el salario.',
+                'calculation' => 'fixed',
+                'is_mandatory' => false,
+                'is_active' => true,
+                'affects_irp' => false,
+                'apply_judicial_limit' => false,
+            ]
+        );
     }
 }

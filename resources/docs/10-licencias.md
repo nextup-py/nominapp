@@ -40,7 +40,14 @@ El sistema distingue dos modalidades que coexisten en el mismo módulo:
    - **Fecha de inicio** y **Fecha de fin**
    - **Motivo** (opcional)
    - **Documento de soporte** (obligatorio para Reposo Médico)
+   - **Descuento de sueldo** (opcional): activar **Genera descuento en la próxima nómina** si los días no se pagan. Con el tipo **Sin Goce de Sueldo** viene activado
 4. Guardar — el permiso queda en estado **Pendiente**
+
+### Descuento por días de licencia sin goce de sueldo
+
+Con el interruptor **Genera descuento en la próxima nómina** activado en una licencia de días completos, al **aprobar** se genera una deducción (código **LIC001**, que el sistema crea sola si no existe) **por cada día laborable del período**: se omiten los feriados y los días en que el empleado no tenía turno. El monto de cada día es el salario diario del empleado (salario ÷ 30, o la tarifa diaria de los jornaleros), igual que en las suspensiones. El modal de **Aprobar** muestra de antemano cuántos días y cuánto se descontará.
+
+Si el empleado **ya tiene nómina generada** para esas fechas, la licencia se aprueba igual pero **no** se genera el descuento (no se cobraría): el aviso lo dice y hay que cargarlo a mano como deducción puntual.
 
 ---
 
@@ -65,7 +72,7 @@ Si se activa la opción de deducción, el monto se calcula automáticamente al a
 | **Mensual** | Salario ÷ 240 horas (30 días × 8 hs) × horas del permiso |
 | **Jornalero** | Tarifa diaria ÷ 8 × horas del permiso |
 
-El descuento se registra como una deducción y se aplica en la **siguiente nómina** del empleado.
+El descuento se registra como una deducción **fechada el día del permiso** y se aplica en la nómina de ese período.
 
 ---
 
@@ -76,6 +83,7 @@ El descuento se registra como una deducción y se aplica en la **siguiente nómi
 | **Pendiente** | Creado, esperando aprobación |
 | **Aprobado** | Autorizado |
 | **Rechazado** | No autorizado |
+| **Anulada** | Estaba aprobada y se anuló: se deshicieron sus efectos |
 
 > **El estado solo cambia con Aprobar o Rechazar.** En el formulario de edición el campo **Estado** se muestra pero no se puede modificar: antes se podía cambiar a «Aprobado» desde ahí, y eso no justificaba las ausencias del período (una licencia de maternidad quedó aprobada con 82 ausencias pendientes en **Por resolver**).
 
@@ -106,6 +114,17 @@ El modal de aprobación muestra información contextual según el tipo de permis
 |-----------------|----------------------|
 | **Parcial por horas** | Rango horario y monto del descuento a generar (si aplica) |
 | **Por días completos** | Cantidad de ausencias del período que se justificarán automáticamente |
+
+---
+
+## Anular una licencia aprobada
+
+Una licencia **aprobada** que se cargó por error se puede **anular** desde el detalle (**Anular**, permiso *Anular licencias*). El modal pide el **motivo** y avisa de antemano qué se deshace:
+
+- Las ausencias que la licencia había justificado vuelven a **Por resolver** (estado **Pendiente**): RR.HH. decide de nuevo. **No** se genera ningún descuento por esas ausencias.
+- Los descuentos que había generado (LIC001) se **eliminan**.
+
+Se bloquea si la licencia tiene descuentos y el empleado ya tiene **nómina generada** para esas fechas: primero hay que eliminar o regenerar esa nómina. Una licencia sin descuentos se puede anular aunque haya nómina. En el detalle, la sección **Seguimiento** muestra quién aprobó (o anuló) y cuándo.
 
 ---
 

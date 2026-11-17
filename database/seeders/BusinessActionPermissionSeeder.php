@@ -80,11 +80,16 @@ class BusinessActionPermissionSeeder extends Seeder
         'employee_leave' => [
             'approve' => 'Aprobar',
             'reject' => 'Rechazar',
+            'cancel' => 'Anular',
         ],
         'absence' => [
             'justify' => 'Justificar',
             'mark_unjustified' => 'Marcar como Injustificada',
             'export' => 'Exportar',
+        ],
+        // Pseudo-modelo: acceso a las páginas «Salud del sistema» y «Logs» (antes solo Super Admin), sin CRUD propio.
+        'system_health' => [
+            'view' => 'Ver Salud del sistema y logs',
         ],
         // Pseudo-modelo (como 'period'): permisos de la página «Mi equipo», sin CRUD propio.
         'team' => [

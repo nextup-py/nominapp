@@ -14,7 +14,7 @@ it('seeds roles and assigns Super Admin to the freshly created admin user', func
     $this->artisan('db:seed', ['--class' => ProductionSeeder::class])->assertSuccessful();
 
     expect(Role::pluck('name')->all())->toEqualCanonicalizing([
-        'Super Admin', 'RRHH', 'Contador/Nómina', 'Solo Lectura', 'Jefe de equipo', 'Supervisor de sucursal', 'Encargado de asistencia',
+        'Super Admin', 'RRHH', 'Contador/Nómina', 'Solo Lectura', 'Jefe de equipo', 'Supervisor de sucursal', 'Encargado de asistencia', 'Soporte TI',
     ]);
 
     $admin = User::where('email', 'admin@example.com')->first();
