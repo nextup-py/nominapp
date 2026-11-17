@@ -18,7 +18,7 @@ La pantalla muestra únicamente los avisos de los módulos a los que el usuario 
 | **Canal** | **Campanita**, **Correo** o ambos. Con el aviso activo hay que elegir al menos uno |
 | **Frecuencia** | **Al instante** (llega cuando ocurre) o **En el resumen diario** (se junta con los demás y llega una vez al día) |
 
-Los avisos que ya llegan **una vez al día por sí mismos** (**Jornadas sin salida**, **Empleados sin horario** y **Contratos por vencer o vencidos**) solo se envían al instante: la frecuencia aparece bloqueada con la indicación *Ya llega una vez al día*.
+Los avisos que ya llegan **una vez al día por sí mismos** (**Jornadas sin salida**, **Empleados sin horario** y **Contratos por vencer o vencidos** y **Fin del período de prueba**) solo se envían al instante: la frecuencia aparece bloqueada con la indicación *Ya llega una vez al día*.
 
 Los cambios aplican **desde el próximo aviso**; lo que ya llegó no se modifica.
 
@@ -100,6 +100,7 @@ Requieren el permiso **Editar Terminal**.
 | Aviso | Permiso necesario | Cuándo llega |
 |-------|-------------------|--------------|
 | **Contratos por vencer o vencidos** | Ver contratos | Aviso diario (08:00) según los días configurados |
+| **Fin del período de prueba** | Ver contratos | Resumen diario (08:05) de los contratos cuya prueba termina en los próximos días configurados; no se repite mientras siga sin leer |
 | **Celular vinculado** | Ver dispositivos de empleados | Un empleado vinculó su celular |
 | **Celular re-vinculado** | Ver dispositivos de empleados | Un empleado vinculó un celular nuevo (obligatorio) |
 | **Vinculación de celular sin permiso** | Editar empleados | Un empleado no habilitado intentó vincular su celular. El botón **Ver empleado y habilitar** abre su ficha, donde está **Habilitar celular** |

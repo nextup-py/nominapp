@@ -3,6 +3,7 @@
 namespace App\Filament\Actions;
 
 use App\Filament\Resources\LiquidacionResource;
+use App\Models\Contract;
 use App\Models\Employee;
 use App\Models\Liquidacion;
 use App\Services\EmployeeTerminationService;
@@ -35,14 +36,14 @@ class EmployeeTerminationAction
             ->color('danger')
             ->tooltip('Termina el contrato y deja inactivo al empleado, con fecha, tipo y motivo')
             ->authorize(fn (): bool => auth()->user()?->can('terminate_contract') ?? false)
-            ->visible(fn (Employee $record): bool => $record->status === 'active')
-            ->modalHeading(fn (Employee $record): string => "Dar de baja a {$record->full_name}")
+            ->visible(fn ($record): bool => self::employee($record)->status === 'active')
+            ->modalHeading(fn ($record): string => 'Dar de baja a '.self::employee($record)->full_name)
             ->modalSubmitActionLabel('Dar de baja')
-            ->form(fn (Employee $record): array => [
+            ->form(fn ($record): array => [
                 Placeholder::make('pending')
                     ->hiddenLabel()
-                    ->content(fn (): string => self::pendingText($record))
-                    ->visible(fn (): bool => self::pendingText($record) !== ''),
+                    ->content(fn (): string => self::pendingText(self::employee($record)))
+                    ->visible(fn (): bool => self::pendingText(self::employee($record)) !== ''),
                 DatePicker::make('date')
                     ->label('Fecha de baja')
                     ->default(today())
@@ -62,7 +63,9 @@ class EmployeeTerminationAction
                     ->helperText('Opcional. Te lleva al formulario de Liquidación con estos datos; el contrato se termina al cerrar la liquidación. Si se liquida por fuera, dejalo apagado.')
                     ->default(false),
             ])
-            ->action(function (Employee $record, array $data, $action): void {
+            ->action(function ($record, array $data, $action): void {
+                $record = self::employee($record);
+
                 if ($data['calculate_liquidation'] ?? false) {
                     $url = LiquidacionResource::getUrl('create', [
                         'employee_id' => $record->id,
@@ -91,6 +94,12 @@ class EmployeeTerminationAction
                     ->body("{$record->full_name} quedó inactivo. El contrato se terminó con fecha ".Carbon::parse($data['date'])->format('d/m/Y').'.')
                     ->send();
             });
+    }
+
+    /** El empleado de la fila: el propio registro o el dueño del contrato (widget de contratos por vencer). */
+    private static function employee(Employee|Contract $record): Employee
+    {
+        return $record instanceof Contract ? $record->employee : $record;
     }
 
     /** Aviso de préstamos y adelantos pendientes, o cadena vacía si no hay. */

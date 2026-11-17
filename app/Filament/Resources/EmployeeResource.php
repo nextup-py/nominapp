@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\EmployeeRehireAction;
 use App\Filament\Actions\EmployeeTerminationAction;
 use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Actions\ReportingLineActions;
@@ -1215,6 +1216,7 @@ class EmployeeResource extends Resource
                         }),
 
                     EmployeeTerminationAction::make(Action::class),
+                    EmployeeRehireAction::make(Action::class),
 
                     Action::make('change_status')
                         ->label('Cambiar estado')

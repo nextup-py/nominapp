@@ -27,6 +27,7 @@ Acceder desde **Configuración → Configuración General**.
 ### Configuración de Contratos
 
 - **Días de anticipación para alertas:** cuántos días antes del vencimiento de un contrato a plazo el sistema muestra la alerta (por defecto 30).
+- **Aviso de fin de período de prueba:** cuántos días antes de que termine la prueba de un contrato (Art. 58 CLT) llega el resumen diario y aparece en el Escritorio (por defecto 7; **0** apaga el aviso).
 - **Pasar a indefinido en la segunda renovación (Art. 53 CLT):** al renovar por segunda vez un contrato a plazo fijo, el contrato nuevo se crea indefinido (encendido por defecto). Apagado, el tipo no cambia solo. Aunque esté encendido, cada renovación puede mantener el plazo fijo indicando el motivo. Validar con el contador o un abogado antes de apagarlo.
 
 ### Reconocimiento Facial

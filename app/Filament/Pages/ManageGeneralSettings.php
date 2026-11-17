@@ -299,6 +299,15 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('días')
                             ->helperText('Cantidad de días antes del vencimiento para mostrar alertas de contratos'),
 
+                        TextInput::make('contract_trial_alert_days')
+                            ->label('Aviso de fin de período de prueba')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(60)
+                            ->default(7)
+                            ->suffix('días antes')
+                            ->helperText('Un resumen diario avisa de los contratos cuya prueba termina en estos días. 0 apaga el aviso.'),
+
                         Toggle::make('contract_force_indefinite_on_second_renewal')
                             ->label('Pasar a indefinido en la segunda renovación (Art. 53 CLT)')
                             ->default(true)

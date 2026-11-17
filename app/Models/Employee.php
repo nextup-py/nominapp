@@ -86,7 +86,10 @@ class Employee extends Model implements AuthenticatableContract
 
     public function getHireDateAttribute(): ?Carbon
     {
-        return $this->activeContract?->start_date
+        $contract = $this->activeContract;
+
+        return $contract?->seniority_from
+            ?? $contract?->start_date
             ?? $this->contracts()->oldest('start_date')->first()?->start_date;
     }
 

@@ -140,7 +140,7 @@ it('solo ofrece los avisos de los módulos a los que el usuario tiene acceso', f
     $nobody = prefsUser();
 
     expect(array_keys(NotificationCatalog::forUser($terminals)))->toContain('terminal.offline')->not->toContain('contract.alert')
-        ->and(array_keys(NotificationCatalog::forUser($contracts)))->toBe(['contract.alert', 'system.new_login_location'])
+        ->and(array_keys(NotificationCatalog::forUser($contracts)))->toBe(['contract.alert', 'contract.trial_ending', 'system.new_login_location'])
         ->and(array_keys(NotificationCatalog::forUser($nobody)))->toBe(['system.new_login_location']);
 
     $admin = User::factory()->create();
