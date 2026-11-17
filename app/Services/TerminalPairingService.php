@@ -8,6 +8,7 @@ use App\Models\TerminalEvent;
 use App\Models\TerminalPairingRequest;
 use App\Models\User;
 use App\Notifications\TerminalLinkLostNotification;
+use App\Notifications\TerminalMultipleDevicesNotification;
 use App\Notifications\TerminalPairingRequestedNotification;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,9 @@ class TerminalPairingService
 {
     /** Minutos durante los cuales una pérdida de vínculo del mismo terminal no se vuelve a registrar ni avisar. */
     public const LINK_LOST_DEDUPE_MINUTES = 30;
+
+    /** Horas en las que dos equipos distintos pidiendo vincularse al mismo terminal se consideran un conflicto. */
+    public const MULTIPLE_DEVICES_WINDOW_HOURS = 24;
 
     /** Segundos sin latido a partir de los cuales una solicitud con acceso vigente se toma como pérdida de vínculo (el terminal late cada ~90 s; menos que eso es otro dispositivo pidiendo mientras el verdadero sigue en línea). */
     public const LINK_LOST_MIN_SILENCE_SECONDS = Terminal::HEARTBEAT_ACTIVE_SECONDS;
@@ -95,6 +99,8 @@ class TerminalPairingService
         if (! $request->auto_approved) {
             $this->notifyManagers($request);
         }
+
+        $this->noticeMultipleDevices($terminal);
 
         if ($linkLost) {
             $this->notifyLinkLost($terminal, $context);
@@ -249,7 +255,7 @@ class TerminalPairingService
 
             if ($request->status === TerminalPairingRequest::STATUS_PENDING && ! $request->expires_at->isFuture()) {
                 $request->update(['status' => TerminalPairingRequest::STATUS_EXPIRED]);
-                $this->settleNotifications($request->terminal_id);
+                $this->flagUnattended($request->terminal_id);
             }
 
             return match ($request->status) {
@@ -270,7 +276,7 @@ class TerminalPairingService
         $terminalIds = TerminalPairingRequest::query()->stale()->pluck('terminal_id')->unique();
         $expired = TerminalPairingRequest::query()->stale()->update(['status' => TerminalPairingRequest::STATUS_EXPIRED]);
 
-        $terminalIds->each(fn (int $terminalId) => $this->settleNotifications($terminalId));
+        $terminalIds->each(fn (int $terminalId) => $this->flagUnattended($terminalId));
 
         return $expired;
     }
@@ -370,6 +376,67 @@ class TerminalPairingService
                 'terminal_id' => $request->terminal_id,
                 'request_id' => $request->id,
             ]);
+        }
+    }
+
+    /**
+     * Cuando las solicitudes de un terminal vencen sin que nadie las apruebe, el aviso de «solicitud» NO se marca como
+     * leído (así desaparecía justo cuando nadie lo atendió): pasa a «Vinculación sin atender» y sigue sin leer hasta que
+     * alguien lo abra o el terminal se vincule. Si todavía hay una solicitud pendiente no cambia nada.
+     */
+    private function flagUnattended(int $terminalId): void
+    {
+        if (TerminalPairingRequest::query()->where('terminal_id', $terminalId)->pending()->exists()) {
+            return;
+        }
+
+        $terminal = Terminal::query()->with('branch')->find($terminalId);
+
+        if ($terminal === null) {
+            return;
+        }
+
+        try {
+            DatabaseNotification::query()
+                ->whereNull('read_at')
+                ->where('type', TerminalPairingRequestedNotification::class)
+                ->where('data->terminal_id', $terminalId)
+                ->get()
+                ->each(function (DatabaseNotification $notification) use ($terminal): void {
+                    $notification->forceFill([
+                        'data' => TerminalPairingRequestedNotification::unattendedData($terminal, (int) ($notification->data['requests_count'] ?? 1)),
+                    ])->save();
+                });
+        } catch (\Throwable $e) {
+            Log::warning("No se pudo marcar como sin atender la vinculación del terminal #{$terminalId}: {$e->getMessage()}", ['terminal_id' => $terminalId]);
+        }
+    }
+
+    /**
+     * Si dos o más equipos distintos (por su identificador) pidieron vincularse a este terminal en las últimas
+     * `MULTIPLE_DEVICES_WINDOW_HOURS` horas, lo registra en la bitácora y avisa a quienes gestionan terminales, una
+     * vez por ventana. Best-effort: la solicitud ya está creada.
+     */
+    private function noticeMultipleDevices(Terminal $terminal): void
+    {
+        try {
+            $since = now()->subHours(self::MULTIPLE_DEVICES_WINDOW_HOURS);
+
+            $devices = $terminal->pairingRequests()
+                ->where('created_at', '>=', $since)
+                ->whereNotNull('device_id')
+                ->distinct()
+                ->count('device_id');
+
+            if ($devices < 2 || TerminalEvent::query()->where('terminal_id', $terminal->id)->where('type', 'multiple_devices')->where('created_at', '>=', $since)->exists()) {
+                return;
+            }
+
+            TerminalEvent::record($terminal, 'multiple_devices', ['devices' => $devices]);
+
+            Terminal::managers()->each(fn (User $user) => $user->notify(new TerminalMultipleDevicesNotification($terminal->loadMissing('branch'), $devices)));
+        } catch (\Throwable $e) {
+            Log::warning("No se pudo avisar que varios equipos usan el terminal #{$terminal->id}: {$e->getMessage()}", ['terminal_id' => $terminal->id]);
         }
     }
 

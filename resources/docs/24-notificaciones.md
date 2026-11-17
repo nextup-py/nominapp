@@ -41,7 +41,7 @@ Quien nunca tocó su configuración recibe los avisos como siempre, por la campa
 
 - **Terminal reconectado** viene **desactivado**. La reconexión queda siempre en la **Bitácora** del terminal, y cuando un terminal vuelve a reportar, su aviso de **Terminal sin conexión** se marca como leído automáticamente: la campanita muestra solo lo que sigue caído. Quien quiera el aviso de reconexión puede activarlo.
 - **Terminal provisionado** y **Celular vinculado** llegan en el **resumen diario** (son informativos: nadie necesita verlos al instante). Quien los quiera en el momento los cambia a **Al instante** en su configuración.
-- **Solicitud de vinculación** llega **una sola vez por terminal**: si el mismo equipo pide código varias veces mientras el aviso sigue sin leer, el aviso se actualiza con «(N veces)» en vez de crear otro. Cuando el terminal ya no tiene solicitudes pendientes (se aprobó, se rechazó, venció o se vinculó), el aviso se marca como leído solo.
+- **Solicitud de vinculación** llega **una sola vez por terminal**: si el mismo equipo pide código varias veces mientras el aviso sigue sin leer, el aviso se actualiza con «(N veces)» en vez de crear otro. Cuando el terminal ya no tiene solicitudes pendientes porque se aprobó, se rechazó o se vinculó, el aviso se marca como leído solo. Si las solicitudes **vencen sin que nadie las atienda**, el aviso **no desaparece**: sigue sin leer y pasa a decir **Vinculación sin atender**, hasta que el terminal se vincule.
 - **Terminal provisionado** y **Celular re-vinculado** llegan además por **correo**.
 - Si el correo del panel está configurado (**Configuración General → Correo**), **Terminal sin conexión**, **Terminal sin vincular** y **Contratos por vencer o vencidos** llegan también por correo. Quien ya eligió sus canales los conserva.
 - **Terminal provisionado** no le llega a quien generó el enlace de configuración, abrió la ventana de vinculación o aprobó la solicitud: ya sabe que lo hizo.
@@ -57,9 +57,11 @@ Requieren el permiso **Editar Terminal**. Detalle en el capítulo **Terminales d
 | Aviso | Cuándo llega |
 |-------|--------------|
 | **Terminal sin conexión** | Un terminal pasó a Desconectado dentro de su horario de vigilancia (varios a la vez llegan en un solo aviso) |
+| **Terminal sigue sin conexión** | Recordatorio único a las 4 horas si el terminal sigue caído (comparte el aviso de **Terminal sin conexión**: si lo apagás, tampoco llega) |
 | **Terminal reconectado** | Un terminal que había avisado su desconexión volvió a reportar (desactivado por defecto) |
 | **Terminal sin vincular** | Un terminal perdió su acceso (obligatorio) |
 | **Terminal perdió el vínculo** | Un terminal que seguía vinculado en el servidor pidió vincularse de nuevo porque el navegador perdió su acceso guardado (datos borrados, ventana privada, otro perfil). Se avisa una vez cada 30 minutos por terminal |
+| **Dos equipos en el mismo terminal** | Dos equipos distintos pidieron vincularse al mismo terminal en 24 horas; se van a quitar el acceso uno al otro. Una vez por terminal cada 24 horas |
 | **Dispositivo reemplazado en un terminal** | Un dispositivo nuevo se vinculó a un terminal cuyo dispositivo anterior seguía en línea, que quedó sin acceso. No le llega a quien dejó listo el vínculo |
 | **Cola de marcaciones atascada** | Marcaciones pendientes que no se envían hace más del tiempo configurado |
 | **Batería baja** | El terminal bajó del porcentaje configurado y no está cargando |

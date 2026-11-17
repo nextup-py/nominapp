@@ -91,6 +91,7 @@ class NotificationCatalog
 
             'terminal.pairing_requested' => ['Solicitud de vinculación', 'Un dispositivo pidió vincularse a un terminal con un código y espera aprobación.', 'terminal_linking', 'update_terminal'],
             'terminal.device_replaced' => ['Dispositivo reemplazado en un terminal', 'Un dispositivo nuevo se vinculó a un terminal cuyo dispositivo anterior seguía en línea: el anterior quedó sin acceso. Suele indicar dos equipos abiertos en la misma URL. Queda siempre en la bitácora del terminal.', 'terminal_linking', 'update_terminal'],
+            'terminal.multiple_devices' => ['Dos equipos en el mismo terminal', 'Dos equipos distintos pidieron vincularse al mismo terminal en 24 horas: se van a quitar el acceso uno al otro. Una vez por terminal cada 24 horas.', 'terminal_linking', 'update_terminal'],
             'terminal.provisioned' => ['Terminal provisionado', 'Un dispositivo completó su vinculación. No llega a quien generó el enlace o abrió la ventana.', 'terminal_linking', 'update_terminal', ['channels' => ['database', 'mail'], 'frequency' => self::FREQUENCY_DIGEST]],
             'terminal.link_window_expired' => ['Ventana de vinculación vencida', 'La ventana que abriste venció sin que ningún dispositivo la usara.', 'terminal_linking', 'update_terminal'],
             'terminal.command_expired' => ['Comando remoto vencido', 'Un comando que enviaste a un terminal venció sin aplicarse.', 'terminal_linking', 'update_terminal'],

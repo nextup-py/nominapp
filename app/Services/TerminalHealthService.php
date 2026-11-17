@@ -35,6 +35,9 @@ class TerminalHealthService
     /** Minutos con la versión de la app desactualizada (terminal en línea) antes de avisar. */
     public const APP_OUTDATED_ALERT_MINUTES = 120;
 
+    /** Horas sin conexión tras las cuales se recuerda una sola vez que el terminal sigue caído. */
+    public const OFFLINE_REMINDER_HOURS = 4;
+
     /** Minutos seguidos en una pestaña del navegador o con la pestaña oculta (terminal en línea y en su horario) antes de avisar. */
     public const DISPLAY_ALERT_MINUTES = 120;
 
@@ -74,6 +77,8 @@ class TerminalHealthService
             'linked' => $linked,
             'connectivity' => $connectivity,
             'offline_alerted' => (bool) ($previous['offline_alerted'] ?? false),
+            'offline_alerted_at' => $previous['offline_alerted_at'] ?? null,
+            'offline_reminded' => (bool) ($previous['offline_reminded'] ?? false),
             'queue_stuck' => (bool) ($previous['queue_stuck'] ?? false),
             'low_battery' => (bool) ($previous['low_battery'] ?? false),
             'cache_empty' => (bool) ($previous['cache_empty'] ?? false),
@@ -174,20 +179,62 @@ class TerminalHealthService
 
         if ($connectivity === 'stale' && ! $snapshot['offline_alerted']) {
             $snapshot['offline_alerted'] = true;
+            $snapshot['offline_alerted_at'] = now()->toIso8601String();
+            $snapshot['offline_reminded'] = false;
             $alerts[] = $this->raise($terminal, 'offline', 'health_offline', [
                 'stale_after_minutes' => $terminal->effectiveStaleMinutes(),
                 'last_heartbeat_at' => $terminal->last_heartbeat_at?->toIso8601String(),
                 'hints' => $terminal->offlineHints(),
             ]);
+        } elseif ($connectivity === 'stale' && $this->offlineReminderDue($snapshot)) {
+            $snapshot['offline_reminded'] = true;
+            $alerts[] = $this->remindOffline($terminal, $snapshot);
         } elseif ($connectivity === 'online' && $snapshot['offline_alerted']) {
             $snapshot['offline_alerted'] = false;
+            $snapshot['offline_alerted_at'] = null;
+            $snapshot['offline_reminded'] = false;
             $alerts[] = $this->raise($terminal, 'recovered', 'health_recovered');
             $this->markOfflineAlertsRead($terminal);
         } elseif (in_array($connectivity, ['unlinked', 'never_connected'], true)) {
             $snapshot['offline_alerted'] = false;
+            $snapshot['offline_alerted_at'] = null;
+            $snapshot['offline_reminded'] = false;
         }
 
         return $alerts;
+    }
+
+    /**
+     * Si el terminal sigue sin conexión pasadas `OFFLINE_REMINDER_HOURS` horas desde el primer aviso y todavía no se
+     * recordó. Se recuerda una sola vez: un terminal caído todo el fin de semana no debe llenar la campanita.
+     *
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function offlineReminderDue(array $snapshot): bool
+    {
+        if (! $snapshot['offline_alerted'] || $snapshot['offline_reminded'] || empty($snapshot['offline_alerted_at'])) {
+            return false;
+        }
+
+        return Carbon::parse($snapshot['offline_alerted_at'])->diffInMinutes(now()) >= self::OFFLINE_REMINDER_HOURS * 60;
+    }
+
+    /**
+     * Recordatorio de un terminal que sigue sin conexión: queda en la bitácora y avisa aparte (no se agrupa con los
+     * avisos nuevos de la corrida, porque dice «sigue sin conexión»).
+     *
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function remindOffline(Terminal $terminal, array $snapshot): string
+    {
+        $this->record($terminal, 'health_offline_reminder', [
+            'hours_offline' => self::OFFLINE_REMINDER_HOURS,
+            'last_heartbeat_at' => $terminal->last_heartbeat_at?->toIso8601String(),
+        ]);
+
+        $this->notifyManagers(new TerminalHealthNotification($terminal, 'offline', reminder: true), 'offline', $terminal);
+
+        return 'offline';
     }
 
     /**

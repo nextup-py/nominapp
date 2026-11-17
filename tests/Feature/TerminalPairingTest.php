@@ -11,6 +11,7 @@ use App\Models\Terminal;
 use App\Models\TerminalEvent;
 use App\Models\TerminalPairingRequest;
 use App\Models\User;
+use App\Notifications\TerminalMultipleDevicesNotification;
 use App\Notifications\TerminalPairingRequestedNotification;
 use App\Services\TerminalPairingService;
 use App\Settings\ModuleSettings;
@@ -448,14 +449,75 @@ it('el aviso se marca como leído cuando el terminal ya no tiene solicitudes pen
     expect($unread())->toBe(0);
 });
 
-it('el aviso también se limpia cuando las solicitudes vencen solas', function () {
+it('si las solicitudes vencen sin atender, el aviso sigue sin leer y pasa a «Vinculación sin atender»', function () {
     Notification::swap(new ChannelManager(app()));
     $terminal = makePairingTerminal();
     $manager = makePairingManager();
 
     requestPairing($terminal);
+    requestPairing($terminal);
     TerminalPairingRequest::query()->update(['expires_at' => now()->subMinute()]);
 
-    expect(app(TerminalPairingService::class)->expireStale())->toBe(1)
-        ->and($manager->unreadNotifications()->where('type', TerminalPairingRequestedNotification::class)->count())->toBe(0);
+    expect(app(TerminalPairingService::class)->expireStale())->toBe(2);
+
+    $notification = $manager->unreadNotifications()->where('type', TerminalPairingRequestedNotification::class)->get();
+
+    expect($notification)->toHaveCount(1)
+        ->and($notification->first()->data['title'])->toBe('Vinculación sin atender')
+        ->and($notification->first()->data['body'])->toContain('2 solicitudes de vinculación vencieron')
+        ->and($notification->first()->data['unattended'])->toBeTrue();
+});
+
+it('el aviso de vinculación sin atender se marca como leído cuando el terminal se vincula', function () {
+    Notification::swap(new ChannelManager(app()));
+    $terminal = makePairingTerminal();
+    $manager = makePairingManager();
+    $unread = fn () => $manager->unreadNotifications()->where('type', TerminalPairingRequestedNotification::class)->count();
+
+    requestPairing($terminal);
+    TerminalPairingRequest::query()->update(['expires_at' => now()->subMinute()]);
+    app(TerminalPairingService::class)->expireStale();
+
+    expect($unread())->toBe(1);
+
+    ['request' => $request, 'secret' => $secret] = requestPairing($terminal);
+    app(TerminalPairingService::class)->approve($request, $manager, $request->code);
+    pollPairing($secret)->assertOk();
+
+    expect($unread())->toBe(0);
+});
+
+it('avisa una vez cuando dos equipos distintos piden vincularse al mismo terminal en 24 horas', function () {
+    Notification::fake();
+    $terminal = makePairingTerminal();
+    $manager = makePairingManager();
+    $service = app(TerminalPairingService::class);
+
+    $service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-a']);
+    $service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-a']); // el mismo equipo reintenta
+
+    Notification::assertNotSentTo($manager, TerminalMultipleDevicesNotification::class);
+
+    $service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-b']);
+    $service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-c']);
+
+    Notification::assertSentToTimes($manager, TerminalMultipleDevicesNotification::class, 1);
+    expect($terminal->events()->where('type', 'multiple_devices')->count())->toBe(1)
+        ->and($terminal->events()->where('type', 'multiple_devices')->first()->payload['devices'])->toBe(2);
+});
+
+it('el aviso de dos equipos se repite pasadas 24 horas', function () {
+    Notification::fake();
+    $terminal = makePairingTerminal();
+    $manager = makePairingManager();
+    $service = app(TerminalPairingService::class);
+
+    $service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-a']);
+    $service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-b']);
+
+    $this->travel(25)->hours();
+    $service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-a']);
+    $service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-b']);
+
+    Notification::assertSentToTimes($manager, TerminalMultipleDevicesNotification::class, 2);
 });

@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
 use App\Notifications\Concerns\HonorsPreferences;
+use App\Services\TerminalHealthService;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -22,6 +23,7 @@ class TerminalHealthNotification extends Notification
     public function __construct(
         public readonly Terminal $terminal,
         public readonly string $alert,
+        public readonly bool $reminder = false,
     ) {}
 
     /**
@@ -41,8 +43,10 @@ class TerminalHealthNotification extends Notification
 
         match ($this->alert) {
             'offline' => $notification
-                ->title('Terminal sin conexión')
-                ->body("El terminal {$name} no reporta hace más de {$this->terminal->effectiveStaleMinutes()} minutos. Causa probable: ".implode(' ', $this->terminal->offlineHints()).$this->responsibleLine())
+                ->title($this->reminder ? 'Terminal sigue sin conexión' : 'Terminal sin conexión')
+                ->body($this->reminder
+                    ? "El terminal {$name} sigue sin reportar hace más de ".TerminalHealthService::OFFLINE_REMINDER_HOURS.' horas y nadie lo atendió: mientras tanto no puede registrar marcaciones. Causa probable: '.implode(' ', $this->terminal->offlineHints()).$this->responsibleLine()
+                    : "El terminal {$name} no reporta hace más de {$this->terminal->effectiveStaleMinutes()} minutos. Causa probable: ".implode(' ', $this->terminal->offlineHints()).$this->responsibleLine())
                 ->icon('heroicon-o-signal-slash')
                 ->danger(),
             'recovered' => $notification

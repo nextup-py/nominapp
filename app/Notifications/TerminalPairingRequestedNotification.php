@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Filament\Pages\TerminalPairingInbox;
+use App\Filament\Resources\TerminalResource;
+use App\Models\Terminal;
 use App\Models\TerminalPairingRequest;
 use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
@@ -59,6 +61,32 @@ class TerminalPairingRequestedNotification extends Notification
             'terminal_id' => $terminal->id,
             'pairing_request_id' => $this->request->id,
             'requests_count' => $this->requestsCount,
+        ];
+    }
+
+    /**
+     * Contenido del aviso cuando las solicitudes vencieron sin que nadie las aprobara. Reemplaza al de «solicitud»
+     * (sigue sin leer) para que no desaparezca justo cuando nadie lo atendió; se marca leído al vincularse el terminal.
+     *
+     * @return array<string, mixed>
+     */
+    public static function unattendedData(Terminal $terminal, int $requestsCount): array
+    {
+        $times = $requestsCount > 1 ? "{$requestsCount} solicitudes de vinculación vencieron" : 'Una solicitud de vinculación venció';
+
+        return [
+            ...FilamentNotification::make()
+                ->title('Vinculación sin atender')
+                ->body("{$times} sin que nadie las aprobara en el terminal \"{$terminal->name}\" ({$terminal->branch?->name}). Mientras no se vincule, ese equipo no puede marcar. Abrí la ventana de vinculación del terminal o pedí que recarguen la página para generar un código nuevo.")
+                ->icon('heroicon-o-exclamation-triangle')
+                ->danger()
+                ->actions([
+                    FilamentAction::make('review')->label('Ver terminal')->url(TerminalResource::getUrl('view', ['record' => $terminal])),
+                ])
+                ->getDatabaseMessage(),
+            'terminal_id' => $terminal->id,
+            'requests_count' => $requestsCount,
+            'unattended' => true,
         ];
     }
 

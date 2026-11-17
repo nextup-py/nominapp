@@ -324,6 +324,49 @@ it('avisa una sola vez cuando pasa a desconectado y otra cuando se recupera', fu
         ->toBe(['health_offline', 'health_recovered']);
 });
 
+it('recuerda una sola vez, a las 4 horas, que el terminal sigue sin conexión', function () {
+    $manager = healthManager();
+    $terminal = makeHealthTerminal(['stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subMinute()]);
+
+    evaluateHealth($terminal); // línea de base
+
+    $terminal->update(['last_heartbeat_at' => now()->subMinutes(20)]);
+    expect(evaluateHealth($terminal))->toBe(['offline']);
+
+    Carbon::setTestNow(now()->addHours(3));
+    expect(evaluateHealth($terminal))->toBe([]); // todavía no pasaron 4 horas
+
+    Carbon::setTestNow(now()->addHours(1)->addMinute());
+    expect(evaluateHealth($terminal))->toBe(['offline'])
+        ->and(evaluateHealth($terminal))->toBe([]);
+
+    Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 2);
+    Notification::assertSentTo($manager, TerminalHealthNotification::class, fn (TerminalHealthNotification $n) => $n->reminder);
+    expect($terminal->events()->where('type', 'health_offline_reminder')->count())->toBe(1);
+});
+
+it('tras reconectarse, una nueva caída vuelve a avisar y a recordar', function () {
+    healthManager();
+    $terminal = makeHealthTerminal(['stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subMinute()]);
+
+    evaluateHealth($terminal);
+    $terminal->update(['last_heartbeat_at' => now()->subMinutes(20)]);
+    evaluateHealth($terminal);
+
+    Carbon::setTestNow(now()->addHours(5));
+    evaluateHealth($terminal); // recordatorio
+
+    $terminal->update(['last_heartbeat_at' => now()]);
+    expect(evaluateHealth($terminal))->toBe(['recovered']);
+
+    Carbon::setTestNow(now()->addHour());
+    $terminal->update(['last_heartbeat_at' => now()->subMinutes(30)]);
+    expect(evaluateHealth($terminal))->toBe(['offline']); // aviso nuevo, no recordatorio
+
+    Carbon::setTestNow(now()->addHours(4)->addMinute());
+    expect(evaluateHealth($terminal))->toBe(['offline']);
+});
+
 it('fuera del horario de vigilancia no avisa; al abrir el horario, si sigue caído, avisa', function () {
     healthManager();
     $terminal = makeHealthTerminal([
