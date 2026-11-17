@@ -15,6 +15,22 @@ class CreateLiquidacion extends CreateRecord
 {
     protected static string $resource = LiquidacionResource::class;
 
+    /**
+     * Carga el formulario con los datos que trae la baja guiada (`employee_id`, `termination_date`, `termination_type`,
+     * `termination_reason` en la URL); sin ellos queda como siempre.
+     */
+    protected function fillForm(): void
+    {
+        $this->callHook('beforeFill');
+
+        $this->form->fill(array_filter(
+            request()->only(['employee_id', 'termination_date', 'termination_type', 'termination_reason']),
+            fn ($value): bool => filled($value),
+        ));
+
+        $this->callHook('afterFill');
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $activeLiquidacion = Liquidacion::where('employee_id', $data['employee_id'])
@@ -55,7 +71,7 @@ class CreateLiquidacion extends CreateRecord
             ->wherePivotNull('end_date')
             ->exists();
 
-        if (!$hasIps) {
+        if (! $hasIps) {
             Notification::make()
                 ->warning()
                 ->title('Empleado sin deducción IPS registrada')
@@ -66,7 +82,7 @@ class CreateLiquidacion extends CreateRecord
 
         $contract = $employee->activeContract;
 
-        if (!$contract) {
+        if (! $contract) {
             Notification::make()
                 ->danger()
                 ->title('Sin contrato activo')
@@ -94,18 +110,18 @@ class CreateLiquidacion extends CreateRecord
 
         if ($contract->salary_type === 'jornal') {
             $dailySalary = $salary;
-            $baseSalary  = round($salary * 30, 2);
+            $baseSalary = round($salary * 30, 2);
         } else {
-            $baseSalary  = $salary;
+            $baseSalary = $salary;
             $dailySalary = round($salary / 30, 2);
         }
 
-        $data['hire_date']     = $contract->start_date;
-        $data['base_salary']   = $baseSalary;
-        $data['daily_salary']  = $dailySalary;
-        $data['salary_type']   = $contract->salary_type;
+        $data['hire_date'] = $contract->start_date;
+        $data['base_salary'] = $baseSalary;
+        $data['daily_salary'] = $dailySalary;
+        $data['salary_type'] = $contract->salary_type;
         $data['created_by_id'] = Auth::id();
-        $data['status']        = 'draft';
+        $data['status'] = 'draft';
 
         return $data;
     }

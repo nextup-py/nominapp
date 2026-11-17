@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\EmployeeResource\Pages;
 
+use App\Filament\Actions\EmployeeTerminationAction;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Employee;
 use Filament\Actions\Action;
@@ -31,6 +32,8 @@ class ViewEmployee extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            EmployeeTerminationAction::make(),
+
             Action::make('download_legajo')
                 ->label('Descargar Legajo')
                 ->icon('heroicon-o-arrow-down-tray')

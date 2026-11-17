@@ -763,3 +763,23 @@ Ir a **Asistencias → Reportes de Asistencia** para ver resúmenes por período
 **Pestaña Ausencias:** total de ausencias, justificadas, injustificadas y descuentos por empleado.
 
 Ambas pestañas permiten exportar a Excel (resumen y detalle).
+
+---
+
+## Reporte de trabajo en feriado y domingo
+
+Ir a **Reportes → Trabajo en feriado y domingo** (requiere ver asistencias y contratos, porque muestra valores de salario).
+
+Lista cada jornada con marcación en un feriado o domingo del período, por empleado y sucursal. **Filtros:** desde/hasta (por defecto, desde el inicio del año), tipo de día (feriados y domingos, solo feriados o solo domingos) y sucursal.
+
+| Columna | Significado |
+|---------|-------------|
+| **Trabajadas** | Horas trabajadas ese día |
+| **Extra** | Horas extra registradas; solo se pagan con el recargo si están aprobadas (se indica «sin aprobar») |
+| **Turno** | Horas trabajadas menos las extra: el turno normal |
+| **Valor hora** | Salario mensual ÷ horas mensuales del horario del empleado, con el contrato que regía ese día |
+| **Recargo estimado** | Horas del turno × valor hora × (multiplicador de feriado − 1) |
+
+Arriba se muestran los totales del período. **Exportar a Excel** descarga las mismas filas.
+
+> El recargo estimado es solo una referencia: hoy el turno normal en feriado o domingo se paga como un día común, y este reporte **no cambia ningún pago**. Sirve para conversar con el asesor legal y el contador sobre si corresponde recargarlo. Las jornadas de empleados sin contrato mensual vigente ese día no tienen estimación.

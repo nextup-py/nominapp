@@ -74,7 +74,7 @@ Para que no queden olvidados, el sistema los hace visibles:
 - En **Asistencias → Por resolver**, la tarjeta **Contratos vencidos sin renovar** muestra cuántos son y abre ese listado.
 - La campanita diaria de las 08:00 avisa de los contratos vencidos (ver **Mis notificaciones**).
 
-Desde el contrato se resuelve cada caso: **Renovar** (o extender la fecha de fin) si la relación continúa, o **Terminar** si el empleado se va (eso lo pasa a Inactivo; luego se crea la **Liquidación**).
+Desde el contrato se resuelve cada caso: **Renovar** (o extender la fecha de fin) si la relación continúa, o **Terminar** si el empleado se va (eso lo pasa a Inactivo; para liquidar en el sistema, crear la **Liquidación** antes de terminar, o usar **Dar de baja** desde la ficha del empleado).
 
 ### Contrato vencido: renovar o extender la fecha
 
@@ -91,7 +91,7 @@ Un contrato **Vencido** se puede continuar de dos maneras:
 Agrupadas en el menú **Más acciones** (⋮) de cada fila:
 - **Suspender / Reactivar** — disponible por fila según estado
 - **Renovar** — contratos Vigentes o Vencidos de tipo distinto a Indefinido
-- **Terminar** — solo contratos Vigentes. Al confirmar, la notificación incluye un botón **Crear Liquidación** con acceso directo al formulario de liquidación del empleado
+- **Terminar** — solo contratos Vigentes. Si el empleado se va, es preferible **Dar de baja** desde su ficha: registra fecha, tipo y motivo, y permite calcular la liquidación antes de terminar el contrato (crear una liquidación exige un contrato vigente)
 - **Generar PDF** — genera el PDF del contrato según la plantilla de la empresa
 - **Subir / Reemplazar Firmado** — para adjuntar el PDF escaneado con firmas (el label cambia a "Reemplazar" si ya hay uno subido)
 - **Descargar Firmado**

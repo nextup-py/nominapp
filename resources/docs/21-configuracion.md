@@ -163,6 +163,7 @@ Los hijos se cargan en la pestaña **Hijos** del empleado. La columna **Bonifica
 - **Mínimo días consecutivos:** fraccionamiento mínimo por solicitud (por defecto 6).
 - **Años mínimos de servicio:** antigüedad requerida para tener derecho a vacaciones (por defecto 1).
 - **Días hábiles para vacaciones:** días de la semana que cuentan como hábiles al calcular el período — por defecto **Lunes a Sábado** (no lunes a viernes).
+- **Contar los días de vacaciones según el horario de cada empleado:** apagado por defecto. Encendido, un día solo se descuenta si el empleado tenía turno ese día (quien trabaja de lunes a viernes no gasta los sábados, y se respetan los francos de las rotaciones); quien no tiene horario ni rotación usa los días hábiles de arriba. Los feriados nunca se descuentan. Solo afecta a las vacaciones que se carguen desde ahora; las ya aprobadas conservan sus días.
 
 ---
 
@@ -204,36 +205,44 @@ Los feriados se usan para:
 - Aplicar el multiplicador de horas extra en feriado
 - Evitar generar ausencias en días que corresponden a feriado
 
-### Cargar Feriados Nacionales (un clic)
+### Tipos de feriado
 
-El botón **Cargar Feriados Nacionales** agrega automáticamente, para el año actual, los feriados nacionales de Paraguay precargados en el sistema (no duplica los que ya existan):
+Cada feriado tiene un **tipo**: **Nacional fijo** (misma fecha cada año), **Nacional móvil** (cambia cada año, como Jueves y Viernes Santo o los trasladados a lunes) y **Día no laborable o puente** (decretado por el gobierno). El listado muestra el tipo en una etiqueta y se puede filtrar por tipo.
+
+### Cargar Feriados Nacionales
+
+El botón **Cargar Feriados Nacionales** pide el **año** y agrega los feriados de fecha fija (no duplica los que ya existan). Conviene verificar esta lista contra el calendario oficial vigente:
 
 | Fecha | Nombre |
 |-------|--------|
 | 01/01 | Año Nuevo |
 | 01/03 | Día de los Héroes |
 | 01/05 | Día del Trabajador |
-| 15/05 | Día de la Independencia Nacional |
+| 14/05 y 15/05 | Independencia Nacional |
 | 12/06 | Paz del Chaco |
 | 15/08 | Fundación de Asunción |
-| 29/09 | Día de la Victoria de Boquerón |
-| 08/12 | Día de la Virgen de Caacupé |
+| 29/09 | Victoria de Boquerón |
+| 08/12 | Virgen de Caacupé |
 | 25/12 | Navidad |
 
-> Esta lista fija no incluye feriados de fecha variable (ej. Semana Santa) — esos deben cargarse manualmente cada año.
+> No incluye los feriados móviles (Semana Santa, traslados a lunes) ni los días no laborables: se cargan a mano cada año con el tipo que corresponda.
 
 ### Otras acciones del listado
 
 - **Eliminar Feriados Pasados** — borra todos los feriados anteriores al año actual (acción irreversible, útil para limpiar el historial).
-- **Copiar al Próximo Año** — duplica todos los feriados del año actual al año siguiente (respetando la misma fecha, un año después), sin duplicar los que ya existan.
+- **Copiar al Próximo Año** — copia al año siguiente **solo los feriados de tipo «Nacional fijo»** (misma fecha, un año después), sin duplicar los que ya existan. Los móviles y los días no laborables no se copian porque cambian de fecha; la notificación lista cuáles hay que cargar a mano.
+- **Calendario** — muestra los 12 meses del año actual y del siguiente, con los feriados resaltados por tipo y los domingos en gris.
+- **Quién trabaja** (por fila) — lista a los empleados que marcaron ese día (fechas pasadas) o que tienen turno según su horario (fechas futuras), por sucursal. La columna **Trabajaron** del listado muestra la cantidad en las fechas ya pasadas.
+
+### Aviso de feriados faltantes
+
+Si el año en curso (o, desde noviembre, el siguiente) tiene menos de 3 feriados cargados, se avisa por la campanita a quienes pueden cargarlos (**Feriados faltantes**, configurable en **Mis notificaciones**). Mientras faltan, el formulario de **Vacaciones** también advierte que los días descontados pueden estar de más.
 
 ### Cargar un feriado manualmente
 
 1. Clic en **Nuevo Feriado**
-2. Ingresar fecha y nombre
+2. Ingresar fecha, tipo y nombre
 3. Guardar
-
-> Se recomienda usar **Cargar Feriados Nacionales** al inicio de cada año y completar manualmente los feriados de fecha variable (Semana Santa) y cualquier feriado local o extraordinario.
 
 ---
 

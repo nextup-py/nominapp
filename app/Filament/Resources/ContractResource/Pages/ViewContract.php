@@ -10,7 +10,6 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
-use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Storage;
@@ -183,17 +182,9 @@ class ViewContract extends ViewRecord
 
                     Notification::make()
                         ->title('Contrato Terminado')
-                        ->body("El contrato de {$this->record->employee->full_name} ha sido terminado. Puede crear una liquidación desde el módulo correspondiente.")
+                        ->body("El contrato de {$this->record->employee->full_name} ha sido terminado. Si se liquida en el sistema, la liquidación se crea antes de terminar el contrato: usá «Dar de baja» desde la ficha del empleado.")
                         ->warning()
                         ->persistent()
-                        ->actions([
-                            NotificationAction::make('create_liquidacion')
-                                ->label('Crear Liquidación')
-                                ->url(route('filament.admin.resources.liquidaciones.create', [
-                                    'employee_id' => $this->record->employee_id,
-                                ]))
-                                ->button(),
-                        ])
                         ->send();
                 }),
 

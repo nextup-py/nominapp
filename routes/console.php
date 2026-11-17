@@ -269,3 +269,6 @@ Schedule::command('logs:notify-new-errors')->hourly()->withoutOverlapping();
 
 /** Mantiene chico el directorio de logs (diario, de madrugada). */
 Schedule::command('logs:rotate')->dailyAt('03:50')->withoutOverlapping();
+
+/** Avisa a RR.HH. si faltan los feriados del año (diario, a la mañana). */
+Schedule::command('holidays:notify-missing')->dailyAt('08:40')->withoutOverlapping();

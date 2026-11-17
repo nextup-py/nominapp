@@ -7,6 +7,7 @@ use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Pages\SettingsPage;
@@ -476,6 +477,10 @@ class ManagePayrollSettings extends SettingsPage
                             ])
                             ->columns(7)
                             ->required(),
+
+                        Toggle::make('vacation_count_by_schedule')
+                            ->label('Contar los días de vacaciones según el horario de cada empleado')
+                            ->helperText('Encendido: un día solo se descuenta si el empleado tenía turno ese día (un empleado de lunes a viernes no gasta los sábados; se respetan los francos de rotación). Quien no tiene horario ni rotación usa los días hábiles de arriba. Apagado: todos usan los días hábiles de arriba. Los feriados nunca se descuentan. Solo afecta a las vacaciones que se carguen desde ahora.'),
                     ]),
             ]);
     }

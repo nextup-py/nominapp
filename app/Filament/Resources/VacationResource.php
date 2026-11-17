@@ -11,13 +11,13 @@ use App\Models\VacationBalance;
 use App\Services\VacationService;
 use App\Settings\PayrollSettings;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -253,22 +253,18 @@ class VacationResource extends Resource
                                 $returnDate = $get('return_date');
                                 $start = Carbon::parse($startDate);
                                 $end = Carbon::parse($endDate);
-                                $workingDays = app(PayrollSettings::class)->vacation_business_days;
 
                                 $balance = $employeeId
                                     ? VacationBalance::where('employee_id', $employeeId)->where('year', $start->year)->first()
                                     : null;
                                 $available = $balance?->available_days ?? 0;
 
+                                $employeeForCount = $employeeId ? Employee::find($employeeId) : null;
+                                $breakdown = $employeeForCount instanceof Employee
+                                    ? VacationService::breakdown($employeeForCount, $start, $end)
+                                    : [];
+                                $skipped = collect($breakdown)->where('counts', false)->groupBy('reason')->map->count();
                                 $holidays = Holiday::whereBetween('date', [$start, $end])->orderBy('date')->get();
-
-                                $holidayDates = $holidays->pluck('date')->map(fn ($d) => $d->format('Y-m-d'))->toArray();
-                                $nonWorkingDays = 0;
-                                foreach (CarbonPeriod::create($start, $end) as $date) {
-                                    if (! in_array($date->dayOfWeekIso, $workingDays) && ! in_array($date->format('Y-m-d'), $holidayDates)) {
-                                        $nonWorkingDays++;
-                                    }
-                                }
 
                                 $daysColor = $businessDays > $available ? 'text-danger-600' : 'text-success-600';
                                 $returnFormatted = $returnDate ? Carbon::parse($returnDate)->format('d/m/Y') : '-';
@@ -301,8 +297,17 @@ class VacationResource extends Resource
                                     $holidaysHtml = "<p class='text-info-600 text-xs mt-1'>📅 {$label}: {$list}</p>";
                                 }
 
-                                $nonWorkingHtml = $nonWorkingDays > 0
-                                    ? "<p class='text-gray-500 text-xs mt-1'>🚫 ".($nonWorkingDays === 1 ? '1 día no hábil' : "{$nonWorkingDays} días no hábiles").' (domingos)</p>'
+                                $reasonLabels = ['day_off' => 'días sin turno según su horario', 'not_working_day' => 'días no hábiles (domingos u otros según el ajuste)'];
+                                $nonWorkingParts = collect($reasonLabels)
+                                    ->filter(fn ($label, $reason) => ($skipped[$reason] ?? 0) > 0)
+                                    ->map(fn ($label, $reason) => $skipped[$reason].' '.$label)
+                                    ->implode(', ');
+                                $nonWorkingHtml = $nonWorkingParts !== ''
+                                    ? "<p class='text-gray-500 text-xs mt-1'>No se descuentan: {$nonWorkingParts}.</p>"
+                                    : '';
+                                $remaining = $available - $businessDays;
+                                $remainingHtml = $employeeId
+                                    ? "<p class='text-xs mt-1 ".($remaining < 0 ? 'text-danger-600' : 'text-gray-500')."'>Saldo después de esta solicitud: {$remaining} días.</p>"
                                     : '';
 
                                 $warningHtml = ($businessDays > 0 && $businessDays < 6)
@@ -316,6 +321,7 @@ class VacationResource extends Resource
                                         {$amountHtml}
                                         {$holidaysHtml}
                                         {$nonWorkingHtml}
+                                        {$remainingHtml}
                                         {$warningHtml}
                                     </div>
                                 ");
@@ -520,10 +526,10 @@ class VacationResource extends Resource
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
                     ->visible(fn ($record) => $record->isApproved()
-                        && $record->payment_status === 'unpaid'
-                        && $record->payment_method === 'immediate')
+                        && $record->payment_status === 'unpaid')
                     ->modalHeading('Registrar pago vacacional')
-                    ->modalDescription(fn ($record) => 'Monto a registrar: Gs. '.number_format((float) $record->payment_amount, 0, ',', '.'))
+                    ->modalDescription(fn ($record) => 'Monto a registrar: Gs. '.number_format((float) $record->payment_amount, 0, ',', '.')
+                        .($record->payment_method === 'with_payroll' ? '. Era un pago «con nómina»: al marcarlo como pagado, la nómina no lo volverá a pagar (úsalo cuando se pagó por fuera).' : ''))
                     ->modalSubmitActionLabel('Sí, registrar pago')
                     ->form([
                         DatePicker::make('paid_at')
@@ -570,6 +576,51 @@ class VacationResource extends Resource
                                 ->success()
                                 ->title('Vacaciones Aprobadas')
                                 ->body("Se aprobaron {$approved} solicitudes.".($skipped > 0 ? " Se omitieron {$skipped} que no estaban pendientes." : ''))
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('markPaidBulk')
+                        ->label('Marcar como pagadas')
+                        ->icon('heroicon-o-banknotes')
+                        ->color('success')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_vacation') ?? false)
+                        ->modalHeading('Marcar vacaciones como pagadas')
+                        ->modalDescription('Registra el pago de las vacaciones aprobadas y sin pagar que seleccionaste, para regularizar pagos hechos por fuera del sistema. Las «con nómina» quedan pagadas: la nómina no las volverá a pagar.')
+                        ->modalSubmitActionLabel('Sí, marcar como pagadas')
+                        ->form([
+                            Toggle::make('use_start_date')
+                                ->label('Usar la fecha de inicio de cada vacación como fecha de pago')
+                                ->default(true)
+                                ->live(),
+                            DatePicker::make('paid_at')
+                                ->label('Fecha de pago')
+                                ->displayFormat('d/m/Y')
+                                ->native(false)
+                                ->closeOnDateSelection()
+                                ->maxDate(today())
+                                ->visible(fn (Get $get): bool => ! $get('use_start_date'))
+                                ->required(fn (Get $get): bool => ! $get('use_start_date')),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            $paid = 0;
+                            $skipped = 0;
+
+                            foreach ($records as $record) {
+                                if (! $record->isApproved() || $record->payment_status !== 'unpaid') {
+                                    $skipped++;
+
+                                    continue;
+                                }
+
+                                VacationService::recordPayment($record, ($data['use_start_date'] ?? true) ? Carbon::parse($record->start_date) : Carbon::parse($data['paid_at']));
+                                $paid++;
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title('Pagos registrados')
+                                ->body("Se marcaron {$paid} vacaciones como pagadas.".($skipped > 0 ? " Se omitieron {$skipped} que no estaban aprobadas y sin pagar." : ''))
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),

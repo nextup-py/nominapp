@@ -50,7 +50,13 @@ Los datos requeridos de fábrica son teléfono, fecha de nacimiento, domicilio, 
 | **Activo** | Empleado vigente en nómina |
 | **Inactivo** | Relación laboral terminada (se marca automáticamente al vencer o terminar su contrato, o al cerrar una liquidación) |
 
-> El estado se puede cambiar manualmente con la acción **Cambiar estado** desde el perfil del empleado, entre Activo e Inactivo.
+> Con un contrato vigente, el empleado **no se puede pasar a Inactivo** ni desde el campo **Estado** del formulario ni con **Cambiar estado**: la baja se registra con **Dar de baja**. Sin contrato vigente, **Cambiar estado** sigue disponible.
+
+### Dar de baja
+
+Desde la ficha del empleado (o el menú de acciones del listado), **Dar de baja** pide la **fecha de baja** (hoy o anterior, nunca anterior al inicio del contrato), el **tipo de baja** (renuncia, despido, mutuo acuerdo o fin de contrato) y el **motivo**. Al confirmar, el contrato queda **Terminado** con esa fecha, tipo y motivo, y el empleado pasa a **Inactivo** (se cierran su horario, percepciones y deducciones). Si tiene préstamos aprobados o adelantos sin descontar, el modal lo avisa: la baja no los cancela. Requiere el permiso **Terminar contrato**.
+
+Si la liquidación se calcula en el sistema, activar **Calcular la liquidación en el sistema**: no da de baja todavía, sino que abre el formulario de **Liquidación** con los datos cargados, y el contrato se termina al **Cerrar** la liquidación (crear una liquidación exige un contrato vigente). Si se liquida por fuera, dejarlo apagado.
 
 ### Empleado sin contrato o sin horario
 
