@@ -35,9 +35,9 @@ Ir a **Asistencias → Monitor en vivo** para ver, mientras ocurre, qué pasa ho
 
 | Zona | Contenido |
 |------|-----------|
-| **Tarjetas** | Presentes ahora, Con retraso, Sin marcar, Ausentes, En descanso, Aún no inician, Terminaron y De permiso. Un clic en una tarjeta filtra la lista por ese estado; otro clic lo quita |
+| **Tarjetas** | Presentes ahora, Con retraso, Sin marcar, Ausentes, Sin salida, En descanso, Aún no inician, Terminaron y De permiso. Un clic en una tarjeta filtra la lista por ese estado; otro clic lo quita |
 | **Empleados hoy** | Una fila por empleado activo con su estado, horario de hoy, última marcación y detalle (minutos de retraso, tiempo en descanso, cuánto falta para que entre). Lo que requiere atención aparece primero. El nombre abre la ficha mensual del empleado |
-| **Alertas del momento** | Quien debía entrar y no marcó, descansos de más de 60 minutos, marcaciones de hoy fuera de radio o sin ubicación que siguen sin revisar y terminales sin conexión |
+| **Alertas del momento** | Quien debía entrar y no marcó, quien se fue sin marcar la salida, descansos de más de 60 minutos, marcaciones de hoy fuera de radio o sin ubicación que siguen sin revisar y terminales sin conexión |
 | **Últimas marcaciones** | Las 15 marcaciones más recientes de hoy |
 
 **Estados:**
@@ -45,6 +45,7 @@ Ir a **Asistencias → Monitor en vivo** para ver, mientras ocurre, qué pasa ho
 | Estado | Significado |
 |--------|-------------|
 | **En turno** | Marcó entrada (o terminó un descanso) y no salió. Incluye turnos nocturnos que empezaron ayer y siguen abiertos |
+| **Sin salida** | Su turno terminó hace más de 1 hora y su última marcación sigue abierta (entrada o descanso sin cerrar): se fue sin marcar la salida. Es el momento de preguntarle, mientras se acuerda; después se corrige en **Por resolver** |
 | **En descanso** | Marcó inicio de descanso y no marcó el fin |
 | **Terminó** | Marcó su salida |
 | **Sin marcar** | Su turno ya empezó y no tiene ninguna marcación |

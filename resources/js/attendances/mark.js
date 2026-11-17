@@ -1,5 +1,6 @@
 import { captureFaceSamples } from '../shared/face-capture-core.js';
 import { migrateTokenFromLocalStorage, getMeta, getOwnEmployee, resetDb } from './mobile-offline/db.js';
+import { withoutBreakStartNearShiftEnd, expectedCheckOutFor } from './offline-shared/end-of-shift.js';
 import { identifyEmployee as matchDescriptor } from './offline-shared/matcher.js';
 import { heartbeat, getFaceConfig, unlinkDevice, MobileAuthError } from './mobile-offline/sync.js';
 import {
@@ -1293,7 +1294,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const status = await getOwnStatus();
 
             state.employee = employee;
-            state.allowed  = status.allowed_events || [];
+            // Cerca de la hora de salida del horario no se ofrece «Inicio descanso» (quien se iba solía tocarlo en vez de «Salida»).
+            state.allowed  = withoutBreakStartNearShiftEnd(status.allowed_events || [], expectedCheckOutFor(status, await getOwnEmployee()));
 
             await finishCaptureProgress("success");
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\Employee;
+use App\Services\AttendanceCalculator;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,11 +55,21 @@ class MobileStatusController extends Controller
             'last_event' => $state['last']?->event_type,
             'last_event_time' => $state['last']?->recorded_at?->format('H:i'),
             'allowed_events' => $state['allowed'],
+            // Hora de salida del horario de hoy ("HH:MM"): el celular deja de ofrecer «Inicio descanso» cerca de ella.
+            'expected_check_out' => $this->expectedCheckOut($employee, $now),
             'today_events' => $displayEvents->map(fn (AttendanceEvent $event): array => [
                 'event_type' => $event->event_type,
                 'event_type_label' => AttendanceEvent::getEventTypeLabel($event->event_type),
                 'time' => $event->recorded_at->format('H:i'),
             ])->values(),
         ]);
+    }
+
+    /** Hora de salida esperada de hoy ("HH:MM"), o null si el empleado no tiene turno ese día. */
+    private function expectedCheckOut(Employee $employee, Carbon $now): ?string
+    {
+        $time = AttendanceCalculator::resolveShiftDataFor($employee, $now->copy()->startOfDay())['check_out'] ?? null;
+
+        return $time ? substr((string) $time, 0, 5) : null;
     }
 }

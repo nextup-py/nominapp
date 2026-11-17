@@ -73,13 +73,14 @@
                 ['key' => 'late', 'label' => 'Con retraso', 'color' => 'warning'],
                 ['key' => 'missing', 'label' => 'Sin marcar', 'color' => 'danger'],
                 ['key' => 'absent', 'label' => 'Ausentes', 'color' => 'danger'],
+                ['key' => 'no_exit', 'label' => 'Sin salida', 'color' => 'warning'],
                 ['key' => 'on_break', 'label' => 'En descanso', 'color' => 'info'],
                 ['key' => 'upcoming', 'label' => 'Aún no inician', 'color' => 'gray'],
                 ['key' => 'finished', 'label' => 'Terminaron', 'color' => 'gray'],
                 ['key' => 'on_leave', 'label' => 'De permiso', 'color' => 'warning'],
             ];
         @endphp
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-9">
             @foreach ($cards as $card)
                 @php($count = $snapshot['counts'][$card['key']] ?? 0)
                 <button type="button" wire:click="toggleState('{{ $card['key'] }}')" wire:key="card-{{ $card['key'] }}"
@@ -170,7 +171,7 @@
                         @endif
                         @foreach ($snapshot['alerts'] as $alert)
                             <li class="text-sm" wire:key="alert-{{ $loop->index }}">
-                                <x-filament::badge :color="$alert['color']">{{ ['missing' => 'Sin marcar', 'long_break' => 'Descanso largo', 'outside_radius' => 'Fuera de radio'][$alert['type']] ?? $alert['type'] }}</x-filament::badge>
+                                <x-filament::badge :color="$alert['color']">{{ ['missing' => 'Sin marcar', 'no_exit' => 'Sin salida', 'long_break' => 'Descanso largo', 'outside_radius' => 'Fuera de radio'][$alert['type']] ?? $alert['type'] }}</x-filament::badge>
                                 <span class="font-medium text-gray-950 dark:text-white">{{ $alert['employee'] }}</span>
                                 <span class="text-gray-600 dark:text-gray-300">— {{ $alert['text'] }}</span>
                             </li>

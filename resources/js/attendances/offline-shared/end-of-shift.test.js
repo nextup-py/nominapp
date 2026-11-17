@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { withoutBreakStartNearShiftEnd } from './end-of-shift.js';
+import { withoutBreakStartNearShiftEnd, expectedCheckOutFor } from './end-of-shift.js';
 
 /** Fecha local a la hora indicada. */
 const at = (h, m = 0) => new Date(2026, 9, 19, h, m);
@@ -40,5 +40,19 @@ describe('withoutBreakStartNearShiftEnd', () => {
         expect(withoutBreakStartNearShiftEnd(['check_out'], '18:00', at(17, 30))).toEqual(['check_out']);
         expect(withoutBreakStartNearShiftEnd(['break_end'], '18:00', at(17, 30))).toEqual(['break_end']);
         expect(withoutBreakStartNearShiftEnd(['check_in', 'check_out'], '18:00', at(17, 30))).toEqual(['check_in', 'check_out']);
+    });
+});
+
+describe('expectedCheckOutFor', () => {
+    it('prefiere la hora de la consulta en línea', () => {
+        expect(expectedCheckOutFor({ expected_check_out: '18:00' }, { expected_check_out: '17:00', expected_shift_date: '2026-10-19' }, at(10))).toBe('18:00');
+    });
+
+    it('sin conexión usa la del último latido solo si es de hoy', () => {
+        const own = { expected_check_out: '17:00', expected_shift_date: '2026-10-19' };
+
+        expect(expectedCheckOutFor({}, own, at(10))).toBe('17:00');
+        expect(expectedCheckOutFor({}, { ...own, expected_shift_date: '2026-10-18' }, at(10))).toBeNull();
+        expect(expectedCheckOutFor({}, null, at(10))).toBeNull();
     });
 });

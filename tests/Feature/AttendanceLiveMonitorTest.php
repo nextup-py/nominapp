@@ -179,3 +179,36 @@ it('avisa de las marcaciones de hoy fuera de radio que siguen sin revisar', func
 
     expect(collect(LiveAttendanceMonitor::snapshot()['alerts'])->where('type', 'outside_radius'))->toHaveCount(0);
 });
+
+it('pasa a «Sin salida» a quien sigue abierto una hora después de que terminó su turno', function () {
+    Carbon::setTestNow(Carbon::parse('2026-11-16 16:10:00'));
+
+    liveDay(liveEmployee('Olvido'), [['check_in', '07:00:00']]);
+    liveDay(liveEmployee('Descanso'), [['check_in', '07:00:00'], ['break_start', '14:55:00']]);
+    liveDay(liveEmployee('Salio'), [['check_in', '07:00:00'], ['check_out', '15:02:00']]);
+    liveDay(liveEmployee('Reciente'), [['check_in', '07:00:00']])->forceFill(['expected_check_out' => '16:00:00'])->saveQuietly();
+
+    expect(liveStates())->toMatchArray([
+        'Olvido Vivo' => 'no_exit',
+        'Descanso Vivo' => 'no_exit',
+        'Salio Vivo' => 'finished',
+        'Reciente Vivo' => 'working',
+    ]);
+
+    $snapshot = LiveAttendanceMonitor::snapshot();
+    $alerts = collect($snapshot['alerts'])->where('type', 'no_exit');
+
+    expect($snapshot['counts']['no_exit'])->toBe(2)
+        ->and($snapshot['counts']['present'])->toBe(1)
+        ->and($alerts)->toHaveCount(2)
+        ->and($alerts->first()['text'])->toContain('no marcó la salida');
+});
+
+it('un turno que cruza la medianoche no pasa a «Sin salida» antes de que termine', function () {
+    Carbon::setTestNow(Carbon::parse('2026-11-16 23:30:00'));
+
+    $night = liveEmployee('Noche', shift: ['22:00:00', '06:00:00']);
+    liveDay($night, [['check_in', '22:00:00']])->forceFill(['expected_check_in' => '22:00:00', 'expected_check_out' => '06:00:00'])->saveQuietly();
+
+    expect(liveStates())->toMatchArray(['Noche Vivo' => 'working']);
+});
