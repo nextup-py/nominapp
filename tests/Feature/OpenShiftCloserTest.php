@@ -252,3 +252,71 @@ it('el comando exige la fecha límite y puede cancelarse', function () {
 
     expect($day->fresh()->events()->count())->toBe(1);
 });
+
+it('convierte en salida un inicio de descanso marcado cerca de la hora de salida y deja el resto', function () {
+    $closer = app(OpenShiftCloser::class);
+    $employee = closerEmployee();
+    $near = closerDay($employee, 3, [['check_in', '08:55'], ['break_start', '15:30']]);
+    $after = closerDay($employee, 4, [['check_in', '08:55'], ['break_start', '16:45']]);
+    $middle = closerDay($employee, 5, [['check_in', '08:55'], ['break_start', '12:00']]);
+    $tooLate = closerDay($employee, 6, [['check_in', '08:55'], ['break_start', '17:30']]);
+    $endsWithEntry = closerDay($employee, 7, [['check_in', '15:50']]);
+
+    expect($closer->closeWithRealMark($near, OpenShiftCloser::STRATEGY_BREAK_AS_EXIT))->toBeNull()
+        ->and($closer->closeWithRealMark($after, OpenShiftCloser::STRATEGY_BREAK_AS_EXIT))->toBeNull()
+        ->and($closer->closeWithRealMark($middle, OpenShiftCloser::STRATEGY_BREAK_AS_EXIT))->toBe(OpenShiftCloser::SKIP_NOT_NEAR_EXIT)
+        ->and($closer->closeWithRealMark($tooLate, OpenShiftCloser::STRATEGY_BREAK_AS_EXIT))->toBe(OpenShiftCloser::SKIP_NOT_NEAR_EXIT)
+        ->and($closer->closeWithRealMark($endsWithEntry, OpenShiftCloser::STRATEGY_BREAK_AS_EXIT))->toBe(OpenShiftCloser::SKIP_NOT_APPLICABLE);
+
+    $events = $near->fresh()->events()->orderBy('recorded_at')->get();
+
+    expect($events)->toHaveCount(2)
+        ->and($events->last()->event_type)->toBe('check_out')
+        ->and($events->last()->recorded_at->format('H:i'))->toBe('15:30')
+        ->and($middle->fresh()->events()->orderBy('recorded_at')->get()->last()->event_type)->toBe('break_start');
+});
+
+it('cierra en el fin de descanso marcado hasta una hora después de la salida del horario', function () {
+    $closer = app(OpenShiftCloser::class);
+    $employee = closerEmployee();
+    $near = closerDay($employee, 3, [['check_in', '08:55'], ['break_start', '12:00'], ['break_end', '16:20']]);
+    $tooLate = closerDay($employee, 4, [['check_in', '08:55'], ['break_start', '12:00'], ['break_end', '17:30']]);
+    $beforeExit = closerDay($employee, 5, [['check_in', '08:55'], ['break_start', '12:00'], ['break_end', '15:30']]);
+
+    expect($closer->closeWithRealMark($near, OpenShiftCloser::STRATEGY_LAST_MARK))->toBeNull()
+        ->and($closer->closeWithRealMark($tooLate, OpenShiftCloser::STRATEGY_LAST_MARK))->toBe(OpenShiftCloser::SKIP_NOT_NEAR_EXIT)
+        ->and($closer->closeWithRealMark($beforeExit, OpenShiftCloser::STRATEGY_LAST_MARK))->toBe(OpenShiftCloser::SKIP_NOT_APPLICABLE);
+
+    $events = $near->fresh()->events()->orderBy('recorded_at')->orderBy('id')->get();
+
+    expect($events)->toHaveCount(4)
+        ->and($events->last()->event_type)->toBe('check_out')
+        ->and($events->last()->recorded_at->format('H:i'))->toBe('16:20');
+});
+
+it('las estrategias con marcación real respetan nómina generada y decisiones de RR.HH.', function () {
+    $closer = app(OpenShiftCloser::class);
+    $protected = closerDay(closerEmployee(), 3, [['check_in', '08:55'], ['break_start', '15:30']], attributes: ['overtime_approved' => true]);
+
+    expect($closer->closeWithRealMark($protected, OpenShiftCloser::STRATEGY_BREAK_AS_EXIT))->toBe(OpenShiftCloser::SKIP_PROTECTED)
+        ->and($protected->fresh()->events()->count())->toBe(2);
+});
+
+it('el comando acepta las reglas de marcación real y no admite las dos a la vez', function () {
+    $employee = closerEmployee();
+    $day = closerDay($employee, 5, [['check_in', '08:55'], ['break_start', '15:30']]);
+
+    $this->artisan('attendance:close-open-shifts', ['--before' => '2026-10-10', '--break-as-exit' => true, '--at-last-mark' => true])->assertFailed();
+
+    $this->artisan('attendance:close-open-shifts', ['--before' => '2026-10-10', '--break-as-exit' => true, '--dry-run' => true])
+        ->expectsOutputToContain('[dry-run] Se cerrarían 1 jornada(s).')
+        ->assertSuccessful();
+
+    expect($day->fresh()->events()->orderBy('recorded_at')->get()->last()->event_type)->toBe('break_start');
+
+    $this->artisan('attendance:close-open-shifts', ['--before' => '2026-10-10', '--break-as-exit' => true, '--force' => true])
+        ->expectsOutputToContain('Cerradas 1 jornada(s).')
+        ->assertSuccessful();
+
+    expect($day->fresh()->events()->orderBy('recorded_at')->get()->last()->event_type)->toBe('check_out');
+});

@@ -12,12 +12,18 @@ use Illuminate\Console\Command;
  * «Cerrar jornadas sin salida» del panel (`OpenShiftCloser`): agrega la salida a la hora del horario y recalcula.
  * Omite las de nómina generada, con decisiones de RR.HH., en descanso o sin horario, y cuenta cada motivo.
  * Sirve para limpiar un atraso grande sin seleccionar jornada por jornada en el listado.
+ *
+ * Con `--break-as-exit` o `--at-last-mark` no se usa la hora del horario sino una marcación real: el inicio de
+ * descanso marcado a 1 h o menos de la salida (quien se iba tocaba el botón equivocado) o el fin de descanso
+ * marcado hasta 1 h después de la salida del horario.
  */
 class CloseOpenShifts extends Command
 {
     protected $signature = 'attendance:close-open-shifts
         {--before= : Cierra solo jornadas anteriores a esta fecha (Y-m-d). Obligatorio}
         {--from= : Fecha inicial (Y-m-d). Por defecto, sin límite}
+        {--break-as-exit : En vez del horario, toma como salida el inicio de descanso marcado a 1 h o menos de la salida del horario}
+        {--at-last-mark : En vez del horario, cierra en el fin de descanso marcado hasta 1 h después de la salida del horario}
         {--dry-run : Muestra qué se cerraría sin guardar nada}
         {--force : No pide confirmación antes de guardar}';
 
@@ -36,6 +42,13 @@ class CloseOpenShifts extends Command
 
         $before = Carbon::parse($this->option('before'))->startOfDay();
         $dryRun = (bool) $this->option('dry-run');
+        $strategy = $this->strategy();
+
+        if ($strategy === false) {
+            $this->error('Elegí una sola regla: --break-as-exit o --at-last-mark (o ninguna para usar la hora del horario).');
+
+            return self::INVALID;
+        }
 
         if (! $dryRun && ! $this->option('force') && ! $this->confirm("Se agregará la salida del horario a las jornadas abiertas anteriores al {$before->format('d/m/Y')}. ¿Continuar?")) {
             $this->warn('Cancelado, no se guardó nada.');
@@ -52,9 +65,11 @@ class CloseOpenShifts extends Command
             ->where('date', '<', $before->toDateString())
             ->when($this->option('from'), fn ($query, $from) => $query->where('date', '>=', Carbon::parse($from)->toDateString()))
             ->orderBy('date')
-            ->chunkById(200, function ($days) use ($closer, $dryRun, &$closed, &$failed, &$skipped) {
+            ->chunkById(200, function ($days) use ($closer, $dryRun, $strategy, &$closed, &$failed, &$skipped) {
                 foreach ($days as $day) {
-                    $reason = $dryRun ? $closer->evaluate($day)['skip'] : $this->close($closer, $day, $failed);
+                    $reason = $dryRun
+                        ? ($strategy ? $closer->evaluateRealMark($day, $strategy)['skip'] : $closer->evaluate($day)['skip'])
+                        : $this->close($closer, $day, $strategy, $failed);
 
                     if ($reason === null) {
                         $closed++;
@@ -80,14 +95,30 @@ class CloseOpenShifts extends Command
     /**
      * Cierra una jornada y devuelve el motivo de omisión, null si se cerró o `error` si la secuencia no era válida.
      */
-    private function close(OpenShiftCloser $closer, AttendanceDay $day, int &$failed): ?string
+    private function close(OpenShiftCloser $closer, AttendanceDay $day, ?string $strategy, int &$failed): ?string
     {
         try {
-            return $closer->close($day);
+            return $strategy ? $closer->closeWithRealMark($day, $strategy) : $closer->close($day);
         } catch (\InvalidArgumentException) {
             $failed++;
 
             return 'error';
         }
+    }
+
+    /**
+     * Estrategia elegida con las opciones: null = la hora del horario, o `false` si pidieron las dos a la vez.
+     */
+    private function strategy(): string|false|null
+    {
+        $breakAsExit = (bool) $this->option('break-as-exit');
+        $atLastMark = (bool) $this->option('at-last-mark');
+
+        return match (true) {
+            $breakAsExit && $atLastMark => false,
+            $breakAsExit => OpenShiftCloser::STRATEGY_BREAK_AS_EXIT,
+            $atLastMark => OpenShiftCloser::STRATEGY_LAST_MARK,
+            default => null,
+        };
     }
 }

@@ -222,3 +222,35 @@ it('status() devuelve expected_check_out nulo si el empleado no tiene horario es
     expect($response->json('expected_check_out'))->toBeNull()
         ->and($response->json('last_event_at'))->toBeNull();
 });
+
+// ─── Celular: salida esperada del día (no ofrecer «Inicio descanso» cerca de la salida) ───────
+
+it('el heartbeat móvil trae la salida esperada de hoy y su fecha', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-27 10:00:00'));
+    $employee = makeOfflineTestEmployee();
+    assignBreakScheduleToEmployee($employee);
+    Sanctum::actingAs($employee, [Employee::MOBILE_SYNC_ABILITY]);
+
+    $this->postJson('/api/v1/mobile/heartbeat')->assertOk()
+        ->assertJsonPath('employee.expected_check_out', '22:00')
+        ->assertJsonPath('employee.expected_shift_date', '2026-08-27');
+});
+
+it('el heartbeat móvil trae la salida esperada nula si no hay horario ese día', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-27 10:00:00'));
+    $employee = makeOfflineTestEmployee();
+    Sanctum::actingAs($employee, [Employee::MOBILE_SYNC_ABILITY]);
+
+    $this->postJson('/api/v1/mobile/heartbeat')->assertOk()
+        ->assertJsonPath('employee.expected_check_out', null)
+        ->assertJsonPath('employee.expected_shift_date', '2026-08-27');
+});
+
+it('el estado móvil en línea informa la salida esperada de hoy', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-27 10:00:00'));
+    $employee = makeOfflineTestEmployee();
+    assignBreakScheduleToEmployee($employee);
+    Sanctum::actingAs($employee, [Employee::MOBILE_SYNC_ABILITY]);
+
+    $this->getJson('/api/v1/mobile/status')->assertOk()->assertJsonPath('expected_check_out', '22:00');
+});

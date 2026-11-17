@@ -28,7 +28,7 @@ import { getCachedEmployees, getMeta } from '../terminal-offline/db.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
 import { recordIdentification, recordIdentificationFailure } from '../terminal-offline/identification-stats.js';
 import { getEmployeeStatus, getExpectedShift } from '../terminal-offline/queue.js';
-import { withoutBreakStartNearShiftEnd } from './end-of-shift.js';
+import { withoutBreakStartNearShiftEnd } from '../offline-shared/end-of-shift.js';
 import { shouldAskEntryOrExit } from './missing-entry.js';
 import { setTerminalVideoState, setIdStatusDot, showCaptureProgress, updateCaptureProgress, finishCaptureProgress } from './ui-feedback.js';
 import { hasUserInteracted } from '../../shared/audio-feedback.js';

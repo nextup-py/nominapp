@@ -35,6 +35,9 @@ class LiveAttendanceMonitor
     /** Minutos en descanso a partir de los cuales se marca como descanso largo. */
     public const LONG_BREAK_MINUTES = 60;
 
+    /** Minutos después de la hora de salida del horario a partir de los cuales quien sigue «en turno» pasa a «Sin salida». */
+    public const NO_EXIT_GRACE_MINUTES = 60;
+
     /** Tipos de último evento que dejan al empleado dentro de su turno. */
     private const OPEN_EVENTS = ['check_in', 'break_start', 'break_end'];
 
@@ -48,6 +51,7 @@ class LiveAttendanceMonitor
         return [
             'missing' => ['label' => 'Sin marcar', 'color' => 'danger', 'icon' => 'heroicon-o-exclamation-circle'],
             'absent' => ['label' => 'Ausente', 'color' => 'danger', 'icon' => 'heroicon-o-x-circle'],
+            'no_exit' => ['label' => 'Sin salida', 'color' => 'warning', 'icon' => 'heroicon-o-arrow-right-on-rectangle'],
             'on_break' => ['label' => 'En descanso', 'color' => 'info', 'icon' => 'heroicon-o-pause-circle'],
             'working' => ['label' => 'En turno', 'color' => 'success', 'icon' => 'heroicon-o-check-circle'],
             'upcoming' => ['label' => 'Aún no inicia', 'color' => 'gray', 'icon' => 'heroicon-o-clock'],
@@ -328,6 +332,16 @@ class LiveAttendanceMonitor
                 $row['detail'] = "{$row['minutes']} min en descanso";
             }
 
+            // Su turno ya terminó hace rato y la última marcación sigue abierta: se fue sin marcar la salida.
+            $shiftEnd = $last !== null ? self::shiftEnd($day) : null;
+
+            if ($shiftEnd !== null && in_array($row['state'], ['working', 'on_break'], true)
+                && $now->gte($shiftEnd->copy()->addMinutes(self::NO_EXIT_GRACE_MINUTES))) {
+                $row['state'] = 'no_exit';
+                $row['minutes'] = (int) $shiftEnd->diffInMinutes($now);
+                $row['detail'] = "Su turno terminó a las {$row['expected_out']} y no marcó la salida ({$row['last_event']} a las {$row['last_event_at']})";
+            }
+
             return $row;
         }
 
@@ -369,6 +383,24 @@ class LiveAttendanceMonitor
         return $row;
     }
 
+    /**
+     * Instante en que termina el turno de la jornada (el del día siguiente si cruza la medianoche), o null sin horario.
+     */
+    private static function shiftEnd(?AttendanceDay $day): ?Carbon
+    {
+        if ($day === null || ! $day->expected_check_out) {
+            return null;
+        }
+
+        $end = $day->date->copy()->startOfDay()->setTimeFromTimeString($day->expected_check_out);
+
+        if ($day->expected_check_in && $day->expected_check_out <= $day->expected_check_in) {
+            $end->addDay();
+        }
+
+        return $end;
+    }
+
     /** Recorta una hora `HH:MM:SS` a `HH:MM`. */
     private static function hhmm(?string $time): ?string
     {
@@ -408,7 +440,7 @@ class LiveAttendanceMonitor
     }
 
     /**
-     * Alertas del momento: quien debería haber entrado y no marcó, y descansos largos.
+     * Alertas del momento: quien debería haber entrado y no marcó, quien se fue sin marcar la salida y descansos largos.
      *
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<int, array<string, mixed>>
@@ -420,6 +452,8 @@ class LiveAttendanceMonitor
         foreach ($rows as $row) {
             if ($row['state'] === 'missing') {
                 $alerts[] = ['type' => 'missing', 'color' => 'danger', 'employee' => $row['name'], 'branch' => $row['branch'], 'text' => "Debía entrar a las {$row['expected_in']} y no marcó ({$row['detail']})", 'minutes' => $row['minutes']];
+            } elseif ($row['state'] === 'no_exit') {
+                $alerts[] = ['type' => 'no_exit', 'color' => 'warning', 'employee' => $row['name'], 'branch' => $row['branch'], 'text' => $row['detail'], 'minutes' => $row['minutes']];
             } elseif ($row['state'] === 'on_break' && $row['minutes'] >= self::LONG_BREAK_MINUTES) {
                 $alerts[] = ['type' => 'long_break', 'color' => 'warning', 'employee' => $row['name'], 'branch' => $row['branch'], 'text' => "Lleva {$row['minutes']} min en descanso", 'minutes' => $row['minutes']];
             }

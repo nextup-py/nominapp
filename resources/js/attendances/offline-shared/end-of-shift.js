@@ -66,3 +66,19 @@ export function withoutBreakStartNearShiftEnd(allowedEvents, expectedCheckOut, n
 
     return nearEnd ? allowedEvents.filter((type) => type !== 'break_start') : allowedEvents;
 }
+
+/**
+ * Hora de salida del horario de hoy ("HH:MM") para el celular: la que informó la consulta en línea del estado y, sin
+ * conexión, la que trajo el último latido (solo si es de hoy: un latido de ayer traería el horario de otro día).
+ * @param {{expected_check_out?: string|null}|null|undefined} status - estado del día (consulta en línea o resuelto local).
+ * @param {{expected_check_out?: string|null, expected_shift_date?: string|null}|null|undefined} ownEmployee - empleado cacheado del latido.
+ * @param {Date} [now]
+ * @returns {string|null}
+ */
+export function expectedCheckOutFor(status, ownEmployee, now = new Date()) {
+    if (status?.expected_check_out) return status.expected_check_out;
+
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    return ownEmployee?.expected_shift_date === today ? ownEmployee.expected_check_out ?? null : null;
+}

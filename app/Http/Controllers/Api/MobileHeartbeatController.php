@@ -62,7 +62,19 @@ class MobileHeartbeatController extends Controller
                 // si el horario cambia mientras el dispositivo está offline por más tiempo
                 // que eso, hasta el próximo heartbeat exitoso.
                 'has_scheduled_break' => AttendanceCalculator::hasScheduledBreak($employee, now(config('app.timezone'))),
+                // Salida del horario de hoy y la fecha a la que corresponde: el celular la usa sin conexión para no ofrecer
+                // «Inicio descanso» cerca de la hora de salida, e ignora el dato si ya no es de hoy.
+                'expected_check_out' => $this->expectedCheckOut($employee),
+                'expected_shift_date' => now(config('app.timezone'))->toDateString(),
             ],
         ]);
+    }
+
+    /** Hora de salida esperada de hoy ("HH:MM"), o null si el empleado no tiene turno ese día. */
+    private function expectedCheckOut(Employee $employee): ?string
+    {
+        $time = AttendanceCalculator::resolveShiftDataFor($employee, now(config('app.timezone'))->startOfDay())['check_out'] ?? null;
+
+        return $time ? substr((string) $time, 0, 5) : null;
     }
 }
