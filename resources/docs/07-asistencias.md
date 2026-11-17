@@ -62,6 +62,21 @@ Ir a **Asistencias → Monitor en vivo** para ver, mientras ocurre, qué pasa ho
 
 Para ver la página hace falta el mismo permiso que para el listado de **Asistencias**.
 
+## Mi equipo
+
+Ir a **Mi equipo** (en el menú, arriba) para ver el estado de hoy de las personas a tu cargo: quién está en turno, en descanso, sin marcar, ausente, con retraso o de permiso. Es una vista de **solo consulta**, se actualiza sola cada 30 segundos y usa los mismos contadores del Monitor en vivo (tocar una tarjeta filtra la lista; hay buscador por nombre o CI). La aprobación de tardanzas, extras y permisos sigue siendo de RR.HH.
+
+Quién aparece en tu equipo depende de tus permisos y de la ficha vinculada a tu usuario:
+
+| Permiso | A quién ves |
+|---------|-------------|
+| **Ver su equipo** | A quienes te reportan, directa o indirectamente (campo **Reporta a** de la ficha del empleado). |
+| **Ver su sucursal** | Además, a todo el personal activo de tu sucursal. |
+
+> Tu usuario debe estar vinculado a tu ficha de empleado (se hace en el perfil o desde **Usuarios**). Sin esa ficha, o si nadie te tiene como superior, la página lo avisa en vez de mostrar una lista vacía. Tampoco aparecés vos en tu propio equipo. Los roles sugeridos **Jefe de equipo** y **Supervisor de sucursal** traen estos permisos.
+
+---
+
 ## Modos de marcación
 
 Ir a **Asistencias → Modos de Marcación** para ver los enlaces y códigos QR de cada modo.

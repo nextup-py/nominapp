@@ -79,7 +79,7 @@ class LiveAttendanceMonitor
     /**
      * Foto de asistencia de hoy.
      *
-     * @param  array{company_id?: int|string|null, branch_id?: int|string|null, department_id?: int|string|null, only_scheduled?: bool, search?: string|null, state?: string|null}  $filters
+     * @param  array{employee_ids?: array<int, int>, company_id?: int|string|null, branch_id?: int|string|null, department_id?: int|string|null, only_scheduled?: bool, search?: string|null, state?: string|null}  $filters
      * @return array{
      *     now: Carbon,
      *     counts: array<string, int>,
@@ -176,6 +176,7 @@ class LiveAttendanceMonitor
             ->active()
             ->select(['employees.id', 'employees.first_name', 'employees.last_name', 'employees.ci', 'employees.branch_id'])
             ->with('branch:id,name,company_id')
+            ->when(array_key_exists('employee_ids', $filters), fn (Builder $q) => $q->whereIn('employees.id', (array) $filters['employee_ids']))
             ->when(filled($filters['company_id'] ?? null), fn (Builder $q) => $q->whereHas('branch', fn ($b) => $b->where('company_id', (int) $filters['company_id'])))
             ->when(filled($filters['branch_id'] ?? null), fn (Builder $q) => $q->where('employees.branch_id', (int) $filters['branch_id']))
             ->when(filled($filters['department_id'] ?? null), fn (Builder $q) => $q->whereExists(fn ($sub) => $sub
