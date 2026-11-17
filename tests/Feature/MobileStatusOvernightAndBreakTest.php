@@ -107,7 +107,8 @@ it('status móvil permite marcar salida de un turno nocturno abierto el día ant
     expect($response->json('last_event'))->toBe('check_in')
         ->and($response->json('allowed_events'))->toContain('check_out')
         ->and($response->json('today_events'))->toHaveCount(1)
-        ->and($response->json('today_events.0.event_type'))->toBe('check_in');
+        ->and($response->json('today_events.0.event_type'))->toBe('check_in')
+        ->and($response->json('last_event_at'))->toBe(Carbon::parse('2026-08-27 17:00:00')->toIso8601String());
 });
 
 it('status móvil sí ofrece "Inicio de descanso" sin horario asignado (sin turno no hay regla que lo impida)', function () {

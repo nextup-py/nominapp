@@ -30,6 +30,7 @@ import {
 } from './db.js';
 import { submitEvents, fetchEmployeeStatus, TerminalAuthError } from './sync.js';
 import { submitInChunks } from '../offline-shared/submit-in-chunks.js';
+import { isClosedStateFromAnotherDay } from '../offline-shared/stale-state.js';
 
 /**
  * Máquina de estados de marcación diaria — mismo criterio que
@@ -141,7 +142,8 @@ export async function resolveEmployeeStatus(employeeId) {
     let lastEvent = cached?.last_event ?? null;
     let lastEventTime = cached?.last_event_time ?? null;
 
-    if (todayEvents.length === 0 && isOpenStateStale(cached, now.getTime(), await getMeta('overnight_max_hours'))) {
+    if (todayEvents.length === 0 && (isOpenStateStale(cached, now.getTime(), await getMeta('overnight_max_hours')) || isClosedStateFromAnotherDay(cached, today))) {
+        // Jornada abierta demasiado vieja o salida de otro día: el empleado empieza de cero.
         lastEvent = null;
         lastEventTime = null;
     }

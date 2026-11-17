@@ -82,8 +82,9 @@ class EmployeeLeaveResource extends Resource
                             ->default('pending')
                             ->native(false)
                             ->required()
-                            ->disabled(fn (?EmployeeLeave $record) => $record === null)
-                            ->dehydrated()
+                            ->disabled()
+                            ->dehydrated(fn (?EmployeeLeave $record): bool => $record === null)
+                            ->helperText('Cambia con Aprobar o Rechazar: aprobar justifica las ausencias del período, algo que no hace editar este campo.')
                             ->columnSpan(1),
 
                         Select::make('type')

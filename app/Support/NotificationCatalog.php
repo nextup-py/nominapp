@@ -40,6 +40,7 @@ class NotificationCatalog
             'attendance' => 'Asistencia',
             'contracts_devices' => 'Contratos y dispositivos',
             'approvals' => 'Aprobaciones',
+            'vacations' => 'Vacaciones',
             'system' => 'Sistema',
         ];
     }
@@ -106,6 +107,10 @@ class NotificationCatalog
             'device.mobile_relinked' => ['Celular re-vinculado', 'Un empleado vinculó un celular nuevo y se revocó el anterior.', 'contracts_devices', 'view_any_employee_device', ['mandatory' => true, 'channels' => ['database', 'mail']]],
             'device.mobile_link_blocked' => ['Vinculación de celular sin permiso', 'Un empleado no habilitado para marcar desde el celular intentó vincularlo.', 'contracts_devices', 'update_employee'],
             'approvals.pending' => ['Solicitudes pendientes de aprobar', 'Resumen diario de adelantos, préstamos, retiros de mercadería y permisos que esperan una decisión de quien los aprueba. Solo le llega a quien tiene permiso de aprobar alguno de ellos.', 'approvals', ['approve_advance', 'approve_loan', 'approve_merchandise_withdrawal', 'approve_employee_leave'], ['digestable' => false]],
+            'vacation.pending' => ['Vacaciones pendientes de decidir', 'Solicitudes de vacaciones que llevan varios días sin aprobar ni rechazar (los días se configuran en Configuración de nómina). No se repite mientras el anterior siga sin leer.', 'vacations', 'update_vacation', ['digestable' => false]],
+            'vacation.unpaid' => ['Vacaciones aprobadas sin marcar como pagadas', 'Vacaciones aprobadas cuyo inicio fue hace más de 7 días y no figuran pagadas. No se repite mientras el anterior siga sin leer.', 'vacations', 'update_vacation', ['digestable' => false]],
+            'vacation.unused' => ['Derecho anual de vacaciones sin tomar', 'Cada lunes, los empleados que tienen sin usar todo el derecho de un año, para programar sus vacaciones.', 'vacations', 'update_vacation', ['digestable' => false]],
+            'vacation.anniversary' => ['Empleados que cumplen su primer año', 'Quienes cumplen el primer año de antigüedad en los próximos días y empiezan a tener derecho a vacaciones. No se repite mientras el anterior siga sin leer.', 'vacations', 'update_vacation', ['digestable' => false]],
             'system.mail_failed' => ['Fallo del envío de correo', 'El servidor de correo no pudo enviar un mensaje: los avisos por correo no están llegando (clave vencida, servidor caído). Solo para el Super Admin; no se repite mientras el anterior siga sin leer.', 'system', 'super-admin', ['mandatory' => true, 'digestable' => false]],
             'holidays.missing' => ['Faltan los feriados del año', 'El año en curso (o el siguiente desde noviembre) no tiene los feriados cargados: afecta vacaciones, asistencia y horas extra. No se repite mientras el anterior siga sin leer.', 'attendance', 'create_holiday', ['digestable' => false]],
             'system.new_error' => ['Errores nuevos en el sistema', 'Apareció un error que no se había visto antes en los logs. Solo para el Super Admin; no se repite por el mismo error.', 'system', 'super-admin', ['digestable' => false]],

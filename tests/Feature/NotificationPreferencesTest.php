@@ -75,6 +75,12 @@ it('cada notificación declara una clave que existe en el catálogo y no sobra n
             continue;
         }
 
+        if ($expression === '"vacation.{$this->kind}"') {
+            array_push($used, ...array_map(fn ($kind) => "vacation.{$kind}", ['pending', 'unpaid', 'unused', 'anniversary']));
+
+            continue;
+        }
+
         expect($expression)->not->toBeNull(basename($file).' no declara preferenceKey()');
         $used[] = trim($expression, "'");
     }
