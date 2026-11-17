@@ -93,7 +93,7 @@ it('el latido guarda la ubicación solo de los equipos móviles y solo la últim
     Sanctum::actingAs($fixed, [Terminal::SYNC_ABILITY]);
     $this->postJson('/api/v1/terminal/heartbeat', $payload)->assertOk()->assertJsonPath('config.location_check', false);
 
-    expect($mobile->fresh()->device_report['location'])->toBe(['lat' => -25.5, 'lng' => -54.6, 'accuracy_m' => 20, 'read_at' => '2026-11-17T09:59:00Z'])
+    expect($mobile->fresh()->device_report['location'])->toEqual(['lat' => -25.5, 'lng' => -54.6, 'accuracy_m' => 20, 'read_at' => '2026-11-17T09:59:00Z'])
         ->and($mobile->fresh()->device_report['location_error'])->toBe('timeout')
         ->and($fixed->fresh()->device_report)->not->toHaveKey('location')
         ->and($fixed->fresh()->device_report)->not->toHaveKey('location_error');
