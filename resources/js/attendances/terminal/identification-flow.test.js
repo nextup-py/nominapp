@@ -460,6 +460,28 @@ describe('confirmación de salida y tiempo de espera de la selección', () => {
         expect(registerMark).not.toHaveBeenCalled();
     });
 
+    it('cerca de la hora de salida no ofrece iniciar un descanso: solo la salida, con confirmación', async () => {
+        vi.setSystemTime(new Date(2026, 9, 19, 17, 40));
+        setup({ lastEvent: 'check_in', allowedEvents: ['break_start', 'check_out'] });
+        getExpectedShift.mockResolvedValue({ expectedCheckIn: '09:00', expectedCheckOut: '18:00' });
+
+        await identifyOnce();
+
+        expect(showTypeSelectionForEmployee).toHaveBeenCalledTimes(1);
+        expect(showTypeSelectionForEmployee.mock.calls[0][3]).toEqual(['check_out']);
+        expect(registerMark).not.toHaveBeenCalled();
+    });
+
+    it('a media jornada sigue ofreciendo el descanso y la salida', async () => {
+        vi.setSystemTime(new Date(2026, 9, 19, 12, 0));
+        setup({ lastEvent: 'check_in', allowedEvents: ['break_start', 'check_out'] });
+        getExpectedShift.mockResolvedValue({ expectedCheckIn: '09:00', expectedCheckOut: '18:00' });
+
+        await identifyOnce();
+
+        expect(showTypeSelectionForEmployee.mock.calls[0][3]).toEqual(['break_start', 'check_out']);
+    });
+
     it('el fin de un descanso también pide confirmación', async () => {
         setup({ lastEvent: 'break_start', allowedEvents: ['break_end'] });
 

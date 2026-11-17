@@ -28,6 +28,7 @@ import { getCachedEmployees, getMeta } from '../terminal-offline/db.js';
 import { getFaceConfig, TerminalAuthError } from '../terminal-offline/sync.js';
 import { recordIdentification, recordIdentificationFailure } from '../terminal-offline/identification-stats.js';
 import { getEmployeeStatus, getExpectedShift } from '../terminal-offline/queue.js';
+import { withoutBreakStartNearShiftEnd } from './end-of-shift.js';
 import { shouldAskEntryOrExit } from './missing-entry.js';
 import { setTerminalVideoState, setIdStatusDot, showCaptureProgress, updateCaptureProgress, finishCaptureProgress } from './ui-feedback.js';
 import { hasUserInteracted } from '../../shared/audio-feedback.js';
@@ -375,7 +376,7 @@ export async function startAutoIdentification(refs) {
                 setTerminalVideoState('success');
                 setIdStatusDot('success');
 
-                const allowedEvents = result.allowed_events || [];
+                const serverAllowedEvents = result.allowed_events || [];
                 const onCountdownComplete = () => startIdentificationFlow(refs, { onIdleTimeout: refs.onIdleTimeout });
                 const markCallbacks = {
                     onStatusUpdate: (text) => updateStatus(refs.identificationStatus, text),
@@ -386,6 +387,8 @@ export async function startAutoIdentification(refs) {
                 // Tras una salida, la nueva entrada (segundo turno del día) nunca se registra sola:
                 // si el empleado vuelve a ser reconocido sin querer, no debe abrir otra jornada.
                 const { expectedCheckIn, expectedCheckOut } = await getExpectedShift(result.employee.id);
+                // Cerca de la hora de salida no se ofrece «Inicio descanso»: quien se va solía tocarlo en vez de «Salida».
+                const allowedEvents = withoutBreakStartNearShiftEnd(serverAllowedEvents, expectedCheckOut);
                 const askEntryOrExit = shouldAskEntryOrExit({
                     allowedEvents,
                     lastEvent: result.last_event ?? null,
