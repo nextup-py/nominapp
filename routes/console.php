@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\AttendanceMarkFailure;
+use App\Services\SystemHealthService;
 use App\Support\ConfiguredTime;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
@@ -254,3 +256,16 @@ Schedule::command('terminals:evaluate-availability')
     ->onFailure(function () {
         Log::error('Falló la evaluación semanal de disponibilidad de terminales');
     });
+
+/**
+ * Latido del programador: cada minuto deja la hora de su última corrida para «Salud del sistema».
+ */
+Schedule::call(fn () => Cache::forever(SystemHealthService::SCHEDULER_KEY, now()))
+    ->everyMinute()
+    ->name('system-heartbeat');
+
+/** Avisa a los Super Admin de errores nuevos en los logs (cada hora). */
+Schedule::command('logs:notify-new-errors')->hourly()->withoutOverlapping();
+
+/** Mantiene chico el directorio de logs (diario, de madrugada). */
+Schedule::command('logs:rotate')->dailyAt('03:50')->withoutOverlapping();

@@ -244,3 +244,19 @@ Acceder desde **Configuración → Visor de Logs**.
 Herramienta técnica de diagnóstico: muestra los registros de error y advertencia (`storage/logs/laravel.log`) directamente desde el panel, con columnas de **Nivel**, **Entorno**, **Archivo**, **Mensaje** y **Fecha**.
 
 > Pensada para soporte técnico y desarrolladores al investigar un problema puntual (ej. un PDF que no se generó, un job que falló) — no forma parte del uso diario del sistema por parte de RR.HH. o Contaduría.
+
+## Salud del sistema
+
+Acceder desde **Configuración → Salud del sistema** (solo Super Admin). Resume en cinco tarjetas si el sistema está funcionando:
+
+| Tarjeta | Qué mira |
+|---------|----------|
+| **Programador** | Que las tareas automáticas (cálculo de asistencia, avisos) estén corriendo. Pasa a **Crítico** si no hay actividad hace más de 5 minutos. |
+| **Cola** | Trabajos fallidos y pendientes. |
+| **Correo** | Si el correo está configurado y si hubo fallas de envío sin revisar. |
+| **Disco** | Espacio usado del servidor (**Atención** desde el 85 %, **Crítico** desde el 95 %). |
+| **Logs** | Tamaño de los archivos de registro. |
+
+Debajo aparecen los **errores de los últimos 7 días** agrupados: un error que se repite 500 veces se muestra una sola vez, con su contador, la primera y la última aparición. Cuando el error es conocido se explica en palabras simples y se sugiere qué hacer. El botón **Abrir el visor de logs** lleva al detalle técnico.
+
+Cuando aparece un error que no se había visto antes, el Super Admin recibe un aviso (**Errores nuevos en el sistema**, configurable en **Mis notificaciones**). Los logs viejos se limpian solos cada madrugada: los diarios se conservan 30 días y los demás archivos se recortan al pasar de 20 MB.
