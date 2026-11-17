@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\SuggestedRoles;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 
@@ -52,6 +53,8 @@ class RoleSeeder extends Seeder
 
         $readOnly = Role::firstOrCreate(['name' => 'Solo Lectura', 'guard_name' => 'web']);
         $readOnly->syncPermissions($this->viewOnlyPermissionsFor(PermissionSeeder::MODELS));
+
+        SuggestedRoles::createMissing();
 
         $this->assignSuperAdminToUsersWithoutRoles($superAdmin);
     }

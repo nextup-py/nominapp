@@ -6,7 +6,7 @@ El sistema controla el acceso a cada módulo mediante roles con permisos configu
 
 ## Roles predefinidos
 
-El sistema trae 4 roles ya configurados de fábrica:
+El sistema trae 4 roles ya configurados de fábrica, más 3 roles sugeridos (se crean solos en una instalación nueva y, en una ya existente, con el botón **Crear roles sugeridos** de **Configuración → Roles**, que no toca ningún rol que ya exista):
 
 | Rol | Alcance |
 |-----|---------|
@@ -14,6 +14,9 @@ El sistema trae 4 roles ya configurados de fábrica:
 | **RRHH** | CRUD completo sobre empleados, contratos, asistencia, permisos/licencias, amonestaciones, vacaciones, horarios, dispositivos, terminales y sucursales. |
 | **Contador/Nómina** | CRUD completo sobre nómina, préstamos, adelantos, retiros de mercadería, liquidación, aguinaldo, deducciones/percepciones y lotes bancarios. Solo lectura sobre empleados y contratos. |
 | **Solo Lectura** | Puede ver (listado y detalle) todos los módulos, sin poder crear, editar ni eliminar nada. |
+| **Jefe de equipo** *(sugerido)* | Ve en **Mi equipo** el monitor en vivo y las asistencias de las personas que le reportan, directa o indirectamente. No accede al resto del panel. |
+| **Supervisor de sucursal** *(sugerido)* | Igual que Jefe de equipo, y además ve a todo el personal de su sucursal. |
+| **Encargado de asistencia** *(sugerido)* | Aprueba tardanzas y horas extra, corrige marcaciones y resuelve ausencias de toda la empresa. No ve nómina ni salarios. |
 
 > El primer usuario que se crea en una instalación nueva (vía `ProductionSeeder` o `DemoSeeder`) queda automáticamente como **Super Admin**. Cualquier usuario existente que se quede sin rol asignado también pasa a Super Admin automáticamente la próxima vez que corran los seeders — pensado para instalaciones que migran a este sistema de roles.
 
@@ -65,9 +68,17 @@ Además de los módulos, estas pantallas y descargas también dependen del rol:
 
 1. Ir a **Configuración → Roles** (solo visible para usuarios con rol Super Admin)
 2. Clic en **Nuevo rol** (o abrir uno existente para editarlo)
-3. Ingresar el **nombre del rol**
-4. Marcar los permisos deseados — están agrupados por módulo (Organización, Empleados, Asistencia, Nómina y Créditos, Configuración) en secciones colapsables; dentro de cada sección aparecen juntos los permisos CRUD y los de acción de negocio del módulo
+3. Ingresar el **nombre del rol** y, si se quiere, una **descripción** (se muestra en el listado)
+4. Marcar los permisos deseados — están agrupados por módulo (Organización, Empleados, Asistencia, Nómina y Créditos, Configuración) en secciones colapsables; dentro de cada sección aparecen juntos los permisos CRUD y los de acción de negocio del módulo. Cada sección tiene un **buscador** y la opción de **marcar o desmarcar todo** el módulo
 5. Guardar
+
+**Otras acciones del listado de roles:**
+
+- **Ver:** muestra la descripción, los usuarios que tienen el rol y sus permisos resumidos por módulo. Desde ahí, **Comparar con otro rol** lista qué tiene cada uno que el otro no.
+- **Duplicar:** crea una copia con otro nombre y los mismos permisos, para ajustarla después (lo más práctico para armar un rol parecido a uno existente).
+- La columna **Usuarios** indica cuántos usuarios tiene cada rol.
+
+> **Protecciones:** el rol **Super Admin** no se puede editar, renombrar ni eliminar (todo el sistema lo reconoce por su nombre), y un rol que todavía tiene usuarios asignados no se puede eliminar: primero hay que cambiarles el rol.
 
 > No hace falta crear un rol desde cero para cada caso de uso — se pueden editar los 4 roles predefinidos para ajustar el alcance según las necesidades de la empresa.
 

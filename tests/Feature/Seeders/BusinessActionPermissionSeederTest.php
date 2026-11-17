@@ -6,10 +6,10 @@ use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
 
-it('seeds all 43 business-action permissions', function () {
+it('seeds all 45 business-action permissions', function () {
     (new BusinessActionPermissionSeeder)->run();
 
-    expect(Permission::count())->toBe(43);
+    expect(Permission::count())->toBe(45);
 
     expect(Permission::where('name', 'approve_loan')->exists())->toBeTrue();
     expect(Permission::where('name', 'reject_loan')->exists())->toBeTrue();
@@ -71,5 +71,5 @@ it('is idempotent — running twice does not duplicate permissions', function ()
     (new BusinessActionPermissionSeeder)->run();
     (new BusinessActionPermissionSeeder)->run();
 
-    expect(Permission::count())->toBe(43);
+    expect(Permission::count())->toBe(45);
 });

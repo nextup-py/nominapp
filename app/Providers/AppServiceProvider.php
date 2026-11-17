@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -56,6 +57,19 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(NotificationFailed::class, ReportMailFailure::class);
 
         Gate::before(fn (User $user) => $user->hasRole('Super Admin') ? true : null);
+
+        // El rol Super Admin es el que reconoce todo el sistema por su nombre: no se renombra ni se elimina.
+        Role::updating(function (Role $role): void {
+            if ($role->getOriginal('name') === 'Super Admin' && $role->name !== 'Super Admin') {
+                throw new \DomainException('El rol Super Admin no se puede renombrar.');
+            }
+        });
+
+        Role::deleting(function (Role $role): void {
+            if ($role->getOriginal('name') === 'Super Admin' || $role->name === 'Super Admin') {
+                throw new \DomainException('El rol Super Admin no se puede eliminar.');
+            }
+        });
 
         // Pantallas y descargas reservadas al Super Admin (configuración, logs): el Gate::before ya lo deja pasar.
         Gate::define('super-admin', fn (User $user) => $user->hasRole('Super Admin'));
