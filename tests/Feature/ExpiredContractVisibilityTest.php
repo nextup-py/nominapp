@@ -117,3 +117,39 @@ it('la bandeja Por resolver cuenta a los empleados activos con contrato vencido'
     expect($section['count'])->toBe(2)
         ->and($section['url'])->toContain('expired_contract');
 });
+
+// ─── Reparación de contratos vencidos con fecha de fin futura ────────────────
+
+it('contracts:reactivate-misexpired vuelve a vigente el vencido con fin futuro y respeta al que ya tiene otro vigente', function () {
+    $company = Company::create(['name' => 'Empresa Repara', 'ruc' => '5200000-1', 'employer_number' => 5200000]);
+    $branch = Branch::create(['name' => 'Central', 'company_id' => $company->id]);
+    $department = Department::create(['name' => 'General', 'company_id' => $company->id]);
+    $position = Position::create(['name' => 'Cajero', 'department_id' => $department->id]);
+
+    $make = function (string $first, string $status, string $end) use ($branch, $position, $department) {
+        static $ci = 5200100;
+        $employee = Employee::create(['first_name' => $first, 'last_name' => 'Repara', 'ci' => (string) $ci++, 'email' => strtolower($first).$ci.'@test.com', 'branch_id' => $branch->id, 'status' => 'active']);
+
+        return [$employee, Contract::create([
+            'employee_id' => $employee->id, 'type' => 'plazo_fijo', 'start_date' => now()->subMonths(6), 'end_date' => $end,
+            'salary_type' => 'mensual', 'salary' => 2_550_000, 'position_id' => $position->id, 'department_id' => $department->id, 'status' => $status,
+        ])];
+    };
+
+    [, $wrong] = $make('Mal', 'expired', now()->addMonths(3)->toDateString());
+    [, $truly] = $make('Vencido', 'expired', now()->subDays(5)->toDateString());
+    [$both, $oldFuture] = $make('Doble', 'expired', now()->addMonths(2)->toDateString());
+    Contract::create([
+        'employee_id' => $both->id, 'type' => 'indefinido', 'start_date' => now()->subDays(10), 'salary_type' => 'mensual',
+        'salary' => 2_550_000, 'position_id' => $position->id, 'department_id' => $department->id, 'status' => 'active',
+    ]);
+
+    $this->artisan('contracts:reactivate-misexpired', ['--dry-run' => true])->expectsOutputToContain('[dry-run] Se reactivarían 1 contrato(s); 1 omitido(s).')->assertSuccessful();
+    expect($wrong->fresh()->status)->toBe('expired');
+
+    $this->artisan('contracts:reactivate-misexpired')->expectsOutputToContain('Reactivados 1 contrato(s); 1 omitido(s).')->assertSuccessful();
+
+    expect($wrong->fresh()->status)->toBe('active')
+        ->and($truly->fresh()->status)->toBe('expired')
+        ->and($oldFuture->fresh()->status)->toBe('expired');
+});
