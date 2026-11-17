@@ -354,6 +354,13 @@ class EmployeeResource extends Resource
                             ->native(false)
                             ->required()
                             ->hiddenOn('create')
+                            ->rules([
+                                fn (?Employee $record): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($record): void {
+                                    if ($value === 'active' && $record?->status === 'inactive' && ($blocker = $record->activationBlocker())) {
+                                        $fail($blocker);
+                                    }
+                                },
+                            ])
                             ->disabled(fn (?Employee $record): bool => $record?->status === 'active' && $record->activeContract !== null)
                             ->helperText(fn (?Employee $record): string => $record?->status === 'active' && $record->activeContract !== null
                                 ? 'Con contrato vigente, la baja se registra con «Dar de baja» desde la ficha.'
@@ -1231,6 +1238,7 @@ class EmployeeResource extends Resource
                         ->tooltip(fn (Employee $record): string => $record->has_face ? 'Capturar nuevo descriptor facial (reemplaza el actual)' : 'Registrar rostro del empleado por primera vez')
                         ->url(fn (Employee $record): string => route('face.capture', $record))
                         ->color(fn (Employee $record): string => $record->has_face ? 'warning' : 'success')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
                         ->visible(fn (Employee $record): bool => $record->status === 'active'),
 
                     Action::make('generate_enrollment')
@@ -1238,6 +1246,7 @@ class EmployeeResource extends Resource
                         ->icon('heroicon-o-link')
                         ->color('info')
                         ->tooltip('Generar enlace temporal para que el empleado registre su rostro desde su propio dispositivo')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
                         ->visible(fn (Employee $record): bool => $record->status === 'active')
                         ->requiresConfirmation()
                         ->modalHeading('Generar Enlace de Registro Facial')
@@ -1277,6 +1286,7 @@ class EmployeeResource extends Resource
                         ->color('gray')
                         ->tooltip('Cambiar el estado del empleado (activo o inactivo)')
                         ->modalSubmitActionLabel('Cambiar estado')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
                         ->form([
                             Select::make('status')
                                 ->label('Nuevo estado')
@@ -1300,6 +1310,13 @@ class EmployeeResource extends Resource
                                 return;
                             }
 
+                            if ($data['status'] === 'active' && ($blocker = $record->activationBlocker())) {
+                                Notification::make()->danger()->title('No se puede activar')->body($blocker)->send();
+                                $action->halt();
+
+                                return;
+                            }
+
                             $record->update(['status' => $data['status']]);
 
                             Notification::make()
@@ -1314,6 +1331,7 @@ class EmployeeResource extends Resource
                         ->icon('heroicon-o-device-phone-mobile')
                         ->color('danger')
                         ->tooltip('Desvincula el dispositivo vinculado a este empleado para marcación offline — requerirá vincularse de nuevo desde /vincular-dispositivo')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_employee_device') ?? false)
                         ->visible(fn (Employee $record): bool => $record->hasMobileLinked())
                         ->requiresConfirmation()
                         ->modalHeading('Revocar sesión móvil')
@@ -1347,17 +1365,35 @@ class EmployeeResource extends Resource
                         ->label('Activar seleccionados')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
                         ->requiresConfirmation()
                         ->modalHeading('Activar empleados')
-                        ->modalDescription(fn (Collection $records) => "Se activarán {$records->count()} empleado(s). Esta acción no se puede deshacer.")
+                        ->modalDescription('Solo se activan los empleados inactivos que tienen un contrato vigente; el resto se omite (para esos, usá «Reingresar»).')
                         ->modalSubmitActionLabel('Sí, activar')
                         ->action(function (Collection $records): void {
-                            $count = $records->count();
-                            Employee::whereIn('id', $records->pluck('id'))->update(['status' => 'active']);
+                            $records->loadMissing('activeContract');
+                            $activated = 0;
+                            $skipped = 0;
+
+                            foreach ($records as $employee) {
+                                if ($employee->status === 'active') {
+                                    continue;
+                                }
+
+                                if ($employee->activationBlocker() !== null) {
+                                    $skipped++;
+
+                                    continue;
+                                }
+
+                                $employee->update(['status' => 'active']);
+                                $activated++;
+                            }
+
                             Notification::make()
-                                ->success()
-                                ->title('Empleados activados')
-                                ->body("{$count} empleado(s) activado(s) correctamente.")
+                                ->{$activated === 0 ? 'warning' : 'success'}()
+                                ->title($activated === 0 ? 'Sin cambios' : 'Empleados activados')
+                                ->body("{$activated} activado(s)".($skipped > 0 ? ", {$skipped} omitido(s) por no tener contrato vigente" : '').'.')
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
@@ -1366,12 +1402,13 @@ class EmployeeResource extends Resource
                         ->label('Desactivar seleccionados')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
                         ->requiresConfirmation()
                         ->modalHeading('Desactivar empleados')
                         ->modalDescription(function (Collection $records) {
                             $records->loadMissing('activeContract');
                             $withContract = $records->filter(fn ($e) => $e->activeContract !== null)->count();
-                            $base = "Se desactivarán {$records->count()} empleado(s). Esta acción no se puede deshacer.";
+                            $base = "Se desactivarán {$records->count()} empleado(s): se cierran su horario y sus percepciones y deducciones vigentes.";
 
                             return $withContract > 0
                                 ? $base." Atención: {$withContract} empleado(s) con contrato activo serán ignorados (procesá una Liquidación para darlos de baja)."
@@ -1383,8 +1420,8 @@ class EmployeeResource extends Resource
                             $withContract = $records->filter(fn ($e) => $e->activeContract !== null);
                             $toDeactivate = $records->reject(fn ($e) => $e->activeContract !== null);
 
-                            if ($toDeactivate->isNotEmpty()) {
-                                Employee::whereIn('id', $toDeactivate->pluck('id'))->update(['status' => 'inactive']);
+                            foreach ($toDeactivate as $employee) {
+                                $employee->update(['status' => 'inactive']);
                             }
 
                             $parts = [];
@@ -1409,6 +1446,7 @@ class EmployeeResource extends Resource
                         ->label('Configurar adelanto automático')
                         ->icon('heroicon-o-banknotes')
                         ->color('info')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_contract') ?? false)
                         ->form([
                             Select::make('advance_percent')
                                 ->label('Porcentaje de adelanto')

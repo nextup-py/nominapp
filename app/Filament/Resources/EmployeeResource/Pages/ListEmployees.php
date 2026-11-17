@@ -44,6 +44,7 @@ class ListEmployees extends ListRecords
                     ->label('Descargar Plantilla')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
+                    ->authorize(fn (): bool => auth()->user()?->can('create_employee') ?? false)
                     ->action(fn () => Excel::download(
                         new EmployeesTemplateExport,
                         'plantilla_empleados_'.now()->format('Y_m_d_H_i_s').'.xlsx'
@@ -53,6 +54,7 @@ class ListEmployees extends ListRecords
                     ->label('Importar Empleados')
                     ->icon('heroicon-o-arrow-up-tray')
                     ->color('gray')
+                    ->authorize(fn (): bool => auth()->user()?->can('create_employee') ?? false)
                     ->modalHeading('Creación Masiva de Empleados')
                     ->modalSubmitActionLabel('Importar')
                     ->form([

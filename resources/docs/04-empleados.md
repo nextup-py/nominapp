@@ -50,7 +50,9 @@ Los datos requeridos de fábrica son teléfono, fecha de nacimiento, domicilio, 
 | **Activo** | Empleado vigente en nómina |
 | **Inactivo** | Relación laboral terminada (se marca automáticamente al vencer o terminar su contrato, o al cerrar una liquidación) |
 
-> Con un contrato vigente, el empleado **no se puede pasar a Inactivo** ni desde el campo **Estado** del formulario ni con **Cambiar estado**: la baja se registra con **Dar de baja**. Sin contrato vigente, **Cambiar estado** sigue disponible.
+> Con un contrato vigente, el empleado **no se puede pasar a Inactivo** ni desde el campo **Estado** del formulario ni con **Cambiar estado**: la baja se registra con **Dar de baja**. Sin contrato vigente, **Cambiar estado** sigue disponible para desactivar.
+
+> **Activar** (con **Cambiar estado**, el campo **Estado** o la acción masiva **Activar seleccionados**) solo se permite si el empleado tiene un contrato vigente; sin él quedaría «activo sin contrato». Para quien ya tuvo contratos se usa **Reingresar**. La acción masiva **Desactivar seleccionados** cierra, igual que la baja individual, el horario y las percepciones y deducciones vigentes, y omite a quienes tienen contrato vigente. Las acciones de estado, el enlace de enrolamiento facial, **Revocar sesión móvil**, la configuración masiva de adelanto automático y la importación exigen el permiso correspondiente (**Editar Empleado**, **Editar Dispositivo de Empleado**, **Editar Contrato** y **Crear Empleado**); sin él no aparecen.
 
 ### Dar de baja
 
