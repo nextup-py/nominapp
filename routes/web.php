@@ -8,6 +8,7 @@ use App\Http\Controllers\AttendanceFaceMarkController;
 use App\Http\Controllers\AttendancePdfReportController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractReportController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeFaceController;
 use App\Http\Controllers\EmployeeReportController;
@@ -145,6 +146,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Hoja de instalación de terminales (PDF, sin secretos)
     Route::get('/terminales/{terminal}/hoja-instalacion', [TerminalInstallSheetController::class, 'show'])->name('terminals.install-sheet');
+
+    // Documentos del legajo (los privados no tienen URL pública)
+    Route::get('/documentos/{document}/descargar', [DocumentController::class, 'download'])->middleware('can:view,document')->name('documents.download');
 
     // Amonestaciones
     Route::get('/amonestaciones/{warning}/pdf', [WarningController::class, 'show'])->middleware('can:view,warning')->name('warnings.pdf');

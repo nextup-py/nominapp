@@ -101,6 +101,7 @@ Requieren el permiso **Editar Terminal**.
 |-------|-------------------|--------------|
 | **Contratos por vencer o vencidos** | Ver contratos | Aviso diario (08:00) según los días configurados |
 | **Fin del período de prueba** | Ver contratos | Resumen diario (08:05) de los contratos cuya prueba termina en los próximos días configurados; no se repite mientras siga sin leer |
+| **Documentos de legajos por vencer o vencidos** | Ver documentos de empleados | Resumen diario (08:10) de los documentos que vencieron o vencen en los próximos días configurados; cada documento se avisa una vez por estado |
 | **Celular vinculado** | Ver dispositivos de empleados | Un empleado vinculó su celular |
 | **Celular re-vinculado** | Ver dispositivos de empleados | Un empleado vinculó un celular nuevo (obligatorio) |
 | **Vinculación de celular sin permiso** | Editar empleados | Un empleado no habilitado intentó vincular su celular. El botón **Ver empleado y habilitar** abre su ficha, donde está **Habilitar celular** |

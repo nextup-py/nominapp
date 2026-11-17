@@ -17,6 +17,7 @@ El sistema trae 4 roles ya configurados de fábrica, más 3 roles sugeridos (se 
 | **Jefe de equipo** *(sugerido)* | Ve en **Mi equipo** el monitor en vivo y las asistencias de las personas que le reportan, directa o indirectamente. No accede al resto del panel. |
 | **Supervisor de sucursal** *(sugerido)* | Igual que Jefe de equipo, y además ve a todo el personal de su sucursal. |
 | **Encargado de asistencia** *(sugerido)* | Aprueba tardanzas y horas extra, corrige marcaciones y resuelve ausencias de toda la empresa. No ve nómina ni salarios. |
+| **RRHH** (documentos) | Además de lo anterior, gestiona los **documentos de los legajos** y el catálogo de **tipos de documento**. Los permisos son propios (**Documento del Empleado** y **Tipo de Documento**): ni Contador/Nómina ni Soporte TI los tienen por defecto. |
 | **Soporte TI** *(sugerido)* | Gestiona terminales y su vinculación, dispositivos de empleados, enrolamiento facial y fallos de marcación, y ve **Salud del sistema** y los **logs**. Ve solo el listado de empleados (nombre, CI): no accede a contratos, salarios, nómina ni configuración. |
 
 > El primer usuario que se crea en una instalación nueva (vía `ProductionSeeder` o `DemoSeeder`) queda automáticamente como **Super Admin**. Cualquier usuario existente que se quede sin rol asignado también pasa a Super Admin automáticamente la próxima vez que corran los seeders — pensado para instalaciones que migran a este sistema de roles.
