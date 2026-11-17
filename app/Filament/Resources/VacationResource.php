@@ -18,6 +18,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -520,10 +521,10 @@ class VacationResource extends Resource
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
                     ->visible(fn ($record) => $record->isApproved()
-                        && $record->payment_status === 'unpaid'
-                        && $record->payment_method === 'immediate')
+                        && $record->payment_status === 'unpaid')
                     ->modalHeading('Registrar pago vacacional')
-                    ->modalDescription(fn ($record) => 'Monto a registrar: Gs. '.number_format((float) $record->payment_amount, 0, ',', '.'))
+                    ->modalDescription(fn ($record) => 'Monto a registrar: Gs. '.number_format((float) $record->payment_amount, 0, ',', '.')
+                        .($record->payment_method === 'with_payroll' ? '. Era un pago «con nómina»: al marcarlo como pagado, la nómina no lo volverá a pagar (úsalo cuando se pagó por fuera).' : ''))
                     ->modalSubmitActionLabel('Sí, registrar pago')
                     ->form([
                         DatePicker::make('paid_at')
@@ -570,6 +571,51 @@ class VacationResource extends Resource
                                 ->success()
                                 ->title('Vacaciones Aprobadas')
                                 ->body("Se aprobaron {$approved} solicitudes.".($skipped > 0 ? " Se omitieron {$skipped} que no estaban pendientes." : ''))
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('markPaidBulk')
+                        ->label('Marcar como pagadas')
+                        ->icon('heroicon-o-banknotes')
+                        ->color('success')
+                        ->authorize(fn (): bool => auth()->user()?->can('update_vacation') ?? false)
+                        ->modalHeading('Marcar vacaciones como pagadas')
+                        ->modalDescription('Registra el pago de las vacaciones aprobadas y sin pagar que seleccionaste, para regularizar pagos hechos por fuera del sistema. Las «con nómina» quedan pagadas: la nómina no las volverá a pagar.')
+                        ->modalSubmitActionLabel('Sí, marcar como pagadas')
+                        ->form([
+                            Toggle::make('use_start_date')
+                                ->label('Usar la fecha de inicio de cada vacación como fecha de pago')
+                                ->default(true)
+                                ->live(),
+                            DatePicker::make('paid_at')
+                                ->label('Fecha de pago')
+                                ->displayFormat('d/m/Y')
+                                ->native(false)
+                                ->closeOnDateSelection()
+                                ->maxDate(today())
+                                ->visible(fn (Get $get): bool => ! $get('use_start_date'))
+                                ->required(fn (Get $get): bool => ! $get('use_start_date')),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            $paid = 0;
+                            $skipped = 0;
+
+                            foreach ($records as $record) {
+                                if (! $record->isApproved() || $record->payment_status !== 'unpaid') {
+                                    $skipped++;
+
+                                    continue;
+                                }
+
+                                VacationService::recordPayment($record, ($data['use_start_date'] ?? true) ? Carbon::parse($record->start_date) : Carbon::parse($data['paid_at']));
+                                $paid++;
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title('Pagos registrados')
+                                ->body("Se marcaron {$paid} vacaciones como pagadas.".($skipped > 0 ? " Se omitieron {$skipped} que no estaban aprobadas y sin pagar." : ''))
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),

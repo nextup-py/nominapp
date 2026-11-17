@@ -78,7 +78,8 @@ Ir a **Reportes → Reporte de Vacaciones**.
 
 **Desde Aprobado:**
 - **Desaprobar** — revierte a Pendiente (solo si el pago vacacional todavía no fue registrado). Si las vacaciones ya comenzaron o ya pasaron, el sistema muestra una advertencia antes de confirmar.
-- **Marcar como pagado** (solo si la forma de pago es "Pago adelantado") — registra la fecha de pago del monto vacacional.
+- **Marcar como pagado** — registra la fecha de pago del monto vacacional. También está disponible para las de «Con próximo salario» cuando el pago se hizo por fuera: al marcarla como pagada, la nómina no la vuelve a pagar.
+- **Marcar como pagadas** (acción masiva, seleccionando filas de la lista) — regulariza varias vacaciones aprobadas y sin pagar de una vez, por ejemplo pagos hechos por fuera del sistema. Por defecto usa la fecha de inicio de cada vacación como fecha de pago, o se puede elegir una fecha. Se omiten las que no están aprobadas y sin pagar.
 - **Revertir Pago** — deshace el registro de pago (esto solo corrige el sistema; el dinero ya entregado al empleado debe gestionarse aparte).
 - **Generar Documentos** — genera en PDF, a elección: Comunicación de Vacaciones, Solicitud de Usufructo y/o Recibo de Liquidación (Art. 220 C.L.). Si se eligen varios, se descargan juntos en un ZIP.
 - **Editar** ya no está disponible una vez aprobada la solicitud.
