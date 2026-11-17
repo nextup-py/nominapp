@@ -3,10 +3,8 @@
 namespace App\Filament\Actions;
 
 use App\Models\Absence;
-use App\Models\AttendanceEvent;
 use App\Models\EmployeeLeave;
-use App\Services\AttendanceCalculator;
-use Carbon\Carbon;
+use App\Services\AbsenceAttendanceRegistrar;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
@@ -80,13 +78,7 @@ class AbsenceActions
 
                 Select::make('reason_select')
                     ->label('Motivo')
-                    ->options([
-                        'no_mark' => 'Presente sin marcación — olvido del empleado',
-                        'tech_failure' => 'Falla técnica en el terminal',
-                        'supervisor' => 'Marcación manual autorizada por supervisor',
-                        'data_error' => 'Error de carga previo',
-                        'other' => 'Otro',
-                    ])
+                    ->options(AbsenceAttendanceRegistrar::REASONS)
                     ->native(false)
                     ->required()
                     ->live(),
@@ -98,49 +90,14 @@ class AbsenceActions
                     ->required(fn (Get $get) => $get('reason_select') === 'other'),
             ])
             ->action(function (array $data, Absence $record) {
-                $day = $record->attendanceDay;
-                $date = $day->date;
-                $existingTypes = $day->events()->pluck('event_type')->toArray();
-                $created = 0;
-
-                if (! in_array('check_in', $existingTypes) && filled($data['check_in_time'])) {
-                    AttendanceEvent::create([
-                        'attendance_day_id' => $day->id,
-                        'event_type' => 'check_in',
-                        'recorded_at' => Carbon::parse($date->format('Y-m-d').' '.$data['check_in_time']),
-                        'source' => 'manual',
-                    ]);
-                    $created++;
-                }
-
-                if (! in_array('check_out', $existingTypes) && filled($data['check_out_time'])) {
-                    AttendanceEvent::create([
-                        'attendance_day_id' => $day->id,
-                        'event_type' => 'check_out',
-                        'recorded_at' => Carbon::parse($date->format('Y-m-d').' '.$data['check_out_time']),
-                        'source' => 'manual',
-                    ]);
-                    $created++;
-                }
-
-                $day->refresh();
-                AttendanceCalculator::apply($day);
-                $day->save();
-
-                $reasonLabels = [
-                    'no_mark' => 'Presente sin marcación — olvido del empleado',
-                    'tech_failure' => 'Falla técnica en el terminal',
-                    'supervisor' => 'Marcación manual autorizada por supervisor',
-                    'data_error' => 'Error de carga previo',
-                    'other' => $data['notes'] ?? 'Otro',
-                ];
-
-                $reviewNotes = $reasonLabels[$data['reason_select']];
-                if ($data['reason_select'] !== 'other' && filled($data['notes'] ?? null)) {
-                    $reviewNotes .= ' — '.$data['notes'];
-                }
-
-                $record->justify(Auth::id(), $reviewNotes);
+                $created = app(AbsenceAttendanceRegistrar::class)->register(
+                    $record,
+                    $data['check_in_time'] ?? null,
+                    $data['check_out_time'] ?? null,
+                    $data['reason_select'],
+                    $data['notes'] ?? null,
+                    Auth::id(),
+                );
 
                 $body = $created > 0
                     ? "Se registraron {$created} marcación(es) manual(es). La ausencia fue justificada."
