@@ -184,6 +184,10 @@ Al crear o editar un contrato, se puede agregar una sección de **Cláusulas Adi
 
 ---
 
+## Contratos vigentes de empleados dados de baja
+
+Si un empleado se marca como **Inactivo** sin pasar por **Terminar contrato** o por **Liquidación**, su contrato sigue «Vigente» y aparece en los reportes y alertas. Un administrador del servidor lo regulariza con `php artisan contracts:close-stale --dry-run` (lista) y luego sin `--dry-run`: termina el contrato con fecha de baja igual a la última asistencia y deja constancia en las notas. Los empleados con una liquidación abierta se informan aparte: su contrato se cierra al **Cerrar** la liquidación. La fecha de terminación ahora se guarda también al usar **Terminar contrato**.
+
 ## Historial de cambios
 
 Cada contrato registra automáticamente todos los cambios de estado, salario, cargo y fechas. El historial está disponible en el tab **Historial de cambios** dentro del detalle del contrato, mostrando quién hizo cada cambio y cuándo.
