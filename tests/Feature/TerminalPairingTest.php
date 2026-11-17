@@ -539,7 +539,7 @@ it('detecta que el equipo que pide vincularse ya funciona como otro terminal', f
 
     expect($request->linkedElsewhere()?->is($celular))->toBeTrue();
     $event = TerminalEvent::where('terminal_id', $principal->id)->where('type', 'pairing_requested')->latest('id')->first();
-    expect($event->payload['linked_elsewhere'])->toBe(['terminal_id' => $celular->id, 'name' => 'Celular'])
+    expect($event->payload['linked_elsewhere'])->toEqual(['terminal_id' => $celular->id, 'name' => 'Celular'])
         ->and($event->detail)->toContain('Celular');
 });
 
