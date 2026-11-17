@@ -29,6 +29,7 @@ class OrgChartRequest extends FormRequest
             'department' => ['nullable', 'integer', Rule::exists('departments', 'id')->where('company_id', $companyId)],
             'q' => ['nullable', 'string', 'max:100'],
             'vacancies' => ['nullable', 'boolean'],
+            'view' => ['nullable', 'in:positions,people'],
         ];
     }
 
@@ -48,6 +49,14 @@ class OrgChartRequest extends FormRequest
     }
 
     /**
+     * Vista elegida: `positions` (por cargos, la de siempre) o `people` (por personas, según «Reporta a»).
+     */
+    public function view(): string
+    {
+        return $this->input('view') === 'people' ? 'people' : 'positions';
+    }
+
+    /**
      * Parámetros de la URL que reproducen los filtros activos (para el enlace al PDF).
      *
      * @return array<string, mixed>
@@ -61,6 +70,7 @@ class OrgChartRequest extends FormRequest
             'department' => $filters['department'],
             'q' => $filters['search'],
             'vacancies' => $filters['vacancies'] ? null : 0,
+            'view' => $this->view() === 'people' ? 'people' : null,
         ], fn ($value) => $value !== null);
     }
 }

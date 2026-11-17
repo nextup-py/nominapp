@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\MobileMarkingFields;
+use App\Filament\Actions\PositionMergeAction;
 use App\Filament\Resources\PositionResource\Pages;
 use App\Filament\Resources\PositionResource\RelationManagers;
 use App\Models\Position;
@@ -244,6 +245,8 @@ class PositionResource extends Resource
                     ->native(false),
             ])
             ->actions([
+                PositionMergeAction::make(),
+
                 DeleteAction::make()
                     ->label('Eliminar')
                     ->icon('heroicon-o-trash')

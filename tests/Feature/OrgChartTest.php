@@ -305,3 +305,68 @@ it('la vista usa los estilos compartidos del panel y ofrece el interruptor de te
         ->toContain('color-scheme')
         ->not->toContain('<style>');
 });
+
+// ─── Organigrama por personas («Reporta a») ──────────────────────────────────
+
+/** @return array<int, string> Nombres del árbol de personas, aplanados con su profundidad. */
+function orgPeopleNames(array $tree, int $depth = 0): array
+{
+    $names = [];
+    foreach ($tree as $person) {
+        $names[] = str_repeat('-', $depth).$person['name'];
+        $names = array_merge($names, orgPeopleNames($person['children'], $depth + 1));
+    }
+
+    return $names;
+}
+
+it('arma el árbol de personas desde «Reporta a» y separa a quienes no tienen superior ni subordinados', function () {
+    $boss = orgEmployee($this->branch, null, 'Jefa');
+    $middle = orgEmployee($this->branch, null, 'Medio');
+    $worker = orgEmployee($this->branch, null, 'Obrero');
+    $alone = orgEmployee($this->branch, null, 'Suelto');
+    $middle->update(['reports_to_id' => $boss->id]);
+    $worker->update(['reports_to_id' => $middle->id]);
+
+    $data = app(OrgChartService::class)->buildPeople($this->company);
+
+    expect(orgPeopleNames($data['tree']))->toBe(['Jefa Pérez', '-Medio Pérez', '--Obrero Pérez'])
+        ->and(array_column($data['without_manager'], 'name'))->toBe(['Suelto Pérez'])
+        ->and($data['stats'])->toBe(['people' => 4, 'heads' => 1, 'without_manager' => 1]);
+});
+
+it('el filtro del organigrama por personas conserva la cadena de superiores del que coincide', function () {
+    $boss = orgEmployee($this->branch, null, 'Jefa');
+    $worker = orgEmployee($this->branch, null, 'Obrero');
+    $other = orgEmployee($this->branch, null, 'Otro');
+    $worker->update(['reports_to_id' => $boss->id]);
+    $other->update(['reports_to_id' => $boss->id]);
+
+    $data = app(OrgChartService::class)->buildPeople($this->company, ['search' => 'obrero']);
+
+    expect(orgPeopleNames($data['tree']))->toBe(['Jefa Pérez', '-Obrero Pérez']);
+});
+
+it('un superior inactivo o de otra empresa no deja a su subordinado fuera del árbol', function () {
+    $inactive = orgEmployee($this->branch, null, 'Baja', employeeStatus: 'inactive');
+    $worker = orgEmployee($this->branch, null, 'Obrero');
+    $worker->update(['reports_to_id' => $inactive->id]);
+
+    $data = app(OrgChartService::class)->buildPeople($this->company);
+
+    expect(array_column($data['without_manager'], 'name'))->toBe(['Obrero Pérez']);
+});
+
+it('la página del organigrama muestra la vista por personas y oculta el PDF', function () {
+    $boss = orgEmployee($this->branch, null, 'Jefa');
+    $worker = orgEmployee($this->branch, null, 'Obrero');
+    $worker->update(['reports_to_id' => $boss->id]);
+
+    $this->get(route('org-chart.show', ['company' => $this->company, 'view' => 'people']))
+        ->assertOk()
+        ->assertSee('Jefa Pérez')
+        ->assertSee('Obrero Pérez')
+        ->assertDontSee('Exportar PDF');
+
+    $this->get(route('org-chart.show', ['company' => $this->company]))->assertOk()->assertSee('Exportar PDF');
+});

@@ -18,11 +18,15 @@ class OrgChartController extends Controller
      */
     public function show(OrgChartRequest $request, Company $company): View
     {
-        $orgData = $this->orgChart->build($company, $request->filters());
+        $view = $request->view();
+        $orgData = $view === 'people'
+            ? $this->orgChart->buildPeople($company, $request->filters())
+            : $this->orgChart->build($company, $request->filters());
 
         return view('org-chart.show', [
             'company' => $company,
             'orgData' => $orgData,
+            'view' => $view,
             'showBranch' => $orgData['showBranch'],
             'filters' => $request->filters(),
             'branches' => $company->branches()->orderBy('name')->pluck('name', 'id'),
