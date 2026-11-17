@@ -34,6 +34,7 @@ Ir a **Asistencias → Terminales**.
    - **Sucursal** — sucursal a la que pertenece. Solo se ofrecen sucursales de empresas activas
    - **Estado** — Activo (por defecto) o Inactivo
    - **Dispositivo** — marca, modelo, número de serie, MAC y notas (todo opcional, sirve para inventario). Marca y modelo se completan solos al vincular cuando el navegador los informa
+   - **Equipo móvil** — activar si el terminal es un celular o tablet que puede salir de la sucursal (por ejemplo, el celular de ventas). Ver **Equipo móvil: ubicación** más abajo
    - **Responsable y garantía** — **Responsable del equipo** y su **teléfono** (a quién llamar si falla), **Fecha de compra** y **Garantía hasta**. Es todo opcional y lo carga una persona: ningún navegador puede detectarlo. El teléfono va sin espacios ni guiones (ej: 0981123456)
    - **Fecha de instalación** e **Instalado por** (opcional)
 3. Guardar
@@ -311,6 +312,7 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Cola de marcaciones atascada** / **normalizada** | La cola dejó de vaciarse o volvió a la normalidad |
 | **Batería baja** / **recuperada** | El nivel cruzó el porcentaje configurado |
 | **Sin cargador** / **Cargador conectado** | El terminal lleva el tiempo configurado sin cargador (por defecto 30 minutos) / se enchufó de nuevo |
+| **Fuera de la sucursal** / **De vuelta en la sucursal** | Un equipo móvil mandó dos lecturas seguidas de ubicación fuera del radio de su sucursal / volvió. El detalle indica la distancia |
 | **Sucursal sin empleados enrolados** / **con empleados enrolados** | La sucursal del terminal se quedó sin ningún empleado activo con rostro registrado, o volvió a tenerlos |
 | **Caché de empleados vacía** / **normalizada** | El terminal en línea reportó 0 empleados en caché habiendo empleados enrolados, o volvió a tenerlos |
 | **Reloj desajustado** / **normalizado** | El reloj del dispositivo pasó (o dejó de pasar) el desfase tolerado |
@@ -476,6 +478,16 @@ El script usa Chrome (o Edge si no está Chrome), crea el acceso directo **Termi
 1. Instalar el sitio como aplicación desde el menú del navegador (en Chrome, el ícono de instalación de la barra de direcciones; en Edge, **Aplicaciones → Instalar este sitio como aplicación**; el nombre exacto varía según la versión). El detalle del terminal pasa a mostrar **Instalada como app**.
 2. Para que arranque con Windows: **Windows + R**, escribir `shell:startup` y copiar ahí el acceso directo de la aplicación.
 3. Ajustar la energía con los pasos de **PC con Windows**.
+
+### Equipo móvil: ubicación
+
+Un terminal marcado como **Equipo móvil** compara su ubicación con la de la **sucursal** (las coordenadas que tiene cargadas) para detectar que se lo llevaron y siguen marcando como si estuvieran allí. Las PC fijas no lo necesitan ni piden ningún permiso.
+
+- El equipo pide el **permiso de ubicación** una vez y lee su posición **cada 10 minutos**, junto al reporte de estado. Solo se guarda la **última lectura** y la distancia: no hay historial de recorridos.
+- El radio es el de la sucursal (**Radio en metros**) y, si no lo tiene, el **radio por defecto** de Configuración General (150 m).
+- Se avisa cuando hay **dos lecturas seguidas fuera del radio** (unos 10 minutos), con el equipo en línea y dentro de su horario de vigilancia. Una lectura imprecisa (peor que el radio) no cuenta. El aviso **Terminal fuera de la sucursal** llega a quien gestiona terminales, aparece en el cartel del panel y las marcaciones **siguen funcionando** con normalidad.
+- Si la sucursal **no tiene coordenadas**, no se verifica nada; el detalle lo dice. Si el equipo no da permiso de ubicación, el detalle muestra **Sin permiso de ubicación** y una recomendación.
+- En el detalle, **Estado del dispositivo → Ubicación** muestra la distancia y la hora de la lectura.
 
 ### Recomendaciones
 

@@ -6,6 +6,7 @@ use App\Notifications\TerminalDeviceReplacedNotification;
 use App\Notifications\TerminalLinkWindowExpiredNotification;
 use App\Notifications\TerminalProvisionedNotification;
 use App\Services\DeviceHintsParser;
+use App\Services\LocationRadiusService;
 use App\Settings\GeneralSettings;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\Authenticatable;
@@ -63,6 +64,7 @@ class Terminal extends Model implements AuthenticatableContract
         'code',
         'branch_id',
         'status',
+        'is_mobile',
         'device_brand',
         'device_model',
         'device_serial',
@@ -120,6 +122,7 @@ class Terminal extends Model implements AuthenticatableContract
         'stale_after_minutes' => 'integer',
         'confirm_exit' => 'boolean',
         'watch_days' => 'array',
+        'is_mobile' => 'boolean',
         'device_report' => 'array',
         'device_report_at' => 'datetime',
         'queue_backlog_since' => 'datetime',
@@ -964,6 +967,37 @@ class Terminal extends Model implements AuthenticatableContract
     }
 
     /**
+     * Ubicación del equipo móvil frente a la de su sucursal según su última lectura, o null si no aplica (no es un equipo
+     * móvil, la sucursal no tiene coordenadas o todavía no mandó ninguna lectura). El radio es el de la sucursal si lo
+     * tiene configurado y, si no, el radio por defecto de Configuración General. Una lectura cuya precisión es peor que
+     * el radio no es confiable: no alcanza para decir que salió.
+     *
+     * @return array{distance_m: int, accuracy_m: int|null, radius_m: int, outside: bool, reliable: bool, read_at: ?Carbon}|null
+     */
+    public function locationStatus(): ?array
+    {
+        $reading = $this->device_report['location'] ?? null;
+        $coordinates = $this->branch?->coordinates;
+
+        if (! $this->is_mobile || ! is_array($reading) || ! isset($reading['lat'], $reading['lng']) || ! is_array($coordinates) || ! isset($coordinates['lat'], $coordinates['lng'])) {
+            return null;
+        }
+
+        $radius = (int) ($this->branch->location_radius_m ?: app(GeneralSettings::class)->attendance_location_default_radius);
+        $distance = (int) round(LocationRadiusService::distanceMeters((float) $coordinates['lat'], (float) $coordinates['lng'], (float) $reading['lat'], (float) $reading['lng']));
+        $accuracy = isset($reading['accuracy_m']) ? (int) $reading['accuracy_m'] : null;
+
+        return [
+            'distance_m' => $distance,
+            'accuracy_m' => $accuracy,
+            'radius_m' => $radius,
+            'outside' => $distance > $radius,
+            'reliable' => $accuracy === null || $accuracy <= $radius,
+            'read_at' => isset($reading['read_at']) ? Carbon::parse($reading['read_at']) : null,
+        ];
+    }
+
+    /**
      * Qué conviene corregir en el equipo según lo que informó en su último reporte, para mostrarlo en el detalle del
      * terminal. Pensado también para equipos que se usan para otra cosa (por ejemplo un celular de ventas): lo que
      * importa es que esté enchufado, con la pantalla encendida y con esta app visible. Vacío si no hay nada que corregir
@@ -994,6 +1028,21 @@ class Terminal extends Model implements AuthenticatableContract
             $recommendations[] = [
                 'title' => 'Mantener la pantalla encendida',
                 'text' => 'El equipo no logra mantener la pantalla encendida'.($reason ? " ({$reason})" : '').'. Quitar el ahorro de energía para esta app, dejarla visible y, en una PC, configurar que nunca se suspenda.',
+            ];
+        }
+
+        if ($this->is_mobile && ($report['location_error'] ?? null) === 'denied') {
+            $recommendations[] = [
+                'title' => 'Permitir la ubicación',
+                'text' => 'Este equipo móvil no tiene permiso de ubicación y no se puede verificar que esté en la sucursal. Permitir la ubicación para el sitio en los ajustes del navegador.',
+            ];
+        }
+
+        $location = $this->locationStatus();
+        if ($location !== null && $location['outside'] && $location['reliable']) {
+            $recommendations[] = [
+                'title' => 'Volver a la sucursal',
+                'text' => "El equipo está a {$location['distance_m']} m de la sucursal (radio de {$location['radius_m']} m). Si se lo llevaron, devolverlo antes de que alguien marque en él.",
             ];
         }
 

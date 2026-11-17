@@ -12,7 +12,7 @@
         <strong>
             {{ count($terminals) === 1 ? '1 terminal necesita atención' : count($terminals).' terminales necesitan atención' }}:
         </strong>
-        {{ collect($terminals)->map(fn ($t) => $t['name'].($t['branch'] ? " ({$t['branch']})" : '').' — '.($t['status'] === 'unlinked' ? 'sin vincular' : 'sin conexión'))->implode('; ') }}.
+        {{ collect($terminals)->map(fn ($t) => $t['name'].($t['branch'] ? " ({$t['branch']})" : '').' — '.['unlinked' => 'sin vincular', 'stale' => 'sin conexión', 'outside' => 'fuera de la sucursal'][$t['status']])->implode('; ') }}.
         <a href="{{ \App\Filament\Resources\TerminalResource::getUrl('index') }}">Ver terminales</a>
     </div>
 @endif

@@ -28,16 +28,31 @@ class TerminalAttentionBanner
                 ->with('branch')
                 ->orderBy('name')
                 ->get()
-                ->filter(fn (Terminal $terminal): bool => ! $terminal->isInactive() && in_array($terminal->connectivity_status, ['unlinked', 'stale'], true))
                 ->map(fn (Terminal $terminal): array => [
                     'id' => $terminal->id,
                     'name' => $terminal->name,
                     'branch' => $terminal->branch?->name,
-                    'status' => $terminal->connectivity_status,
+                    'status' => $terminal->isInactive() ? 'ok' : self::statusOf($terminal),
                 ])
+                ->filter(fn (array $item): bool => $item['status'] !== 'ok')
                 ->values()
                 ->all();
         });
+    }
+
+    /**
+     * Qué le pasa al terminal: `unlinked`, `stale` (sin conexión dentro de su horario), `outside` (equipo móvil fuera de la
+     * sucursal, según su último aviso) u `ok`.
+     */
+    private static function statusOf(Terminal $terminal): string
+    {
+        $connectivity = $terminal->connectivity_status;
+
+        if (in_array($connectivity, ['unlinked', 'stale'], true)) {
+            return $connectivity;
+        }
+
+        return $connectivity === 'online' && ($terminal->health_snapshot['outside'] ?? false) ? 'outside' : 'ok';
     }
 
     /** Si el usuario actual debe ver el cartel: gestiona terminales y el módulo está disponible para su rol. */

@@ -82,6 +82,7 @@ class NotificationCatalog
             'terminal.queue_stuck' => ['Cola de marcaciones atascada', 'Un terminal tiene marcaciones pendientes que no se envían hace más del tiempo configurado.', 'terminal_health', 'update_terminal'],
             'terminal.battery_low' => ['Batería baja', 'Un terminal está por debajo del porcentaje configurado y sin cargador.', 'terminal_health', 'update_terminal'],
             'terminal.no_charger' => ['Terminal sin cargador', 'Un terminal en línea lleva más del tiempo configurado en Configuración General sin cargador, antes de que la batería esté baja. Solo si el navegador informa la batería.', 'terminal_health', 'update_terminal'],
+            'terminal.outside_branch' => ['Terminal fuera de la sucursal', 'Un terminal marcado como equipo móvil mandó dos lecturas seguidas de ubicación fuera del radio de su sucursal. Solo con el equipo en línea y dentro de su horario.', 'terminal_health', 'update_terminal'],
             'terminal.no_enrolled' => ['Sucursal sin empleados enrolados', 'La sucursal de un terminal no tiene ningún empleado activo con rostro registrado.', 'terminal_health', 'update_terminal'],
             'terminal.cache_empty' => ['Terminal sin empleados en caché', 'Un terminal está en línea pero no tiene empleados en su caché local.', 'terminal_health', 'update_terminal'],
             'terminal.clock_skew' => ['Reloj del terminal desajustado', 'La hora de un terminal difiere del servidor más de lo permitido.', 'terminal_health', 'update_terminal'],

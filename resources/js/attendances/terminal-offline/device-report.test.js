@@ -203,3 +203,19 @@ describe('datos del equipo (readDeviceInfo) y device_id', () => {
         expect(report).not.toHaveProperty('language');
     });
 });
+
+describe('collectDeviceReport con ubicación', () => {
+    it('incluye la última lectura de un equipo móvil y su error si no hay permiso', async () => {
+        const reading = { lat: -25.5, lng: -54.6, accuracy_m: 20, read_at: '2026-11-17T12:00:00.000Z' };
+
+        expect((await collectDeviceReport({ nav: {}, win: {}, location: reading })).location).toEqual(reading);
+        expect((await collectDeviceReport({ nav: {}, win: {}, location: { error: 'denied' } })).location_error).toBe('denied');
+    });
+
+    it('sin ubicación (equipo fijo o sin lectura todavía) no manda nada', async () => {
+        const report = await collectDeviceReport({ nav: {}, win: {}, location: null });
+
+        expect(report).not.toHaveProperty('location');
+        expect(report).not.toHaveProperty('location_error');
+    });
+});

@@ -74,6 +74,8 @@ class TerminalEvent extends Model
             'health_offline_reminder' => 'Sigue sin conexión',
             'health_no_charger' => 'Sin cargador',
             'health_charger_ok' => 'Cargador conectado',
+            'health_outside_branch' => 'Fuera de la sucursal',
+            'health_back_in_branch' => 'De vuelta en la sucursal',
             'health_offline' => 'Sin conexión',
             'health_recovered' => 'Reconectado',
             'health_unlinked' => 'Quedó sin vincular',
@@ -125,6 +127,8 @@ class TerminalEvent extends Model
             'health_offline_reminder' => 'danger',
             'health_no_charger' => 'warning',
             'health_charger_ok' => 'success',
+            'health_outside_branch' => 'danger',
+            'health_back_in_branch' => 'success',
             'health_offline' => 'danger',
             'health_recovered' => 'success',
             'health_unlinked' => 'danger',
@@ -178,6 +182,9 @@ class TerminalEvent extends Model
         }
         if (isset($payload['devices'])) {
             $parts[] = $payload['devices'].' equipos distintos en 24 horas';
+        }
+        if (isset($payload['distance_m'])) {
+            $parts[] = 'A '.$payload['distance_m'].' m de la sucursal'.(isset($payload['radius_m']) ? ' (radio de '.$payload['radius_m'].' m)' : '');
         }
         if (isset($payload['hours_offline'])) {
             $parts[] = 'Sin conexión hace '.$payload['hours_offline'].' horas';

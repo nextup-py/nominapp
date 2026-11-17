@@ -138,7 +138,8 @@ export function detectDisplayMode(win, nav = globalThis.navigator) {
  * @param {string|null} [options.deviceId] - identificador aleatorio de este equipo (ver device-identity.js); el servidor lo usa para aprender el del dispositivo vinculado.
  * @param {{samples: number, median_ms: number, p90_ms: number}|null} [options.identification] - tiempo de identificación de las últimas marcaciones (ver identification-stats.js); null si todavía no hubo ninguna.
  * @param {{attempts: number, failures: number, successes: number, msTotal: number}|null} [options.identificationTotals] - contadores acumulados de identificación desde que se cargó la página; el servidor suma la diferencia entre reportes.
- * @returns {Promise<Record<string, string|number|boolean>>}
+ * @param {{lat: number, lng: number, accuracy_m: number|null, read_at: string}|{error: string}|null} [options.location] - última lectura de ubicación de un equipo móvil (ver location-reader.js); solo viaja si el servidor la pidió.
+ * @returns {Promise<Record<string, string|number|boolean|object>>}
  */
 export async function collectDeviceReport({
     nav = globalThis.navigator,
@@ -151,6 +152,7 @@ export async function collectDeviceReport({
     identification = null,
     identificationTotals = null,
     deviceId = null,
+    location = null,
 } = {}) {
     const report = {};
 
@@ -186,6 +188,12 @@ export async function collectDeviceReport({
         report.identification_median_ms = Math.round(identification.median_ms);
         report.identification_p90_ms = Math.round(identification.p90_ms);
         report.identification_samples = Math.round(identification.samples);
+    }
+
+    if (location?.error) {
+        report.location_error = String(location.error);
+    } else if (location && Number.isFinite(location.lat) && Number.isFinite(location.lng)) {
+        report.location = { lat: location.lat, lng: location.lng, accuracy_m: location.accuracy_m ?? null, read_at: location.read_at };
     }
 
     const [battery, camera, storage] = await Promise.all([readBattery(nav), readCameraState(nav), readStorage(nav)]);

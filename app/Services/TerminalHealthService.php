@@ -35,6 +35,9 @@ class TerminalHealthService
     /** Minutos con la versión de la app desactualizada (terminal en línea) antes de avisar. */
     public const APP_OUTDATED_ALERT_MINUTES = 120;
 
+    /** Lecturas de ubicación seguidas fuera del radio para avisar que un equipo móvil salió de la sucursal. */
+    public const OUTSIDE_CONSECUTIVE_READINGS = 2;
+
     /** Horas sin conexión tras las cuales se recuerda una sola vez que el terminal sigue caído. */
     public const OFFLINE_REMINDER_HOURS = 4;
 
@@ -94,6 +97,9 @@ class TerminalHealthService
             'tab_hidden_since' => $previous['tab_hidden_since'] ?? null,
             'no_charger' => (bool) ($previous['no_charger'] ?? false),
             'no_charger_since' => $previous['no_charger_since'] ?? null,
+            'outside' => (bool) ($previous['outside'] ?? false),
+            'outside_hits' => (int) ($previous['outside_hits'] ?? 0),
+            'location_read_at' => $previous['location_read_at'] ?? null,
             'outage_run' => (int) ($previous['outage_run'] ?? 0),
         ];
 
@@ -117,6 +123,7 @@ class TerminalHealthService
                 ...$this->evaluateAppVersion($terminal, $connectivity, $snapshot),
                 ...$this->evaluateDisplay($terminal, $connectivity, $snapshot),
                 ...$this->evaluateCharger($terminal, $connectivity, $snapshot),
+                ...$this->evaluateLocation($terminal, $connectivity, $snapshot),
             ];
         }
 
@@ -475,6 +482,55 @@ class TerminalHealthService
         }
 
         return $alerts;
+    }
+
+    /**
+     * Equipo móvil que sale de la sucursal: cuenta **lecturas** de ubicación (no latidos, que son cada minuto) fuera del
+     * radio y, con `OUTSIDE_CONSECUTIVE_READINGS` seguidas, avisa una vez. Una lectura cuya precisión es peor que el
+     * radio no cuenta ni reinicia (un GPS impreciso no prueba nada). Solo con el equipo en línea y dentro de su horario
+     * de vigilancia; al volver al radio queda en la bitácora.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function evaluateLocation(Terminal $terminal, string $connectivity, array &$snapshot): array
+    {
+        if (! $terminal->is_mobile || $connectivity !== 'online' || ! $terminal->hasFreshDeviceReport() || ! $terminal->isWithinWatchWindow()) {
+            return [];
+        }
+
+        $location = $terminal->locationStatus();
+
+        // Una lectura se cuenta una sola vez: el latido repite la última hasta que hay una nueva.
+        if ($location === null || ! $location['reliable'] || $location['read_at'] === null || $location['read_at']->toIso8601String() === $snapshot['location_read_at']) {
+            return [];
+        }
+
+        $snapshot['location_read_at'] = $location['read_at']->toIso8601String();
+
+        if (! $location['outside']) {
+            $snapshot['outside_hits'] = 0;
+
+            if ($snapshot['outside']) {
+                $snapshot['outside'] = false;
+                $this->record($terminal, 'health_back_in_branch', ['distance_m' => $location['distance_m']]);
+            }
+
+            return [];
+        }
+
+        $snapshot['outside_hits']++;
+
+        if (! $snapshot['outside'] && $snapshot['outside_hits'] >= self::OUTSIDE_CONSECUTIVE_READINGS) {
+            $snapshot['outside'] = true;
+
+            return [$this->raise($terminal, 'outside_branch', 'health_outside_branch', [
+                'distance_m' => $location['distance_m'],
+                'radius_m' => $location['radius_m'],
+            ])];
+        }
+
+        return [];
     }
 
     /**
