@@ -222,6 +222,28 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('horas')
                             ->helperText('Si la última marcación de la jornada de ayer es más antigua que esto, ya no se considera un turno nocturno en curso: una salida nueva no se le asigna y queda como conflicto. 0 = sin límite.'),
 
+                        TextInput::make('attendance_late_tolerance_minutes')
+                            ->label('Tolerancia de tardanza')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(60)
+                            ->default(5)
+                            ->suffix('minutos')
+                            ->helperText('Hasta este margen de atraso en la entrada no se considera tardanza. Pasado el margen cuentan todos los minutos de atraso (con 5, llegar 7 minutos tarde son 7 minutos de tardanza). 0 = sin tolerancia. Aplica a las jornadas que se calculen desde ahora; las ya calculadas no cambian salvo que se recalculen.'),
+
+                        TextInput::make('attendance_overtime_tolerance_minutes')
+                            ->label('Tolerancia de horas extra')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(120)
+                            ->default(15)
+                            ->suffix('minutos')
+                            ->helperText('Hasta este margen de tiempo trabajado por encima del horario no se considera hora extra (salir unos minutos tarde o llegar un poco antes). Pasado el margen cuenta todo el tiempo extra. 0 = sin tolerancia. Aplica a las jornadas que se calculen desde ahora.'),
+
                         Toggle::make('attendance_auto_close_enabled')
                             ->label('Cerrar solo las jornadas sin salida')
                             ->live()

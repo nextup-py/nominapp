@@ -12,6 +12,7 @@ use App\Models\Schedule;
 use App\Models\ShiftOverride;
 use App\Models\ShiftTemplate;
 use App\Models\WarningSuspensionDay;
+use App\Settings\GeneralSettings;
 use App\Settings\PayrollSettings;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -453,20 +454,25 @@ class AttendanceCalculator
     {
         if ($totalHours !== null && $expectedHours !== null) {
             $extraHours = $totalHours - $expectedHours;
+            $tolerance = max(0, (int) app(GeneralSettings::class)->attendance_overtime_tolerance_minutes);
 
-            return $extraHours > 0 ? round($extraHours, 2) : 0;
+            // Hasta la tolerancia no es hora extra (salir unos minutos tarde o llegar un poco antes); pasada, cuenta todo.
+            return $extraHours * 60 > $tolerance ? round($extraHours, 2) : 0;
         }
 
         return null;
     }
 
     /**
-     * Calcula los minutos de llegada tarde comparando instantes reales.
+     * Calcula los minutos de llegada tarde comparando instantes reales, respetando la tolerancia configurada.
      */
     private static function calculateLateMinutes(?Carbon $expectedIn, ?Carbon $actualIn): ?int
     {
         if ($expectedIn && $actualIn) {
-            return $actualIn->greaterThan($expectedIn) ? (int) $expectedIn->diffInMinutes($actualIn, true) : 0;
+            $late = $actualIn->greaterThan($expectedIn) ? (int) $expectedIn->diffInMinutes($actualIn, true) : 0;
+
+            // Hasta la tolerancia no es tardanza; pasada, cuentan todos los minutos de atraso.
+            return $late > max(0, (int) app(GeneralSettings::class)->attendance_late_tolerance_minutes) ? $late : 0;
         }
 
         return null;

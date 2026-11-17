@@ -26,6 +26,12 @@ class GeneralSettings extends Settings
     /** Horas máximas desde la última marcación de una jornada abierta de ayer para seguir tratándola como turno nocturno en curso; 0 = sin límite. */
     public int $attendance_overnight_max_hours;
 
+    /** Minutos de atraso en la entrada que no cuentan como tardanza; pasado ese margen cuentan todos los minutos. 0 = sin tolerancia. */
+    public int $attendance_late_tolerance_minutes;
+
+    /** Minutos de tiempo trabajado sobre el horario que no cuentan como hora extra (salir un poco tarde, llegar un poco antes); pasado ese margen cuenta todo. 0 = sin tolerancia. */
+    public int $attendance_overtime_tolerance_minutes;
+
     /** Cierra solo, cada madrugada, las jornadas abiertas de días anteriores (ver `attendance:auto-close-open-shifts`). */
     public bool $attendance_auto_close_enabled;
 

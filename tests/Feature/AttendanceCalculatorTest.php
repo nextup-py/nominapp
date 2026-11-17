@@ -893,3 +893,45 @@ it('la marca de doble turno no afecta a un día de un solo turno', function () {
 
     expect((float) $day->extra_hours)->toBe(2.0);
 });
+
+// ─── Tolerancias de tardanza y de horas extra ────────────────────────────────
+
+it('no cuenta como tardanza el atraso dentro de la tolerancia y pasada cuenta todos los minutos', function () {
+    seedAttSettings();
+    app(GeneralSettings::class)->attendance_late_tolerance_minutes = 5;
+
+    $minutesLate = function (string $checkIn): int {
+        $day = makeAttDay(makeAttEmployee(), '2026-03-16', ['expected_check_in' => '08:00:00', 'expected_check_out' => '17:00:00', 'expected_hours' => 9.0]);
+        addEvent($day, 'check_in', $checkIn);
+        addEvent($day, 'check_out', '17:00:00');
+        AttendanceCalculator::apply($day);
+
+        return (int) $day->late_minutes;
+    };
+
+    expect($minutesLate('08:05:00'))->toBe(0)
+        ->and($minutesLate('08:06:00'))->toBe(6);
+
+    app(GeneralSettings::class)->attendance_late_tolerance_minutes = 0;
+    expect($minutesLate('08:01:00'))->toBe(1);
+});
+
+it('no cuenta como hora extra el tiempo dentro de la tolerancia y pasada cuenta todo', function () {
+    seedAttSettings();
+    app(GeneralSettings::class)->attendance_overtime_tolerance_minutes = 15;
+
+    $extra = function (string $checkOut): float {
+        $day = makeAttDay(makeAttEmployee(), '2026-03-16', ['expected_check_in' => '08:00:00', 'expected_check_out' => '17:00:00', 'expected_hours' => 9.0]);
+        addEvent($day, 'check_in', '08:00:00');
+        addEvent($day, 'check_out', $checkOut);
+        AttendanceCalculator::apply($day);
+
+        return (float) $day->extra_hours;
+    };
+
+    expect($extra('17:15:00'))->toBe(0.0)
+        ->and($extra('17:16:00'))->toBe(0.27);
+
+    app(GeneralSettings::class)->attendance_overtime_tolerance_minutes = 0;
+    expect($extra('17:10:00'))->toBe(0.17);
+});
