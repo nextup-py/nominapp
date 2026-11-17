@@ -38,6 +38,7 @@ class ReportsIndex extends Page
             ],
             'Asistencia' => [
                 ['page' => AttendanceReport::class, 'description' => 'Horas trabajadas, tardanzas y ausencias por período.'],
+                ['page' => HolidayWorkReport::class, 'description' => 'Trabajo en feriados y domingos, con el recargo que correspondería sobre el turno normal.'],
             ],
             'Créditos' => [
                 ['page' => AdvanceReport::class, 'description' => 'Adelantos de salario por estado y período.'],
