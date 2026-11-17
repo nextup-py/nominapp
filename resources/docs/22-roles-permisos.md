@@ -97,6 +97,25 @@ Además de los módulos, estas pantallas y descargas también dependen del rol:
 
 ---
 
+## Gestionar usuarios
+
+En **Configuración → Usuarios** el listado tiene pestañas **Todos**, **Activos**, **Inactivos** y **Sin rol** (cada una con su cantidad), filtro por **Rol** y las columnas **Roles**, **Estado** y **Último acceso** (la ficha de empleado vinculada se puede mostrar desde el selector de columnas).
+
+| Acción | Qué hace |
+|--------|----------|
+| **Nuevo Usuario** | Crea el usuario definiendo su contraseña. |
+| **Invitar por correo** | Crea el usuario sin contraseña y le envía un enlace para que la defina él mismo. |
+| **Desactivar / Activar** (menú de la fila) | Un usuario inactivo no puede entrar al panel y se le cierran las sesiones abiertas; conserva su historial. |
+| **Enviar enlace de contraseña** | Envía por correo un enlace para definir una contraseña nueva (también sirve si la olvidó). |
+| **Cerrar sesiones** | Cierra todas las sesiones abiertas del usuario. |
+| **Eliminar** | Borra el usuario para siempre; si solo hay que impedir que entre, usar Desactivar. |
+
+> No se puede desactivar ni eliminar al propio usuario ni al **último Super Admin activo**. El envío de enlaces e invitaciones requiere el correo configurado en **Configuración General → Correo**; si no sale, el usuario igualmente se crea y se puede reenviar el enlace después. La pantalla de ingreso muestra **¿Olvidaste tu contraseña?** para que cada persona lo pida sola.
+
+También se puede crear el usuario de un empleado desde su ficha (**Empleados → ver empleado → Crear usuario**): usa el correo de la ficha, vincula la ficha al usuario y envía la invitación; solo aparece si el empleado está activo y aún no tiene usuario. Quien tiene el permiso **Crear Usuario** puede invitar, pero solo un Super Admin puede asignar roles.
+
+---
+
 ## Notas importantes
 
 - Solo un usuario con rol **Super Admin** puede ver el módulo de Roles y asignar roles a otros usuarios — el resto de los usuarios ni siquiera ve esas pantallas en el menú.

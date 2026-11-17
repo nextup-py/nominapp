@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,6 +22,9 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
 
     protected $guard_name = 'web';
 
+    /** @var array<string, mixed> Valores por defecto de un usuario recién creado en memoria. */
+    protected $attributes = ['is_active' => true];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -32,6 +36,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'password',
         'avatar_path',
         'employee_id',
+        'is_active',
     ];
 
     /**
@@ -54,12 +59,42 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 
+    /** Solo entra al panel un usuario activo y con al menos un rol. */
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->roles()->exists();
+        return $this->is_active && $this->roles()->exists();
+    }
+
+    /** Usuarios activos. */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('users.is_active', true);
+    }
+
+    /**
+     * Motivo por el que no se puede desactivar ni eliminar a este usuario, o null si se puede: no a uno mismo y
+     * nunca al último Super Admin activo (nadie podría volver a administrar el sistema).
+     */
+    public function lockoutBlocker(?User $actor): ?string
+    {
+        if ($actor !== null && $actor->is($this)) {
+            return 'No podés hacerlo sobre tu propio usuario.';
+        }
+
+        if ($this->is_active && $this->hasRole('Super Admin')) {
+            $others = static::query()->active()->whereHas('roles', fn ($q) => $q->where('name', 'Super Admin'))
+                ->whereKeyNot($this->getKey())->exists();
+
+            if (! $others) {
+                return 'Es el último Super Admin activo: el sistema quedaría sin administrador.';
+            }
+        }
+
+        return null;
     }
 
     /** URL de la foto de perfil para el avatar del panel (null = iniciales). */

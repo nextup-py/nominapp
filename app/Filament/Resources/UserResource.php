@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\UserAccountActions;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use App\Support\PasswordPolicy;
@@ -9,13 +10,15 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
@@ -113,6 +116,14 @@ class UserResource extends Resource
             ]);
     }
 
+    /** Consulta del listado: roles y ficha precargados y el último ingreso calculado en la misma consulta. */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['roles:id,name', 'employee:id,first_name,last_name'])
+            ->withMax('loginHistories as last_login_at', 'logged_in_at');
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -123,51 +134,72 @@ class UserResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('email')
-                    ->label('Email')
+                    ->label('Correo electrónico')
                     ->searchable()
                     ->sortable()
                     ->copyable()
                     ->icon('heroicon-o-envelope'),
 
-                TextColumn::make('email')
-                    ->label('Correo Electrónico')
-                    ->searchable()
-                    ->sortable(),
+                TextColumn::make('roles.name')
+                    ->label('Roles')
+                    ->badge()
+                    ->color('primary')
+                    ->placeholder('Sin rol'),
+
+                TextColumn::make('is_active')
+                    ->label('Estado')
+                    ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'danger'),
+
+                TextColumn::make('last_login_at')
+                    ->label('Último acceso')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->placeholder('Nunca ingresó'),
+
+                TextColumn::make('employee.full_name')
+                    ->label('Ficha de empleado')
+                    ->placeholder('Sin ficha vinculada')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('created_at')
                     ->label('Registrado')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
-                    ->toggleable(),
-
-                TextColumn::make('updated_at')
-                    ->label('Actualizado')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                SelectFilter::make('role')
+                    ->label('Rol')
+                    ->relationship('roles', 'name')
+                    ->preload(),
             ])
             ->actions([
-                EditAction::make()
-                    ->label('Editar')
-                    ->icon('heroicon-o-pencil-square')
-                    ->color('primary'),
-                DeleteAction::make()
-                    ->label('Eliminar')
-                    ->icon('heroicon-o-trash')
-                    ->color('danger')
-                    ->modalHeading('¿Eliminar usuario?')
-                    ->modalSubmitActionLabel('Sí, eliminar'),
-            ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                ActionGroup::make([
+                    EditAction::make()
+                        ->label('Editar')
+                        ->icon('heroicon-o-pencil-square'),
+                    UserAccountActions::toggleActive(),
+                    UserAccountActions::sendPasswordLink(),
+                    UserAccountActions::closeSessions(),
+                    DeleteAction::make()
+                        ->label('Eliminar')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->before(function (User $record, DeleteAction $action): void {
+                            if ($blocker = $record->lockoutBlocker(auth()->user())) {
+                                Notification::make()->danger()->title('No se puede eliminar')->body($blocker)->send();
+                                $action->halt();
+                            }
+                        })
+                        ->modalHeading('¿Eliminar usuario?')
+                        ->modalDescription('Se pierde el acceso para siempre. Si solo querés impedir que entre, usá Desactivar.')
+                        ->modalSubmitActionLabel('Sí, eliminar'),
                 ]),
             ])
+            ->bulkActions([])
             ->emptyStateHeading('No hay usuarios registrados')
             ->emptyStateDescription('Comienza creando un nuevo usuario del sistema.')
             ->emptyStateIcon('heroicon-o-users');

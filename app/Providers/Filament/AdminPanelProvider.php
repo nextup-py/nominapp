@@ -36,6 +36,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('')
             ->login()
+            ->passwordReset()
             ->profile(EditProfile::class, isSimple: false)
             ->favicon(asset('icons/favicon.ico'))
             ->brandLogo(asset('images/branding/nominapp-isotipo.png'))
