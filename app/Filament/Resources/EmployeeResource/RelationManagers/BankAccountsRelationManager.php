@@ -164,6 +164,7 @@ class BankAccountsRelationManager extends RelationManager
             ])
             ->actions([
                 Action::make('mark_primary')
+                    ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
                     ->label('Marcar como principal')
                     ->icon('heroicon-o-star')
                     ->color('warning')
@@ -183,6 +184,7 @@ class BankAccountsRelationManager extends RelationManager
                     }),
 
                 Action::make('toggle_status')
+                    ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
                     ->label(fn (EmployeeBankAccount $record) => $record->isActive() ? 'Desactivar' : 'Reactivar')
                     ->icon(fn (EmployeeBankAccount $record) => $record->isActive() ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
                     ->color(fn (EmployeeBankAccount $record) => $record->isActive() ? 'danger' : 'success')
@@ -224,7 +226,7 @@ class BankAccountsRelationManager extends RelationManager
                     ->modalHeading('¿Eliminar cuenta bancaria?')
                     ->modalDescription('¿Estás seguro? Solo se puede eliminar si la cuenta nunca fue usada en una nómina.')
                     ->modalSubmitActionLabel('Sí, eliminar')
-                    ->before(function (EmployeeBankAccount $record, \Filament\Tables\Actions\DeleteAction $action) {
+                    ->before(function (EmployeeBankAccount $record, DeleteAction $action) {
                         if ($record->payrolls()->exists()) {
                             Notification::make()
                                 ->danger()

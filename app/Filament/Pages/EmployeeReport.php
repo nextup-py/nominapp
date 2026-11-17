@@ -157,7 +157,10 @@ class EmployeeReport extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         $columnOptions = EmployeeReportExport::availableColumns();
-        $columnDefaults = EmployeeReportExport::defaultColumns();
+        if (! EmployeeReportExport::canSeeSalary()) {
+            unset($columnOptions['salary']);
+        }
+        $columnDefaults = EmployeeReportExport::visibleColumns(EmployeeReportExport::defaultColumns());
         $orientationThreshold = 8;
 
         $f = $this->tableFilters ?? [];
@@ -229,7 +232,7 @@ class EmployeeReport extends Page implements HasTable
                         'endDateUntil' => $endDateUntil,
                     ], fn ($v) => $v !== null);
 
-                    $params['columns'] = implode(',', $data['columns']);
+                    $params['columns'] = implode(',', EmployeeReportExport::visibleColumns($data['columns']));
                     $params['orientation'] = $data['orientation'] ?? 'portrait';
 
                     $url = route('employees.report.pdf', $params);
@@ -268,7 +271,7 @@ class EmployeeReport extends Page implements HasTable
                         new EmployeeReportExport(
                             $companyId, $branchId, $gender, $birthMonth, $status,
                             $departmentId, $contractType, $paymentMethod,
-                            $data['columns'],
+                            EmployeeReportExport::visibleColumns($data['columns']),
                             $registeredFrom, $registeredUntil, $endDateFrom, $endDateUntil
                         ),
                         'empleados_'.now()->format('Y_m_d_H_i').'.xlsx'
@@ -383,6 +386,7 @@ class EmployeeReport extends Page implements HasTable
                     )
                     ->alignRight()
                     ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('contracts.salary', $direction))
+                    ->visible(fn (): bool => EmployeeReportExport::canSeeSalary())
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('contract_type')

@@ -436,6 +436,7 @@ class ContractsRelationManager extends RelationManager
             ])
             ->headerActions([
                 Action::make('new_contract')
+                    ->authorize(fn (): bool => auth()->user()?->can('create_contract') ?? false)
                     ->label('Nuevo Contrato')
                     ->icon('heroicon-o-plus')
                     ->url(fn () => ContractResource::getUrl('create').'?employee_id='.$this->getOwnerRecord()->id)
@@ -450,6 +451,7 @@ class ContractsRelationManager extends RelationManager
                     ->openUrlInNewTab(),
 
                 Action::make('upload_signed')
+                    ->authorize(fn (): bool => auth()->user()?->can('update_contract') ?? false)
                     ->label(fn (Contract $record) => $record->document_path ? 'Reemplazar' : 'Subir Firmado')
                     ->icon(fn (Contract $record) => $record->document_path ? 'heroicon-o-arrow-path' : 'heroicon-o-arrow-up-tray')
                     ->color(fn (Contract $record) => $record->document_path ? 'warning' : 'success')
@@ -495,6 +497,7 @@ class ContractsRelationManager extends RelationManager
 
                 ActionGroup::make([
                     Action::make('suspend_contract')
+                        ->authorize(fn (): bool => auth()->user()?->can('suspend_contract') ?? false)
                         ->label('Suspender contrato')
                         ->icon('heroicon-o-pause-circle')
                         ->color('warning')
@@ -510,6 +513,7 @@ class ContractsRelationManager extends RelationManager
                         }),
 
                     Action::make('reactivate_contract')
+                        ->authorize(fn (): bool => auth()->user()?->can('reactivate_contract') ?? false)
                         ->label('Reactivar contrato')
                         ->icon('heroicon-o-play-circle')
                         ->color('success')

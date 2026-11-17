@@ -120,6 +120,7 @@ class EmployeeDeductionsRelationManager extends RelationManager
             ->filters([$this->vigenciaEstadoFilter()])
             ->headerActions([
                 Action::make('assign_mandatory')
+                    ->authorize(fn (): bool => auth()->user()?->can('update_employee') ?? false)
                     ->label('Asignar obligatorias')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')

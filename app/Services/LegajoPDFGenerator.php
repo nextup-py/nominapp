@@ -31,6 +31,7 @@ class LegajoPDFGenerator
         $pdf = Pdf::loadView('pdf.legajo', [
             'employee' => $employee,
             'contract' => $employee->activeContract,
+            'showSalary' => auth()->user()?->can('view_any_contract') ?? false,
             'companyLogo' => $logoPath ? storage_path('app/public/'.$logoPath) : null,
             'companyName' => $company?->name ?? '',
             'companyRuc' => $company?->ruc ?? '',

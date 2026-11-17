@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Contract;
 use App\Models\Employee;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromQuery;
@@ -41,6 +42,23 @@ class EmployeeReportExport implements FromQuery, ShouldAutoSize, WithHeadings, W
         if (empty($this->columns)) {
             $this->columns = array_keys(static::availableColumns());
         }
+    }
+
+    /** Si el usuario actual puede ver salarios (permiso de contratos). */
+    public static function canSeeSalary(): bool
+    {
+        return auth()->user()?->can('view_any_contract') ?? false;
+    }
+
+    /**
+     * Quita de las columnas pedidas las que el usuario actual no puede ver (hoy, el salario sin permiso de contratos).
+     *
+     * @param  array<int, string>  $columns
+     * @return array<int, string>
+     */
+    public static function visibleColumns(array $columns): array
+    {
+        return static::canSeeSalary() ? $columns : array_values(array_diff($columns, ['salary']));
     }
 
     /**
@@ -127,8 +145,8 @@ class EmployeeReportExport implements FromQuery, ShouldAutoSize, WithHeadings, W
             ->when($this->departmentId, fn ($q) => $q->where('contracts.department_id', $this->departmentId))
             ->when($this->contractType, fn ($q) => $q->where('contracts.type', $this->contractType))
             ->when($this->paymentMethod, fn ($q) => $q->where('contracts.payment_method', $this->paymentMethod))
-            ->when($this->registeredFrom, fn ($q) => $q->where('employees.created_at', '>=', \Carbon\Carbon::parse($this->registeredFrom)->startOfDay()))
-            ->when($this->registeredUntil, fn ($q) => $q->where('employees.created_at', '<=', \Carbon\Carbon::parse($this->registeredUntil)->endOfDay()))
+            ->when($this->registeredFrom, fn ($q) => $q->where('employees.created_at', '>=', Carbon::parse($this->registeredFrom)->startOfDay()))
+            ->when($this->registeredUntil, fn ($q) => $q->where('employees.created_at', '<=', Carbon::parse($this->registeredUntil)->endOfDay()))
             ->when($this->endDateFrom || $this->endDateUntil, fn ($q) => $q->whereHas('contracts', function ($q2) {
                 if ($this->endDateFrom) {
                     $q2->where('end_date', '>=', $this->endDateFrom);
@@ -172,12 +190,12 @@ class EmployeeReportExport implements FromQuery, ShouldAutoSize, WithHeadings, W
             'gender' => $genderOptions[$row->gender] ?? '',
             'age' => $row->birth_date ? $row->birth_date->age : '',
             'birthday' => $row->birth_date ? $row->birth_date->day.' de '.$row->birth_date->locale('es')->isoFormat('MMMM') : '',
-            'hire_date' => $row->hire_date ? \Carbon\Carbon::parse($row->hire_date)->format('d/m/Y') : '',
+            'hire_date' => $row->hire_date ? Carbon::parse($row->hire_date)->format('d/m/Y') : '',
             'years_of_service' => (function () use ($row): string {
                 if (! $row->hire_date || $row->status !== 'active') {
                     return '';
                 }
-                $hire = \Carbon\Carbon::parse($row->hire_date);
+                $hire = Carbon::parse($row->hire_date);
                 $years = (int) $hire->diffInYears(now());
                 $totalMonths = (int) $hire->diffInMonths(now());
                 if ($years >= 1) {
@@ -192,8 +210,8 @@ class EmployeeReportExport implements FromQuery, ShouldAutoSize, WithHeadings, W
 
                 return $days.' día'.($days !== 1 ? 's' : '');
             })(),
-            'registered_at' => $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y') : '',
-            'end_date' => $row->last_end_date ? \Carbon\Carbon::parse($row->last_end_date)->format('d/m/Y') : '',
+            'registered_at' => $row->created_at ? Carbon::parse($row->created_at)->format('d/m/Y') : '',
+            'end_date' => $row->last_end_date ? Carbon::parse($row->last_end_date)->format('d/m/Y') : '',
             'salary' => $row->salary ? (float) $row->salary : '',
             'contract_type' => $contractTypes[$row->contract_type] ?? '',
             'payment_method' => $paymentMethods[$row->payment_method] ?? '',
