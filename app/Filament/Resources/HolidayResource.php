@@ -3,19 +3,24 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\HolidayResource\Pages;
+use App\Models\AttendanceDay;
 use App\Models\Holiday;
+use App\Services\HolidayWorkforce;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -53,6 +58,15 @@ class HolidayResource extends Resource
                             ->required()
                             ->columnSpan(1),
 
+                        Select::make('type')
+                            ->label('Tipo')
+                            ->options(Holiday::getTypeOptions())
+                            ->default(Holiday::TYPE_FIXED)
+                            ->native(false)
+                            ->required()
+                            ->helperText('Los fijos se copian solos al año siguiente; los móviles y los días no laborables hay que cargarlos a mano cada año.')
+                            ->columnSpan(1),
+
                         TextInput::make('name')
                             ->label('Nombre')
                             ->placeholder('Ejemplo: Día de la Independencia')
@@ -83,6 +97,21 @@ class HolidayResource extends Resource
                     ->sortable()
                     ->wrap(),
 
+                TextColumn::make('type')
+                    ->label('Tipo')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => Holiday::getTypeLabels()[$state] ?? (string) $state)
+                    ->color(fn (?string $state): string => Holiday::getTypeColors()[$state] ?? 'gray')
+                    ->sortable(),
+
+                TextColumn::make('worked')
+                    ->label('Trabajaron')
+                    ->state(fn (Holiday $record): ?int => $record->date->lte(today())
+                        ? AttendanceDay::whereDate('date', $record->date)->whereNotNull('check_in_time')->count()
+                        : null)
+                    ->placeholder('—')
+                    ->tooltip('Empleados con marcación ese día (solo fechas ya pasadas)'),
+
                 TextColumn::make('day_of_week')
                     ->label('Día')
                     ->getStateUsing(fn ($record) => ucfirst(Carbon::parse($record->date)->locale('es')->dayName))
@@ -102,6 +131,10 @@ class HolidayResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('type')
+                    ->label('Tipo')
+                    ->options(Holiday::getTypeOptions()),
+
                 Filter::make('current_year')
                     ->label('Año Actual')
                     ->query(fn (Builder $query) => $query->whereYear('date', now()->year)),
@@ -115,6 +148,15 @@ class HolidayResource extends Resource
                     ->query(fn (Builder $query) => $query->where('date', '>=', now()->startOfDay())),
             ])
             ->actions([
+                Action::make('who_works')
+                    ->label('Quién trabaja')
+                    ->icon('heroicon-o-users')
+                    ->color('gray')
+                    ->modalHeading(fn (Holiday $record): string => $record->name.' — '.$record->date->format('d/m/Y'))
+                    ->modalWidth('3xl')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Cerrar')
+                    ->modalContent(fn (Holiday $record) => view('filament.holidays.workforce', ['data' => HolidayWorkforce::forDate($record->date)])),
                 EditAction::make()
                     ->label('Editar')
                     ->icon('heroicon-o-pencil-square')

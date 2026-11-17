@@ -4,11 +4,12 @@ namespace App\Filament\Resources\HolidayResource\Pages;
 
 use App\Filament\Resources\HolidayResource;
 use App\Models\Holiday;
+use App\Support\HolidayCatalog;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ManageRecords;
-use Illuminate\Support\HtmlString;
 
 class ManageHolidays extends ManageRecords
 {
@@ -21,50 +22,23 @@ class ManageHolidays extends ManageRecords
                 ->label('Cargar Feriados Nacionales')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('info')
-                ->requiresConfirmation()
-                ->modalHeading('Cargar Feriados Nacionales de Paraguay')
-                ->modalDescription(new HtmlString('
-                <div>
-                    <p class="mb-3">Esto agregará los feriados nacionales de Paraguay para el año <strong>' . now()->year . '</strong>.</p>
-                    <p class="mb-2 font-semibold">Feriados a importar:</p>
-                    <ul class="list-disc list-inside space-y-1 text-sm">
-                        <li>Año Nuevo (1 de enero)</li>
-                        <li>Día de los Héroes (1 de marzo)</li>
-                        <li>Día del Trabajador (1 de mayo)</li>
-                        <li>Día de la Independencia Nacional (15 de mayo)</li>
-                        <li>Día de la Paz del Chaco (12 de junio)</li>
-                        <li>Fundación de Asunción (15 de agosto)</li>
-                        <li>Día de la Victoria de Boquerón (29 de septiembre)</li>
-                        <li>Día de la Virgen de Caacupé (8 de diciembre)</li>
-                        <li>Navidad (25 de diciembre)</li>
-                    </ul>
-                    <p class="mt-3 text-xs text-gray-500">Los feriados ya existentes no se duplicarán.</p>
-                </div>
-            '))
-                ->action(function () {
-                    $year = now()->year;
-                    $holidays = [
-                        ['date' => "$year-01-01", 'name' => 'Año Nuevo'],
-                        ['date' => "$year-03-01", 'name' => 'Día de los Héroes'],
-                        ['date' => "$year-05-01", 'name' => 'Día del Trabajador'],
-                        ['date' => "$year-05-15", 'name' => 'Día de la Independencia Nacional'],
-                        ['date' => "$year-06-12", 'name' => 'Paz del Chaco'],
-                        ['date' => "$year-08-15", 'name' => 'Fundación de Asunción'],
-                        ['date' => "$year-09-29", 'name' => 'Día de la Victoria de Boquerón'],
-                        ['date' => "$year-12-08", 'name' => 'Día de la Virgen de Caacupé'],
-                        ['date' => "$year-12-25", 'name' => 'Navidad'],
-                    ];
-
-                    $imported = 0;
-                    foreach ($holidays as $holiday) {
-                        if (!Holiday::where('date', $holiday['date'])->exists()) {
-                            Holiday::create($holiday);
-                            $imported++;
-                        }
-                    }
+                ->modalHeading('Cargar los feriados nacionales fijos')
+                ->modalDescription('Agrega los feriados de fecha fija (Año Nuevo, Héroes, Trabajador, Independencia, Paz del Chaco, Fundación de Asunción, Boquerón, Caacupé y Navidad). Los móviles (Jueves y Viernes Santo, traslados a lunes y días no laborables) hay que cargarlos a mano cada año. Los que ya existan no se duplican.')
+                ->modalSubmitActionLabel('Cargar')
+                ->form([
+                    Select::make('year')
+                        ->label('Año')
+                        ->options(fn (): array => collect(range(now()->year, now()->year + 2))->mapWithKeys(fn (int $y): array => [$y => (string) $y])->all())
+                        ->default(now()->year)
+                        ->native(false)
+                        ->required(),
+                ])
+                ->action(function (array $data): void {
+                    $imported = HolidayCatalog::load((int) $data['year']);
 
                     Notification::make()
-                        ->title($imported > 0 ? "Se agregaron $imported feriados" : 'Todos los feriados ya existen')
+                        ->title($imported > 0 ? "Se agregaron {$imported} feriados de {$data['year']}" : 'Todos los feriados fijos ya existen')
+                        ->body('Recordá cargar a mano los móviles: Jueves y Viernes Santo, traslados a lunes y días no laborables.')
                         ->success()
                         ->send();
                 }),
@@ -89,31 +63,31 @@ class ManageHolidays extends ManageRecords
                 ->label('Copiar al Próximo Año')
                 ->icon('heroicon-o-document-duplicate')
                 ->requiresConfirmation()
-                ->modalHeading('Copiar Feriados al Próximo Año')
-                ->modalDescription('Esto copiará todos los feriados del año actual al próximo año. Los feriados que ya existan en el próximo año no se duplicarán.')
-                ->action(function () {
-                    $currentYear = now()->year;
-                    $nextYear = $currentYear + 1;
-
-                    $holidays = Holiday::whereYear('date', $currentYear)->get();
-                    $created = 0;
-
-                    foreach ($holidays as $holiday) {
-                        $newDate = \Carbon\Carbon::parse($holiday->date)->addYear();
-                        if (!Holiday::where('date', $newDate)->exists()) {
-                            Holiday::create([
-                                'date' => $newDate,
-                                'name' => $holiday->name,
-                            ]);
-                            $created++;
-                        }
-                    }
+                ->modalHeading('Copiar los feriados fijos al próximo año')
+                ->modalDescription('Copia al próximo año solo los feriados de tipo «Nacional fijo» del año actual. Los móviles y los días no laborables cambian de fecha cada año y no se copian: hay que cargarlos a mano. Los que ya existan no se duplican.')
+                ->modalSubmitActionLabel('Sí, copiar')
+                ->action(function (): void {
+                    $result = HolidayCatalog::copyFixed(now()->year);
 
                     Notification::make()
-                        ->title("Se copiaron $created feriados al año $nextYear")
+                        ->title("Se copiaron {$result['created']} feriados fijos al año ".(now()->year + 1))
+                        ->body($result['skipped_moving'] === [] ? null : 'Cargá a mano los móviles: '.implode(', ', $result['skipped_moving']).'.')
                         ->success()
                         ->send();
                 }),
+
+            Action::make('calendar')
+                ->label('Calendario')
+                ->icon('heroicon-o-calendar-days')
+                ->color('gray')
+                ->modalHeading('Calendario de feriados')
+                ->modalWidth('5xl')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Cerrar')
+                ->modalContent(fn () => view('filament.holidays.calendar', [
+                    'years' => [now()->year, now()->year + 1],
+                    'holidays' => Holiday::whereYear('date', '>=', now()->year)->whereYear('date', '<=', now()->year + 1)->get()->keyBy(fn (Holiday $h): string => $h->date->toDateString()),
+                ])),
 
             CreateAction::make()
                 ->label('Nuevo Feriado')

@@ -9,6 +9,7 @@ use App\Models\Payroll;
 use App\Models\Vacation;
 use App\Models\VacationBalance;
 use App\Settings\PayrollSettings;
+use App\Support\HolidayCatalog;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
@@ -490,6 +491,11 @@ class VacationService
 
         if ($businessDays < 1) {
             $errors[] = 'El período seleccionado no contiene días hábiles.';
+        }
+
+        // 2b. Sin feriados cargados para el año, el descuento de días puede ser incorrecto
+        if (HolidayCatalog::isMissing($startDate->year)) {
+            $warnings[] = "No hay feriados cargados para {$startDate->year}: los días descontados pueden estar de más. Cargalos en Catálogos → Feriados.";
         }
 
         // 3. Verificar mínimo de días consecutivos (fraccionamiento)
