@@ -402,8 +402,10 @@ it('quien abrió la ventana de vinculación no recibe el aviso de que el termina
     $terminal->openLinkWindow($opener);
     $terminal->claimSanctumToken(via: 'pairing');
 
+    // «Terminal provisionado» es informativo: llega en el resumen diario por defecto, no al instante.
     expect($opener->notifications()->count())->toBe(0)
-        ->and($colleague->notifications()->count())->toBe(1);
+        ->and(NotificationDigestItem::where('user_id', $opener->id)->count())->toBe(0)
+        ->and(NotificationDigestItem::where('user_id', $colleague->id)->count())->toBe(1);
 });
 
 it('quien generó el enlace de configuración tampoco recibe el aviso', function () {
@@ -415,7 +417,8 @@ it('quien generó el enlace de configuración tampoco recibe el aviso', function
     $terminal->claimSanctumToken();
 
     expect($author->notifications()->count())->toBe(0)
-        ->and($colleague->notifications()->count())->toBe(1);
+        ->and(NotificationDigestItem::where('user_id', $author->id)->count())->toBe(0)
+        ->and(NotificationDigestItem::where('user_id', $colleague->id)->count())->toBe(1);
 });
 
 // ─── Avisos que ya llegan una vez al día ────────────────────────────────────

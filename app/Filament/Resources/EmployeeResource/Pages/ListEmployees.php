@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\EmployeeResource\Pages;
 
 use App\Exports\EmployeesTemplateExport;
+use App\Filament\Actions\ReportingLineActions;
 use App\Filament\Pages\EmployeeReport;
 use App\Filament\Resources\EmployeeResource;
 use App\Imports\EmployeesImport;
@@ -35,6 +36,8 @@ class ListEmployees extends ListRecords
                 ->icon('heroicon-o-chart-bar')
                 ->color('gray')
                 ->url(EmployeeReport::getUrl()),
+
+            ReportingLineActions::rule(),
 
             ActionGroup::make([
                 Action::make('download_employees_template')

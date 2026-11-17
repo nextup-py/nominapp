@@ -90,7 +90,7 @@ class NotificationCatalog
 
             'terminal.pairing_requested' => ['Solicitud de vinculación', 'Un dispositivo pidió vincularse a un terminal con un código y espera aprobación.', 'terminal_linking', 'update_terminal'],
             'terminal.device_replaced' => ['Dispositivo reemplazado en un terminal', 'Un dispositivo nuevo se vinculó a un terminal cuyo dispositivo anterior seguía en línea: el anterior quedó sin acceso. Suele indicar dos equipos abiertos en la misma URL. Queda siempre en la bitácora del terminal.', 'terminal_linking', 'update_terminal'],
-            'terminal.provisioned' => ['Terminal provisionado', 'Un dispositivo completó su vinculación. No llega a quien generó el enlace o abrió la ventana.', 'terminal_linking', 'update_terminal', ['channels' => ['database', 'mail']]],
+            'terminal.provisioned' => ['Terminal provisionado', 'Un dispositivo completó su vinculación. No llega a quien generó el enlace o abrió la ventana.', 'terminal_linking', 'update_terminal', ['channels' => ['database', 'mail'], 'frequency' => self::FREQUENCY_DIGEST]],
             'terminal.link_window_expired' => ['Ventana de vinculación vencida', 'La ventana que abriste venció sin que ningún dispositivo la usara.', 'terminal_linking', 'update_terminal'],
             'terminal.command_expired' => ['Comando remoto vencido', 'Un comando que enviaste a un terminal venció sin aplicarse.', 'terminal_linking', 'update_terminal'],
 
@@ -102,7 +102,7 @@ class NotificationCatalog
             'attendance.face_enrollment' => ['Autoenrolamiento facial pendiente', 'Un empleado completó su registro facial y espera aprobación.', 'attendance', 'update_face_enrollment'],
 
             'contract.alert' => ['Contratos por vencer o vencidos', 'Contratos que se acercan a su fecha de fin o ya vencieron.', 'contracts_devices', 'view_any_contract', ['digestable' => false, 'mail_when_configured' => true]],
-            'device.mobile_linked' => ['Celular vinculado', 'Un empleado vinculó su celular para marcar asistencia.', 'contracts_devices', 'view_any_employee_device'],
+            'device.mobile_linked' => ['Celular vinculado', 'Un empleado vinculó su celular para marcar asistencia.', 'contracts_devices', 'view_any_employee_device', ['frequency' => self::FREQUENCY_DIGEST]],
             'device.mobile_relinked' => ['Celular re-vinculado', 'Un empleado vinculó un celular nuevo y se revocó el anterior.', 'contracts_devices', 'view_any_employee_device', ['mandatory' => true, 'channels' => ['database', 'mail']]],
             'device.mobile_link_blocked' => ['Vinculación de celular sin permiso', 'Un empleado no habilitado para marcar desde el celular intentó vincularlo.', 'contracts_devices', 'update_employee'],
             'approvals.pending' => ['Solicitudes pendientes de aprobar', 'Resumen diario de adelantos, préstamos, retiros de mercadería y permisos que esperan una decisión de quien los aprueba. Solo le llega a quien tiene permiso de aprobar alguno de ellos.', 'approvals', ['approve_advance', 'approve_loan', 'approve_merchandise_withdrawal', 'approve_employee_leave'], ['digestable' => false]],
@@ -126,7 +126,7 @@ class NotificationCatalog
                 'enabled' => $overrides['enabled'] ?? true,
                 'channels' => $overrides['channels'] ?? [self::CHANNEL_DATABASE],
                 'mail_when_configured' => $overrides['mail_when_configured'] ?? false,
-                'frequency' => self::FREQUENCY_INSTANT,
+                'frequency' => $overrides['frequency'] ?? self::FREQUENCY_INSTANT,
             ];
         }
 

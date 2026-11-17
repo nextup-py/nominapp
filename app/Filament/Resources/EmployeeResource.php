@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\MobileMarkingFields;
+use App\Filament\Actions\ReportingLineActions;
 use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Resources\EmployeeResource\Pages;
 use App\Filament\Resources\EmployeeResource\RelationManagers;
@@ -288,7 +289,8 @@ class EmployeeResource extends Resource
                             ->native(false)
                             ->nullable()
                             ->placeholder('Sin superior directo')
-                            ->helperText('Superior jerárquico directo del empleado.'),
+                            ->rules(fn (?Employee $record) => [ReportingLineActions::managerRule($record)])
+                            ->helperText('Superior jerárquico directo del empleado. No puede ser él mismo ni alguien que ya le reporte, directa o indirectamente.'),
 
                         Select::make('status')
                             ->label('Estado')
@@ -871,6 +873,13 @@ class EmployeeResource extends Resource
                     ->color('primary')
                     ->default('-'),
 
+                TextColumn::make('reportsTo.full_name')
+                    ->label('Reporta a')
+                    ->icon('heroicon-o-user')
+                    ->placeholder('Sin superior directo')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->wrap(),
+
                 TextColumn::make('branch.name')
                     ->label('Sucursal')
                     ->icon('heroicon-o-building-storefront')
@@ -1081,6 +1090,11 @@ class EmployeeResource extends Resource
                     ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
                         ? $query->privacyConsentStatus($data['value'])
                         : $query),
+
+                Filter::make('without_manager')
+                    ->label('Sin superior directo')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->whereNull('reports_to_id')),
 
                 Filter::make('without_schedule')
                     ->label('Sin horario asignado')
@@ -1298,6 +1312,8 @@ class EmployeeResource extends Resource
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
+
+                    ReportingLineActions::bulkAssign(),
 
                     BulkAction::make('set_advance_percent')
                         ->label('Configurar adelanto automático')
