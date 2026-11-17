@@ -163,31 +163,48 @@ class EmployeeLeave extends Model implements Auditable
         $this->update($updates);
 
         // Solo justifica ausencias en licencias de día completo
-        $justifiedDates = [];
-        if (! $this->isPartialDay()) {
-            $absences = Absence::where('employee_id', $this->employee_id)
-                ->whereHas('attendanceDay', fn ($q) => $q->whereBetween('date', [$this->start_date, $this->end_date]))
-                ->whereIn('status', ['pending', 'unjustified'])
-                ->with('attendanceDay')
-                ->get();
-
-            $typeLabel = self::getTypeOptions()[$this->type] ?? $this->type;
-            $period = $this->start_date->format('d/m/Y').' al '.$this->end_date->format('d/m/Y');
-
-            foreach ($absences as $absence) {
-                $absence->justify(
-                    $approvedById,
-                    "Justificada por licencia: {$typeLabel} ({$period})",
-                    $this->id
-                );
-                $justifiedDates[] = $absence->attendanceDay->date->copy();
-            }
-        }
+        $justified = $this->justifyAbsences($approvedById);
 
         return [
-            'justified_count' => count($justifiedDates),
-            'justified_dates' => $justifiedDates,
+            'justified_count' => count($justified),
+            'justified_dates' => $justified,
         ];
+    }
+
+    /**
+     * Justifica las ausencias del empleado dentro del período de esta licencia (solo de día completo).
+     * Lo usa `approve()` y el comando `leaves:justify-absences`, que repara licencias aprobadas por un camino que
+     * no justificó sus ausencias. Es idempotente: una ausencia ya justificada no se vuelve a tocar.
+     *
+     * @param  list<string>  $statuses  Estados de ausencia a justificar (por defecto pendientes e injustificadas).
+     * @return list<Carbon> Fechas de las ausencias justificadas.
+     */
+    public function justifyAbsences(int $reviewedById, array $statuses = ['pending', 'unjustified']): array
+    {
+        if ($this->isPartialDay()) {
+            return [];
+        }
+
+        $absences = Absence::where('employee_id', $this->employee_id)
+            ->whereHas('attendanceDay', fn ($q) => $q->whereBetween('date', [$this->start_date, $this->end_date]))
+            ->whereIn('status', $statuses)
+            ->with('attendanceDay')
+            ->get();
+
+        $typeLabel = self::getTypeOptions()[$this->type] ?? $this->type;
+        $period = $this->start_date->format('d/m/Y').' al '.$this->end_date->format('d/m/Y');
+        $justifiedDates = [];
+
+        foreach ($absences as $absence) {
+            $absence->justify(
+                $reviewedById,
+                "Justificada por licencia: {$typeLabel} ({$period})",
+                $this->id
+            );
+            $justifiedDates[] = $absence->attendanceDay->date->copy();
+        }
+
+        return $justifiedDates;
     }
 
     /** Rechaza la licencia. */

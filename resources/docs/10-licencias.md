@@ -77,6 +77,8 @@ El descuento se registra como una deducción y se aplica en la **siguiente nómi
 | **Aprobado** | Autorizado |
 | **Rechazado** | No autorizado |
 
+> **El estado solo cambia con Aprobar o Rechazar.** En el formulario de edición el campo **Estado** se muestra pero no se puede modificar: antes se podía cambiar a «Aprobado» desde ahí, y eso no justificaba las ausencias del período (una licencia de maternidad quedó aprobada con 82 ausencias pendientes en **Por resolver**).
+
 ---
 
 ## Aprobar o rechazar un permiso
