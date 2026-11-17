@@ -230,6 +230,36 @@ class OpenShiftCloser
     }
 
     /**
+     * Cierra la jornada con la mejor regla disponible: la hora del horario; si quedó en un descanso, el inicio de
+     * descanso marcado cerca de la salida; si su última marcación es posterior a la salida del horario, esa marcación.
+     * Devuelve la regla usada (`schedule`, `break_as_exit` o `last_mark`) o el motivo por el que se omitió.
+     *
+     * @return array{closed_with: string|null, skip: string|null}
+     *
+     * @throws \InvalidArgumentException Si la secuencia resultante no es válida.
+     */
+    public function closeBest(AttendanceDay $day): array
+    {
+        $skip = $this->close($day);
+
+        if ($skip === null) {
+            return ['closed_with' => 'schedule', 'skip' => null];
+        }
+
+        $strategy = match ($skip) {
+            self::SKIP_ON_BREAK => self::STRATEGY_BREAK_AS_EXIT,
+            self::SKIP_EXIT_BEFORE_LAST_EVENT => self::STRATEGY_LAST_MARK,
+            default => null,
+        };
+
+        if ($strategy !== null && $this->closeWithRealMark($day, $strategy) === null) {
+            return ['closed_with' => $strategy, 'skip' => null];
+        }
+
+        return ['closed_with' => null, 'skip' => $skip];
+    }
+
+    /**
      * Indica si la primera marcación del día está demasiado lejos del inicio del horario esperado: suele ser la
      * salida del turno anterior marcada como entrada, y cerrarla con la salida del horario daría una jornada de
      * casi 24 horas. Se compara también contra el inicio del día anterior y del siguiente (turnos que cruzan medianoche).

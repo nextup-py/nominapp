@@ -26,6 +26,18 @@ class GeneralSettings extends Settings
     /** Horas máximas desde la última marcación de una jornada abierta de ayer para seguir tratándola como turno nocturno en curso; 0 = sin límite. */
     public int $attendance_overnight_max_hours;
 
+    /** Cierra solo, cada madrugada, las jornadas abiertas de días anteriores (ver `attendance:auto-close-open-shifts`). */
+    public bool $attendance_auto_close_enabled;
+
+    /** Hora ("HH:MM") a la que corre el cierre automático. */
+    public string $attendance_auto_close_time;
+
+    /** Avisa cada noche a quienes ven asistencias de quién se fue sin marcar la salida (ver `attendance:notify-no-exit-today`). */
+    public bool $attendance_no_exit_notice_enabled;
+
+    /** Hora ("HH:MM") a la que se envía el aviso del mismo día. */
+    public string $attendance_no_exit_notice_time;
+
     public float $face_threshold;
 
     public float $face_min_confidence_gap;

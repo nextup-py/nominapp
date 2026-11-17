@@ -9,6 +9,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -220,6 +221,33 @@ class ManageGeneralSettings extends SettingsPage
                             ->default(16)
                             ->suffix('horas')
                             ->helperText('Si la última marcación de la jornada de ayer es más antigua que esto, ya no se considera un turno nocturno en curso: una salida nueva no se le asigna y queda como conflicto. 0 = sin límite.'),
+
+                        Toggle::make('attendance_auto_close_enabled')
+                            ->label('Cerrar solo las jornadas sin salida')
+                            ->live()
+                            ->helperText('Cada día, a la hora indicada, el sistema cierra las jornadas abiertas de los últimos 7 días: con la salida del horario o, si quedó un descanso o una marcación cerca de la hora de salida, con esa marcación real. Respeta nóminas generadas y decisiones de RR.HH., y deja un resumen en la campanita. Apagado = RR.HH. las cierra a mano.'),
+
+                        TimePicker::make('attendance_auto_close_time')
+                            ->label('Hora del cierre automático')
+                            ->seconds(false)
+                            ->native(false)
+                            ->format('H:i')
+                            ->required()
+                            ->visible(fn (Get $get): bool => (bool) $get('attendance_auto_close_enabled'))
+                            ->helperText('Conviene antes de que empiece la jornada y después de que terminen los turnos nocturnos.'),
+
+                        Toggle::make('attendance_no_exit_notice_enabled')
+                            ->label('Avisar cada noche quién se fue sin marcar la salida')
+                            ->live()
+                            ->helperText('Una notificación a quienes ven asistencias con la lista de los empleados cuyo turno terminó hace más de 1 hora y siguen sin salida, para consultarles mientras se acuerdan. No se repite mientras el aviso anterior siga sin leer.'),
+
+                        TimePicker::make('attendance_no_exit_notice_time')
+                            ->label('Hora del aviso')
+                            ->seconds(false)
+                            ->native(false)
+                            ->format('H:i')
+                            ->required()
+                            ->visible(fn (Get $get): bool => (bool) $get('attendance_no_exit_notice_enabled')),
 
                         Toggle::make('attendance_mobile_marking_default')
                             ->label('Permitir marcar desde el celular por defecto')

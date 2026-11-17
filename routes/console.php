@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AttendanceMarkFailure;
+use App\Support\ConfiguredTime;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -110,6 +111,21 @@ Schedule::command('contracts:notify-expiring')
  */
 Schedule::command('attendance:notify-open-shifts')
     ->dailyAt('08:52')
+    ->withoutOverlapping();
+
+/**
+ * Cierre automático de jornadas sin salida y aviso del mismo día: corren a la hora configurada en Configuración
+ * General (y solo si están activados). Se revisa cada minuto sin lanzar un proceso: el comando solo se ejecuta
+ * en el minuto exacto.
+ */
+Schedule::command('attendance:auto-close-open-shifts')
+    ->everyMinute()
+    ->when(fn () => ConfiguredTime::isDue('attendance_auto_close_enabled', 'attendance_auto_close_time'))
+    ->withoutOverlapping();
+
+Schedule::command('attendance:notify-no-exit-today')
+    ->everyMinute()
+    ->when(fn () => ConfiguredTime::isDue('attendance_no_exit_notice_enabled', 'attendance_no_exit_notice_time'))
     ->withoutOverlapping();
 
 /**

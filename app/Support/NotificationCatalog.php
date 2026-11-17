@@ -95,6 +95,8 @@ class NotificationCatalog
             'terminal.command_expired' => ['Comando remoto vencido', 'Un comando que enviaste a un terminal venció sin aplicarse.', 'terminal_linking', 'update_terminal'],
 
             'attendance.open_shifts' => ['Jornadas sin salida', 'Resumen diario de jornadas con entrada y sin salida registrada.', 'attendance', 'view_any_attendance_day', ['digestable' => false]],
+            'attendance.auto_closed' => ['Jornadas cerradas automáticamente', 'Resumen del cierre automático de jornadas sin salida: cuántas se cerraron solas y cuántas quedan para revisar. Solo se envía si el cierre automático está activado.', 'attendance', 'view_any_attendance_day', ['digestable' => false]],
+            'attendance.no_exit_today' => ['Quién se fue sin marcar la salida hoy', 'Aviso de la noche con los empleados cuyo turno terminó hace más de 1 hora y siguen sin salida, para consultarles mientras se acuerdan.', 'attendance', 'view_any_attendance_day', ['digestable' => false]],
             'attendance.no_schedule' => ['Empleados sin horario', 'Resumen diario de empleados activos sin horario asignado.', 'attendance', 'update_schedule', ['digestable' => false]],
             'attendance.sync_conflict' => ['Conflicto de sincronización', 'Una marcación hecha sin conexión no pudo registrarse y necesita revisión.', 'attendance', 'update_attendance_mark_failure'],
             'attendance.face_enrollment' => ['Autoenrolamiento facial pendiente', 'Un empleado completó su registro facial y espera aprobación.', 'attendance', 'update_face_enrollment'],
