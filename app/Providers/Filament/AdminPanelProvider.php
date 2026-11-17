@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\MyNotifications;
 use App\Http\Middleware\EnsureSetupIsComplete;
+use App\Support\PanelGlobalSearchProvider;
 use App\Support\ThemeResolver;
 use EightyNine\FilamentDocs\FilamentDocsPlugin;
 use Filament\FontProviders\LocalFontProvider;
@@ -87,6 +88,10 @@ class AdminPanelProvider extends PanelProvider
                     ->url(fn (): string => MyNotifications::getUrl()),
             ])
             ->databaseNotifications()
+            ->globalSearch(PanelGlobalSearchProvider::class)
+            ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
+            ->globalSearchFieldKeyBindingSuffix()
+            ->globalSearchDebounce('300ms')
             ->plugin(FilamentDocsPlugin::make())
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')

@@ -25,6 +25,15 @@ El menú se organiza en grupos: **Asistencias** (monitor en vivo, pendientes, as
 
 Los reportes están reunidos en una sola entrada, **Reportes**, con tarjetas por tema. **Balances de Vacaciones** está dentro de **Empleados**, junto a **Vacaciones**.
 
+## Búsqueda global
+
+El campo de búsqueda de la barra superior (o el atajo **Ctrl+K**, **Cmd+K** en Mac) encuentra:
+
+- **Empleados:** por nombre, apellido o CI (se pueden escribir varias palabras, por ejemplo *marta nog*). Cada resultado muestra la **CI**, la **sucursal** y el **estado**; los empleados dados de baja salen al final con la marca **(Inactivo)**. Se busca desde la segunda letra y el resultado abre la ficha del empleado.
+- **Pantallas:** el nombre de cualquier listado o página del panel, incluidos los reportes (por ejemplo *terminales*, *por resolver* o *salud del sistema*), sin importar mayúsculas ni tildes.
+
+> Solo aparece lo que cada usuario puede abrir: quien no tiene permiso para ver empleados no ve esa categoría, y las pantallas de un módulo sin acceso no se listan.
+
 ## Jerarquía de datos
 
 Dos ejes independientes que se unen en el Contrato:

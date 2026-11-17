@@ -62,16 +62,6 @@ class CompanyResource extends Resource
     }
 
     /**
-     * Campos de la búsqueda global del panel.
-     *
-     * @return array<int, string>
-     */
-    public static function getGloballySearchableAttributes(): array
-    {
-        return ['name', 'trade_name', 'ruc', 'employer_number'];
-    }
-
-    /**
      * Define el formulario para crear y editar empresas, organizado en secciones para mejorar la usabilidad.
      */
     public static function form(Form $form): Form

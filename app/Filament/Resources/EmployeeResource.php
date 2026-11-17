@@ -54,6 +54,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
@@ -105,6 +106,58 @@ class EmployeeResource extends Resource
     /**
      * Define el formulario para crear y editar empleados.
      */
+    /**
+     * Campos de la búsqueda global: nombre, apellido y CI (cada palabra escrita debe coincidir con alguno).
+     *
+     * @return array<int, string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['first_name', 'last_name', 'ci'];
+    }
+
+    /** Máximo de empleados en la búsqueda global. */
+    public static function getGlobalSearchResultsLimit(): int
+    {
+        return 8;
+    }
+
+    /** Activos primero y, dentro de cada grupo, por nombre; con la sucursal precargada para el detalle. */
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()
+            ->with('branch')
+            ->orderByRaw("employees.status = 'active' desc")
+            ->orderBy('first_name')
+            ->orderBy('last_name');
+    }
+
+    /** Nombre completo; los dados de baja llevan la marca «(Inactivo)» para no abrirlos por error. */
+    public static function getGlobalSearchResultTitle(Model $record): string
+    {
+        return $record->full_name.($record->status === 'active' ? '' : ' (Inactivo)');
+    }
+
+    /**
+     * Detalle de cada resultado: CI, sucursal y estado.
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'CI' => (string) $record->ci,
+            'Sucursal' => $record->branch?->name ?? 'Sin sucursal',
+            'Estado' => $record->status_label,
+        ];
+    }
+
+    /** Lleva a la ficha del empleado (no a la edición). */
+    public static function getGlobalSearchResultUrl(Model $record): ?string
+    {
+        return static::canView($record) ? static::getUrl('view', ['record' => $record]) : null;
+    }
+
     public static function form(Form $form): Form
     {
         return $form

@@ -27,6 +27,16 @@ class ReportsIndex extends Page
      *
      * @return array<string, list<array{page: class-string<Page>, description: string}>>
      */
+    /**
+     * Páginas de reporte del catálogo (las usa la búsqueda global para encontrarlas aunque no estén en el menú).
+     *
+     * @return list<class-string<Page>>
+     */
+    public static function reportPages(): array
+    {
+        return collect(self::catalog())->flatten(1)->pluck('page')->all();
+    }
+
     protected static function catalog(): array
     {
         return [
