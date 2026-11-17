@@ -7,7 +7,7 @@ use Spatie\Permission\Models\Permission;
 
 /**
  * Siembra el catálogo de permisos CRUD (view_any/view/create/update/delete)
- * para cada uno de los 33 modelos con Resource en Filament.
+ * para cada uno de los modelos con Resource en Filament.
  *
  * No incluye permisos de acciones de negocio (aprobar, cerrar, exportar...)
  * — esos se agregan en un seeder posterior (ver Plan 2 de roles/permisos).
@@ -18,7 +18,7 @@ class PermissionSeeder extends Seeder
         'absence', 'advance', 'aguinaldo', 'aguinaldo_period',
         'attendance_day', 'attendance_event', 'attendance_mark_failure',
         'branch', 'company', 'contract', 'contract_template',
-        'deduction', 'department', 'disbursement_batch',
+        'deduction', 'department', 'disbursement_batch', 'document', 'document_type',
         'employee', 'employee_device', 'employee_leave',
         'face_enrollment', 'holiday', 'liquidacion', 'loan',
         'merchandise_withdrawal', 'payroll', 'payroll_period',
@@ -51,6 +51,8 @@ class PermissionSeeder extends Seeder
         'deduction' => 'Deducción',
         'department' => 'Departamento',
         'disbursement_batch' => 'Lote Bancario',
+        'document' => 'Documento del Empleado',
+        'document_type' => 'Tipo de Documento',
         'employee' => 'Empleado',
         'employee_device' => 'Dispositivo de Empleado',
         'employee_leave' => 'Permiso/Licencia',
@@ -76,8 +78,8 @@ class PermissionSeeder extends Seeder
     ];
 
     public const GROUPS = [
-        'Organización' => ['company', 'branch', 'department', 'position', 'contract_template'],
-        'Empleados' => ['employee', 'contract', 'employee_device', 'face_enrollment', 'vacation', 'warning', 'employee_leave', 'holiday'],
+        'Organización' => ['company', 'branch', 'department', 'position', 'contract_template', 'document_type'],
+        'Empleados' => ['employee', 'contract', 'document', 'employee_device', 'face_enrollment', 'vacation', 'warning', 'employee_leave', 'holiday'],
         'Asistencia' => ['attendance_day', 'attendance_event', 'attendance_mark_failure', 'terminal', 'schedule', 'shift_template', 'rotation_pattern', 'team'],
         'Nómina y Créditos' => ['payroll', 'payroll_period', 'period', 'deduction', 'perception', 'loan', 'advance', 'merchandise_withdrawal', 'liquidacion', 'aguinaldo', 'aguinaldo_period', 'disbursement_batch', 'absence'],
         'Configuración' => ['user', 'system_health'],
