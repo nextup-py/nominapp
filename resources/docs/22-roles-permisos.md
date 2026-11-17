@@ -14,7 +14,7 @@ El sistema trae 4 roles ya configurados de fábrica, más 3 roles sugeridos (se 
 | **RRHH** | CRUD completo sobre empleados, contratos, asistencia, permisos/licencias, amonestaciones, vacaciones, horarios, dispositivos, terminales y sucursales. |
 | **Contador/Nómina** | CRUD completo sobre nómina, préstamos, adelantos, retiros de mercadería, liquidación, aguinaldo, deducciones/percepciones y lotes bancarios. Solo lectura sobre empleados y contratos. |
 | **Solo Lectura** | Puede ver (listado y detalle) todos los módulos, sin poder crear, editar ni eliminar nada. |
-| **Jefe de equipo** *(sugerido)* | Ve en **Mi equipo** el monitor en vivo y las asistencias de las personas que le reportan, directa o indirectamente. No accede al resto del panel. |
+| **Jefe de equipo** *(sugerido)* | Ve en **Mi equipo** el estado de hoy de las personas que le reportan, directa o indirectamente (solo consulta). No accede al resto del panel. |
 | **Supervisor de sucursal** *(sugerido)* | Igual que Jefe de equipo, y además ve a todo el personal de su sucursal. |
 | **Encargado de asistencia** *(sugerido)* | Aprueba tardanzas y horas extra, corrige marcaciones y resuelve ausencias de toda la empresa. No ve nómina ni salarios. |
 | **RRHH** (documentos) | Además de lo anterior, gestiona los **documentos de los legajos** y el catálogo de **tipos de documento**. Los permisos son propios (**Documento del Empleado** y **Tipo de Documento**): ni Contador/Nómina ni Soporte TI los tienen por defecto. |

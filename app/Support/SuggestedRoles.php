@@ -20,7 +20,7 @@ class SuggestedRoles
     {
         return [
             'Jefe de equipo' => [
-                'description' => 'Ve en «Mi equipo» el monitor en vivo y las asistencias de las personas que le reportan, directa o indirectamente. No accede al resto del panel.',
+                'description' => 'Ve en «Mi equipo» el estado de hoy de las personas que le reportan, directa o indirectamente (solo consulta). No accede al resto del panel.',
                 'permissions' => ['view_team'],
             ],
             'Supervisor de sucursal' => [
