@@ -20,7 +20,7 @@ class RoleSeeder extends Seeder
                 'attendance_day', 'attendance_event', 'attendance_mark_failure',
                 'employee_leave', 'warning', 'vacation', 'schedule', 'shift_template',
                 'rotation_pattern', 'holiday', 'face_enrollment', 'employee_device',
-                'terminal', 'branch', 'absence',
+                'terminal', 'branch', 'absence', 'document', 'document_type',
             ]),
             [
                 'approve_employee_leave', 'reject_employee_leave', 'cancel_employee_leave',

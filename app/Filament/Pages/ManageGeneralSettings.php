@@ -308,6 +308,15 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('días antes')
                             ->helperText('Un resumen diario avisa de los contratos cuya prueba termina en estos días. 0 apaga el aviso.'),
 
+                        TextInput::make('document_alert_days')
+                            ->label('Aviso de documentos por vencer')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(365)
+                            ->default(30)
+                            ->suffix('días antes')
+                            ->helperText('Un resumen avisa de los documentos de los legajos que vencen en estos días y de los que ya vencieron. 0 apaga el aviso.'),
+
                         Toggle::make('contract_force_indefinite_on_second_renewal')
                             ->label('Pasar a indefinido en la segunda renovación (Art. 53 CLT)')
                             ->default(true)

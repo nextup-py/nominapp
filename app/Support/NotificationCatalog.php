@@ -107,6 +107,7 @@ class NotificationCatalog
 
             'contract.alert' => ['Contratos por vencer o vencidos', 'Contratos que se acercan a su fecha de fin o ya vencieron.', 'contracts_devices', 'view_any_contract', ['digestable' => false, 'mail_when_configured' => true]],
             'contract.trial_ending' => ['Fin del período de prueba', 'Resumen diario de los contratos cuyo período de prueba termina en los próximos días (se configuran en Configuración General). No se repite mientras el anterior siga sin leer.', 'contracts_devices', 'view_any_contract', ['digestable' => false]],
+            'document.expiring' => ['Documentos de legajos por vencer o vencidos', 'Resumen de los documentos de los empleados (cédula, carné de salud…) que vencieron o vencen en los próximos días (se configuran en Configuración General). Cada documento se avisa una vez al entrar en cada estado.', 'contracts_devices', 'view_any_document'],
             'device.mobile_linked' => ['Celular vinculado', 'Un empleado vinculó su celular para marcar asistencia.', 'contracts_devices', 'view_any_employee_device', ['frequency' => self::FREQUENCY_DIGEST]],
             'device.mobile_relinked' => ['Celular re-vinculado', 'Un empleado vinculó un celular nuevo y se revocó el anterior.', 'contracts_devices', 'view_any_employee_device', ['mandatory' => true, 'channels' => ['database', 'mail']]],
             'device.mobile_link_blocked' => ['Vinculación de celular sin permiso', 'Un empleado no habilitado para marcar desde el celular intentó vincularlo.', 'contracts_devices', 'update_employee'],

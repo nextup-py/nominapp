@@ -102,6 +102,18 @@ Desde la pestaña **Amonestaciones** en el perfil del empleado se pueden ver y r
 
 ---
 
+## Documentos del empleado
+
+La pestaña **Documentos** del perfil guarda los archivos del legajo: cédula, carné de salud, certificados, contratos firmados, etc.
+
+- **Subir documento:** se elige el **Tipo de documento** (opcional), el **nombre**, el **Vencimiento** y el archivo (PDF, imágenes u Office, hasta 10 MB). Al elegir un tipo se completa el nombre. Si el tipo tiene vencimiento, la fecha es obligatoria.
+- **Tipos de documento:** los define cada empresa en **Catálogos → Tipos de documento**, y marca cuáles vencen. Un tipo inactivo no se ofrece al subir, pero los documentos ya cargados lo conservan.
+- **Vencimiento:** la columna **Vencimiento** muestra la fecha y el estado (**Vigente**, **Por vencer**, **Vencido**) y el filtro **Vencimiento** lista cada grupo. Un resumen avisa de los que vencen en los próximos días (se configura en **Configuración General → Contratos**, «Aviso de documentos por vencer», 30 días por defecto; 0 lo apaga) y de los que ya vencieron; cada documento se avisa una vez por estado y vuelve a avisarse si se cambia su fecha.
+- **Privacidad:** los documentos nuevos son privados: no tienen una dirección pública y se descargan con el botón **Descargar**, que exige el permiso **Ver Documento del Empleado**. Los subidos antes de esta versión siguen donde estaban.
+- **Permisos:** subir, editar y eliminar piden **Crear**, **Editar** y **Eliminar Documento del Empleado**. RR.HH. los tiene; Contador/Nómina y Soporte TI no ven la pestaña.
+
+---
+
 ## Legajo del empleado
 
 El legajo es un resumen completo del empleado en PDF. Para generarlo:
