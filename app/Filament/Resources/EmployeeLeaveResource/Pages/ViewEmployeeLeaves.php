@@ -4,8 +4,10 @@ namespace App\Filament\Resources\EmployeeLeaveResource\Pages;
 
 use App\Filament\Resources\EmployeeLeaveResource;
 use App\Models\Absence;
+use App\Services\EmployeeLeaveDeductionService;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Auth;
@@ -47,7 +49,7 @@ class ViewEmployeeLeaves extends ViewRecord
                         ->whereIn('status', ['pending', 'unjustified'])
                         ->count();
 
-                    $base = 'Se aprobará la licencia del empleado.';
+                    $base = 'Se aprobará la licencia del empleado.'.EmployeeLeaveResource::fullDayDeductionPreview($record);
                     if ($count > 0) {
                         $base .= " Se justificarán automáticamente {$count} ausencia(s) registrada(s) en el período.";
                     }
@@ -59,26 +61,7 @@ class ViewEmployeeLeaves extends ViewRecord
                 ->action(function () {
                     $result = $this->record->approve(Auth::id());
 
-                    if ($this->record->isPartialDay()) {
-                        $body = $this->record->generates_deduction
-                            ? 'El permiso fue aprobado. Se generó un descuento para la próxima nómina.'
-                            : 'El permiso fue aprobado.';
-                    } else {
-                        $count = $result['justified_count'];
-                        $dates = $result['justified_dates'] ?? [];
-
-                        if ($count === 0) {
-                            $body = 'La licencia fue aprobada. No había ausencias pendientes en el período.';
-                        } elseif ($count <= 5) {
-                            $dateList = collect($dates)
-                                ->sortBy(fn ($d) => $d->timestamp)
-                                ->map(fn ($d) => $d->translatedFormat('d/m'))
-                                ->join(', ');
-                            $body = "Se justificaron {$count} ausencia(s): {$dateList}.";
-                        } else {
-                            $body = "Se justificaron {$count} ausencias del período automáticamente.";
-                        }
-                    }
+                    $body = EmployeeLeaveResource::approvalBody($this->record, $result);
 
                     Notification::make()
                         ->success()
@@ -105,6 +88,45 @@ class ViewEmployeeLeaves extends ViewRecord
                         ->warning()
                         ->title('Licencia rechazada')
                         ->send();
+
+                    $this->refreshFormData(['status']);
+                }),
+
+            Action::make('cancel')
+                ->label('Anular')
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('danger')
+                ->modalHeading('Anular licencia aprobada')
+                ->modalDescription(function () {
+                    $blocker = $this->record->cancellationBlocker();
+
+                    if ($blocker !== null) {
+                        return "No se puede anular: {$blocker}";
+                    }
+
+                    $absences = $this->record->absences()->where('status', 'justified')->count();
+                    $deductions = app(EmployeeLeaveDeductionService::class)->deductionCount($this->record);
+
+                    return "Se anulará la licencia. {$absences} ausencia(s) justificada(s) vuelven a «Por resolver» y {$deductions} descuento(s) se eliminan. No se genera ningún descuento por las ausencias: RR.HH. decide de nuevo.";
+                })
+                ->form([
+                    Textarea::make('reason')
+                        ->label('Motivo de la anulación')
+                        ->required()
+                        ->maxLength(500),
+                ])
+                ->modalSubmitActionLabel('Sí, anular')
+                ->visible(fn () => $this->record->status === 'approved' && auth()->user()->can('cancel_employee_leave'))
+                ->action(function (array $data) {
+                    $result = $this->record->cancel(Auth::id(), $data['reason']);
+
+                    $notification = Notification::make()->title($result['success'] ? 'Licencia anulada' : 'No se pudo anular');
+
+                    $result['success']
+                        ? $notification->success()->body("{$result['absences']} ausencia(s) volvieron a «Por resolver» y se eliminaron {$result['deductions']} descuento(s).")
+                        : $notification->danger()->body($result['message']);
+
+                    $notification->send();
 
                     $this->refreshFormData(['status']);
                 }),

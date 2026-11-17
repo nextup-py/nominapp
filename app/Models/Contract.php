@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
@@ -37,6 +38,7 @@ class Contract extends Model implements Auditable
         'employee_id',
         'type',
         'start_date',
+        'seniority_from',
         'end_date',
         'trial_days',
         'renewals_count',
@@ -60,6 +62,7 @@ class Contract extends Model implements Auditable
 
     protected $casts = [
         'start_date' => 'date',
+        'seniority_from' => 'date',
         'end_date' => 'date',
         'terminated_at' => 'datetime',
         'trial_days' => 'integer',
@@ -305,6 +308,29 @@ class Contract extends Model implements Auditable
         $trialEnd = $this->start_date->copy()->addDays($this->trial_days);
 
         return now()->lte($trialEnd);
+    }
+
+    /**
+     * Contratos vigentes cuyo período de prueba termina entre hoy y dentro de `$days` días (inclusive). El fin de la
+     * prueba es `start_date + trial_days` (misma definición que `getTrialEndDateAttribute()`); se resuelve en PHP
+     * porque son pocos contratos vigentes con prueba corriendo.
+     *
+     * @return Collection<int, static>
+     */
+    public static function trialEndingWithin(int $days): Collection
+    {
+        $from = today();
+        $to = today()->addDays($days);
+
+        return static::query()
+            ->with(['employee', 'position'])
+            ->where('status', 'active')
+            ->where('trial_days', '>', 0)
+            ->where('start_date', '>=', today()->subDays(400))
+            ->get()
+            ->filter(fn (self $c): bool => $c->trial_end_date !== null && $c->trial_end_date->between($from, $to))
+            ->sortBy('trial_end_date')
+            ->values();
     }
 
     /**

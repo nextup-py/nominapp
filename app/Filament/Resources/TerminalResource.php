@@ -26,6 +26,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Infolists\Components\Grid as InfoGrid;
 use Filament\Infolists\Components\ImageEntry;
@@ -117,6 +118,12 @@ class TerminalResource extends Resource
                             ->native(false)
                             ->default('active')
                             ->required(),
+
+                        Toggle::make('is_mobile')
+                            ->label('Equipo móvil')
+                            ->helperText('Un celular o tablet que puede salir de la sucursal (por ejemplo, el celular de ventas). Su ubicación se compara con la de la sucursal cada 10 minutos y se avisa si sale del radio. Pide el permiso de ubicación al equipo. Las PC fijas no lo necesitan.')
+                            ->default(false)
+                            ->columnSpanFull(),
                     ])
                     ->columns(3),
 
@@ -434,6 +441,20 @@ class TerminalResource extends Resource
                         ]),
                     ]),
 
+                InfoSection::make('Recomendaciones')
+                    ->description('Qué conviene corregir en el equipo según su último reporte. Un equipo que también se usa para otra cosa (por ejemplo, un celular de ventas) puede ser terminal si se mantiene enchufado, con la pantalla encendida y con esta app visible.')
+                    ->icon('heroicon-o-light-bulb')
+                    ->collapsible()
+                    ->schema([
+                        TextEntry::make('_recommendations')
+                            ->label('')
+                            ->getStateUsing(fn (Terminal $record): array => collect($record->recommendations())->map(fn (array $item): string => "{$item['title']}: {$item['text']}")->all())
+                            ->listWithLineBreaks()
+                            ->bulleted()
+                            ->columnSpanFull(),
+                    ])
+                    ->visible(fn (Terminal $record): bool => $record->recommendations() !== []),
+
                 InfoSection::make('Estado del dispositivo')
                     ->description('Lo que el terminal informó en su último heartbeat. Cada dato depende de lo que el navegador permita leer.')
                     ->icon('heroicon-o-cpu-chip')
@@ -449,6 +470,12 @@ class TerminalResource extends Resource
                                 ->label('Modo')
                                 ->getStateUsing(fn (Terminal $record) => static::describeInstallMode($record))
                                 ->placeholder('Sin dato'),
+
+                            TextEntry::make('_location')
+                                ->label('Ubicación')
+                                ->getStateUsing(fn (Terminal $record) => static::describeLocation($record))
+                                ->visible(fn (Terminal $record): bool => (bool) $record->is_mobile)
+                                ->placeholder('Sin lectura'),
 
                             TextEntry::make('_battery')
                                 ->label('Batería')
@@ -1003,6 +1030,28 @@ class TerminalResource extends Resource
         ]);
 
         return $parts ? implode(' · ', $parts) : null;
+    }
+
+    /** Ubicación del equipo móvil frente a su sucursal, en lenguaje del panel. */
+    public static function describeLocation(Terminal $record): ?string
+    {
+        if (($record->device_report['location_error'] ?? null) === 'denied') {
+            return 'Sin permiso de ubicación';
+        }
+
+        $location = $record->locationStatus();
+
+        if ($location === null) {
+            return $record->branch?->coordinates ? null : 'La sucursal no tiene coordenadas cargadas';
+        }
+
+        $text = $location['outside'] ? "Fuera: a {$location['distance_m']} m (radio de {$location['radius_m']} m)" : "En la sucursal (a {$location['distance_m']} m)";
+
+        if (! $location['reliable']) {
+            $text .= ' · lectura imprecisa';
+        }
+
+        return $text.($location['read_at'] ? ' · '.$location['read_at']->diffForHumans() : '');
     }
 
     public static function describeBattery(Terminal $record): ?string

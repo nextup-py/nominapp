@@ -56,6 +56,10 @@ Los datos requeridos de fábrica son teléfono, fecha de nacimiento, domicilio, 
 
 Desde la ficha del empleado (o el menú de acciones del listado), **Dar de baja** pide la **fecha de baja** (hoy o anterior, nunca anterior al inicio del contrato), el **tipo de baja** (renuncia, despido, mutuo acuerdo o fin de contrato) y el **motivo**. Al confirmar, el contrato queda **Terminado** con esa fecha, tipo y motivo, y el empleado pasa a **Inactivo** (se cierran su horario, percepciones y deducciones). Si tiene préstamos aprobados o adelantos sin descontar, el modal lo avisa: la baja no los cancela. Requiere el permiso **Terminar contrato**.
 
+### Reingresar
+
+Para un empleado **Inactivo** con contratos anteriores, **Reingresar** (ficha o menú de acciones) lo reactiva y abre un **contrato nuevo** prellenado con el cargo, la modalidad y el pago del último. Se piden el tipo de contrato, la fecha de reingreso, el salario, los días de prueba y, si el tipo lo exige, la fecha de finalización (plazo fijo y aprendizaje: máximo 1 año, Art. 53 CLT). El interruptor **Acumular la antigüedad anterior** lo decide RR.HH. en cada reingreso: apagado, la antigüedad cuenta desde el nuevo contrato; encendido, desde el primer ingreso (si corresponde acumular es un criterio legal que confirma el asesor). Las percepciones y deducciones que se cerraron con la baja **no** se restauran: hay que asignarlas de nuevo. Requiere el permiso **Crear contrato**.
+
 Si la liquidación se calcula en el sistema, activar **Calcular la liquidación en el sistema**: no da de baja todavía, sino que abre el formulario de **Liquidación** con los datos cargados, y el contrato se termina al **Cerrar** la liquidación (crear una liquidación exige un contrato vigente). Si se liquida por fuera, dejarlo apagado.
 
 ### Empleado sin contrato o sin horario

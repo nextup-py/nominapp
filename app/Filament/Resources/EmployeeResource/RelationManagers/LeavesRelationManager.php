@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\EmployeeResource\RelationManagers;
 
+use App\Filament\Resources\EmployeeLeaveResource;
 use App\Models\Absence;
 use App\Models\EmployeeLeave;
 use Carbon\Carbon;
@@ -293,7 +294,7 @@ class LeavesRelationManager extends RelationManager
                             ->whereIn('status', ['pending', 'unjustified'])
                             ->count();
 
-                        $base = 'Se aprobará la licencia del empleado.';
+                        $base = 'Se aprobará la licencia del empleado.'.EmployeeLeaveResource::fullDayDeductionPreview($record);
                         if ($count > 0) {
                             $base .= " Se justificarán automáticamente {$count} ausencia(s) registrada(s) en el período.";
                         }
@@ -304,15 +305,7 @@ class LeavesRelationManager extends RelationManager
                     ->action(function (EmployeeLeave $record) {
                         $result = $record->approve(Auth::id());
 
-                        if ($record->isPartialDay()) {
-                            $body = $record->generates_deduction
-                                ? 'El permiso fue aprobado. Se generó un descuento para la próxima nómina.'
-                                : 'El permiso fue aprobado.';
-                        } else {
-                            $body = $result['justified_count'] > 0
-                                ? "Se justificaron {$result['justified_count']} ausencia(s) del período automáticamente."
-                                : 'La licencia fue aprobada. No había ausencias pendientes en el período.';
-                        }
+                        $body = EmployeeLeaveResource::approvalBody($record, $result);
 
                         Notification::make()
                             ->success()

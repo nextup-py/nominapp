@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\EmployeeResource\Pages;
 
+use App\Filament\Actions\EmployeeRehireAction;
 use App\Filament\Actions\EmployeeTerminationAction;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Employee;
@@ -33,6 +34,7 @@ class ViewEmployee extends ViewRecord
     {
         return [
             EmployeeTerminationAction::make(),
+            EmployeeRehireAction::make(),
 
             Action::make('download_legajo')
                 ->label('Descargar Legajo')

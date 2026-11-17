@@ -12,6 +12,7 @@
 
 import { getMeta, setMeta, clearRebuildableCaches, applyEmployeesDelta, applyBreakFlags, logSync, countPendingEvents, countConflictEvents, countCachedEmployees } from './db.js';
 import { collectDeviceReport } from './device-report.js';
+import { createLocationReader } from './location-reader.js';
 import { getIdentificationStats, getIdentificationTotals } from './identification-stats.js';
 import { getDeviceId } from './device-identity.js';
 
@@ -157,6 +158,9 @@ function readWakeLock() {
     return typeof value === 'boolean' ? value : null;
 }
 
+/** Lector de ubicación de este equipo (solo se usa si el servidor lo marca como equipo móvil). */
+const locationReader = createLocationReader();
+
 /**
  * Reporte de estado del dispositivo para el heartbeat. Un fallo al recolectarlo
  * nunca debe impedir el heartbeat: en ese caso viaja vacío.
@@ -164,7 +168,15 @@ function readWakeLock() {
  */
 async function buildDeviceReport() {
     try {
+        // Solo un equipo móvil (config.location_check del servidor) manda su ubicación; la lectura va en segundo plano.
+        let location = null;
+        if (await getMeta('location_check')) {
+            locationReader.refreshIfStale();
+            location = locationReader.snapshot();
+        }
+
         return await collectDeviceReport({
+            location,
             appVersion: globalThis.window?.terminalData?.app_version ?? null,
             cachedEmployees: await countCachedEmployees(),
             clockOffsetMs: (await getMeta('server_clock_offset_ms')) ?? null,
@@ -214,6 +226,12 @@ export async function heartbeat() {
         }
         if (Number.isFinite(data.config.camera_resume_minutes)) {
             await setMeta('camera_resume_minutes', data.config.camera_resume_minutes);
+        }
+        if (typeof data.config.location_check === 'boolean') {
+            await setMeta('location_check', data.config.location_check);
+        }
+        if (Number.isFinite(data.config.no_charger_minutes)) {
+            await setMeta('no_charger_minutes', data.config.no_charger_minutes);
         }
         if (typeof data.config.confirm_exit === 'boolean') {
             await setMeta('terminal_confirm_exit', data.config.confirm_exit);

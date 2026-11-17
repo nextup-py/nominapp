@@ -6,6 +6,7 @@ use App\Notifications\TerminalDeviceReplacedNotification;
 use App\Notifications\TerminalLinkWindowExpiredNotification;
 use App\Notifications\TerminalProvisionedNotification;
 use App\Services\DeviceHintsParser;
+use App\Services\LocationRadiusService;
 use App\Settings\GeneralSettings;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\Authenticatable;
@@ -63,6 +64,7 @@ class Terminal extends Model implements AuthenticatableContract
         'code',
         'branch_id',
         'status',
+        'is_mobile',
         'device_brand',
         'device_model',
         'device_serial',
@@ -120,6 +122,7 @@ class Terminal extends Model implements AuthenticatableContract
         'stale_after_minutes' => 'integer',
         'confirm_exit' => 'boolean',
         'watch_days' => 'array',
+        'is_mobile' => 'boolean',
         'device_report' => 'array',
         'device_report_at' => 'datetime',
         'queue_backlog_since' => 'datetime',
@@ -961,6 +964,118 @@ class Terminal extends Model implements AuthenticatableContract
         $charging = $this->device_report['battery_charging'] ?? null;
 
         return $charging === null ? null : (bool) $charging;
+    }
+
+    /**
+     * Ubicación del equipo móvil frente a la de su sucursal según su última lectura, o null si no aplica (no es un equipo
+     * móvil, la sucursal no tiene coordenadas o todavía no mandó ninguna lectura). El radio es el de la sucursal si lo
+     * tiene configurado y, si no, el radio por defecto de Configuración General. Una lectura cuya precisión es peor que
+     * el radio no es confiable: no alcanza para decir que salió.
+     *
+     * @return array{distance_m: int, accuracy_m: int|null, radius_m: int, outside: bool, reliable: bool, read_at: ?Carbon}|null
+     */
+    public function locationStatus(): ?array
+    {
+        $reading = $this->device_report['location'] ?? null;
+        $coordinates = $this->branch?->coordinates;
+
+        if (! $this->is_mobile || ! is_array($reading) || ! isset($reading['lat'], $reading['lng']) || ! is_array($coordinates) || ! isset($coordinates['lat'], $coordinates['lng'])) {
+            return null;
+        }
+
+        $radius = (int) ($this->branch->location_radius_m ?: app(GeneralSettings::class)->attendance_location_default_radius);
+        $distance = (int) round(LocationRadiusService::distanceMeters((float) $coordinates['lat'], (float) $coordinates['lng'], (float) $reading['lat'], (float) $reading['lng']));
+        $accuracy = isset($reading['accuracy_m']) ? (int) $reading['accuracy_m'] : null;
+
+        return [
+            'distance_m' => $distance,
+            'accuracy_m' => $accuracy,
+            'radius_m' => $radius,
+            'outside' => $distance > $radius,
+            'reliable' => $accuracy === null || $accuracy <= $radius,
+            'read_at' => isset($reading['read_at']) ? Carbon::parse($reading['read_at']) : null,
+        ];
+    }
+
+    /**
+     * Qué conviene corregir en el equipo según lo que informó en su último reporte, para mostrarlo en el detalle del
+     * terminal. Pensado también para equipos que se usan para otra cosa (por ejemplo un celular de ventas): lo que
+     * importa es que esté enchufado, con la pantalla encendida y con esta app visible. Vacío si no hay nada que corregir
+     * o el equipo nunca informó su estado.
+     *
+     * @return list<array{title: string, text: string}>
+     */
+    public function recommendations(): array
+    {
+        $report = $this->device_report ?? [];
+
+        if ($report === []) {
+            return [];
+        }
+
+        $recommendations = [];
+
+        if ($this->reportedCharging() === false) {
+            $level = $this->reportedBatteryLevel();
+            $recommendations[] = [
+                'title' => 'Enchufar el equipo',
+                'text' => 'Funciona con batería'.($level !== null ? " (al {$level}%)" : '').'. Conectarlo al cargador y, en los ajustes del equipo, activar «mantener la pantalla encendida mientras carga» para que no se suspenda y deje de marcar.',
+            ];
+        }
+
+        if (array_key_exists('wake_lock', $report) && $report['wake_lock'] === false) {
+            $reason = $this->wakeLockErrorLabel();
+            $recommendations[] = [
+                'title' => 'Mantener la pantalla encendida',
+                'text' => 'El equipo no logra mantener la pantalla encendida'.($reason ? " ({$reason})" : '').'. Quitar el ahorro de energía para esta app, dejarla visible y, en una PC, configurar que nunca se suspenda.',
+            ];
+        }
+
+        if ($this->is_mobile && ($report['location_error'] ?? null) === 'denied') {
+            $recommendations[] = [
+                'title' => 'Permitir la ubicación',
+                'text' => 'Este equipo móvil no tiene permiso de ubicación y no se puede verificar que esté en la sucursal. Permitir la ubicación para el sitio en los ajustes del navegador.',
+            ];
+        }
+
+        $location = $this->locationStatus();
+        if ($location !== null && $location['outside'] && $location['reliable']) {
+            $recommendations[] = [
+                'title' => 'Volver a la sucursal',
+                'text' => "El equipo está a {$location['distance_m']} m de la sucursal (radio de {$location['radius_m']} m). Si se lo llevaron, devolverlo antes de que alguien marque en él.",
+            ];
+        }
+
+        if ($this->reportedHidden() === true) {
+            $recommendations[] = [
+                'title' => 'Dejar la app visible',
+                'text' => 'La pestaña o la app estaba oculta o minimizada: el navegador la frena y el equipo puede suspenderse. Si el equipo se usa para otra cosa, volver a esta app al terminar.',
+            ];
+        }
+
+        if ($this->displayKind() === 'browser') {
+            $recommendations[] = [
+                'title' => 'Abrir como app o en modo kiosko',
+                'text' => 'Está abierto en una pestaña del navegador. Instalarlo como app o usar el modo kiosko para que tenga su propia ventana.',
+            ];
+        }
+
+        $skew = $this->reportedClockSkewSeconds();
+        if ($skew !== null && abs($skew) > app(GeneralSettings::class)->terminal_clock_skew_max_seconds) {
+            $recommendations[] = [
+                'title' => 'Corregir la fecha y hora',
+                'text' => "El reloj del equipo difiere del servidor en {$skew} segundos. Activar la fecha y hora automáticas.",
+            ];
+        }
+
+        if ($this->isAppOutdated()) {
+            $recommendations[] = [
+                'title' => 'Actualizar la app',
+                'text' => 'El equipo tiene una versión anterior. Enviar el comando Recargar app o recargar su página.',
+            ];
+        }
+
+        return $recommendations;
     }
 
     /**

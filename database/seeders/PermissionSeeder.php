@@ -67,6 +67,7 @@ class PermissionSeeder extends Seeder
         'rotation_pattern' => 'Patrón de Rotación',
         'schedule' => 'Horario',
         'shift_template' => 'Plantilla de Turno',
+        'system_health' => 'Salud del sistema y logs',
         'team' => 'Mi Equipo',
         'terminal' => 'Terminal',
         'user' => 'Usuario',
@@ -79,7 +80,7 @@ class PermissionSeeder extends Seeder
         'Empleados' => ['employee', 'contract', 'employee_device', 'face_enrollment', 'vacation', 'warning', 'employee_leave', 'holiday'],
         'Asistencia' => ['attendance_day', 'attendance_event', 'attendance_mark_failure', 'terminal', 'schedule', 'shift_template', 'rotation_pattern', 'team'],
         'Nómina y Créditos' => ['payroll', 'payroll_period', 'period', 'deduction', 'perception', 'loan', 'advance', 'merchandise_withdrawal', 'liquidacion', 'aguinaldo', 'aguinaldo_period', 'disbursement_batch', 'absence'],
-        'Configuración' => ['user'],
+        'Configuración' => ['user', 'system_health'],
     ];
 
     public function run(): void

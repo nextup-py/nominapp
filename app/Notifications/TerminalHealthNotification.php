@@ -5,6 +5,8 @@ namespace App\Notifications;
 use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
 use App\Notifications\Concerns\HonorsPreferences;
+use App\Services\TerminalHealthService;
+use App\Settings\GeneralSettings;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Bus\Queueable;
@@ -22,6 +24,7 @@ class TerminalHealthNotification extends Notification
     public function __construct(
         public readonly Terminal $terminal,
         public readonly string $alert,
+        public readonly bool $reminder = false,
     ) {}
 
     /**
@@ -41,8 +44,10 @@ class TerminalHealthNotification extends Notification
 
         match ($this->alert) {
             'offline' => $notification
-                ->title('Terminal sin conexión')
-                ->body("El terminal {$name} no reporta hace más de {$this->terminal->effectiveStaleMinutes()} minutos. Causa probable: ".implode(' ', $this->terminal->offlineHints()).$this->responsibleLine())
+                ->title($this->reminder ? 'Terminal sigue sin conexión' : 'Terminal sin conexión')
+                ->body($this->reminder
+                    ? "El terminal {$name} sigue sin reportar hace más de ".TerminalHealthService::OFFLINE_REMINDER_HOURS.' horas y nadie lo atendió: mientras tanto no puede registrar marcaciones. Causa probable: '.implode(' ', $this->terminal->offlineHints()).$this->responsibleLine()
+                    : "El terminal {$name} no reporta hace más de {$this->terminal->effectiveStaleMinutes()} minutos. Causa probable: ".implode(' ', $this->terminal->offlineHints()).$this->responsibleLine())
                 ->icon('heroicon-o-signal-slash')
                 ->danger(),
             'recovered' => $notification
@@ -90,6 +95,16 @@ class TerminalHealthNotification extends Notification
                 ->body("El terminal {$name} lleva horas abierto en una pestaña del navegador, sin instalar como app ni en modo kiosko: puede quedar oculto o suspenderse y dejar de marcar. Instalarlo como app o usar el modo kiosko (ver la guía de terminales).")
                 ->icon('heroicon-o-window')
                 ->warning(),
+            'outside_branch' => $notification
+                ->title('Terminal fuera de la sucursal')
+                ->body($this->outsideBody($name))
+                ->icon('heroicon-o-map-pin')
+                ->danger(),
+            'no_charger' => $notification
+                ->title('Terminal sin cargador')
+                ->body("El terminal {$name} lleva más de ".app(GeneralSettings::class)->terminal_no_charger_minutes.' minutos sin cargador'.($this->terminal->reportedBatteryLevel() !== null ? " (batería al {$this->terminal->reportedBatteryLevel()}%)" : '').'. Enchufarlo y dejar la pantalla encendida y la app visible para que no se suspenda y deje de marcar.')
+                ->icon('heroicon-o-bolt-slash')
+                ->warning(),
             'tab_hidden' => $notification
                 ->title('Pestaña del terminal oculta')
                 ->body("La pestaña del terminal {$name} lleva horas oculta o minimizada: el navegador la frena y suelta el bloqueo de pantalla, así que el equipo puede suspenderse. Dejarlo a la vista o usar el modo kiosko.")
@@ -103,6 +118,15 @@ class TerminalHealthNotification extends Notification
             'terminal_id' => $this->terminal->id,
             'alert' => $this->alert,
         ];
+    }
+
+    /** Texto del aviso de un equipo móvil fuera de la sucursal, con la distancia de su última lectura. */
+    private function outsideBody(string $name): string
+    {
+        $location = $this->terminal->locationStatus();
+        $distance = $location !== null ? " a {$location['distance_m']} m de la sucursal (radio de {$location['radius_m']} m)" : ' fuera de la sucursal';
+
+        return "El equipo móvil {$name} está{$distance}. Las marcaciones hechas desde ahí no son de la sucursal: recuperarlo y devolverlo, o quitarle la marca de equipo móvil si ya no se usa así.";
     }
 
     /** Frase final del aviso de desconexión con a quién llamar, vacía si el terminal no tiene responsable cargado. */

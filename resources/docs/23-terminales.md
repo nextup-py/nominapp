@@ -34,6 +34,7 @@ Ir a **Asistencias → Terminales**.
    - **Sucursal** — sucursal a la que pertenece. Solo se ofrecen sucursales de empresas activas
    - **Estado** — Activo (por defecto) o Inactivo
    - **Dispositivo** — marca, modelo, número de serie, MAC y notas (todo opcional, sirve para inventario). Marca y modelo se completan solos al vincular cuando el navegador los informa
+   - **Equipo móvil** — activar si el terminal es un celular o tablet que puede salir de la sucursal (por ejemplo, el celular de ventas). Ver **Equipo móvil: ubicación** más abajo
    - **Responsable y garantía** — **Responsable del equipo** y su **teléfono** (a quién llamar si falla), **Fecha de compra** y **Garantía hasta**. Es todo opcional y lo carga una persona: ningún navegador puede detectarlo. El teléfono va sin espacios ni guiones (ej: 0981123456)
    - **Fecha de instalación** e **Instalado por** (opcional)
 3. Guardar
@@ -304,10 +305,14 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Dispositivo desvinculado** | Quién lo desvinculó |
 | **El dispositivo perdió el vínculo** | El servidor todavía tenía el acceso vigente y el terminal, sin latir hace más de 3 minutos, pidió vincularse de nuevo: el navegador perdió su copia local. El detalle indica el motivo informado, si el navegador no conserva datos y hace cuánto fue el último latido. Se registra una vez cada 30 minutos por terminal |
 | **Dispositivo reemplazado** | Un dispositivo nuevo se vinculó sobre uno que ya tenía acceso. El detalle indica la IP del dispositivo anterior y si estaba en línea |
+| **Dos equipos usan el mismo terminal** | Dos equipos distintos pidieron vincularse al mismo terminal en 24 horas. El detalle indica cuántos |
+| **Sigue sin conexión** | Recordatorio, a las 4 horas del primer aviso, de que el terminal sigue caído |
 | **Sin conexión** / **Reconectado** | El sistema detectó que pasó a Desconectado o que volvió a reportar |
 | **Quedó sin vincular** | Un terminal vinculado perdió su acceso |
 | **Cola de marcaciones atascada** / **normalizada** | La cola dejó de vaciarse o volvió a la normalidad |
 | **Batería baja** / **recuperada** | El nivel cruzó el porcentaje configurado |
+| **Sin cargador** / **Cargador conectado** | El terminal lleva el tiempo configurado sin cargador (por defecto 30 minutos) / se enchufó de nuevo |
+| **Fuera de la sucursal** / **De vuelta en la sucursal** | Un equipo móvil mandó dos lecturas seguidas de ubicación fuera del radio de su sucursal / volvió. El detalle indica la distancia |
 | **Sucursal sin empleados enrolados** / **con empleados enrolados** | La sucursal del terminal se quedó sin ningún empleado activo con rostro registrado, o volvió a tenerlos |
 | **Caché de empleados vacía** / **normalizada** | El terminal en línea reportó 0 empleados en caché habiendo empleados enrolados, o volvió a tenerlos |
 | **Reloj desajustado** / **normalizado** | El reloj del dispositivo pasó (o dejó de pasar) el desfase tolerado |
@@ -325,12 +330,14 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 
 | Aviso | Cuándo |
 |-------|--------|
+| **Terminal sigue sin conexión** | Si pasan **4 horas** y el terminal sigue caído, se avisa **una sola vez más** (no se repite cada hora). Se marca leído cuando el terminal vuelve a reportar |
 | **Terminal sin conexión** | Pasó a **Desconectado** (solo dentro de su horario de vigilancia). El aviso incluye la **causa probable** según el último reporte del dispositivo (pantalla que no se mantenía encendida, abierto en el navegador, sin cargador, reloj desajustado, app vieja) y, si el terminal tiene **Responsable del equipo**, su nombre y teléfono para llamarlo; también queda en la bitácora |
 | **N terminales sin conexión** | Si varios terminales pasan a Desconectado en la misma revisión (por ejemplo al abrir el horario de vigilancia) llega **un solo aviso** con la lista (con el responsable de cada terminal que lo tenga) y la causa probable más frecuente, en vez de uno por terminal |
 | **Terminal reconectado** | Volvió a reportar después de haber avisado la desconexión. **Desactivado por defecto**: la reconexión queda en la bitácora y el aviso de desconexión de ese terminal se marca como leído solo |
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
 | **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones **pendientes** no se envían hace más del tiempo configurado. Las marcaciones **en conflicto** no cuentan: el servidor ya las rechazó y quedan en **Fallos de Marcación** para revisar |
 | **Batería baja en terminal** | El nivel bajó del porcentaje configurado y no está cargando (solo si el navegador informa la batería) |
+| **Terminal sin cargador** | El terminal en línea lleva más de los minutos configurados sin cargador (por defecto 30), antes de que la batería esté baja. Dice cómo corregirlo: enchufarlo y dejar la pantalla encendida y la app visible. Una sola vez hasta que se enchufe (solo si el navegador informa la batería) |
 | **Terminal sin empleados enrolados** | La sucursal del terminal no tiene ningún empleado activo con rostro registrado: no podrá identificar a nadie. Enrolar a los empleados o revisar a qué sucursal pertenecen |
 | **Terminal sin empleados en caché** | El terminal está en línea pero reporta 0 empleados en su caché, aunque su sucursal tiene empleados enrolados. Enviar el comando remoto **Limpiar caché** o **Recargar app** |
 | **Terminal con la app desactualizada** | El terminal está en línea pero sigue con una versión anterior de la app más de 2 horas después de reportarla así. Enviar el comando remoto **Recargar app** |
@@ -472,6 +479,24 @@ El script usa Chrome (o Edge si no está Chrome), crea el acceso directo **Termi
 2. Para que arranque con Windows: **Windows + R**, escribir `shell:startup` y copiar ahí el acceso directo de la aplicación.
 3. Ajustar la energía con los pasos de **PC con Windows**.
 
+### Equipo móvil: ubicación
+
+Un terminal marcado como **Equipo móvil** compara su ubicación con la de la **sucursal** (las coordenadas que tiene cargadas) para detectar que se lo llevaron y siguen marcando como si estuvieran allí. Las PC fijas no lo necesitan ni piden ningún permiso.
+
+- El equipo pide el **permiso de ubicación** una vez y lee su posición **cada 10 minutos**, junto al reporte de estado. Solo se guarda la **última lectura** y la distancia: no hay historial de recorridos.
+- El radio es el de la sucursal (**Radio en metros**) y, si no lo tiene, el **radio por defecto** de Configuración General (150 m).
+- Se avisa cuando hay **dos lecturas seguidas fuera del radio** (unos 10 minutos), con el equipo en línea y dentro de su horario de vigilancia. Una lectura imprecisa (peor que el radio) no cuenta. El aviso **Terminal fuera de la sucursal** llega a quien gestiona terminales, aparece en el cartel del panel y las marcaciones **siguen funcionando** con normalidad.
+- Si la sucursal **no tiene coordenadas**, no se verifica nada; el detalle lo dice. Si el equipo no da permiso de ubicación, el detalle muestra **Sin permiso de ubicación** y una recomendación.
+- En el detalle, **Estado del dispositivo → Ubicación** muestra la distancia y la hora de la lectura.
+
+### Recomendaciones
+
+En el detalle del terminal aparece la sección **Recomendaciones** cuando el último reporte del equipo muestra algo que corregir: **enchufar el equipo**, **mantener la pantalla encendida**, **dejar la app visible**, **abrir como app o en modo kiosko**, **corregir la fecha y hora** o **actualizar la app**. Desaparece sola cuando todo está bien.
+
+**Equipo que también se usa para otra cosa:** un celular de ventas, por ejemplo, puede ser terminal sin ser exclusivo. Lo que importa es que esté **enchufado**, con la **pantalla encendida** y con **esta app visible** cuando alguien tenga que marcar. Si queda desenchufado, el propio terminal muestra en reposo un aviso discreto (**Este equipo no está enchufado…**, con **Ocultar**, que vuelve a los 30 minutos) y nunca impide marcar.
+
+---
+
 ## Qué se ve en el dispositivo
 
 | Pantalla | Cuándo aparece |
@@ -539,6 +564,9 @@ El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: 
 | Un terminal figura **Sin vincular** pero "andaba" | Alguien lo desvinculó, lo desactivó o vinculó otro dispositivo | Revisar con quién gestiona los terminales y volver a vincular |
 | Un terminal pide vincularse una y otra vez aunque se aprobó hace minutos | El navegador **no conserva sus datos**: ventana privada o de invitado, «borrar datos al cerrar», perfil que se restaura en cada arranque, equipo con congelado o un limpiador automático. El servidor no lo desvinculó (no hay un evento **Dispositivo desvinculado**; sí **El dispositivo perdió el vínculo** en la bitácora y un aviso **Terminal perdió el vínculo**) | Vincular y recargar la página con **F5**: si vuelve a pedir vínculo, el navegador no guarda datos. Usar un navegador o perfil exclusivo que sí los guarde, sin modo privado ni borrado al cerrar (ver **PC con Windows**) |
 | Aparece el aviso **Este navegador no conserva los datos del terminal** | El terminal hizo una prueba de escritura y lectura y el navegador no devolvió lo guardado | Es una advertencia: el terminal sigue funcionando y se puede vincular, pero se desvinculará solo. Corregir el navegador como en la fila anterior |
+| Aviso **Vinculación sin atender** | Una o más solicitudes de vinculación **vencieron (10 minutos) sin que nadie las aprobara**. El aviso no desaparece al vencer: sigue sin leer hasta que el terminal se vincule | Abrir la **Ventana de vinculación** del terminal y pedir que recarguen la página del equipo, o aprobar el código que muestre su pantalla en **Solicitudes de vinculación** |
+| Aviso **Dos equipos usan el mismo terminal** | Dos equipos distintos pidieron vincularse al mismo terminal en 24 horas; se van a quitar el acceso uno al otro | Dejar un solo equipo por terminal o crear otro terminal para el segundo (una vez por terminal cada 24 horas) |
+| Cartel rojo arriba del panel: **N terminales necesitan atención** | Hay terminales **sin vincular** o **sin conexión dentro de su horario de vigilancia**. Lo ve quien puede editar terminales; se actualiza una vez por minuto y desaparece cuando todos están en línea | Entrar a **Ver terminales** y resolver cada uno |
 | Un terminal pide vincularse una y otra vez desde dos equipos distintos (por ejemplo una PC y un celular) | Hay **dos dispositivos abiertos en la misma URL del terminal**. Cada vez que uno se vincula, el otro queda sin acceso y vuelve a pedir un código. En la **Bitácora** aparece **Dispositivo reemplazado** y llega el aviso **Dispositivo reemplazado en un terminal** | Elegir qué equipo es el terminal, cerrar o desinstalar la app en el otro y aprobar un solo código. Si se necesitan los dos equipos, crear otro terminal para el segundo |
 | Aviso **Terminal perdió el vínculo** y el dispositivo correcto sigue funcionando | Otro dispositivo abrió la URL del terminal mientras el verdadero seguía en línea | Si el terminal sigue latiendo el sistema no lo toma como pérdida: aparece como una **Solicitud de vinculación** común (con *Reemplaza al dispositivo actual*). Rechazarla y cerrar la página del otro dispositivo |
 | Aparece un aviso de que el navegador pertenece a **otro terminal** | Ese navegador ya estaba vinculado a un terminal distinto | Cancelar el aviso y abrir la URL correcta. Aceptar borra los datos locales del terminal anterior, **incluidas sus marcaciones pendientes de enviar**. Usar un navegador o perfil exclusivo para cada terminal |

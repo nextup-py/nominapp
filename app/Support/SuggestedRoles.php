@@ -27,6 +27,19 @@ class SuggestedRoles
                 'description' => 'Igual que Jefe de equipo, y además ve a todo el personal de su sucursal en «Mi equipo». No accede al resto del panel.',
                 'permissions' => ['view_team', 'view_branch_team'],
             ],
+            'Soporte TI' => [
+                'description' => 'Gestiona terminales y su vinculación, dispositivos de empleados, enrolamiento facial y fallos de marcación, y ve Salud del sistema y logs. Ve solo el listado de empleados: no accede a contratos, salarios ni nómina, ni a la configuración.',
+                'permissions' => [
+                    'view_any_terminal', 'view_terminal', 'create_terminal', 'update_terminal',
+                    'view_any_branch', 'view_branch',
+                    'view_any_employee_device', 'view_employee_device', 'update_employee_device',
+                    'view_any_face_enrollment', 'view_face_enrollment', 'update_face_enrollment',
+                    'view_any_attendance_mark_failure', 'view_attendance_mark_failure', 'update_attendance_mark_failure',
+                    'view_any_attendance_event', 'view_attendance_event',
+                    'view_any_employee',
+                    'view_system_health',
+                ],
+            ],
             'Encargado de asistencia' => [
                 'description' => 'Aprueba tardanzas y horas extra, corrige marcaciones y resuelve ausencias de toda la empresa. No ve nómina ni salarios.',
                 'permissions' => [

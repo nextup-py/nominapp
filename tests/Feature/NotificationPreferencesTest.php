@@ -70,7 +70,7 @@ it('cada notificación declara una clave que existe en el catálogo y no sobra n
         $expression = $match[1] ?? null;
 
         if ($expression === '"terminal.{$this->alert}"') {
-            array_push($used, ...array_map(fn ($alert) => "terminal.{$alert}", ['offline', 'recovered', 'unlinked', 'queue_stuck', 'battery_low', 'no_enrolled', 'cache_empty', 'clock_skew', 'app_outdated', 'not_installed', 'tab_hidden']));
+            array_push($used, ...array_map(fn ($alert) => "terminal.{$alert}", ['offline', 'recovered', 'unlinked', 'queue_stuck', 'battery_low', 'no_enrolled', 'cache_empty', 'clock_skew', 'app_outdated', 'not_installed', 'tab_hidden', 'no_charger', 'outside_branch']));
 
             continue;
         }
@@ -140,7 +140,7 @@ it('solo ofrece los avisos de los módulos a los que el usuario tiene acceso', f
     $nobody = prefsUser();
 
     expect(array_keys(NotificationCatalog::forUser($terminals)))->toContain('terminal.offline')->not->toContain('contract.alert')
-        ->and(array_keys(NotificationCatalog::forUser($contracts)))->toBe(['contract.alert', 'system.new_login_location'])
+        ->and(array_keys(NotificationCatalog::forUser($contracts)))->toBe(['contract.alert', 'contract.trial_ending', 'system.new_login_location'])
         ->and(array_keys(NotificationCatalog::forUser($nobody)))->toBe(['system.new_login_location']);
 
     $admin = User::factory()->create();

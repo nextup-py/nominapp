@@ -79,6 +79,7 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsed(),
             ])
             ->renderHook(PanelsRenderHook::BODY_END, fn (): string => view('filament.hooks.open-active-nav-group')->render())
+            ->renderHook(PanelsRenderHook::PAGE_START, fn (): string => view('filament.hooks.terminal-alert-banner')->render())
             ->userMenuItems([
                 MenuItem::make()
                     ->label('Mis notificaciones')

@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\EmployeeLeaveDeductionService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -36,12 +37,19 @@ class EmployeeLeave extends Model implements Auditable
         'reason',
         'document_path',
         'status',
+        'approved_by_id',
+        'approved_at',
+        'cancelled_by_id',
+        'cancelled_at',
+        'cancel_reason',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'generates_deduction' => 'boolean',
+        'approved_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     // ─── Relaciones ──────────────────────────────────────────────────────────
@@ -50,6 +58,24 @@ class EmployeeLeave extends Model implements Auditable
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    /** Usuario que aprobó la licencia. */
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_id');
+    }
+
+    /** Usuario que anuló la licencia. */
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by_id');
+    }
+
+    /** Días descontados de una licencia de día completo con descuento. */
+    public function deductionDays(): HasMany
+    {
+        return $this->hasMany(EmployeeLeaveDeductionDay::class);
     }
 
     /** Ausencias justificadas por esta licencia. */
@@ -124,43 +150,18 @@ class EmployeeLeave extends Model implements Auditable
     // ─── Ciclo de vida ────────────────────────────────────────────────────────
 
     /**
-     * Aprueba la licencia.
-     * - Permisos parciales (por horas): si generates_deduction, crea un EmployeeDeduction con LIC001.
-     * - Permisos por días completos: justifica automáticamente las ausencias del período.
+     * Aprueba la licencia y registra quién y cuándo.
+     * - Con «genera descuento»: crea las deducciones LIC001 (una por las horas del permiso parcial, o una por cada día
+     *   laborable de una licencia de día completo); ver `EmployeeLeaveDeductionService`.
+     * - Licencias de día completo: justifica automáticamente las ausencias del período.
      *
-     * @return array{justified_count: int}
+     * @return array{justified_count: int, justified_dates: list<Carbon>, deduction_count: int, deduction_amount: float, deduction_warning: ?string}
      */
     public function approve(int $approvedById): array
     {
-        $updates = ['status' => 'approved'];
+        $this->update(['status' => 'approved', 'approved_by_id' => $approvedById, 'approved_at' => now()]);
 
-        if ($this->generates_deduction && $this->isPartialDay() && ! $this->employee_deduction_id) {
-            $deductionRecord = Deduction::where('code', 'LIC001')->first();
-
-            if ($deductionRecord) {
-                $amount = $this->calculatedDeductionAmount();
-                $typeLabel = self::getTypeOptions()[$this->type] ?? $this->type;
-                $period = $this->start_date->format('d/m/Y').' '.$this->start_time.' - '.$this->end_time;
-
-                $employeeDeduction = EmployeeDeduction::create([
-                    'employee_id' => $this->employee_id,
-                    'deduction_id' => $deductionRecord->id,
-                    'start_date' => now()->toDateString(),
-                    'end_date' => now()->toDateString(),
-                    'custom_amount' => $amount,
-                    'notes' => "Permiso parcial: {$typeLabel} ({$period})",
-                ]);
-
-                $updates['employee_deduction_id'] = $employeeDeduction->id;
-            } else {
-                Log::warning('EmployeeLeave::approve — código LIC001 no encontrado en deductions. Descuento no generado.', [
-                    'employee_leave_id' => $this->id,
-                    'employee_id' => $this->employee_id,
-                ]);
-            }
-        }
-
-        $this->update($updates);
+        $deduction = app(EmployeeLeaveDeductionService::class)->apply($this);
 
         // Solo justifica ausencias en licencias de día completo
         $justified = $this->justifyAbsences($approvedById);
@@ -168,6 +169,9 @@ class EmployeeLeave extends Model implements Auditable
         return [
             'justified_count' => count($justified),
             'justified_dates' => $justified,
+            'deduction_count' => $deduction['count'],
+            'deduction_amount' => $deduction['amount'],
+            'deduction_warning' => $deduction['warning'],
         ];
     }
 
@@ -205,6 +209,76 @@ class EmployeeLeave extends Model implements Auditable
         }
 
         return $justifiedDates;
+    }
+
+    /**
+     * Motivo por el que una licencia aprobada no se puede anular, o null si se puede: solo se anulan las aprobadas, y
+     * con descuentos no si el empleado ya tiene nómina generada para esas fechas (esos descuentos no se pueden deshacer).
+     */
+    public function cancellationBlocker(): ?string
+    {
+        if ($this->status !== 'approved') {
+            return 'Solo se pueden anular licencias aprobadas.';
+        }
+
+        $deductions = app(EmployeeLeaveDeductionService::class);
+
+        return $deductions->deductionCount($this) > 0 ? $deductions->payrollBlocker($this) : null;
+    }
+
+    /**
+     * Anula una licencia aprobada y deshace sus efectos: elimina sus descuentos y devuelve a «pendiente» las ausencias
+     * que había justificado (RR.HH. decide de nuevo; no se genera ningún descuento solo).
+     *
+     * @return array{success: bool, message: string, absences: int, deductions: int}
+     */
+    public function cancel(int $cancelledById, string $reason): array
+    {
+        $blocker = $this->cancellationBlocker();
+
+        if ($blocker !== null) {
+            return ['success' => false, 'message' => $blocker, 'absences' => 0, 'deductions' => 0];
+        }
+
+        return DB::transaction(function () use ($cancelledById, $reason): array {
+            $deductions = app(EmployeeLeaveDeductionService::class)->revert($this);
+
+            $this->update([
+                'status' => 'cancelled',
+                'cancelled_by_id' => $cancelledById,
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
+
+            $absences = $this->absences()->where('status', 'justified')->with('attendanceDay')->get();
+
+            foreach ($absences as $absence) {
+                $absence->update([
+                    'status' => 'pending',
+                    'employee_leave_id' => null,
+                    'reviewed_at' => null,
+                    'reviewed_by_id' => null,
+                    'review_notes' => null,
+                ]);
+
+                $day = $absence->attendanceDay;
+                $coveredByAnother = EmployeeLeave::where('employee_id', $this->employee_id)
+                    ->where('status', 'approved')
+                    ->where('id', '!=', $this->id)
+                    ->whereDate('start_date', '<=', $day->date)
+                    ->whereDate('end_date', '>=', $day->date)
+                    ->exists();
+
+                $day->update(['justified_absence' => $coveredByAnother]);
+            }
+
+            return [
+                'success' => true,
+                'message' => 'La licencia fue anulada.',
+                'absences' => $absences->count(),
+                'deductions' => $deductions,
+            ];
+        });
     }
 
     /** Rechaza la licencia. */
@@ -280,6 +354,7 @@ class EmployeeLeave extends Model implements Auditable
             'pending' => 'Pendiente',
             'approved' => 'Aprobado',
             'rejected' => 'Rechazado',
+            'cancelled' => 'Anulada',
         ];
     }
 
@@ -294,6 +369,7 @@ class EmployeeLeave extends Model implements Auditable
             'pending' => 'warning',
             'approved' => 'success',
             'rejected' => 'danger',
+            'cancelled' => 'gray',
         ];
     }
 
@@ -308,6 +384,7 @@ class EmployeeLeave extends Model implements Auditable
             'pending' => 'heroicon-o-clock',
             'approved' => 'heroicon-o-check-circle',
             'rejected' => 'heroicon-o-x-circle',
+            'cancelled' => 'heroicon-o-arrow-uturn-left',
         ];
     }
 

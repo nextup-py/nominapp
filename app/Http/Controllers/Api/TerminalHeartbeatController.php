@@ -8,6 +8,7 @@ use App\Services\TerminalReliabilityService;
 use App\Settings\GeneralSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 /**
  * Heartbeat del terminal — se llama periódicamente mientras hay conexión
@@ -54,6 +55,7 @@ class TerminalHeartbeatController extends Controller
         'display_mode', 'visible', 'identification_median_ms', 'identification_p90_ms', 'identification_samples',
         'identification_attempts', 'identification_failures', 'identification_successes', 'identification_ms_total',
         'device_memory_gb', 'cpu_cores', 'connection_type', 'screen', 'language', 'timezone', 'platform',
+        'location', 'location_error',
     ];
 
     public function store(Request $request, GeneralSettings $settings): JsonResponse
@@ -95,12 +97,27 @@ class TerminalHeartbeatController extends Controller
             'device.platform' => ['nullable', 'string', 'max:40'],
             'device.storage_used_mb' => ['nullable', 'integer', 'min:0'],
             'device.storage_quota_mb' => ['nullable', 'integer', 'min:0'],
+            'device.location' => ['nullable', 'array'],
+            'device.location.lat' => ['required_with:device.location', 'numeric', 'between:-90,90'],
+            'device.location.lng' => ['required_with:device.location', 'numeric', 'between:-180,180'],
+            'device.location.accuracy_m' => ['nullable', 'integer', 'min:0', 'max:100000'],
+            'device.location.read_at' => ['nullable', 'date'],
+            'device.location_error' => ['nullable', 'string', 'in:denied,unavailable,timeout'],
         ]);
 
         /** @var Terminal $terminal */
         $terminal = $request->user();
 
         $deviceReport = isset($data['device']) ? array_intersect_key($data['device'], array_flip(self::DEVICE_REPORT_KEYS)) : null;
+
+        if ($deviceReport !== null) {
+            // La ubicación solo se guarda de los equipos móviles y solo la última lectura (sin historial de recorridos).
+            if (! $terminal->is_mobile) {
+                unset($deviceReport['location'], $deviceReport['location_error']);
+            } elseif (isset($deviceReport['location'])) {
+                $deviceReport['location'] = Arr::only($deviceReport['location'], ['lat', 'lng', 'accuracy_m', 'read_at']);
+            }
+        }
 
         // Antes de guardar el reporte nuevo se compara con el anterior: la diferencia de los contadores acumulados
         // son las identificaciones de este intervalo (ver TerminalReliabilityService::recordIdentification()).
@@ -141,6 +158,8 @@ class TerminalHeartbeatController extends Controller
             'config' => [
                 'overnight_max_hours' => (int) $settings->attendance_overnight_max_hours,
                 'camera_resume_minutes' => (int) $settings->terminal_camera_resume_minutes,
+                'no_charger_minutes' => (int) $settings->terminal_no_charger_minutes,
+                'location_check' => (bool) $terminal->is_mobile,
                 'confirm_exit' => $terminal->confirmExitEnabled($settings),
                 'selection_timeout_seconds' => (int) $settings->terminal_selection_timeout_seconds,
                 'face_threshold' => (float) $settings->face_threshold,

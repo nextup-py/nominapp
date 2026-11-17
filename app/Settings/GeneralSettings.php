@@ -10,6 +10,9 @@ class GeneralSettings extends Settings
 
     public int $contract_alert_days;
 
+    /** Días de anticipación del aviso de fin de período de prueba (0 = apagado). */
+    public int $contract_trial_alert_days;
+
     /** La segunda renovación de un contrato a plazo fijo pasa a indefinido (Art. 53 CLT); si es false no cambia solo. */
     public bool $contract_force_indefinite_on_second_renewal;
 
@@ -55,6 +58,9 @@ class GeneralSettings extends Settings
 
     /** Porcentaje de batería (sin cargador) por debajo del cual se avisa. */
     public int $terminal_low_battery_percent;
+
+    /** Minutos sin cargador a partir de los cuales se recomienda (en la pantalla del terminal y en el panel) y se avisa que se enchufe; 0 = apagado. */
+    public int $terminal_no_charger_minutes;
 
     /** Segundos de desfase del reloj de un terminal (respecto del servidor) a partir de los cuales se avisa. */
     public int $terminal_clock_skew_max_seconds;

@@ -70,6 +70,12 @@ class TerminalEvent extends Model
             'revoked' => 'Dispositivo desvinculado',
             'link_lost' => 'El dispositivo perdió el vínculo',
             'device_replaced' => 'Dispositivo reemplazado',
+            'multiple_devices' => 'Dos equipos usan el mismo terminal',
+            'health_offline_reminder' => 'Sigue sin conexión',
+            'health_no_charger' => 'Sin cargador',
+            'health_charger_ok' => 'Cargador conectado',
+            'health_outside_branch' => 'Fuera de la sucursal',
+            'health_back_in_branch' => 'De vuelta en la sucursal',
             'health_offline' => 'Sin conexión',
             'health_recovered' => 'Reconectado',
             'health_unlinked' => 'Quedó sin vincular',
@@ -117,6 +123,12 @@ class TerminalEvent extends Model
             'revoked' => 'danger',
             'link_lost' => 'danger',
             'device_replaced' => 'warning',
+            'multiple_devices' => 'warning',
+            'health_offline_reminder' => 'danger',
+            'health_no_charger' => 'warning',
+            'health_charger_ok' => 'success',
+            'health_outside_branch' => 'danger',
+            'health_back_in_branch' => 'success',
             'health_offline' => 'danger',
             'health_recovered' => 'success',
             'health_unlinked' => 'danger',
@@ -167,6 +179,15 @@ class TerminalEvent extends Model
         }
         if (! empty($payload['late'])) {
             $parts[] = 'Confirmado con retraso';
+        }
+        if (isset($payload['devices'])) {
+            $parts[] = $payload['devices'].' equipos distintos en 24 horas';
+        }
+        if (isset($payload['distance_m'])) {
+            $parts[] = 'A '.$payload['distance_m'].' m de la sucursal'.(isset($payload['radius_m']) ? ' (radio de '.$payload['radius_m'].' m)' : '');
+        }
+        if (isset($payload['hours_offline'])) {
+            $parts[] = 'Sin conexión hace '.$payload['hours_offline'].' horas';
         }
         if (! empty($payload['previous_ip'])) {
             $parts[] = 'Dispositivo anterior: IP '.$payload['previous_ip'];

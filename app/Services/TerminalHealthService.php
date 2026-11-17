@@ -35,6 +35,12 @@ class TerminalHealthService
     /** Minutos con la versión de la app desactualizada (terminal en línea) antes de avisar. */
     public const APP_OUTDATED_ALERT_MINUTES = 120;
 
+    /** Lecturas de ubicación seguidas fuera del radio para avisar que un equipo móvil salió de la sucursal. */
+    public const OUTSIDE_CONSECUTIVE_READINGS = 2;
+
+    /** Horas sin conexión tras las cuales se recuerda una sola vez que el terminal sigue caído. */
+    public const OFFLINE_REMINDER_HOURS = 4;
+
     /** Minutos seguidos en una pestaña del navegador o con la pestaña oculta (terminal en línea y en su horario) antes de avisar. */
     public const DISPLAY_ALERT_MINUTES = 120;
 
@@ -74,6 +80,8 @@ class TerminalHealthService
             'linked' => $linked,
             'connectivity' => $connectivity,
             'offline_alerted' => (bool) ($previous['offline_alerted'] ?? false),
+            'offline_alerted_at' => $previous['offline_alerted_at'] ?? null,
+            'offline_reminded' => (bool) ($previous['offline_reminded'] ?? false),
             'queue_stuck' => (bool) ($previous['queue_stuck'] ?? false),
             'low_battery' => (bool) ($previous['low_battery'] ?? false),
             'cache_empty' => (bool) ($previous['cache_empty'] ?? false),
@@ -87,6 +95,11 @@ class TerminalHealthService
             'not_installed_since' => $previous['not_installed_since'] ?? null,
             'tab_hidden' => (bool) ($previous['tab_hidden'] ?? false),
             'tab_hidden_since' => $previous['tab_hidden_since'] ?? null,
+            'no_charger' => (bool) ($previous['no_charger'] ?? false),
+            'no_charger_since' => $previous['no_charger_since'] ?? null,
+            'outside' => (bool) ($previous['outside'] ?? false),
+            'outside_hits' => (int) ($previous['outside_hits'] ?? 0),
+            'location_read_at' => $previous['location_read_at'] ?? null,
             'outage_run' => (int) ($previous['outage_run'] ?? 0),
         ];
 
@@ -109,6 +122,8 @@ class TerminalHealthService
                 ...$this->evaluateClock($terminal, $snapshot),
                 ...$this->evaluateAppVersion($terminal, $connectivity, $snapshot),
                 ...$this->evaluateDisplay($terminal, $connectivity, $snapshot),
+                ...$this->evaluateCharger($terminal, $connectivity, $snapshot),
+                ...$this->evaluateLocation($terminal, $connectivity, $snapshot),
             ];
         }
 
@@ -174,20 +189,62 @@ class TerminalHealthService
 
         if ($connectivity === 'stale' && ! $snapshot['offline_alerted']) {
             $snapshot['offline_alerted'] = true;
+            $snapshot['offline_alerted_at'] = now()->toIso8601String();
+            $snapshot['offline_reminded'] = false;
             $alerts[] = $this->raise($terminal, 'offline', 'health_offline', [
                 'stale_after_minutes' => $terminal->effectiveStaleMinutes(),
                 'last_heartbeat_at' => $terminal->last_heartbeat_at?->toIso8601String(),
                 'hints' => $terminal->offlineHints(),
             ]);
+        } elseif ($connectivity === 'stale' && $this->offlineReminderDue($snapshot)) {
+            $snapshot['offline_reminded'] = true;
+            $alerts[] = $this->remindOffline($terminal, $snapshot);
         } elseif ($connectivity === 'online' && $snapshot['offline_alerted']) {
             $snapshot['offline_alerted'] = false;
+            $snapshot['offline_alerted_at'] = null;
+            $snapshot['offline_reminded'] = false;
             $alerts[] = $this->raise($terminal, 'recovered', 'health_recovered');
             $this->markOfflineAlertsRead($terminal);
         } elseif (in_array($connectivity, ['unlinked', 'never_connected'], true)) {
             $snapshot['offline_alerted'] = false;
+            $snapshot['offline_alerted_at'] = null;
+            $snapshot['offline_reminded'] = false;
         }
 
         return $alerts;
+    }
+
+    /**
+     * Si el terminal sigue sin conexión pasadas `OFFLINE_REMINDER_HOURS` horas desde el primer aviso y todavía no se
+     * recordó. Se recuerda una sola vez: un terminal caído todo el fin de semana no debe llenar la campanita.
+     *
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function offlineReminderDue(array $snapshot): bool
+    {
+        if (! $snapshot['offline_alerted'] || $snapshot['offline_reminded'] || empty($snapshot['offline_alerted_at'])) {
+            return false;
+        }
+
+        return Carbon::parse($snapshot['offline_alerted_at'])->diffInMinutes(now()) >= self::OFFLINE_REMINDER_HOURS * 60;
+    }
+
+    /**
+     * Recordatorio de un terminal que sigue sin conexión: queda en la bitácora y avisa aparte (no se agrupa con los
+     * avisos nuevos de la corrida, porque dice «sigue sin conexión»).
+     *
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function remindOffline(Terminal $terminal, array $snapshot): string
+    {
+        $this->record($terminal, 'health_offline_reminder', [
+            'hours_offline' => self::OFFLINE_REMINDER_HOURS,
+            'last_heartbeat_at' => $terminal->last_heartbeat_at?->toIso8601String(),
+        ]);
+
+        $this->notifyManagers(new TerminalHealthNotification($terminal, 'offline', reminder: true), 'offline', $terminal);
+
+        return 'offline';
     }
 
     /**
@@ -425,6 +482,103 @@ class TerminalHealthService
         }
 
         return $alerts;
+    }
+
+    /**
+     * Equipo móvil que sale de la sucursal: cuenta **lecturas** de ubicación (no latidos, que son cada minuto) fuera del
+     * radio y, con `OUTSIDE_CONSECUTIVE_READINGS` seguidas, avisa una vez. Una lectura cuya precisión es peor que el
+     * radio no cuenta ni reinicia (un GPS impreciso no prueba nada). Solo con el equipo en línea y dentro de su horario
+     * de vigilancia; al volver al radio queda en la bitácora.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function evaluateLocation(Terminal $terminal, string $connectivity, array &$snapshot): array
+    {
+        if (! $terminal->is_mobile || $connectivity !== 'online' || ! $terminal->hasFreshDeviceReport() || ! $terminal->isWithinWatchWindow()) {
+            return [];
+        }
+
+        $location = $terminal->locationStatus();
+
+        // Una lectura se cuenta una sola vez: el latido repite la última hasta que hay una nueva.
+        if ($location === null || ! $location['reliable'] || $location['read_at'] === null || $location['read_at']->toIso8601String() === $snapshot['location_read_at']) {
+            return [];
+        }
+
+        $snapshot['location_read_at'] = $location['read_at']->toIso8601String();
+
+        if (! $location['outside']) {
+            $snapshot['outside_hits'] = 0;
+
+            if ($snapshot['outside']) {
+                $snapshot['outside'] = false;
+                $this->record($terminal, 'health_back_in_branch', ['distance_m' => $location['distance_m']]);
+            }
+
+            return [];
+        }
+
+        $snapshot['outside_hits']++;
+
+        if (! $snapshot['outside'] && $snapshot['outside_hits'] >= self::OUTSIDE_CONSECUTIVE_READINGS) {
+            $snapshot['outside'] = true;
+
+            return [$this->raise($terminal, 'outside_branch', 'health_outside_branch', [
+                'distance_m' => $location['distance_m'],
+                'radius_m' => $location['radius_m'],
+            ])];
+        }
+
+        return [];
+    }
+
+    /**
+     * Terminal en línea que lleva `terminal_no_charger_minutes` o más sin cargador: avisa una vez, antes de que la
+     * batería esté baja (el equipo se apaga o se suspende y deja de marcar). Solo cuenta con el terminal en línea,
+     * dentro de su horario y con un reporte fresco que informe el estado de carga (la Battery API no existe en iOS
+     * ni en Firefox: sin dato no cambia nada). Al enchufarlo se reinicia y queda en la bitácora.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function evaluateCharger(Terminal $terminal, string $connectivity, array &$snapshot): array
+    {
+        $minutes = $this->settings->terminal_no_charger_minutes;
+
+        if ($connectivity !== 'online' || ! $terminal->hasFreshDeviceReport() || ! $terminal->isWithinWatchWindow()) {
+            return [];
+        }
+
+        $charging = $terminal->reportedCharging();
+
+        if ($charging === null) {
+            return [];
+        }
+
+        if ($charging === false && $minutes > 0) {
+            $snapshot['no_charger_since'] ??= now()->toIso8601String();
+
+            if (! $snapshot['no_charger'] && Carbon::parse($snapshot['no_charger_since'])->lte(now()->subMinutes($minutes))) {
+                $snapshot['no_charger'] = true;
+
+                return [$this->raise($terminal, 'no_charger', 'health_no_charger', [
+                    'minutes' => $minutes,
+                    'battery_level' => $terminal->reportedBatteryLevel(),
+                ])];
+            }
+
+            return [];
+        }
+
+        $snapshot['no_charger_since'] = null;
+
+        if ($snapshot['no_charger']) {
+            $snapshot['no_charger'] = false;
+            $this->record($terminal, 'health_charger_ok');
+        }
+
+        return [];
     }
 
     /**

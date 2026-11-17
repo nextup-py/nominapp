@@ -74,6 +74,8 @@ Para que no queden olvidados, el sistema los hace visibles:
 - En **Asistencias → Por resolver**, la tarjeta **Contratos vencidos sin renovar** muestra cuántos son y abre ese listado.
 - La campanita diaria de las 08:00 avisa de los contratos vencidos (ver **Mis notificaciones**).
 
+En el **Escritorio**, la tarjeta **Contratos por vencer y fines de prueba** reúne en una lista los contratos que vencen pronto (o ya vencieron) y los que terminan su período de prueba en los próximos días, con el **Motivo** de cada uno y las acciones **Renovar** y **Dar de baja** sin salir de la tarjeta.
+
 Desde el contrato se resuelve cada caso: **Renovar** (o extender la fecha de fin) si la relación continúa, o **Terminar** si el empleado se va (eso lo pasa a Inactivo; para liquidar en el sistema, crear la **Liquidación** antes de terminar, o usar **Dar de baja** desde la ficha del empleado).
 
 ### Contrato vencido: renovar o extender la fecha

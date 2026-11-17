@@ -27,6 +27,7 @@ Acceder desde **Configuración → Configuración General**.
 ### Configuración de Contratos
 
 - **Días de anticipación para alertas:** cuántos días antes del vencimiento de un contrato a plazo el sistema muestra la alerta (por defecto 30).
+- **Aviso de fin de período de prueba:** cuántos días antes de que termine la prueba de un contrato (Art. 58 CLT) llega el resumen diario y aparece en el Escritorio (por defecto 7; **0** apaga el aviso).
 - **Pasar a indefinido en la segunda renovación (Art. 53 CLT):** al renovar por segunda vez un contrato a plazo fijo, el contrato nuevo se crea indefinido (encendido por defecto). Apagado, el tipo no cambia solo. Aunque esté encendido, cada renovación puede mantener el plazo fijo indicando el motivo. Validar con el contador o un abogado antes de apagarlo.
 
 ### Reconocimiento Facial
@@ -42,6 +43,7 @@ Acceder desde **Configuración → Configuración General**.
 - **Umbral de desconexión:** horas sin un heartbeat (latido) exitoso antes de que el panel marque un terminal como **Desconectado** (por defecto 2 horas; entre 1 y 72). No afecta a los estados *Sin vincular* ni *Nunca conectado*. Cada terminal puede definir su propio umbral en minutos. Ver el capítulo **Terminales de Marcación**.
 - **Cola de marcaciones atascada:** minutos con marcaciones pendientes o en conflicto sin vaciarse (con el terminal en línea) antes de avisar por la campanita (por defecto 15; entre 5 y 1440).
 - **Batería baja:** porcentaje por debajo del cual se avisa que un terminal sin cargador se está quedando sin batería (por defecto 20 %; entre 5 y 50). Solo aplica a navegadores que informan la batería.
+- **Terminal sin cargador:** minutos sin cargador a partir de los cuales el terminal le recomienda a quien lo usa que lo enchufe y se avisa a quien gestiona terminales, antes de que la batería esté baja (por defecto 30; **0** lo apaga). Solo funciona si el navegador informa la batería.
 - **Desfase de reloj tolerado:** segundos de diferencia entre el reloj del terminal y el del servidor a partir de los cuales se avisa (por defecto 120; entre 30 y 3600). Se avisa solo si el desfase se repite en tres reportes seguidos. Las marcaciones ya se corrigen con ese desfase; el aviso sirve para que alguien revise la fecha y hora del dispositivo.
 - **Reencendido de la cámara apagada:** minutos que tarda en volver a encenderse sola la cámara de un terminal que alguien apagó a mano desde su menú **⋮** (por defecto 2; entre 0 y 240; **0** = queda apagada hasta encenderla a mano). Evita dejar el terminal inutilizado por un olvido.
 - **Retención de la bitácora de terminales:** días que se conservan los eventos de la bitácora y los comandos remotos de cada terminal antes de eliminarse automáticamente (por defecto 90; **0** = conservar siempre).
@@ -263,7 +265,7 @@ Herramienta técnica de diagnóstico: muestra los registros de error y advertenc
 
 ## Salud del sistema
 
-Acceder desde **Configuración → Salud del sistema** (solo Super Admin). Resume en cinco tarjetas si el sistema está funcionando:
+Acceder desde **Configuración → Salud del sistema** (Super Admin y los roles con el permiso **Ver Salud del sistema y logs**, como Soporte TI). Resume en cinco tarjetas si el sistema está funcionando:
 
 | Tarjeta | Qué mira |
 |---------|----------|

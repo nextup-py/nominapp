@@ -299,6 +299,15 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('días')
                             ->helperText('Cantidad de días antes del vencimiento para mostrar alertas de contratos'),
 
+                        TextInput::make('contract_trial_alert_days')
+                            ->label('Aviso de fin de período de prueba')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(60)
+                            ->default(7)
+                            ->suffix('días antes')
+                            ->helperText('Un resumen diario avisa de los contratos cuya prueba termina en estos días. 0 apaga el aviso.'),
+
                         Toggle::make('contract_force_indefinite_on_second_renewal')
                             ->label('Pasar a indefinido en la segunda renovación (Art. 53 CLT)')
                             ->default(true)
@@ -372,6 +381,17 @@ class ManageGeneralSettings extends SettingsPage
                             ->default(20)
                             ->suffix('%')
                             ->helperText('Se avisa cuando un terminal sin cargador baja de este nivel (solo si el navegador informa la batería)'),
+
+                        TextInput::make('terminal_no_charger_minutes')
+                            ->label('Terminal sin cargador')
+                            ->numeric()
+                            ->integer()
+                            ->required()
+                            ->minValue(0)
+                            ->maxValue(1440)
+                            ->default(30)
+                            ->suffix('minutos')
+                            ->helperText('Tiempo sin cargador a partir del cual el terminal le recomienda a quien lo usa que lo enchufe y se avisa a quien gestiona terminales, antes de que la batería esté baja. 0 = apagado. Solo si el navegador informa la batería'),
 
                         TextInput::make('terminal_clock_skew_max_seconds')
                             ->label('Desfase de reloj tolerado')

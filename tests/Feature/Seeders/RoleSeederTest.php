@@ -18,7 +18,7 @@ it('creates the four base roles and the three suggested ones', function () {
     (new RoleSeeder)->run();
 
     expect(Role::pluck('name')->all())->toEqualCanonicalizing([
-        'Super Admin', 'RRHH', 'Contador/Nómina', 'Solo Lectura', 'Jefe de equipo', 'Supervisor de sucursal', 'Encargado de asistencia',
+        'Super Admin', 'RRHH', 'Contador/Nómina', 'Solo Lectura', 'Jefe de equipo', 'Supervisor de sucursal', 'Encargado de asistencia', 'Soporte TI',
     ]);
 });
 
@@ -76,7 +76,7 @@ it('is idempotent on the permission matrix', function () {
     (new RoleSeeder)->run();
     (new RoleSeeder)->run();
 
-    expect(Role::count())->toBe(7);
+    expect(Role::count())->toBe(8);
 });
 
 it('gives RRHH the business-action permissions for employee leave, absences and contracts', function () {

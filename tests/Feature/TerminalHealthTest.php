@@ -324,6 +324,124 @@ it('avisa una sola vez cuando pasa a desconectado y otra cuando se recupera', fu
         ->toBe(['health_offline', 'health_recovered']);
 });
 
+it('recuerda una sola vez, a las 4 horas, que el terminal sigue sin conexión', function () {
+    $manager = healthManager();
+    $terminal = makeHealthTerminal(['stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subMinute()]);
+
+    evaluateHealth($terminal); // línea de base
+
+    $terminal->update(['last_heartbeat_at' => now()->subMinutes(20)]);
+    expect(evaluateHealth($terminal))->toBe(['offline']);
+
+    Carbon::setTestNow(now()->addHours(3));
+    expect(evaluateHealth($terminal))->toBe([]); // todavía no pasaron 4 horas
+
+    Carbon::setTestNow(now()->addHours(1)->addMinute());
+    expect(evaluateHealth($terminal))->toBe(['offline'])
+        ->and(evaluateHealth($terminal))->toBe([]);
+
+    Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 2);
+    Notification::assertSentTo($manager, TerminalHealthNotification::class, fn (TerminalHealthNotification $n) => $n->reminder);
+    expect($terminal->events()->where('type', 'health_offline_reminder')->count())->toBe(1);
+});
+
+it('tras reconectarse, una nueva caída vuelve a avisar y a recordar', function () {
+    healthManager();
+    $terminal = makeHealthTerminal(['stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subMinute()]);
+
+    evaluateHealth($terminal);
+    $terminal->update(['last_heartbeat_at' => now()->subMinutes(20)]);
+    evaluateHealth($terminal);
+
+    Carbon::setTestNow(now()->addHours(5));
+    evaluateHealth($terminal); // recordatorio
+
+    $terminal->update(['last_heartbeat_at' => now()]);
+    expect(evaluateHealth($terminal))->toBe(['recovered']);
+
+    Carbon::setTestNow(now()->addHour());
+    $terminal->update(['last_heartbeat_at' => now()->subMinutes(30)]);
+    expect(evaluateHealth($terminal))->toBe(['offline']); // aviso nuevo, no recordatorio
+
+    Carbon::setTestNow(now()->addHours(4)->addMinute());
+    expect(evaluateHealth($terminal))->toBe(['offline']);
+});
+
+it('avisa una vez cuando un terminal en línea lleva el tiempo configurado sin cargador y lo registra al enchufar', function () {
+    $manager = healthManager();
+    $terminal = makeHealthTerminal(['last_heartbeat_at' => now()]);
+    $report = fn (bool $charging) => $terminal->update(['last_heartbeat_at' => now(), 'device_report' => ['battery_level' => 61, 'battery_charging' => $charging], 'device_report_at' => now()]);
+
+    $report(true);
+    evaluateHealth($terminal); // línea de base
+
+    $report(false);
+    expect(evaluateHealth($terminal))->toBe([]);         // recién desenchufado
+
+    Carbon::setTestNow(now()->addMinutes(29));
+    $report(false);
+    expect(evaluateHealth($terminal))->toBe([]);         // todavía no pasan 30 minutos
+
+    Carbon::setTestNow(now()->addMinutes(2));
+    $report(false);
+    expect(evaluateHealth($terminal))->toBe(['no_charger'])
+        ->and(evaluateHealth($terminal))->toBe([]);      // no repite
+
+    Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 1);
+    Notification::assertSentTo($manager, TerminalHealthNotification::class, fn (TerminalHealthNotification $n) => $n->alert === 'no_charger');
+
+    $report(true);
+    evaluateHealth($terminal);
+
+    expect($terminal->events()->whereIn('type', ['health_no_charger', 'health_charger_ok'])->orderBy('id')->pluck('type')->all())
+        ->toBe(['health_no_charger', 'health_charger_ok']);
+});
+
+it('sin cargador no avisa si el ajuste está en 0, si el navegador no informa la carga o si el terminal está caído', function () {
+    $manager = healthManager();
+    $terminal = makeHealthTerminal(['last_heartbeat_at' => now()]);
+    $terminal->update(['device_report' => ['battery_charging' => false], 'device_report_at' => now()]);
+    evaluateHealth($terminal);
+
+    $settings = app(GeneralSettings::class);
+    $settings->terminal_no_charger_minutes = 0;
+    $settings->save();
+
+    Carbon::setTestNow(now()->addHours(3));
+    $terminal->update(['last_heartbeat_at' => now(), 'device_report_at' => now()]);
+    expect(evaluateHealth($terminal))->toBe([]);
+
+    $settings->terminal_no_charger_minutes = 30;
+    $settings->save();
+    $terminal->update(['device_report' => ['battery_level' => 50], 'device_report_at' => now()]); // sin dato de carga
+    expect(evaluateHealth($terminal))->toBe([]);
+
+    Notification::assertNotSentTo($manager, TerminalHealthNotification::class);
+});
+
+it('el detalle recomienda qué corregir según el reporte del equipo y no dice nada si está todo bien', function () {
+    $terminal = makeHealthTerminal();
+
+    expect($terminal->recommendations())->toBe([]); // nunca informó
+
+    $terminal->update(['device_report' => ['battery_level' => 40, 'battery_charging' => false, 'wake_lock' => false, 'visible' => false, 'display_mode' => 'browser']]);
+
+    $titles = collect($terminal->fresh()->recommendations())->pluck('title')->all();
+
+    expect($titles)->toContain('Enchufar el equipo', 'Mantener la pantalla encendida', 'Dejar la app visible', 'Abrir como app o en modo kiosko');
+
+    $terminal->update(['device_report' => ['battery_level' => 100, 'battery_charging' => true, 'wake_lock' => true, 'visible' => true, 'display_mode' => 'standalone']]);
+
+    expect($terminal->fresh()->recommendations())->toBe([]);
+});
+
+it('el latido le informa al terminal los minutos sin cargador configurados', function () {
+    $terminal = makeHealthTerminal();
+    Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
+
+    $this->postJson('/api/v1/terminal/heartbeat', [])->assertOk()->assertJsonPath('config.no_charger_minutes', 30);
+});
+
 it('fuera del horario de vigilancia no avisa; al abrir el horario, si sigue caído, avisa', function () {
     healthManager();
     $terminal = makeHealthTerminal([

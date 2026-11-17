@@ -23,7 +23,7 @@ class RoleSeeder extends Seeder
                 'terminal', 'branch', 'absence',
             ]),
             [
-                'approve_employee_leave', 'reject_employee_leave',
+                'approve_employee_leave', 'reject_employee_leave', 'cancel_employee_leave',
                 'justify_absence', 'mark_unjustified_absence', 'export_absence',
                 'activate_contract', 'renew_contract', 'suspend_contract',
                 'reactivate_contract', 'terminate_contract',

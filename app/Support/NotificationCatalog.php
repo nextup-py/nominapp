@@ -81,6 +81,8 @@ class NotificationCatalog
             'terminal.unlinked' => ['Terminal sin vincular', 'Un terminal perdió su acceso y no puede marcar hasta volver a vincularlo.', 'terminal_health', 'update_terminal', ['mandatory' => true, 'mail_when_configured' => true]],
             'terminal.queue_stuck' => ['Cola de marcaciones atascada', 'Un terminal tiene marcaciones pendientes que no se envían hace más del tiempo configurado.', 'terminal_health', 'update_terminal'],
             'terminal.battery_low' => ['Batería baja', 'Un terminal está por debajo del porcentaje configurado y sin cargador.', 'terminal_health', 'update_terminal'],
+            'terminal.no_charger' => ['Terminal sin cargador', 'Un terminal en línea lleva más del tiempo configurado en Configuración General sin cargador, antes de que la batería esté baja. Solo si el navegador informa la batería.', 'terminal_health', 'update_terminal'],
+            'terminal.outside_branch' => ['Terminal fuera de la sucursal', 'Un terminal marcado como equipo móvil mandó dos lecturas seguidas de ubicación fuera del radio de su sucursal. Solo con el equipo en línea y dentro de su horario.', 'terminal_health', 'update_terminal'],
             'terminal.no_enrolled' => ['Sucursal sin empleados enrolados', 'La sucursal de un terminal no tiene ningún empleado activo con rostro registrado.', 'terminal_health', 'update_terminal'],
             'terminal.cache_empty' => ['Terminal sin empleados en caché', 'Un terminal está en línea pero no tiene empleados en su caché local.', 'terminal_health', 'update_terminal'],
             'terminal.clock_skew' => ['Reloj del terminal desajustado', 'La hora de un terminal difiere del servidor más de lo permitido.', 'terminal_health', 'update_terminal'],
@@ -91,6 +93,7 @@ class NotificationCatalog
 
             'terminal.pairing_requested' => ['Solicitud de vinculación', 'Un dispositivo pidió vincularse a un terminal con un código y espera aprobación.', 'terminal_linking', 'update_terminal'],
             'terminal.device_replaced' => ['Dispositivo reemplazado en un terminal', 'Un dispositivo nuevo se vinculó a un terminal cuyo dispositivo anterior seguía en línea: el anterior quedó sin acceso. Suele indicar dos equipos abiertos en la misma URL. Queda siempre en la bitácora del terminal.', 'terminal_linking', 'update_terminal'],
+            'terminal.multiple_devices' => ['Dos equipos en el mismo terminal', 'Dos equipos distintos pidieron vincularse al mismo terminal en 24 horas: se van a quitar el acceso uno al otro. Una vez por terminal cada 24 horas.', 'terminal_linking', 'update_terminal'],
             'terminal.provisioned' => ['Terminal provisionado', 'Un dispositivo completó su vinculación. No llega a quien generó el enlace o abrió la ventana.', 'terminal_linking', 'update_terminal', ['channels' => ['database', 'mail'], 'frequency' => self::FREQUENCY_DIGEST]],
             'terminal.link_window_expired' => ['Ventana de vinculación vencida', 'La ventana que abriste venció sin que ningún dispositivo la usara.', 'terminal_linking', 'update_terminal'],
             'terminal.command_expired' => ['Comando remoto vencido', 'Un comando que enviaste a un terminal venció sin aplicarse.', 'terminal_linking', 'update_terminal'],
@@ -103,6 +106,7 @@ class NotificationCatalog
             'attendance.face_enrollment' => ['Autoenrolamiento facial pendiente', 'Un empleado completó su registro facial y espera aprobación.', 'attendance', 'update_face_enrollment'],
 
             'contract.alert' => ['Contratos por vencer o vencidos', 'Contratos que se acercan a su fecha de fin o ya vencieron.', 'contracts_devices', 'view_any_contract', ['digestable' => false, 'mail_when_configured' => true]],
+            'contract.trial_ending' => ['Fin del período de prueba', 'Resumen diario de los contratos cuyo período de prueba termina en los próximos días (se configuran en Configuración General). No se repite mientras el anterior siga sin leer.', 'contracts_devices', 'view_any_contract', ['digestable' => false]],
             'device.mobile_linked' => ['Celular vinculado', 'Un empleado vinculó su celular para marcar asistencia.', 'contracts_devices', 'view_any_employee_device', ['frequency' => self::FREQUENCY_DIGEST]],
             'device.mobile_relinked' => ['Celular re-vinculado', 'Un empleado vinculó un celular nuevo y se revocó el anterior.', 'contracts_devices', 'view_any_employee_device', ['mandatory' => true, 'channels' => ['database', 'mail']]],
             'device.mobile_link_blocked' => ['Vinculación de celular sin permiso', 'Un empleado no habilitado para marcar desde el celular intentó vincularlo.', 'contracts_devices', 'update_employee'],
