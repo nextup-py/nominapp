@@ -31,7 +31,7 @@ class ShiftPlannerPage extends Page
 
     protected static ?string $slug = 'planificador';
 
-    protected static ?int $navigationSort = 22;
+    protected static ?int $navigationSort = 6;
 
     protected static string $view = 'filament.pages.shift-planner';
 

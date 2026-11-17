@@ -46,7 +46,7 @@ class AguinaldoPeriodResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     /**
      * Define el formulario para crear o editar un período de aguinaldo, con campos para seleccionar la empresa, el año y agregar notas, incluyendo validaciones personalizadas.

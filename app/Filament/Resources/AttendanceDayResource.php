@@ -63,7 +63,7 @@ class AttendanceDayResource extends Resource
 
     protected static ?string $navigationGroup = 'Asistencias';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
 
     /**
      * Indica si el usuario puede modificar jornadas (aprobar, ajustar, recalcular). Las acciones

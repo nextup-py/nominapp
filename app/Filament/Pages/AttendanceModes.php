@@ -20,9 +20,9 @@ class AttendanceModes extends Page
 
     protected static ?string $navigationIcon = 'heroicon-o-qr-code';
 
-    protected static ?string $navigationGroup = 'Asistencias';
+    protected static ?string $navigationGroup = 'Terminales y dispositivos';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $title = 'Modos de Marcación';
 

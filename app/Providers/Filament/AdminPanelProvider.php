@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\MyNotifications;
 use App\Http\Middleware\EnsureSetupIsComplete;
 use App\Support\ThemeResolver;
@@ -16,6 +17,7 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -33,7 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('')
             ->login()
-            ->profile(isSimple: false)
+            ->profile(EditProfile::class, isSimple: false)
             ->favicon(asset('icons/favicon.ico'))
             ->brandLogo(asset('images/branding/nominapp-isotipo.png'))
             ->darkModeBrandLogo(asset('images/branding/nominapp-isotipo.png'))
@@ -50,18 +52,25 @@ class AdminPanelProvider extends PanelProvider
                 'dark' => Color::Slate,
             ])
             ->navigationGroups([
-                NavigationGroup::make('Organización')
-                    ->icon('heroicon-o-building-office'),
-                NavigationGroup::make('Empleados')
-                    ->icon('heroicon-o-user-group'),
                 NavigationGroup::make('Asistencias')
                     ->icon('heroicon-o-clock'),
+                NavigationGroup::make('Terminales y dispositivos')
+                    ->icon('heroicon-o-computer-desktop')
+                    ->collapsed(),
+                NavigationGroup::make('Empleados')
+                    ->icon('heroicon-o-user-group'),
                 NavigationGroup::make('Nóminas')
-                    ->icon('heroicon-o-banknotes'),
+                    ->icon('heroicon-o-banknotes')
+                    ->collapsed(),
                 NavigationGroup::make('Créditos')
-                    ->icon('heroicon-o-credit-card'),
-                NavigationGroup::make('Reportes')
-                    ->icon('heroicon-o-document-chart-bar'),
+                    ->icon('heroicon-o-credit-card')
+                    ->collapsed(),
+                NavigationGroup::make('Organización')
+                    ->icon('heroicon-o-building-office')
+                    ->collapsed(),
+                NavigationGroup::make('Catálogos')
+                    ->icon('heroicon-o-rectangle-stack')
+                    ->collapsed(),
                 NavigationGroup::make('Configuración')
                     ->icon('heroicon-o-cog-6-tooth')
                     ->collapsed(),
@@ -69,6 +78,7 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-book-open')
                     ->collapsed(),
             ])
+            ->renderHook(PanelsRenderHook::BODY_END, fn (): string => view('filament.hooks.open-active-nav-group')->render())
             ->userMenuItems([
                 MenuItem::make()
                     ->label('Mis notificaciones')

@@ -615,6 +615,25 @@ class Employee extends Model implements AuthenticatableContract
     }
 
     /**
+     * Empleados a quienes les falta un requisito de ficha (ver `EmployeeProfileCompleteness`). Misma condición que
+     * `EmployeeProfileCompleteness::missing()` en SQL, sin mirar qué exige cada empresa.
+     */
+    public function scopeMissingProfileItem($query, string $key)
+    {
+        return match ($key) {
+            'phone' => $query->where(fn ($q) => $q->whereNull('employees.phone')->orWhere('employees.phone', '')),
+            'birth_date' => $query->whereNull('employees.birth_date'),
+            'address' => $query->whereDoesntHave('addresses'),
+            'photo' => $query->where(fn ($q) => $q->whereNull('employees.photo')->orWhere('employees.photo', '')),
+            'face' => $query->whereNull('employees.face_descriptor'),
+            'email' => $query->where(fn ($q) => $q->whereNull('employees.email')->orWhere('employees.email', '')),
+            'bank_account' => $query->whereHas('activeContract', fn ($c) => $c->where('payment_method', 'transfer'))->whereDoesntHave('bankAccounts'),
+            'signed_contract' => $query->whereHas('activeContract', fn ($c) => $c->where(fn ($d) => $d->whereNull('document_path')->orWhere('document_path', ''))),
+            default => $query,
+        };
+    }
+
+    /**
      * Scope para filtrar empleados sin rostro registrado
      */
     public function scopeWithoutFace($query)

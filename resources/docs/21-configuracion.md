@@ -174,9 +174,20 @@ Acceder desde **Configuración → Usuarios**.
 
 1. Clic en **Nuevo usuario**
 2. Ingresar nombre completo, correo electrónico y contraseña (con confirmación)
-3. Guardar
+3. Opcional: vincular la ficha de empleado (**Ficha de empleado**), para que el perfil muestre cargo y sucursal
+4. Guardar
 
-Cada usuario puede gestionar su propio perfil (nombre, email, contraseña, foto) desde el menú de perfil en la esquina del panel.
+La contraseña debe tener al menos 10 caracteres, con mayúsculas, minúsculas y números.
+
+### Mi perfil
+
+Cada usuario abre su perfil desde el menú de la esquina superior del panel. Ahí puede:
+
+- Cambiar su **foto de perfil** y su **contraseña** (con la misma política de 10 caracteres).
+- Ver su **nombre**, **correo**, **ficha de empleado** y **roles**, que son solo de lectura: los cambia el Super Admin desde **Configuración → Usuarios**.
+- Revisar **Mis permisos** agrupados por módulo.
+- Ver sus **Sesiones abiertas** y cerrar las de otros dispositivos con **Cerrar las demás sesiones**.
+- Ver sus **Últimos ingresos** (fecha e IP). Si la cuenta ingresa desde una IP que nunca había usado, llega un aviso por la campanita.
 
 > Un usuario recién creado **no puede entrar al panel** hasta que se le asigne al menos un rol. Ver el capítulo **Roles y Permisos** para asignar roles y entender qué puede hacer cada uno.
 
@@ -233,3 +244,19 @@ Acceder desde **Configuración → Visor de Logs**.
 Herramienta técnica de diagnóstico: muestra los registros de error y advertencia (`storage/logs/laravel.log`) directamente desde el panel, con columnas de **Nivel**, **Entorno**, **Archivo**, **Mensaje** y **Fecha**.
 
 > Pensada para soporte técnico y desarrolladores al investigar un problema puntual (ej. un PDF que no se generó, un job que falló) — no forma parte del uso diario del sistema por parte de RR.HH. o Contaduría.
+
+## Salud del sistema
+
+Acceder desde **Configuración → Salud del sistema** (solo Super Admin). Resume en cinco tarjetas si el sistema está funcionando:
+
+| Tarjeta | Qué mira |
+|---------|----------|
+| **Programador** | Que las tareas automáticas (cálculo de asistencia, avisos) estén corriendo. Pasa a **Crítico** si no hay actividad hace más de 5 minutos. |
+| **Cola** | Trabajos fallidos y pendientes. |
+| **Correo** | Si el correo está configurado y si hubo fallas de envío sin revisar. |
+| **Disco** | Espacio usado del servidor (**Atención** desde el 85 %, **Crítico** desde el 95 %). |
+| **Logs** | Tamaño de los archivos de registro. |
+
+Debajo aparecen los **errores de los últimos 7 días** agrupados: un error que se repite 500 veces se muestra una sola vez, con su contador, la primera y la última aparición. Cuando el error es conocido se explica en palabras simples y se sugiere qué hacer. El botón **Abrir el visor de logs** lleva al detalle técnico.
+
+Cuando aparece un error que no se había visto antes, el Super Admin recibe un aviso (**Errores nuevos en el sistema**, configurable en **Mis notificaciones**). Los logs viejos se limpian solos cada madrugada: los diarios se conservan 30 días y los demás archivos se recortan al pasar de 20 MB.

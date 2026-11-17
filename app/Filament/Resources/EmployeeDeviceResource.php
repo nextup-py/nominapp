@@ -49,9 +49,9 @@ class EmployeeDeviceResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-device-phone-mobile';
 
-    protected static ?string $navigationGroup = 'Asistencias';
+    protected static ?string $navigationGroup = 'Terminales y dispositivos';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 3;
 
     /**
      * Formulario de edición — solo los campos anotables a mano. Vinculación,

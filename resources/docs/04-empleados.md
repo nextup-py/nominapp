@@ -28,6 +28,21 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 
 > Los nombres se capitalizan automáticamente al guardar. La CI debe ser única en el sistema.
 
+### Superior directo («Reporta a»)
+
+El campo **Reporta a** de la ficha indica el superior jerárquico directo del empleado. Debe ser un empleado **activo de la misma empresa**, y no puede ser él mismo ni alguien que ya le reporte, directa o indirectamente (el sistema lo rechaza para evitar ciclos). En el listado se puede mostrar la columna **Reporta a** y filtrar por **Sin superior directo**.
+
+Para cargarlo en muchos empleados a la vez:
+
+- **Asignar superior directo** (acción masiva): seleccionar empleados, elegir el superior y confirmar. Los que no se pueden asignar (el propio superior, los de otra empresa o los que crearían un ciclo) se omiten y la notificación indica cuántos.
+- **Asignar superiores por regla** (botón del encabezado): permite, por ejemplo, que **todos los cajeros reporten a la Encargada de su sucursal**. Se elige la sucursal y los cargos alcanzados, y el superior: *el encargado de su sucursal* (quien tiene cierto cargo en la misma sucursal, siempre que haya uno solo) o *una persona en particular*. La **vista previa** muestra a quién se asignaría cada empleado y por qué se omiten los demás (ya tienen superior, no hay nadie con ese cargo en su sucursal o hay más de uno). Por defecto respeta a quienes ya tienen superior.
+
+### Ficha completa o incompleta
+
+El listado de empleados tiene la columna **Ficha**: el porcentaje de datos requeridos que ya están cargados (verde al 100 %, amarillo desde 70 %, rojo por debajo). Al pasar el cursor se ve qué falta. En la ficha de un empleado incompleto aparece la sección **Ficha incompleta** con la lista, y el filtro **Ficha: falta** deja solo a quienes no tienen un dato puntual (por ejemplo, domicilio), útil para completarlos de a uno.
+
+Los datos requeridos de fábrica son teléfono, fecha de nacimiento, domicilio, foto, rostro enrolado y cuenta bancaria (esta última solo si el contrato paga por transferencia). También se pueden exigir correo y contrato firmado (PDF cargado). Cada empresa elige los suyos en **Organización → Empresas → Editar → Ficha del empleado**.
+
 ### Estados del empleado
 
 | Estado | Descripción |

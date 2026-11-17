@@ -34,7 +34,7 @@ class ScheduleResource extends Resource
 {
     protected static ?string $model = Schedule::class;
 
-    protected static ?string $navigationGroup = 'Organización';
+    protected static ?string $navigationGroup = 'Asistencias';
 
     protected static ?string $navigationLabel = 'Horarios';
 
@@ -46,7 +46,7 @@ class ScheduleResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-clock';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 7;
 
     protected static ?string $recordTitleAttribute = 'name';
 

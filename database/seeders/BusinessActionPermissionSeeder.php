@@ -86,6 +86,11 @@ class BusinessActionPermissionSeeder extends Seeder
             'mark_unjustified' => 'Marcar como Injustificada',
             'export' => 'Exportar',
         ],
+        // Pseudo-modelo (como 'period'): permisos de la página «Mi equipo», sin CRUD propio.
+        'team' => [
+            'view' => 'Ver su equipo',
+            'view_branch' => 'Ver su sucursal',
+        ],
         'contract' => [
             'activate' => 'Activar',
             'renew' => 'Renovar',

@@ -9,6 +9,7 @@ use App\Models\TerminalPairingRequest;
 use App\Models\User;
 use App\Notifications\TerminalLinkLostNotification;
 use App\Notifications\TerminalPairingRequestedNotification;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -191,6 +192,8 @@ class TerminalPairingService
 
             TerminalEvent::record($locked->terminal, 'pairing_approved', ['request_id' => $locked->id], $approver->id);
 
+            $this->settleNotifications($locked->terminal_id);
+
             return $locked;
         });
     }
@@ -212,6 +215,7 @@ class TerminalPairingService
             $locked->update(['status' => TerminalPairingRequest::STATUS_DENIED]);
 
             TerminalEvent::record($locked->terminal, 'pairing_denied', ['request_id' => $locked->id], $actor->id);
+            $this->settleNotifications($locked->terminal_id);
 
             return $locked;
         });
@@ -245,6 +249,7 @@ class TerminalPairingService
 
             if ($request->status === TerminalPairingRequest::STATUS_PENDING && ! $request->expires_at->isFuture()) {
                 $request->update(['status' => TerminalPairingRequest::STATUS_EXPIRED]);
+                $this->settleNotifications($request->terminal_id);
             }
 
             return match ($request->status) {
@@ -262,7 +267,12 @@ class TerminalPairingService
      */
     public function expireStale(): int
     {
-        return TerminalPairingRequest::query()->stale()->update(['status' => TerminalPairingRequest::STATUS_EXPIRED]);
+        $terminalIds = TerminalPairingRequest::query()->stale()->pluck('terminal_id')->unique();
+        $expired = TerminalPairingRequest::query()->stale()->update(['status' => TerminalPairingRequest::STATUS_EXPIRED]);
+
+        $terminalIds->each(fn (int $terminalId) => $this->settleNotifications($terminalId));
+
+        return $expired;
     }
 
     /**
@@ -280,6 +290,8 @@ class TerminalPairingService
         ]);
 
         TerminalEvent::record($terminal, 'pairing_claimed', ['request_id' => $request->id, 'approved_by_id' => $request->approved_by_id]);
+
+        $this->settleNotifications($terminal->id);
 
         return [
             'status' => 'claimed',
@@ -323,15 +335,58 @@ class TerminalPairingService
         }
     }
 
+    /**
+     * Avisa a quienes gestionan terminales. Mientras un gestor tenga sin leer un aviso de este mismo terminal, no se
+     * crea otro: se actualiza el existente con la cantidad de veces que pidió vincularse (un equipo que se recarga una
+     * y otra vez pedía código y llenaba la campanita).
+     */
     private function notifyManagers(TerminalPairingRequest $request): void
     {
         try {
-            Terminal::managers()->each(fn (User $user) => $user->notify(new TerminalPairingRequestedNotification($request)));
+            Terminal::managers()->each(function (User $user) use ($request): void {
+                $existing = DatabaseNotification::query()
+                    ->where('notifiable_type', $user->getMorphClass())
+                    ->where('notifiable_id', $user->getKey())
+                    ->where('type', TerminalPairingRequestedNotification::class)
+                    ->whereNull('read_at')
+                    ->where('data->terminal_id', $request->terminal_id)
+                    ->latest()
+                    ->first();
+
+                if ($existing === null) {
+                    $user->notify(new TerminalPairingRequestedNotification($request));
+
+                    return;
+                }
+
+                $count = (int) ($existing->data['requests_count'] ?? 1) + 1;
+                $existing->forceFill([
+                    'data' => (new TerminalPairingRequestedNotification($request, $count))->toDatabase($user),
+                    'created_at' => now(),
+                ])->save();
+            });
         } catch (\Throwable $e) {
             Log::warning("No se pudo notificar la solicitud de vinculación del terminal #{$request->terminal_id}: {$e->getMessage()}", [
                 'terminal_id' => $request->terminal_id,
                 'request_id' => $request->id,
             ]);
         }
+    }
+
+    /**
+     * Cuando el terminal ya no tiene solicitudes pendientes (se aprobó, rechazó, venció o se vinculó), marca como
+     * leídos los avisos de solicitud que quedaban sin leer: ya no hay nada que revisar.
+     */
+    private function settleNotifications(int $terminalId): void
+    {
+        if (TerminalPairingRequest::query()->where('terminal_id', $terminalId)->pending()->exists()) {
+            return;
+        }
+
+        DatabaseNotification::query()
+            ->whereNull('read_at')
+            ->where('type', TerminalPairingRequestedNotification::class)
+            ->where('data->terminal_id', $terminalId)
+            ->update(['read_at' => now()]);
     }
 }

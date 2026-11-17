@@ -8,6 +8,8 @@ use App\Filament\Resources\CompanyResource\Pages;
 use App\Filament\Resources\CompanyResource\RelationManagers;
 use App\Models\Company;
 use App\Models\PyDepartment;
+use App\Services\EmployeeProfileCompleteness;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
@@ -214,6 +216,19 @@ class CompanyResource extends Resource
                     ])
                     ->columns(2)
                     ->collapsible(),
+
+                Section::make('Ficha del empleado')
+                    ->description('Qué datos exige esta empresa para considerar completa la ficha de un empleado. Sin cambios rigen los de fábrica.')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->schema([
+                        CheckboxList::make('profile_requirements')
+                            ->label('Datos requeridos')
+                            ->options(EmployeeProfileCompleteness::labels())
+                            ->afterStateHydrated(fn (CheckboxList $component, $state) => $component->state(is_array($state) ? $state : EmployeeProfileCompleteness::enabledFor(null)))
+                            ->columns(2),
+                    ])
+                    ->collapsible()
+                    ->collapsed(),
 
                 Section::make('Aviso de privacidad')
                     ->description('Lo muestra el terminal de asistencia a los empleados: en reposo, desde el ícono de información y mientras se identifican.')

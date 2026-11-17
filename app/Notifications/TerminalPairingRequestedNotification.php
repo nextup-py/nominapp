@@ -22,8 +22,12 @@ class TerminalPairingRequestedNotification extends Notification
     use HonorsPreferences;
     use Queueable;
 
+    /**
+     * @param  int  $requestsCount  Cuántas veces pidió vincularse este terminal mientras el aviso seguía sin leer.
+     */
     public function __construct(
         public readonly TerminalPairingRequest $request,
+        public readonly int $requestsCount = 1,
     ) {}
 
     /**
@@ -35,7 +39,8 @@ class TerminalPairingRequestedNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         $terminal = $this->request->terminal;
-        $body = "Un dispositivo pidió vincularse al terminal \"{$terminal->name}\" ({$terminal->branch?->name}). Verificá el código en su pantalla para aprobarlo.";
+        $times = $this->requestsCount > 1 ? " ({$this->requestsCount} veces)" : '';
+        $body = "Un dispositivo pidió vincularse al terminal \"{$terminal->name}\" ({$terminal->branch?->name}){$times}. Verificá el código en su pantalla para aprobarlo.";
 
         if ($this->request->replaces_active_device) {
             $body .= ' Atención: reemplazaría al dispositivo actualmente vinculado.';
@@ -53,6 +58,7 @@ class TerminalPairingRequestedNotification extends Notification
                 ->getDatabaseMessage(),
             'terminal_id' => $terminal->id,
             'pairing_request_id' => $this->request->id,
+            'requests_count' => $this->requestsCount,
         ];
     }
 

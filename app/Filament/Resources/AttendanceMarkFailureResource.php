@@ -53,9 +53,9 @@ class AttendanceMarkFailureResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-exclamation-triangle';
 
-    protected static ?string $navigationGroup = 'Asistencias';
+    protected static ?string $navigationGroup = 'Terminales y dispositivos';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     /** Sin formulario de creación/edición manual — los fallos solo se generan desde el flujo de marcación. */
     public static function form(Form $form): Form

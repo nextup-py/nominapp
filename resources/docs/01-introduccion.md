@@ -19,6 +19,12 @@ El sistema cubre el ciclo completo de gestión del personal:
 - **Reportes:** vistas agregadas exportables a PDF/Excel de salarios, contratos, empleados, vacaciones y préstamos
 - **Configuración:** usuarios, roles y permisos, feriados y parámetros del sistema
 
+## El menú lateral
+
+El menú se organiza en grupos: **Asistencias** (monitor en vivo, pendientes, asistencias, ausencias, marcaciones, planificador, horarios, plantillas de turno y patrones de rotación), **Terminales y dispositivos**, **Empleados**, **Nóminas**, **Créditos**, **Organización**, **Catálogos** (percepciones, deducciones, plantillas de contratos y feriados) y **Configuración**. Los grupos aparecen colapsados salvo **Asistencias** y **Empleados**, y el que contiene la página actual se abre solo. Cada usuario ve únicamente lo que su rol permite.
+
+Los reportes están reunidos en una sola entrada, **Reportes**, con tarjetas por tema. **Balances de Vacaciones** está dentro de **Empleados**, junto a **Vacaciones**.
+
 ## Jerarquía de datos
 
 Dos ejes independientes que se unen en el Contrato:

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
+use App\Support\PasswordPolicy;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -67,12 +68,12 @@ class UserResource extends Resource
                             ->required(fn ($context) => $context === 'create')
                             ->dehydrated(fn ($state) => filled($state))
                             ->dehydrateStateUsing(fn ($state) => Hash::make($state))
-                            ->minLength(8)
+                            ->rule(PasswordPolicy::rule(), fn ($context, $state) => filled($state))
                             ->maxLength(255)
-                            ->placeholder('Mínimo 8 caracteres')
+                            ->placeholder('Mínimo 10 caracteres')
                             ->helperText(fn ($context) => $context === 'edit'
                                 ? 'Dejar en blanco para mantener la contraseña actual'
-                                : 'La contraseña debe tener al menos 8 caracteres')
+                                : PasswordPolicy::hint())
                             ->columnSpan(1),
 
                         TextInput::make('password_confirmation')
@@ -85,6 +86,18 @@ class UserResource extends Resource
                             ->columnSpan(1),
                     ])
                     ->columns(2),
+
+                Section::make('Ficha de empleado')
+                    ->description('Opcional: si la persona es empleada, vincularla muestra su cargo y sucursal en su perfil.')
+                    ->schema([
+                        Select::make('employee_id')
+                            ->label('Empleado')
+                            ->relationship('employee', 'first_name', fn ($query) => $query->where('status', 'active'))
+                            ->getOptionLabelFromRecordUsing(fn ($record): string => "{$record->first_name} {$record->last_name} — CI: {$record->ci}")
+                            ->searchable(['first_name', 'last_name', 'ci'])
+                            ->placeholder('Sin ficha vinculada')
+                            ->visible(fn () => auth()->user()?->hasRole('Super Admin') ?? false),
+                    ]),
 
                 Section::make('Roles')
                     ->schema([

@@ -52,6 +52,7 @@ class Contract extends Model implements Auditable
         'status',
         'notes',
         'additional_clauses',
+        'terminated_at',
         'created_by_id',
     ];
 

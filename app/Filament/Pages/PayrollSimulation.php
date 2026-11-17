@@ -30,7 +30,7 @@ class PayrollSimulation extends Page implements HasForms
 
     protected static ?string $navigationGroup = 'Nóminas';
 
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $slug = 'simulacion-nomina';
 

@@ -141,6 +141,8 @@ Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse
 
 ---
 
+**Fusionar cargos duplicados:** en el menú de cada fila del listado de cargos, **Fusionar en otro cargo** mueve los contratos, los cargos que reportaban a este y las sucursales de marcación a otro cargo **de la misma empresa**, y elimina el cargo sobrante. Antes de confirmar se ve cuántos contratos y empleados activos se mueven y qué configuraciones difieren (departamento, dónde puede marcar en terminal, permiso de celular, marca descanso): prevalece lo del cargo que se conserva. Hace falta poder editar y eliminar cargos. Es útil para unir, por ejemplo, «Supervisor De Sucursal» con «Supervisor de Sucursal».
+
 ## Organigrama
 
 El organigrama se genera automáticamente a partir de la jerarquía de cargos de cada departamento. Para verlo o descargarlo en PDF:
@@ -156,6 +158,8 @@ El organigrama se genera automáticamente a partir de la jerarquía de cargos de
 - Los cargos sin ningún ocupante aparecen atenuados, con borde punteado y la etiqueta **Vacante**. Un cargo ocupado solo en otra sucursal no es vacante.
 - Los empleados activos sin contrato vigente (y por lo tanto sin cargo) se listan aparte, en **Empleados sin cargo asignado**.
 - Los totales del encabezado (departamentos, cargos, empleados y vacantes) cuentan lo que se está viendo.
+
+**Vista por personas:** el selector **Vista** del organigrama permite cambiar de **Por cargos** (la estructura de puestos, con vacantes) a **Por personas**, que arma el árbol con el campo **Reporta a** de cada empleado (ver *Superior directo* en el capítulo de Empleados). Las raíces son quienes tienen subordinados y no reportan a nadie, y quienes no tienen superior ni subordinados aparecen aparte en **Sin superior asignado**. La búsqueda, la sucursal y el departamento conservan la cadena de superiores de cada coincidencia. Esta vista no tiene PDF.
 
 **Filtros:** sobre el organigrama hay un buscador (por nombre de empleado o de cargo) y selectores de **Sucursal** (solo si hay más de una) y **Departamento**, además del interruptor **Mostrar vacantes** (activado por defecto). Clic en **Aplicar** para filtrar y en **Limpiar** para volver a ver todo. Los filtros quedan en la dirección de la página, así que se pueden compartir como enlace.
 

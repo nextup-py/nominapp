@@ -21,17 +21,26 @@
                     <h1>Organigrama</h1>
                     <p>{{ $company->name }}</p>
                     <div class="stats">
-                        <span class="stat">{{ $orgData['stats']['departments'] }} {{ $orgData['stats']['departments'] === 1 ? 'departamento' : 'departamentos' }}</span>
-                        <span class="stat">{{ $orgData['stats']['positions'] }} {{ $orgData['stats']['positions'] === 1 ? 'cargo' : 'cargos' }}</span>
-                        <span class="stat">{{ $orgData['stats']['employees'] }} {{ $orgData['stats']['employees'] === 1 ? 'empleado' : 'empleados' }}</span>
-                        @if ($orgData['stats']['vacancies'] > 0)
-                            <span class="stat stat--warning">{{ $orgData['stats']['vacancies'] }} {{ $orgData['stats']['vacancies'] === 1 ? 'vacante' : 'vacantes' }}</span>
+                        @if ($view === 'people')
+                            <span class="stat">{{ $orgData['stats']['people'] }} {{ $orgData['stats']['people'] === 1 ? 'persona' : 'personas' }}</span>
+                            <span class="stat">{{ $orgData['stats']['heads'] }} {{ $orgData['stats']['heads'] === 1 ? 'jefatura' : 'jefaturas' }}</span>
+                            @if ($orgData['stats']['without_manager'] > 0)
+                                <span class="stat stat--warning">{{ $orgData['stats']['without_manager'] }} sin superior asignado</span>
+                            @endif
+                        @else
+                            <span class="stat">{{ $orgData['stats']['departments'] }} {{ $orgData['stats']['departments'] === 1 ? 'departamento' : 'departamentos' }}</span>
+                            <span class="stat">{{ $orgData['stats']['positions'] }} {{ $orgData['stats']['positions'] === 1 ? 'cargo' : 'cargos' }}</span>
+                            <span class="stat">{{ $orgData['stats']['employees'] }} {{ $orgData['stats']['employees'] === 1 ? 'empleado' : 'empleados' }}</span>
+                            @if ($orgData['stats']['vacancies'] > 0)
+                                <span class="stat stat--warning">{{ $orgData['stats']['vacancies'] }} {{ $orgData['stats']['vacancies'] === 1 ? 'vacante' : 'vacantes' }}</span>
+                            @endif
                         @endif
                     </div>
                 </div>
             </div>
             <div class="header-actions">
                 <x-theme-toggle-button />
+                @if ($view !== 'people')
                 <a href="{{ route('org-chart.pdf', ['company' => $company] + $pdfParams) }}" class="btn btn-primary" target="_blank">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -42,6 +51,7 @@
                     </svg>
                     Exportar PDF
                 </a>
+                @endif
                 <a href="{{ url()->previous() }}" class="btn btn-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -56,6 +66,13 @@
 
         {{-- Filtros: se aplican en el servidor por parámetros de la URL, así el PDF respeta los mismos --}}
         <form method="GET" action="{{ route('org-chart.show', $company) }}" class="filters">
+            <label>
+                Vista
+                <select name="view">
+                    <option value="positions" @selected($view === 'positions')>Por cargos</option>
+                    <option value="people" @selected($view === 'people')>Por personas</option>
+                </select>
+            </label>
             <label>
                 Buscar
                 <input type="search" name="q" value="{{ $filters['search'] }}" maxlength="100"
@@ -81,17 +98,62 @@
                     @endforeach
                 </select>
             </label>
-            <label class="check">
-                <input type="hidden" name="vacancies" value="0">
-                <input type="checkbox" name="vacancies" value="1" @checked($filters['vacancies'])>
-                Mostrar vacantes
-            </label>
+            @if ($view !== 'people')
+                <label class="check">
+                    <input type="hidden" name="vacancies" value="0">
+                    <input type="checkbox" name="vacancies" value="1" @checked($filters['vacancies'])>
+                    Mostrar vacantes
+                </label>
+            @endif
             <div class="filters-actions">
                 <button type="submit" class="btn btn-primary">Aplicar</button>
                 <a href="{{ route('org-chart.show', $company) }}" class="btn btn-secondary">Limpiar</a>
             </div>
         </form>
 
+        @if ($view === 'people')
+            {{-- Organigrama por personas: sale del «Reporta a» de cada empleado --}}
+            <div class="org-chart">
+                @if (count($orgData['tree']) > 0)
+                    <div class="tree">
+                        <ul>
+                            @foreach ($orgData['tree'] as $person)
+                                @include('org-chart.partials.person-node', ['person' => $person])
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @if (count($orgData['without_manager']) > 0)
+                    <div class="unassigned-section">
+                        <div class="unassigned-title">Sin superior asignado</div>
+                        <div class="unassigned-employees">
+                            @foreach ($orgData['without_manager'] as $employee)
+                                <div class="unassigned-employee">
+                                    @if ($employee['photo'])
+                                        <img src="{{ $employee['photo'] }}" alt="{{ $employee['name'] }}" class="employee-photo">
+                                    @else
+                                        <div class="employee-photo-placeholder">{{ strtoupper(substr($employee['name'], 0, 1)) }}</div>
+                                    @endif
+                                    <span class="employee-name">{{ $employee['name'] }}
+                                        @if ($employee['position'])
+                                            <span class="employee-meta">· {{ $employee['position'] }}</span>
+                                        @endif
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if (count($orgData['tree']) === 0 && count($orgData['without_manager']) === 0)
+                    <div class="empty-state">
+                        <h3>No hay resultados</h3>
+                        <p>Ningún empleado activo coincide con los filtros aplicados.</p>
+                    </div>
+                @endif
+            </div>
+        @else
         <div class="org-chart">
             @if (count($orgData['tree']) > 0 || count($orgData['unassigned']) > 0)
                 <div class="scroll-hint">
@@ -156,6 +218,7 @@
                 </div>
             @endif
         </div>
+        @endif
     </div>
 </body>
 

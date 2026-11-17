@@ -15,6 +15,7 @@ use App\Notifications\TerminalPairingRequestedNotification;
 use App\Services\TerminalPairingService;
 use App\Settings\ModuleSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Sanctum\Sanctum;
@@ -409,4 +410,52 @@ it('el texto del modal de aprobación escapa lo que reporta el dispositivo', fun
         ->and($html)->toContain('&lt;b&gt;Pixel&lt;/b&gt;')
         ->and($html)->not->toContain('<script>')
         ->and($html)->toContain('<br>');
+});
+
+// ─── Un solo aviso por terminal y limpieza al resolverse ──────────────────────
+
+it('las solicitudes repetidas de un terminal actualizan un solo aviso con su contador', function () {
+    Notification::swap(new ChannelManager(app()));
+    $terminal = makePairingTerminal();
+    $manager = makePairingManager();
+
+    requestPairing($terminal);
+    requestPairing($terminal);
+    requestPairing($terminal);
+
+    $notifications = $manager->unreadNotifications()->where('type', TerminalPairingRequestedNotification::class)->get();
+
+    expect($notifications)->toHaveCount(1)
+        ->and($notifications->first()->data['requests_count'])->toBe(3)
+        ->and($notifications->first()->data['body'])->toContain('3 veces');
+});
+
+it('el aviso se marca como leído cuando el terminal ya no tiene solicitudes pendientes', function () {
+    Notification::swap(new ChannelManager(app()));
+    $terminal = makePairingTerminal();
+    $manager = makePairingManager();
+    $service = app(TerminalPairingService::class);
+
+    $first = requestPairing($terminal)['request'];
+    $second = requestPairing($terminal)['request'];
+
+    $unread = fn () => $manager->unreadNotifications()->where('type', TerminalPairingRequestedNotification::class)->count();
+
+    $service->deny($first, $manager);
+    expect($unread())->toBe(1); // todavía queda una pendiente
+
+    $service->deny($second, $manager);
+    expect($unread())->toBe(0);
+});
+
+it('el aviso también se limpia cuando las solicitudes vencen solas', function () {
+    Notification::swap(new ChannelManager(app()));
+    $terminal = makePairingTerminal();
+    $manager = makePairingManager();
+
+    requestPairing($terminal);
+    TerminalPairingRequest::query()->update(['expires_at' => now()->subMinute()]);
+
+    expect(app(TerminalPairingService::class)->expireStale())->toBe(1)
+        ->and($manager->unreadNotifications()->where('type', TerminalPairingRequestedNotification::class)->count())->toBe(0);
 });

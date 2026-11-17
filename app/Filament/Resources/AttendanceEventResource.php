@@ -50,7 +50,7 @@ class AttendanceEventResource extends Resource
 
     protected static ?string $navigationGroup = 'Asistencias';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 5;
 
     /**
      * Define el formulario para crear y editar marcaciones.

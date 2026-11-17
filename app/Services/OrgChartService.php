@@ -98,6 +98,115 @@ class OrgChartService
     }
 
     /**
+     * Organigrama de personas: el árbol sale del «Reporta a» de cada empleado. Las raíces son quienes tienen
+     * subordinados y no reportan a nadie; quienes no tienen superior ni subordinados se listan aparte como «sin
+     * superior asignado». Los filtros (sucursal, departamento y búsqueda) dejan a los que coinciden junto con su
+     * cadena de superiores, para que el árbol conserve el contexto.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{tree: array<int, array<string, mixed>>, without_manager: array<int, array<string, mixed>>, stats: array{people: int, heads: int, without_manager: int}, showBranch: bool}
+     */
+    public function buildPeople(Company $company, array $filters = []): array
+    {
+        $branchId = $filters['branch'] ?? null;
+        $departmentId = $filters['department'] ?? null;
+        $search = filled($filters['search'] ?? null) ? mb_strtolower(trim($filters['search'])) : null;
+
+        $employees = Employee::query()
+            ->whereIn('branch_id', $company->branches()->select('id'))
+            ->where('status', self::VISIBLE_STATUS)
+            ->with(['branch:id,name', 'activeContract:id,employee_id,position_id,department_id,start_date,status', 'activeContract.position:id,name'])
+            ->get()
+            ->keyBy('id');
+
+        $matches = $employees->filter(function (Employee $employee) use ($branchId, $departmentId, $search): bool {
+            if ($branchId !== null && $employee->branch_id !== $branchId) {
+                return false;
+            }
+
+            if ($departmentId !== null && $employee->activeContract?->department_id !== $departmentId) {
+                return false;
+            }
+
+            return $search === null
+                || str_contains(mb_strtolower($employee->full_name), $search)
+                || str_contains(mb_strtolower((string) $employee->activeContract?->position?->name), $search);
+        });
+
+        $kept = $matches->keys()->all();
+        $filtered = $branchId !== null || $departmentId !== null || $search !== null;
+
+        if ($filtered) {
+            foreach ($matches as $employee) {
+                $currentId = $employee->reports_to_id;
+                $guard = 0;
+
+                while ($currentId !== null && $employees->has($currentId) && $guard++ < 50) {
+                    $kept[] = $currentId;
+                    $currentId = $employees[$currentId]->reports_to_id;
+                }
+            }
+        } else {
+            $kept = $employees->keys()->all();
+        }
+
+        $keptSet = array_flip($kept);
+        $children = $employees
+            ->filter(fn (Employee $e) => isset($keptSet[$e->id]) && $e->reports_to_id !== null && $employees->has($e->reports_to_id))
+            ->groupBy('reports_to_id');
+
+        $visited = [];
+        $node = function (Employee $employee) use (&$node, $children, &$visited): array {
+            $visited[$employee->id] = true;
+
+            return $this->personEntry($employee) + [
+                'children' => $children->get($employee->id, collect())
+                    ->reject(fn (Employee $child) => isset($visited[$child->id]))
+                    ->sortBy(fn (Employee $child) => $child->last_name.' '.$child->first_name)
+                    ->map(fn (Employee $child) => $node($child))
+                    ->values()
+                    ->all(),
+            ];
+        };
+
+        $roots = $employees
+            ->filter(fn (Employee $e) => isset($keptSet[$e->id]) && ($e->reports_to_id === null || ! $employees->has($e->reports_to_id)))
+            ->sortBy(fn (Employee $e) => $e->last_name.' '.$e->first_name);
+
+        $tree = [];
+        $withoutManager = [];
+
+        foreach ($roots as $root) {
+            if ($children->has($root->id)) {
+                $tree[] = $node($root);
+            } else {
+                $withoutManager[] = $this->personEntry($root) + ['children' => []];
+            }
+        }
+
+        return [
+            'tree' => $tree,
+            'without_manager' => $withoutManager,
+            'stats' => [
+                'people' => count($kept),
+                'heads' => count($tree),
+                'without_manager' => count($withoutManager),
+            ],
+            'showBranch' => $company->branches()->count() > 1,
+        ];
+    }
+
+    /**
+     * Datos de una persona para las tarjetas del organigrama por personas.
+     *
+     * @return array<string, mixed>
+     */
+    private function personEntry(Employee $employee): array
+    {
+        return $this->employeeEntry($employee) + ['position' => $employee->activeContract?->position?->name];
+    }
+
+    /**
      * Datos de un empleado para las tarjetas del organigrama.
      *
      * @return array<string, mixed>

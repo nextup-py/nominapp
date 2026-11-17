@@ -25,7 +25,7 @@ it('is idempotent', function () {
 
 it('every group in GROUPS only references models present in MODELS', function () {
     $modelsInGroups = collect(PermissionSeeder::GROUPS)->flatten()
-        ->filter(fn ($m) => $m !== 'period') // Pseudo-model for business actions only (BusinessActionPermissionSeeder)
+        ->filter(fn ($m) => ! in_array($m, ['period', 'team'], true)) // Pseudo-models for business actions only (BusinessActionPermissionSeeder)
         ->values()
         ->all();
 

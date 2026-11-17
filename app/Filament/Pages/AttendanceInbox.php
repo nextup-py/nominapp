@@ -19,7 +19,7 @@ class AttendanceInbox extends Page
 
     protected static ?string $navigationGroup = 'Asistencias';
 
-    protected static ?int $navigationSort = 0;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $title = 'Por resolver';
 
@@ -43,7 +43,7 @@ class AttendanceInbox extends Page
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'warning';
+        return 'danger';
     }
 
     public static function getNavigationBadgeTooltip(): ?string
