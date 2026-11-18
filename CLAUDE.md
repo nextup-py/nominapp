@@ -43,6 +43,7 @@ php artisan audits:purge                      # purge audit history older than t
 - **Testing:** Pest
 - **Queue/Cache/Session:** database driver
 - **Locale:** Spanish (`es`), timezone `America/Asuncion`, currency Guaraní (Gs.)
+- **Tests y base de datos:** `RefreshDatabase` no está activado globalmente (`tests/Pest.php`): **todo test de Feature que escriba en la base declara `uses(RefreshDatabase::class)`** en su archivo (los de vistas o componentes que no guardan nada no lo necesitan). Sin eso las filas quedan en la base de testing: el test falla en la segunda corrida local (RUC o CI repetidos) y los registros sobrantes alteran a otros tests que cuentan empresas, sucursales o empleados. Si una corrida local falla por datos repetidos, limpiar la base de testing (`php artisan migrate:fresh --env=testing`).
 
 ## Architecture
 

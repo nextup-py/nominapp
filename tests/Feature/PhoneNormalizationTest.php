@@ -4,7 +4,10 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Support\PhoneNormalizer;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+
+uses(RefreshDatabase::class);
 
 it('normaliza los formatos habituales', function (?string $raw, ?string $expected) {
     expect(PhoneNormalizer::normalize($raw))->toBe($expected);
