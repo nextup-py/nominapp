@@ -693,20 +693,22 @@ class EmployeeResource extends Resource
                 ])
                 ->collapsible(),
 
-            InfoSection::make('Contrato Activo')
-                ->icon('heroicon-o-document-text')
+            InfoSection::make('Ubicación en la organización')
+                ->icon('heroicon-o-building-office-2')
                 ->columns(3)
                 ->schema([
-                    // Aviso cuando no hay contrato activo
-                    TextEntry::make('_contract_notice')
-                        ->hiddenLabel()
-                        ->getStateUsing(fn () => 'Este empleado no tiene un contrato activo. Creá uno desde la pestaña "Contratos".')
-                        ->icon('heroicon-o-exclamation-triangle')
-                        ->color('warning')
-                        ->columnSpanFull()
-                        ->hidden(fn (Employee $record) => $record->activeContract !== null),
+                    TextEntry::make('branch.company.name')
+                        ->label('Empresa')
+                        ->icon('heroicon-o-building-office-2')
+                        ->badge()
+                        ->color('info'),
 
-                    // Campos visibles solo cuando hay contrato activo
+                    TextEntry::make('branch.name')
+                        ->label('Sucursal')
+                        ->icon('heroicon-o-building-storefront')
+                        ->badge()
+                        ->color('info'),
+
                     TextEntry::make('activeContract.position.name')
                         ->label('Cargo')
                         ->icon('heroicon-o-briefcase')
@@ -720,27 +722,6 @@ class EmployeeResource extends Resource
                         ->badge()
                         ->color('gray')
                         ->hidden(fn (Employee $record) => $record->activeContract === null),
-
-                    TextEntry::make('hire_date')
-                        ->label('Antigüedad')
-                        ->getStateUsing(
-                            fn (Employee $record) => $record->hire_date
-                                ? $record->hire_date->format('d/m/Y').' · '.$record->antiquity_description
-                                : null
-                        )
-                        ->hidden(fn (Employee $record) => $record->activeContract === null),
-
-                    TextEntry::make('branch.company.name')
-                        ->label('Empresa')
-                        ->icon('heroicon-o-building-office-2')
-                        ->badge()
-                        ->color('info'),
-
-                    TextEntry::make('branch.name')
-                        ->label('Sucursal')
-                        ->icon('heroicon-o-building-storefront')
-                        ->badge()
-                        ->color('info'),
 
                     TextEntry::make('reportsTo.full_name')
                         ->label('Reporta a')
@@ -758,6 +739,30 @@ class EmployeeResource extends Resource
                         ->suffix(fn (Employee $record) => $record->subordinates()->where('status', 'active')->count() === 1 ? ' empleado' : ' empleados')
                         ->badge()
                         ->color(fn (Employee $record) => $record->subordinates()->where('status', 'active')->count() > 0 ? 'primary' : 'gray'),
+                ])
+                ->collapsible(),
+
+            InfoSection::make('Contrato')
+                ->icon('heroicon-o-document-text')
+                ->columns(3)
+                ->schema([
+                    // Aviso cuando no hay contrato activo
+                    TextEntry::make('_contract_notice')
+                        ->hiddenLabel()
+                        ->getStateUsing(fn () => 'Este empleado no tiene un contrato activo. Creá uno desde la pestaña "Contratos".')
+                        ->icon('heroicon-o-exclamation-triangle')
+                        ->color('warning')
+                        ->columnSpanFull()
+                        ->hidden(fn (Employee $record) => $record->activeContract !== null),
+
+                    TextEntry::make('hire_date')
+                        ->label('Antigüedad')
+                        ->getStateUsing(
+                            fn (Employee $record) => $record->hire_date
+                                ? $record->hire_date->format('d/m/Y').' · '.$record->antiquity_description
+                                : null
+                        )
+                        ->hidden(fn (Employee $record) => $record->activeContract === null),
 
                     TextEntry::make('employment_type')
                         ->label('Tipo de empleo')
