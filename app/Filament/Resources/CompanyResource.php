@@ -69,21 +69,44 @@ class CompanyResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Información Legal')
-                    ->description('Datos legales básicos de la empresa, necesarios para su identificación y registro fiscal.')
+                Section::make('Estado')
+                    ->icon('heroicon-o-power')
                     ->schema([
+                        Toggle::make('is_active')
+                            ->label('Activa')
+                            ->default(true)
+                            ->disabled(fn (?Company $record) => $record?->is_active && $record->activeEmployeesCount() > 0)
+                            ->helperText(fn (?Company $record) => $record?->is_active && ($active = $record->activeEmployeesCount()) > 0
+                                ? "No se puede desactivar: tiene {$active} empleados activos. Desvincularlos o transferirlos primero."
+                                : 'Las empresas inactivas no aparecen en los selectores.'),
+                    ])
+                    ->hiddenOn('create'),
+
+                Section::make('Identidad')
+                    ->icon('heroicon-o-identification')
+                    ->schema([
+                        FileUpload::make('logo')
+                            ->label('Logo')
+                            ->image()
+                            ->imageEditor()
+                            ->directory('companies/logos')
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
+                            ->maxSize(5120)
+                            ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => 'logo_empresa_'.now()->format('Y-m-d_H-i-s').'.'.$file->getClientOriginalExtension())
+                            ->helperText('JPG, PNG, WEBP o SVG, máximo 5 MB. El SVG no se ve en el terminal ni en el celular: usar PNG.')
+                            ->columnSpanFull(),
+
                         TextInput::make('name')
                             ->label('Razón Social')
                             ->placeholder('Ej: Industrias XYZ S.A.')
                             ->required()
-                            ->maxLength(255)
-                            ->helperText('Nombre legal registrado de la empresa.'),
+                            ->maxLength(255),
 
                         TextInput::make('trade_name')
                             ->label('Nombre Comercial')
                             ->placeholder('Ej: El Taller de Juan')
                             ->maxLength(255)
-                            ->helperText('Nombre comercial o de fantasía, si es diferente a la razón social.'),
+                            ->helperText('Opcional. Si se deja vacío, se usa la razón social.'),
 
                         TextInput::make('ruc')
                             ->label('RUC')
@@ -93,9 +116,9 @@ class CompanyResource extends Resource
                             ->maxLength(20)
                             ->regex('/^\d{1,8}-\d$/')
                             ->validationMessages([
-                                'regex' => 'El formato del RUC debe ser número base + guion + dígito verificador. Ej: 80012345-6 o 1234567-1',
-                            ])
-                            ->helperText('Número de Registro Único de Contribuyentes (RUC).'),
+                                'regex' => 'El RUC debe tener el formato número-dígito verificador. Ej: 80012345-6.',
+                                'unique' => 'Ya existe una empresa con este RUC.',
+                            ]),
 
                         TextInput::make('employer_number')
                             ->label('Número Patronal IPS')
@@ -105,37 +128,37 @@ class CompanyResource extends Resource
                             ->integer()
                             ->minValue(1)
                             ->maxValue(99999999)
-                            ->helperText('Número de registro patronal en el Instituto de Previsión Social (IPS).'),
+                            ->helperText('Hasta 8 dígitos, sin puntos.')
+                            ->validationMessages([
+                                'unique' => 'Ya existe una empresa con este número patronal.',
+                            ]),
                     ])
                     ->columns(2)
                     ->collapsible(),
 
                 Section::make('Constitución Legal')
-                    ->description('Detalles sobre la constitución legal de la empresa y su representante legal.')
+                    ->icon('heroicon-o-scale')
                     ->schema([
                         Select::make('legal_type')
                             ->label('Tipo Societario')
                             ->required()
                             ->options(Company::$legalTypes)
                             ->searchable()
-                            ->native(false)
-                            ->helperText('Tipo de sociedad según la legislación vigente.'),
+                            ->native(false),
 
                         DatePicker::make('founded_at')
                             ->label('Fecha de Constitución')
-                            ->placeholder('Selecciona una fecha')
+                            ->placeholder('Seleccionar fecha')
                             ->native(false)
                             ->displayFormat('d/m/Y')
                             ->maxDate(now())
-                            ->closeOnDateSelection()
-                            ->helperText('Fecha en que la empresa fue legalmente constituida.'),
+                            ->closeOnDateSelection(),
 
                         TextInput::make('legal_rep_name')
                             ->label('Representante Legal')
                             ->required()
                             ->placeholder('Ej: Juan Pérez')
-                            ->maxLength(255)
-                            ->helperText('Nombre completo del representante legal de la empresa.'),
+                            ->maxLength(255),
 
                         TextInput::make('legal_rep_ci')
                             ->label('CI del Representante')
@@ -144,21 +167,20 @@ class CompanyResource extends Resource
                             ->integer()
                             ->minValue(1)
                             ->maxValue(99999999)
-                            ->helperText('Número de Cédula de Identidad sin puntos ni guiones.'),
+                            ->helperText('Solo dígitos, sin puntos ni guiones.'),
                     ])
                     ->columns(2)
                     ->collapsible(),
 
                 Section::make('Contacto')
-                    ->description('Información de contacto de la empresa para comunicaciones oficiales y comerciales.')
+                    ->icon('heroicon-o-map-pin')
                     ->schema([
                         TextInput::make('address')
                             ->label('Dirección')
                             ->required()
                             ->placeholder('Ej: Av. Siempre Viva 123')
                             ->maxLength(255)
-                            ->columnSpanFull()
-                            ->helperText('Dirección física, incluyendo calle, número y referencia si es necesario.'),
+                            ->columnSpanFull(),
 
                         Select::make('department')
                             ->label('Departamento')
@@ -172,7 +194,7 @@ class CompanyResource extends Resource
                             })
                             ->afterStateUpdated(fn (Set $set) => $set('city', null))
                             ->visible(fn () => PyDepartment::query()->exists())
-                            ->helperText('Filtra las ciudades; no se guarda.'),
+                            ->helperText('Solo filtra las ciudades; no se guarda.'),
 
                         Select::make('city')
                             ->label('Ciudad')
@@ -182,8 +204,7 @@ class CompanyResource extends Resource
                                 $record?->city,
                             ))
                             ->searchable()
-                            ->native(false)
-                            ->helperText('Ciudad donde se encuentra ubicada la empresa.'),
+                            ->native(false),
 
                         TextInput::make('phone')
                             ->label('Teléfono')
@@ -195,23 +216,22 @@ class CompanyResource extends Resource
                             ->live(onBlur: true)
                             ->afterStateUpdated(PhoneNormalizer::onBlur())
                             ->validationMessages([
-                                'regex' => 'Ingrese un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).',
+                                'regex' => 'Ingresar un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).',
                             ])
-                            ->helperText('Número de teléfono movil o fijo de la empresa.'),
+                            ->helperText('Sin espacios ni guiones.'),
 
                         TextInput::make('email')
                             ->label('Correo Electrónico')
                             ->required()
                             ->placeholder('Ej: contacto@empresa.com')
                             ->email()
-                            ->maxLength(255)
-                            ->helperText('Correo electrónico de contacto para la empresa.'),
+                            ->maxLength(255),
                     ])
                     ->columns(2)
                     ->collapsible(),
 
                 Section::make('Ficha del empleado')
-                    ->description('Qué datos exige esta empresa para considerar completa la ficha de un empleado. Sin cambios rigen los de fábrica.')
+                    ->description('Datos que se exigen para considerar completa la ficha de un empleado. Sin cambios rigen los de fábrica.')
                     ->icon('heroicon-o-clipboard-document-check')
                     ->schema([
                         CheckboxList::make('profile_requirements')
@@ -221,53 +241,35 @@ class CompanyResource extends Resource
                             ->columns(2),
                     ])
                     ->collapsible()
-                    ->collapsed(),
+                    ->collapsed(fn (?Company $record) => $record?->profile_requirements === null),
 
                 Section::make('Aviso de privacidad')
-                    ->description('Lo muestra el terminal de asistencia a los empleados: en reposo, desde el ícono de información y mientras se identifican.')
+                    ->description('Lo muestra el terminal de asistencia a los empleados.')
                     ->icon('heroicon-o-shield-check')
                     ->schema([
                         Textarea::make('privacy_notice')
                             ->label('Texto del aviso')
                             ->rows(6)
                             ->maxLength(3000)
-                            ->helperText('Cómo se usa la imagen facial de los empleados (finalidad, quién accede, cuánto se conserva, cómo ejercer sus derechos). Lo redacta la empresa; el sistema solo lo muestra.'),
+                            ->helperText('Lo redacta la empresa (finalidad, acceso, conservación y derechos); el sistema solo lo muestra.'),
 
                         TextInput::make('privacy_policy_url')
                             ->label('Enlace a la política completa')
                             ->url()
                             ->maxLength(500)
                             ->placeholder('https://empresa.com.py/privacidad')
-                            ->helperText('Opcional. El terminal lo muestra como código QR para abrirlo desde el celular.'),
+                            ->helperText('Opcional. El terminal lo muestra como código QR.'),
                     ])
                     ->collapsible()
                     ->collapsed(fn (?Company $record) => blank($record?->privacy_notice) && blank($record?->privacy_policy_url)),
 
-                Section::make('Configuración')
-                    ->description('Opciones de configuración y personalización para la empresa.')
+                Section::make('Marcación desde el celular')
+                    ->icon('heroicon-o-device-phone-mobile')
                     ->schema([
-                        FileUpload::make('logo')
-                            ->label('Logo')
-                            ->image()
-                            ->imageEditor()
-                            ->directory('companies/logos')
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
-                            ->maxSize(5120)
-                            ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => 'logo_empresa_'.now()->format('Y-m-d_H-i-s').'.'.$file->getClientOriginalExtension())
-                            ->helperText('Formatos: JPG, PNG, WEBP o SVG. Máximo 5 MB. El SVG se ve en los PDFs y el panel, pero no en el terminal ni en el celular (use PNG para que aparezca allí).'),
-
-                        Toggle::make('is_active')
-                            ->label('Activa')
-                            ->default(true)
-                            ->disabled(fn (?Company $record) => $record?->is_active && $record->activeEmployeesCount() > 0)
-                            ->helperText(fn (?Company $record) => $record?->is_active && ($active = $record->activeEmployeesCount()) > 0
-                                ? "No se puede desactivar: la empresa tiene {$active} empleados activos. Desvincúlelos o transfiéralos primero."
-                                : 'Las empresas inactivas no aparecen en los selectores.')
-                            ->hiddenOn('create'),
-
-                        MobileMarkingFields::select('Valor para los empleados de la empresa que no tengan el suyo ni uno en su sucursal. «Heredar» usa Configuración General (por defecto, solo terminal).'),
+                        MobileMarkingFields::select('Rige para quien no tenga el suyo ni uno en su sucursal. «Heredar» usa Configuración General.'),
                     ])
-                    ->collapsible(),
+                    ->collapsible()
+                    ->collapsed(fn (?Company $record) => $record?->mobile_marking_allowed === null),
             ]);
     }
 

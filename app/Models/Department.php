@@ -8,6 +8,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Department extends Model
 {
+    /** Red de seguridad: ninguna ruta puede borrar un departamento con cargos o contratos asociados. */
+    protected static function booted(): void
+    {
+        static::deleting(function (Department $department): void {
+            if ($department->deletionBlockers() !== []) {
+                throw new \DomainException("No se puede eliminar el departamento: tiene {$department->deletionBlockersSummary()}. Moverlos a otro departamento antes de eliminarlo.");
+            }
+        });
+    }
+
     protected $fillable = [
         'company_id',
         'name',
@@ -17,8 +27,6 @@ class Department extends Model
 
     /**
      * Definir la relación de pertenencia entre el departamento y la empresa a la que pertenece.
-     *
-     * @return BelongsTo
      */
     public function company(): BelongsTo
     {
@@ -27,12 +35,41 @@ class Department extends Model
 
     /**
      * Definir la relación de uno a muchos entre el departamento y los cargos que pertenecen a él.
-     *
-     * @return HasMany
      */
     public function positions(): HasMany
     {
         return $this->hasMany(Position::class);
+    }
+
+    /** Contratos (vigentes e históricos) registrados en el departamento. */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class);
+    }
+
+    /**
+     * Qué impide eliminar el departamento o cambiarlo de empresa: cargos y contratos asociados.
+     *
+     * @return array<string, int> Cantidad por motivo (solo los que tienen al menos uno).
+     */
+    public function deletionBlockers(): array
+    {
+        return array_filter([
+            'cargo' => $this->positions()->count(),
+            'contrato' => $this->contracts()->count(),
+        ]);
+    }
+
+    /** Texto legible de {@see self::deletionBlockers()}, p. ej. "3 cargos y 12 contratos". */
+    public function deletionBlockersSummary(): string
+    {
+        $parts = collect($this->deletionBlockers())
+            ->map(fn (int $count, string $label) => $count === 1 ? "1 {$label}" : "{$count} {$label}s")
+            ->values();
+
+        return $parts->count() > 1
+            ? $parts->slice(0, -1)->implode(', ').' y '.$parts->last()
+            : (string) $parts->first();
     }
 
     /**

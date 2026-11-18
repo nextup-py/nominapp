@@ -7,10 +7,17 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class EditCompany extends EditRecord
 {
     protected static string $resource = CompanyResource::class;
+
+    /** Título de la página con el nombre de la empresa que se edita. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar: '.$this->record->display_name;
+    }
 
     /**
      * Define las acciones que estarán disponibles en la vista de edición de la empresa.
@@ -32,7 +39,7 @@ class EditCompany extends EditRecord
                     $summary = $this->record->deletionBlockersSummary();
 
                     return $summary !== ''
-                        ? 'La empresa "'.$this->record->display_name.'" tiene '.$summary.' y no se puede eliminar. Desactívela en su lugar.'
+                        ? 'La empresa "'.$this->record->display_name.'" tiene '.$summary.' y no se puede eliminar. Desactivarla en su lugar.'
                         : 'Esta acción no se puede deshacer. Se eliminará la empresa "'.$this->record->display_name.'".';
                 })
                 ->modalSubmitActionLabel('Sí, eliminar')
@@ -46,7 +53,7 @@ class EditCompany extends EditRecord
                     Notification::make()
                         ->danger()
                         ->title('No se puede eliminar la empresa')
-                        ->body("Tiene {$summary}. Para dejar de usarla, desmarque «Activa» en su configuración: las empresas inactivas no aparecen en los selectores.")
+                        ->body("Tiene {$summary}. Para dejar de usarla, desmarcar «Activa» en su edición: las empresas inactivas no aparecen en los selectores.")
                         ->persistent()
                         ->send();
 
@@ -73,7 +80,7 @@ class EditCompany extends EditRecord
         Notification::make()
             ->danger()
             ->title('No se puede desactivar la empresa')
-            ->body("Tiene {$detail}. Desvincúlelos o transfiéralos a otra empresa antes de desactivarla.")
+            ->body("Tiene {$detail}. Desvincularlos o transferirlos a otra empresa antes de desactivarla.")
             ->persistent()
             ->send();
 

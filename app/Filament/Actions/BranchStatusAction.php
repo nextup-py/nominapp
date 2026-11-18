@@ -37,7 +37,7 @@ class BranchStatusAction
                     Notification::make()
                         ->danger()
                         ->title('No se puede desactivar la sucursal')
-                        ->body(static::blockersText($blockers).' Reasígnelos a otra sucursal primero.')
+                        ->body(static::blockersText($blockers).' Reasignarlos a otra sucursal primero.')
                         ->persistent()
                         ->send();
 

@@ -207,7 +207,7 @@ class BranchesRelationManager extends RelationManager
                                 Notification::make()
                                     ->danger()
                                     ->title('No se puede eliminar')
-                                    ->body("La sucursal \"{$record->name}\" tiene {$record->deletionBlockersSummary()}. Reasígnelos antes de eliminarla.")
+                                    ->body("La sucursal \"{$record->name}\" tiene {$record->deletionBlockersSummary()}. Reasignarlos antes de eliminarla.")
                                     ->send();
                                 $action->halt();
                             }

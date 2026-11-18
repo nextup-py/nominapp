@@ -18,8 +18,8 @@ class CreateTerminal extends CreateRecord
     {
         return Notification::make()
             ->success()
-            ->title('Terminal creada')
-            ->body("La terminal \"{$this->record->name}\" fue creada. Generá el enlace de configuración para provisionar el dispositivo.");
+            ->title('Terminal creado')
+            ->body("El terminal \"{$this->record->name}\" fue creado. Generar el enlace de configuración para vincular el dispositivo.");
     }
 
     /**

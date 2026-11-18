@@ -35,7 +35,7 @@ class CompanyStatusAction
                     Notification::make()
                         ->danger()
                         ->title('No se puede desactivar la empresa')
-                        ->body(static::blockersText($blockers).' Desvincúlelos o transfiéralos a otra empresa primero.')
+                        ->body(static::blockersText($blockers).' Desvincularlos o transferirlos a otra empresa primero.')
                         ->persistent()
                         ->send();
 

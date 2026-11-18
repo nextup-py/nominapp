@@ -71,7 +71,7 @@ class Branch extends Model implements Auditable
     {
         static::deleting(function (Branch $branch): void {
             if ($branch->deletionBlockers() !== []) {
-                throw new \DomainException("No se puede eliminar la sucursal: tiene {$branch->deletionBlockersSummary()}. Reasígnelos antes de eliminarla.");
+                throw new \DomainException("No se puede eliminar la sucursal: tiene {$branch->deletionBlockersSummary()}. Reasignarlos antes de eliminarla.");
             }
         });
 
@@ -84,7 +84,7 @@ class Branch extends Model implements Auditable
 
         static::updating(function (Branch $branch): void {
             if ($branch->isDirty('is_active') && ! $branch->is_active && $branch->activeEmployeesCount() > 0) {
-                throw new \DomainException("No se puede desactivar la sucursal: tiene {$branch->activeEmployeesCount()} empleados activos. Reasígnelos primero.");
+                throw new \DomainException("No se puede desactivar la sucursal: tiene {$branch->activeEmployeesCount()} empleados activos. Reasignarlos primero.");
             }
         });
 

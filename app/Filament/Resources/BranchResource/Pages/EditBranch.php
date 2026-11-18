@@ -8,11 +8,18 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 /** Página de edición de una sucursal existente. */
 class EditBranch extends EditRecord
 {
     protected static string $resource = BranchResource::class;
+
+    /** Título de la página con el nombre de la sucursal que se edita. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar: '.$this->record->name;
+    }
 
     /**
      * Retorna las acciones del encabezado: ver registro y eliminar.
@@ -34,7 +41,7 @@ class EditBranch extends EditRecord
                 ->modalHeading('¿Eliminar sucursal?')
                 ->modalDescription(fn () => $this->record->deletionBlockers() !== []
                     ? "Esta sucursal tiene {$this->record->deletionBlockersSummary()}. No es posible eliminarla mientras tenga datos asociados."
-                    : "¿Estás seguro de que deseas eliminar la sucursal \"{$this->record->name}\"? Esta acción no se puede deshacer."
+                    : "Se eliminará la sucursal \"{$this->record->name}\". Esta acción no se puede deshacer."
                 )
                 ->modalSubmitActionLabel('Sí, eliminar')
                 ->before(function (Action $action) {
@@ -42,7 +49,7 @@ class EditBranch extends EditRecord
                         Notification::make()
                             ->danger()
                             ->title('No se puede eliminar')
-                            ->body("La sucursal tiene {$this->record->deletionBlockersSummary()}. Reasígnelos antes de eliminarla.")
+                            ->body("La sucursal tiene {$this->record->deletionBlockersSummary()}. Reasignarlos antes de eliminarla.")
                             ->send();
 
                         $action->halt();

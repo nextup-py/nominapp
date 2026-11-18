@@ -32,12 +32,14 @@ Ir a **Asistencias → Terminales**.
 2. Completar:
    - **Nombre** — identificador descriptivo (ej: "Terminal Recepción")
    - **Sucursal** — sucursal a la que pertenece. Solo se ofrecen sucursales de empresas activas
-   - **Estado** — Activo (por defecto) o Inactivo
-   - **Dispositivo** — marca, modelo, número de serie, MAC y notas (todo opcional, sirve para inventario). Marca y modelo se completan solos al vincular cuando el navegador los informa
    - **Equipo móvil** — activar si el terminal es un celular o tablet que puede salir de la sucursal (por ejemplo, el celular de ventas). Ver **Equipo móvil: ubicación** más abajo
    - **Responsable y garantía** — **Responsable del equipo** y su **teléfono** (a quién llamar si falla), **Fecha de compra** y **Garantía hasta**. Es todo opcional y lo carga una persona: ningún navegador puede detectarlo. El teléfono va sin espacios ni guiones (ej: 0981123456)
-   - **Fecha de instalación** e **Instalado por** (opcional)
+   - **Marcación y monitoreo** (opcional) — confirmación de salida y descansos, umbral de desconexión y horario de vigilancia; sin definir, usa Configuración General y el horario de la sucursal. Ver **Monitoreo del terminal**
+   - **Dispositivo** — marca, modelo, número de serie, MAC y notas (todo opcional, sirve para inventario). Marca y modelo se completan solos al vincular cuando el navegador los informa
+   - **Instalación** — **Fecha de instalación** (hoy por defecto) e **Instalado por** (el usuario actual por defecto)
 3. Guardar
+
+Las secciones **Marcación y monitoreo**, **Dispositivo** y **Responsable y garantía** arrancan cerradas y se abren solas si el terminal ya tiene datos cargados; **Instalación** también, al editar. El campo **Estado** (Activo o Inactivo) solo aparece al editar: un terminal nuevo siempre nace activo, y desactivarlo desvincula el dispositivo. Al cambiar la **Sucursal** de un terminal ya vinculado, el formulario avisa que reconocerá a los empleados de la nueva sucursal.
 
 Al guardar, el sistema abre el detalle del terminal con el cuadro para **generar el enlace de configuración** (ver más abajo). Si se va a vincular por código o con una ventana de vinculación, ese cuadro se puede cerrar.
 
@@ -194,7 +196,7 @@ Se calcula con el último latido exitoso del terminal. Los estados se evalúan e
 
 ### Monitoreo del terminal
 
-Al crear o editar un terminal, la sección **Monitoreo** permite ajustar cuándo se lo considera desconectado y cuándo vale la pena vigilarlo. Todo es opcional:
+Al crear o editar un terminal, la sección **Marcación y monitoreo** permite ajustar cuándo se lo considera desconectado y cuándo vale la pena vigilarlo. Todo es opcional:
 
 | Campo | Qué hace |
 |-------|----------|

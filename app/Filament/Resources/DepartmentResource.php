@@ -22,20 +22,25 @@ use Filament\Tables\Table;
 class DepartmentResource extends Resource
 {
     protected static ?string $model = Department::class;
+
     protected static ?string $navigationIcon = 'heroicon-o-building-library';
+
     protected static ?string $recordTitleAttribute = 'name';
+
     protected static ?string $slug = 'departamentos';
+
     protected static ?string $navigationLabel = 'Departamentos';
+
     protected static ?string $label = 'Departamento';
+
     protected static ?string $pluralLabel = 'Departamentos';
+
     protected static ?string $navigationGroup = 'Organización';
+
     protected static ?int $navigationSort = 3;
 
     /**
      * Define el formulario para crear y editar departamentos.
-     *
-     * @param Form $form
-     * @return Form
      */
     public static function form(Form $form): Form
     {
@@ -43,12 +48,21 @@ class DepartmentResource extends Resource
             ->schema([
                 Select::make('company_id')
                     ->label('Empresa')
-                    ->options(Company::active()->get()->mapWithKeys(fn($c) => [$c->id => $c->name . ' — ' . $c->trade_name]))
+                    ->options(fn (?Department $record) => Company::query()
+                        ->where(fn ($query) => $query->active()->orWhere('id', $record?->company_id))
+                        ->get()
+                        ->mapWithKeys(fn (Company $company) => [$company->id => $company->display_name])
+                        ->all())
+                    ->default(fn () => Company::active()->count() === 1 ? Company::active()->value('id') : null)
                     ->required()
                     ->native(false)
                     ->searchable()
                     ->live()
-                    ->helperText('La empresa a la que pertenece este departamento. Solo se muestran las empresas activas.'),
+                    ->disabled(fn (?Department $record): bool => $record?->deletionBlockers() !== [] && $record !== null)
+                    ->helperText(fn (?Department $record): ?string => $record !== null && ($summary = $record->deletionBlockersSummary()) !== ''
+                        ? "No se puede cambiar: el departamento tiene {$summary}."
+                        : null)
+                    ->visible(fn (): bool => Company::active()->count() > 1),
 
                 TextInput::make('name')
                     ->label('Nombre')
@@ -59,10 +73,9 @@ class DepartmentResource extends Resource
                         table: Department::class,
                         column: 'name',
                         ignoreRecord: true,
-                        modifyRuleUsing: fn($rule, Get $get) => $rule->where('company_id', $get('company_id'))
+                        modifyRuleUsing: fn ($rule, Get $get) => $rule->where('company_id', $get('company_id'))
                     )
-                    ->validationMessages(['unique' => 'Ya existe un departamento con ese nombre en esta empresa.'])
-                    ->helperText('El nombre del departamento debe ser único dentro de la misma empresa.'),
+                    ->validationMessages(['unique' => 'Ya existe un departamento con este nombre en la empresa.']),
 
                 TextInput::make('cost_center')
                     ->label('Centro de Costo')
@@ -71,30 +84,26 @@ class DepartmentResource extends Resource
                         table: Department::class,
                         column: 'cost_center',
                         ignoreRecord: true,
-                        modifyRuleUsing: fn($rule, Get $get) => $rule->where('company_id', $get('company_id'))
+                        modifyRuleUsing: fn ($rule, Get $get) => $rule->where('company_id', $get('company_id'))
                     )
-                    ->validationMessages(['unique' => 'Ya existe un centro de costo con ese identificador en esta empresa.'])
+                    ->validationMessages(['unique' => 'Ya existe un departamento con este centro de costo en la empresa.'])
                     ->maxLength(30)
                     ->nullable()
-                    ->helperText('Es un identificador opcional que puede ayudarte a organizar y clasificar los departamentos.'),
+                    ->helperText('Opcional. No se repite dentro de la empresa.'),
 
                 Textarea::make('description')
                     ->label('Descripción')
-                    ->placeholder('Ej: Este departamento se encarga de gestionar el talento humano, incluyendo reclutamiento, capacitación y bienestar de los empleados.')
+                    ->placeholder('Ej: Gestiona el reclutamiento, la capacitación y el bienestar del personal.')
                     ->nullable()
                     ->maxLength(500)
                     ->rows(3)
-                    ->columnSpanFull()
-                    ->helperText('La descripción es opcional, pero puede proporcionar información adicional sobre el propósito o funciones del departamento.'),
+                    ->columnSpanFull(),
             ])
-            ->columns(3);
+            ->columns(2);
     }
 
     /**
      * Define el infolist para visualizar un departamento.
-     *
-     * @param Infolist $infolist
-     * @return Infolist
      */
     public static function infolist(Infolist $infolist): Infolist
     {
@@ -104,14 +113,14 @@ class DepartmentResource extends Resource
                 ->schema([
                     TextEntry::make('positions_count')
                         ->label('Cargos')
-                        ->getStateUsing(fn(Department $record) => $record->positions()->count())
+                        ->getStateUsing(fn (Department $record) => $record->positions()->count())
                         ->badge()
                         ->color('info')
                         ->icon('heroicon-o-briefcase'),
 
                     TextEntry::make('employees_count')
                         ->label('Empleados')
-                        ->getStateUsing(fn(Department $record) => $record->loadCount('employees')->employees_count)
+                        ->getStateUsing(fn (Department $record) => $record->loadCount('employees')->employees_count)
                         ->badge()
                         ->color('success')
                         ->icon('heroicon-o-users'),
@@ -127,6 +136,7 @@ class DepartmentResource extends Resource
                 ->schema([
                     TextEntry::make('company.trade_name')
                         ->label('Empresa')
+                        ->getStateUsing(fn (Department $record) => $record->company?->display_name)
                         ->badge()
                         ->color('gray')
                         ->icon('heroicon-o-building-office-2'),
@@ -151,9 +161,6 @@ class DepartmentResource extends Resource
 
     /**
      * Define la tabla para listar departamentos, con columnas, filtros y acciones.
-     *
-     * @param Table $table
-     * @return Table
      */
     public static function table(Table $table): Table
     {
@@ -161,6 +168,8 @@ class DepartmentResource extends Resource
             ->columns([
                 TextColumn::make('company.trade_name')
                     ->label('Empresa')
+                    ->getStateUsing(fn (Department $record) => $record->company?->display_name)
+                    ->visible(fn (): bool => Company::active()->count() > 1)
                     ->badge()
                     ->color('gray')
                     ->sortable()
@@ -204,7 +213,7 @@ class DepartmentResource extends Resource
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->since()
-                    ->description(fn($record) => $record->created_at->format('d/m/Y H:i'))
+                    ->description(fn ($record) => $record->created_at->format('d/m/Y H:i'))
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('updated_at')
@@ -216,25 +225,26 @@ class DepartmentResource extends Resource
             ->filters([
                 SelectFilter::make('company_id')
                     ->label('Empresa')
-                    ->options(Company::active()->pluck('trade_name', 'id'))
+                    ->options(fn () => Company::active()->get()->mapWithKeys(fn (Company $company) => [$company->id => $company->display_name])->all())
                     ->searchable()
-                    ->native(false),
+                    ->native(false)
+                    ->visible(fn (): bool => Company::active()->count() > 1),
 
                 SelectFilter::make('cargos')
                     ->label('Cargos')
                     ->options([
-                        'with'    => 'Con cargos',
+                        'with' => 'Con cargos',
                         'without' => 'Sin cargos',
                     ])
                     ->native(false)
-                    ->query(fn($query, $state) => match ($state['value'] ?? null) {
-                        'with'    => $query->has('positions'),
+                    ->query(fn ($query, $state) => match ($state['value'] ?? null) {
+                        'with' => $query->has('positions'),
                         'without' => $query->doesntHave('positions'),
-                        default   => $query,
+                        default => $query,
                     }),
             ])
             ->emptyStateHeading('No hay departamentos registrados')
-            ->emptyStateDescription('Comienza agregando el primer departamento de tu empresa')
+            ->emptyStateDescription('Agregar el primer departamento de la empresa.')
             ->emptyStateIcon('heroicon-o-building-library');
     }
 

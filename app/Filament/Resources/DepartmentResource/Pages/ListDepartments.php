@@ -16,8 +16,6 @@ class ListDepartments extends ListRecords
 
     /**
      * Define las acciones disponibles en el encabezado de la página de listado de departamentos.
-     *
-     * @return array
      */
     protected function getHeaderActions(): array
     {
@@ -38,8 +36,8 @@ class ListDepartments extends ListRecords
                         ->send();
 
                     return Excel::download(
-                        new DepartmentsExport(),
-                        'departamentos_' . now()->format('Y_m_d_H_i_s') . '.xlsx'
+                        new DepartmentsExport,
+                        'departamentos_'.now()->format('Y_m_d_H_i_s').'.xlsx'
                     );
                 }),
 

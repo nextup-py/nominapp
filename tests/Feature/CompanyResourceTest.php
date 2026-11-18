@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Resources\CompanyResource;
 use App\Filament\Resources\CompanyResource\Pages\CreateCompany;
 use App\Filament\Resources\CompanyResource\Pages\EditCompany;
 use App\Filament\Resources\CompanyResource\Pages\ListCompanies;
@@ -14,6 +15,7 @@ use App\Models\PyCity;
 use App\Models\PyDepartment;
 use App\Models\User;
 use Database\Seeders\ParaguayRegionsSeeder;
+use Filament\Forms\Form;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -278,4 +280,56 @@ it('no audita campos fuera de la lista, como el thumbnail del logo', function ()
     $company->update(['logo_thumbnail' => 'data:image/png;base64,AAAA']);
 
     expect($company->audits()->where('event', 'updated')->get()->pluck('new_values')->flatten()->all())->toBe([]);
+});
+
+// ─── Textos y orden del formulario ───────────────────────────────────────────
+
+it('el RUC y el número patronal repetidos muestran un mensaje propio', function () {
+    Company::factory()->create(['ruc' => '80012345-6', 'employer_number' => 12345678]);
+
+    Livewire::test(CreateCompany::class)
+        ->fillForm(validCompanyForm())
+        ->call('create')
+        ->assertHasFormErrors(['ruc' => 'Ya existe una empresa con este RUC.', 'employer_number' => 'Ya existe una empresa con este número patronal.']);
+});
+
+it('el título de la edición lleva el nombre de la empresa', function () {
+    $company = Company::factory()->create(['name' => 'Industrias Test S.A.', 'trade_name' => 'El Taller']);
+
+    Livewire::test(EditCompany::class, ['record' => $company->getKey()])
+        ->assertSee('Editar: '.$company->display_name);
+});
+
+it('la sección Estado solo existe al editar', function () {
+    $company = Company::factory()->create();
+
+    Livewire::test(CreateCompany::class)->assertFormFieldDoesNotExist('is_active');
+
+    Livewire::test(EditCompany::class, ['record' => $company->getKey()])->assertFormFieldExists('is_active');
+});
+
+it('el logo va en la sección de identidad, antes de la razón social', function () {
+    $keys = collect(CompanyResource::form(Form::make(Livewire::test(CreateCompany::class)->instance()))->getComponents())
+        ->flatMap(fn ($section) => collect($section->getChildComponents())->map(fn ($c) => $c->getName()))
+        ->filter()->values();
+
+    expect($keys->search('logo'))->toBeLessThan($keys->search('name'));
+});
+
+it('las secciones opcionales se abren solas cuando ya tienen datos', function () {
+    $component = fn (Company $company, string $label) => collect(
+        Livewire::test(EditCompany::class, ['record' => $company->getKey()])->instance()->form->getComponents()
+    )->first(fn ($section) => $section->getHeading() === $label);
+
+    $empty = Company::factory()->create();
+    $filled = Company::factory()->create([
+        'mobile_marking_allowed' => true,
+        'privacy_notice' => 'Texto',
+        'profile_requirements' => ['phone'],
+    ]);
+
+    foreach (['Marcación desde el celular', 'Aviso de privacidad', 'Ficha del empleado'] as $label) {
+        expect($component($empty, $label)->isCollapsed())->toBeTrue("{$label} vacía")
+            ->and($component($filled, $label)->isCollapsed())->toBeFalse("{$label} con datos");
+    }
 });

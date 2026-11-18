@@ -10,23 +10,19 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 **Listado:** las pestañas **Todas / Activas / Inactivas / Con datos pendientes** muestran cuántas empresas hay de cada tipo. La columna **Datos** indica si la empresa está completa o cuántas cosas le faltan (al pasar el cursor se ve el detalle): sin logo, sin sucursales, sin cuenta bancaria principal activa o con empleados activos sin contrato vigente. El menú de cada fila (⋮) permite abrir el **Organigrama**, descargarlo en **PDF** y **Activar** o **Desactivar** la empresa. El **Nro. Patronal** y las fechas de creación y actualización están ocultos por defecto (se activan desde el selector de columnas de la tabla). La búsqueda global del panel encuentra empresas por razón social, nombre comercial, RUC o número patronal.
 
-**Campos principales** (todos obligatorios salvo el nombre comercial, la fecha de constitución y el logo):
-- **Razón social** y **nombre comercial** (nombre de fantasía, opcional)
-- **Tipo societario:** SA, SRL, EU, Cooperativa, Fundación, etc.
-- **RUC:** formato `XXXXXXXX-D` (ej: `80012345-6`)
-- **Número patronal IPS**
-- **Representante legal:** nombre y cédula
-- **Logo:** se usa en encabezados de todos los PDFs generados (opcional, pero conviene cargarlo)
-- **Dirección, ciudad, teléfono y correo electrónico**
-- **Activa:** las empresas inactivas no aparecen en los selectores del sistema
+**Formulario:** al editar, la primera sección es **Estado** (el interruptor **Activa**); le siguen **Identidad**, **Constitución Legal** y **Contacto**. Todos los datos son obligatorios salvo el logo, el nombre comercial y la fecha de constitución:
+- **Identidad:** logo (se usa en los encabezados de los PDFs; conviene cargarlo), razón social, nombre comercial (si se deja vacío se usa la razón social), RUC con formato `XXXXXXXX-D` (ej: `80012345-6`) y número patronal IPS. El RUC y el número patronal no se pueden repetir entre empresas.
+- **Constitución Legal:** tipo societario (SA, SRL, EU, Cooperativa, Fundación, etc.), fecha de constitución y representante legal (nombre y cédula, solo dígitos).
+- **Contacto:** dirección, departamento y ciudad, teléfono y correo electrónico.
+- **Ficha del empleado, Aviso de privacidad y Marcación desde el celular:** secciones opcionales; arrancan cerradas y se abren solas si la empresa ya tiene datos cargados.
 
 **Cómo crear una empresa:**
 
 1. Ir a **Organización → Empresas**
 2. Clic en **Nueva empresa**
-3. Completar los datos legales: razón social, RUC, número patronal, tipo societario, representante legal
-4. Completar dirección y contacto. Para la **ciudad**, elegir primero el **Departamento** (opcional, solo filtra la lista) y luego la **Ciudad**; el catálogo incluye los 17 departamentos y las ciudades de Paraguay
-5. Subir el logo (JPG, PNG, WEBP o SVG, máx. 5 MB). Conviene PNG: el SVG se ve en el panel y en los PDFs, pero no en el terminal ni en el celular
+3. En **Identidad**, subir el logo (JPG, PNG, WEBP o SVG, máx. 5 MB; conviene PNG: el SVG se ve en el panel y en los PDFs, pero no en el terminal ni en el celular) y completar razón social, RUC y número patronal
+4. En **Constitución Legal**, elegir el tipo societario y completar el representante legal
+5. En **Contacto**, completar dirección y datos de contacto. Para la **ciudad**, elegir primero el **Departamento** (opcional, solo filtra la lista) y luego la **Ciudad**; el catálogo incluye los 17 departamentos y las ciudades de Paraguay
 6. Guardar
 
 ![Departamento y ciudad en el formulario de la empresa](/docs-images/02-empresa-ciudad.png)
@@ -50,11 +46,11 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 ![Detalle de una empresa](/docs-images/02-empresa-detalle.png)
 
-**Aviso de privacidad:** la sección **Aviso de privacidad** del formulario (se expande sola si ya hay uno cargado) tiene el **texto del aviso** (máximo 3000 caracteres) y, opcionalmente, el **enlace a la política completa**. Lo redacta la empresa; el sistema solo lo muestra en el terminal de asistencia (ver el capítulo *Terminales de Marcación*). Cada vez que se cambia el texto o el enlace la **versión del aviso** sube sola; se ve en la vista de la empresa. Sin texto ni enlace, el terminal no muestra ningún aviso. Con un aviso cargado, además se pide la aceptación al empleado cuando registra su rostro por enlace o vincula su celular (ver *Consentimiento del aviso de privacidad* en el capítulo de Asistencias).
+**Aviso de privacidad:** la sección **Aviso de privacidad** del formulario (se abre sola si ya hay uno cargado) tiene el **texto del aviso** (máximo 3000 caracteres) y, opcionalmente, el **enlace a la política completa**. Lo redacta la empresa; el sistema solo lo muestra en el terminal de asistencia (ver el capítulo *Terminales de Marcación*). Cada vez que se cambia el texto o el enlace la **versión del aviso** sube sola; se ve en la vista de la empresa. Sin texto ni enlace, el terminal no muestra ningún aviso. Con un aviso cargado, además se pide la aceptación al empleado cuando registra su rostro por enlace o vincula su celular (ver *Consentimiento del aviso de privacidad* en el capítulo de Asistencias).
 
 **Datos pendientes:** si a la empresa le falta algo que usan los PDFs o los pagos (logo, dirección o ciudad, representante legal, o una cuenta bancaria principal activa), la parte superior de la vista muestra un aviso con lo que falta. Desaparece solo al completarlo.
 
-**Desactivar o eliminar:** para dejar de usar una empresa, usar la acción **Desactivar** (en el menú de la fila del listado o en el encabezado de la vista) o desmarcar **Activa** en su edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una empresa que tenga empleados activos**: hay que desvincularlos o transferirlos a otra empresa primero, y el sistema avisa cuántos son. Los terminales de sus sucursales no se modifican al desactivarla. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.
+**Desactivar o eliminar:** para dejar de usar una empresa, usar la acción **Desactivar** (en el menú de la fila del listado o en el encabezado de la vista) o desmarcar **Activa** en la sección **Estado** de su edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una empresa que tenga empleados activos**: hay que desvincularlos o transferirlos a otra empresa primero, y el sistema avisa cuántos son. Los terminales de sus sucursales no se modifican al desactivarla. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.
 
 > Eliminar una empresa vacía no se puede deshacer. Si ya se usó alguna vez, desactivarla es la opción correcta.
 
@@ -70,11 +66,11 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una sucursal específica.
 
-**Campos:** nombre, dirección, ciudad, teléfono, email, estado (activa o inactiva) y coordenadas GPS (mapa interactivo). La **ciudad** se elige del catálogo oficial: primero, opcionalmente, el **Departamento** (solo filtra las ciudades y no se guarda) y luego la **Ciudad**; el mapa completa la dirección, pero ya no la ciudad.
+**Formulario:** al editar, la primera sección es **Estado** (el interruptor **Activa**); le siguen **Información general** (empresa, nombre, teléfono y correo), **Ubicación** (dirección, ciudad y mapa), **Horario de atención (opcional)** y **Marcación desde el celular**. El campo **Empresa** solo aparece si hay más de una empresa activa; con una sola, la sucursal se crea en ella. El nombre no se puede repetir dentro de la empresa ni el correo entre sucursales. Las dos últimas secciones arrancan cerradas y se abren solas si ya tienen datos. La **ciudad** se elige del catálogo oficial: primero, opcionalmente, el **Departamento** (solo filtra las ciudades y no se guarda) y luego la **Ciudad**; el mapa completa la dirección, pero ya no la ciudad.
 
 **Listado:** las pestañas **Todas / Activas / Inactivas / Con datos pendientes** muestran cuántas sucursales hay de cada tipo. La columna **Datos** indica si la sucursal está completa o cuántas cosas le faltan (al pasar el cursor se ve el detalle): sin ubicación en el mapa, sin ciudad, sin teléfono, con empleados activos pero sin terminal activo, o con empleados activos sin contrato vigente. La columna y el filtro **Empresa** solo aparecen si hay más de una empresa activa. El menú de cada fila (⋮) permite abrir la sucursal en el mapa y **Activar** o **Desactivar**.
 
-**Horario de atención:** en la edición, la sección **Horario de atención** define los días y las horas en que la sucursal trabaja (por ejemplo, lunes a sábado de 06:00 a 23:00). Los terminales de la sucursal que no tienen horario de vigilancia propio usan este horario: fuera de él no se avisa que están desconectados (**Fuera de horario**), con lo que se evitan, por ejemplo, las alertas de las 06:00 de un terminal apagado de noche. Ninguno marcado = todos los días; se completan **las dos** horas o ninguna.
+**Horario de atención:** la sección **Horario de atención** define los días y las horas en que la sucursal trabaja (por ejemplo, lunes a sábado de 06:00 a 23:00). Los terminales de la sucursal que no tienen horario de vigilancia propio usan este horario: fuera de él no se avisa que están desconectados (**Fuera de horario**), con lo que se evitan, por ejemplo, las alertas de las 06:00 de un terminal apagado de noche. Ninguno marcado = todos los días; se completan **las dos** horas o ninguna.
 
 **Vista de la sucursal:** el detalle avisa en **Datos pendientes** lo que falta cargar y muestra empleados activos, activos sin contrato, terminales activos, el estado y el horario de atención.
 
@@ -82,13 +78,13 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 
 1. Ir a **Organización → Sucursales** (o desde la pestaña **Sucursales** dentro de la empresa)
 2. Clic en **Nueva sucursal**
-3. Completar los datos de contacto
-4. Opcionalmente, marcar la ubicación en el mapa o ingresar la dirección para que el sistema geolocalice automáticamente
+3. Completar el nombre y los datos de contacto (y la empresa, si hay más de una)
+4. En **Ubicación**, marcar el punto en el mapa o ingresar la dirección para que el sistema geolocalice automáticamente, y elegir la ciudad
 5. Guardar
 
 > Las coordenadas GPS se usan para vincular marcaciones de asistencia a la ubicación de la sucursal.
 
-**Desactivar una sucursal:** para dejar de usar una sucursal sin borrarla (conserva su historial), usar la acción **Desactivar** del listado o del detalle, o desmarcar **Activa** en la edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una sucursal con empleados activos**: hay que reasignarlos a otra sucursal primero y el sistema avisa cuántos son. Una sucursal inactiva deja de ofrecerse al asignar empleados o terminales y de contarse en la tarjeta de asistencia del Escritorio, pero sus terminales no se modifican y las ya asignadas se siguen viendo en los registros existentes. Los reportes siguen mostrándola.
+**Desactivar una sucursal:** para dejar de usar una sucursal sin borrarla (conserva su historial), usar la acción **Desactivar** del listado o del detalle, o desmarcar **Activa** en la sección **Estado** de la edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una sucursal con empleados activos**: hay que reasignarlos a otra sucursal primero y el sistema avisa cuántos son. Una sucursal inactiva deja de ofrecerse al asignar empleados o terminales y de contarse en la tarjeta de asistencia del Escritorio, pero sus terminales no se modifican y las ya asignadas se siguen viendo en los registros existentes. Los reportes siguen mostrándola.
 
 **Eliminar una sucursal:** solo es posible si no tiene empleados, terminales ni fallas de marcación asociadas. Si los tiene, el sistema bloquea la eliminación y avisa cuántos hay de cada uno; hay que reasignarlos primero.
 
@@ -104,16 +100,18 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 
 Los departamentos agrupan cargos dentro de una empresa. Cada empresa define sus propios departamentos de forma independiente.
 
-**Campos:** nombre, centro de costo (código opcional, ej: `RH-001`), descripción.
+**Campos:** empresa (solo aparece si hay más de una empresa activa; con una sola, el departamento se crea en ella), nombre, centro de costo (código opcional, ej: `RH-001`) y descripción (opcional).
 
 **Cómo crear un departamento:**
 
 1. Ir a **Organización → Departamentos**
 2. Clic en **Nuevo departamento**
-3. Seleccionar la empresa e ingresar el nombre
+3. Ingresar el nombre (y elegir la empresa, si hay más de una)
 4. Guardar
 
-> El nombre del departamento debe ser único dentro de la misma empresa.
+> El nombre y el centro de costo no se pueden repetir dentro de la misma empresa.
+
+**Cambiar de empresa o eliminar:** un departamento que ya tiene cargos o contratos no puede cambiarse de empresa (el campo queda deshabilitado, con la explicación) ni eliminarse: el sistema avisa cuántos cargos y contratos tiene. Para eliminarlo hay que mover antes sus cargos y contratos a otro departamento.
 
 ---
 
@@ -121,7 +119,7 @@ Los departamentos agrupan cargos dentro de una empresa. Cada empresa define sus 
 
 Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse en jerarquía (un cargo puede tener un cargo superior).
 
-**Campos:** nombre, departamento, **Reporta a** (cargo superior, opcional — define la jerarquía del organigrama).
+**Campos:** nombre, departamento y **Reporta a** (cargo superior, opcional — define la jerarquía del organigrama). **Reporta a** solo ofrece cargos de la misma empresa que el departamento elegido, sin incluir al propio cargo ni a los que dependen de él: por eso conviene elegir primero el departamento. El nombre no se puede repetir dentro del departamento.
 
 **Cómo crear un cargo:**
 
@@ -131,11 +129,13 @@ Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse
 4. Si corresponde, seleccionar en **Reporta a** el cargo superior para construir la jerarquía del organigrama
 5. Guardar
 
-**Permisos de marcación por cargo:** el formulario del cargo tiene dos campos que se aplican a todos los que lo ocupan, incluidos los que se incorporen después:
+**Marcación de asistencia por cargo:** la sección **Marcación de asistencia** del formulario del cargo tiene tres campos que se aplican a todos los que lo ocupan, incluidos los que se incorporen después:
 
 - **Marcación desde el celular** (Heredar / Sí / No): ver **Quién puede marcar desde el celular** en el capítulo de Asistencias.
 - **Marca descanso**: activado de fábrica. Se desactiva para los cargos que no marcan descanso (por ejemplo, repartidores en ruta): al terminal y al celular ya no les aparece **Inicio descanso**, aunque el horario del empleado tenga descanso, y las **horas netas** de los reportes descuentan el descanso del horario cuando ese día no marcó uno real. Las horas extra y la nómina no cambian.
 - **Marcación en terminales**: **Solo en su sucursal** (de fábrica), **En su sucursal y en las que se elijan** (aparece el campo **Sucursales adicionales**) o **En cualquier sucursal**. Sirve, por ejemplo, para que los Supervisores marquen en el terminal de cualquier local. Ver **Marcar en el terminal de otra sucursal** en el capítulo de Asistencias.
+
+**Cambiar de departamento o eliminar:** un cargo que ya tiene contratos no puede cambiarse de departamento (el campo queda deshabilitado, con la explicación) ni eliminarse: el sistema avisa cuántos contratos tiene. Para unirlo con otro cargo se usa **Fusionar en otro cargo**. En la eliminación masiva se borran solo los cargos sin contratos y la notificación indica cuáles se omitieron.
 
 > Departamentos y cargos también pueden crearse directamente desde el formulario de contrato del empleado, sin salir de la pantalla.
 

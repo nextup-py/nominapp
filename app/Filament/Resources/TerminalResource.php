@@ -29,6 +29,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Infolists\Components\Grid as InfoGrid;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\Section as InfoSection;
@@ -110,38 +111,74 @@ class TerminalResource extends Resource
                             ->searchable()
                             ->preload()
                             ->native(false)
-                            ->required(),
+                            ->required()
+                            ->live()
+                            ->hint(fn (?Terminal $record, Get $get): ?string => $record?->hasActiveSyncToken()
+                                && filled($get('branch_id'))
+                                && (int) $get('branch_id') !== $record->branch_id
+                                    ? 'Al cambiar de sucursal, el terminal reconocerá a los empleados de la nueva.'
+                                    : null)
+                            ->hintColor('warning')
+                            ->hintIcon(fn (?Terminal $record, Get $get): ?string => $record?->hasActiveSyncToken()
+                                && filled($get('branch_id'))
+                                && (int) $get('branch_id') !== $record->branch_id
+                                    ? 'heroicon-o-exclamation-triangle'
+                                    : null),
 
                         Select::make('status')
                             ->label('Estado')
                             ->options(Terminal::getStatusOptions())
-                            ->helperText('Un terminal inactivo no puede marcar asistencia, aunque conserve su token de sincronización.')
+                            ->helperText('Al desactivarlo se desvincula el dispositivo y deja de marcar.')
                             ->native(false)
                             ->default('active')
-                            ->required(),
+                            ->required()
+                            ->hiddenOn('create'),
 
                         Toggle::make('is_mobile')
                             ->label('Equipo móvil')
-                            ->helperText('Un celular o tablet que puede salir de la sucursal (por ejemplo, el celular de ventas). Su ubicación se compara con la de la sucursal cada 10 minutos y se avisa si sale del radio. Pide el permiso de ubicación al equipo. Las PC fijas no lo necesitan.')
+                            ->helperText('Celular o tablet que puede salir de la sucursal: se avisa si se aleja. Pide permiso de ubicación; las PC fijas no lo necesitan.')
                             ->default(false)
                             ->columnSpanFull(),
                     ])
-                    ->columns(3),
+                    ->columns(2),
+
+                Section::make('Marcación y monitoreo')
+                    ->description('Sin definir, usa Configuración General (y, para el horario, el de la sucursal).')
+                    ->icon('heroicon-o-wifi')
+                    ->compact()
+                    ->collapsible()
+                    ->collapsed(fn (?Terminal $record): bool => $record === null || ($record->confirm_exit === null
+                        && blank($record->stale_after_minutes)
+                        && blank($record->watch_days)
+                        && blank($record->watch_from)
+                        && blank($record->watch_to)))
+                    ->schema([
+                        static::confirmExitField()->columnSpanFull(),
+
+                        ...static::monitoringFields(),
+                    ])
+                    ->columns(2),
 
                 Section::make('Dispositivo')
+                    ->description('Para el inventario. Todo es opcional.')
                     ->icon('heroicon-o-device-tablet')
                     ->compact()
+                    ->collapsible()
+                    ->collapsed(fn (?Terminal $record): bool => $record === null || (blank($record->device_brand)
+                        && blank($record->device_model)
+                        && blank($record->device_serial)
+                        && blank($record->device_mac)
+                        && blank($record->device_notes)))
                     ->schema([
                         TextInput::make('device_brand')
                             ->label('Marca')
                             ->placeholder('Ej: Samsung, Apple, Lenovo')
-                            ->helperText('Se sugiere automáticamente al vincular el dispositivo, cuando el navegador lo permite. Editable.')
+                            ->helperText('Se completa al vincular si el navegador lo informa.')
                             ->maxLength(60),
 
                         TextInput::make('device_model')
                             ->label('Modelo')
                             ->placeholder('Ej: Galaxy Tab A8')
-                            ->helperText('Igual que la marca: sugerido automáticamente, no siempre disponible (ej. iPhone/iPad nunca lo reportan).')
                             ->maxLength(100),
 
                         TextInput::make('device_serial')
@@ -153,7 +190,7 @@ class TerminalResource extends Resource
                             ->placeholder('AA:BB:CC:DD:EE:FF')
                             ->maxLength(17)
                             ->regex('/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/')
-                            ->validationMessages(['regex' => 'Ingrese una dirección MAC válida. Ej: AA:BB:CC:DD:EE:FF']),
+                            ->validationMessages(['regex' => 'Ingresar una dirección MAC válida. Ej: AA:BB:CC:DD:EE:FF.']),
 
                         Textarea::make('device_notes')
                             ->label('Notas del dispositivo')
@@ -164,25 +201,30 @@ class TerminalResource extends Resource
                     ->columns(2),
 
                 Section::make('Responsable y garantía')
-                    ->description('Datos de gestión que el navegador no puede detectar: a quién llamar si el equipo falla y hasta cuándo tiene garantía.')
+                    ->description('A quién llamar si el equipo falla y hasta cuándo tiene garantía.')
                     ->icon('heroicon-o-user-circle')
                     ->compact()
                     ->collapsible()
+                    ->collapsed(fn (?Terminal $record): bool => $record === null || (blank($record->responsible_name)
+                        && blank($record->responsible_phone)
+                        && blank($record->purchased_at)
+                        && blank($record->warranty_until)))
                     ->schema([
                         TextInput::make('responsible_name')
                             ->label('Responsable del equipo')
                             ->placeholder('Ej: Richard Sánchez')
-                            ->helperText('Quien se encarga del equipo en la sucursal o en el soporte. Aparece en el aviso de desconexión.')
+                            ->helperText('Aparece en el aviso de desconexión.')
                             ->maxLength(100),
 
                         TextInput::make('responsible_phone')
                             ->label('Teléfono del responsable')
+                            ->placeholder('Ej: 0981123456')
                             ->maxLength(10)
                             ->regex(PhoneNormalizer::PATTERN)
                             ->live(onBlur: true)
                             ->afterStateUpdated(PhoneNormalizer::onBlur())
-                            ->validationMessages(['regex' => 'Ingrese un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).'])
-                            ->helperText('Número sin espacios ni guiones. Ej: 0981123456'),
+                            ->validationMessages(['regex' => 'Ingresar un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).'])
+                            ->helperText('Sin espacios ni guiones.'),
 
                         DatePicker::make('purchased_at')
                             ->label('Fecha de compra')
@@ -201,29 +243,20 @@ class TerminalResource extends Resource
                     ])
                     ->columns(2),
 
-                Section::make('Marcación')
-                    ->description('Cómo se comporta la pantalla de este terminal al marcar. Sin definir, usa lo de Configuración General.')
-                    ->icon('heroicon-o-finger-print')
-                    ->compact()
-                    ->schema([static::confirmExitField()])
-                    ->columns(1),
-
-                Section::make('Monitoreo')
-                    ->description('Cuándo se considera desconectado este terminal y en qué horario se vigila. Todo es opcional: sin horario propio, usa el horario de atención de su sucursal.')
-                    ->icon('heroicon-o-wifi')
-                    ->compact()
-                    ->schema(static::monitoringFields())
-                    ->columns(2),
-
                 Section::make('Instalación')
                     ->icon('heroicon-o-wrench-screwdriver')
                     ->compact()
+                    ->collapsible()
+                    ->collapsed(fn (?Terminal $record): bool => $record !== null
+                        && blank($record->installed_at)
+                        && blank($record->installed_by_id))
                     ->schema([
                         DatePicker::make('installed_at')
                             ->label('Fecha de instalación')
                             ->native(false)
                             ->displayFormat('d/m/Y')
-                            ->closeOnDateSelection(),
+                            ->closeOnDateSelection()
+                            ->default(fn () => now()->toDateString()),
 
                         Select::make('installed_by_id')
                             ->label('Instalado por')
@@ -928,7 +961,7 @@ class TerminalResource extends Resource
                 ->maxValue(10080)
                 ->suffix('minutos')
                 ->placeholder(fn () => 'Usa el umbral general ('.app(GeneralSettings::class)->terminal_stale_threshold_hours.' h)')
-                ->helperText('Mínimo '.Terminal::MIN_STALE_MINUTES.' minutos (el terminal reporta cada ~90 s). Vacío = umbral general de Configuración General.')
+                ->helperText('Mínimo '.Terminal::MIN_STALE_MINUTES.' minutos. Vacío = umbral general.')
                 ->columnSpanFull(),
 
             ...static::watchWindowFields(),
@@ -951,8 +984,8 @@ class TerminalResource extends Resource
                 ->columns(7)
                 ->bulkToggleable()
                 ->helperText($forBranch
-                    ? 'Ninguno marcado = todos los días. Los terminales de la sucursal sin horario propio no avisan que están desconectados fuera de estos días.'
-                    : 'Ninguno marcado = todos los días (o los de la sucursal, si tiene horario de atención). Fuera de estos días no se avisa que está desconectado.')
+                    ? 'Ninguno marcado = todos los días.'
+                    : 'Ninguno marcado = todos los días (o los de la sucursal, si tiene horario).')
                 ->columnSpanFull(),
 
             TimePicker::make('watch_from')
@@ -967,7 +1000,7 @@ class TerminalResource extends Resource
                 ->seconds(false)
                 ->native(false)
                 ->requiredWith('watch_from')
-                ->helperText('Un rango que cruza la medianoche (ej. 22:00 a 06:00) pertenece al día en que empieza.'),
+                ->helperText('Un rango que cruza la medianoche pertenece al día en que empieza.'),
         ];
     }
 
@@ -1125,7 +1158,7 @@ class TerminalResource extends Resource
             ->selectablePlaceholder(false)
             ->formatStateUsing(fn ($state): string => MobileMarkingFields::toOption($state))
             ->dehydrateStateUsing(fn ($state): ?bool => MobileMarkingFields::fromOption($state))
-            ->helperText('Con «Sí», la salida y los descansos piden un toque para confirmar el tipo; con «No» se registran solos al reconocer a la persona, como antes. La entrada siempre es automática. «No» agiliza la fila pero permite marcar una salida por error.');
+            ->helperText('Con «Sí», la salida y los descansos piden un toque para confirmar; con «No» se registran solos. La entrada siempre es automática.');
     }
 
     /** Texto del detalle: el valor efectivo y de dónde viene (propio o de Configuración General). */
