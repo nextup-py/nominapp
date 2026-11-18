@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\MobileMarkingService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Collection;
 
@@ -33,6 +34,12 @@ class Position extends Model
 
     protected static function booted(): void
     {
+        static::deleting(function (Position $position): void {
+            if ($position->deletionBlockers() !== []) {
+                throw new \DomainException("No se puede eliminar el cargo: tiene {$position->deletionBlockersSummary()}. Moverlos a otro cargo (Fusionar) antes de eliminarlo.");
+            }
+        });
+
         static::updated(function (Position $position): void {
             if ($position->wasChanged('terminal_access')) {
                 $position->touchEmployees();
@@ -71,6 +78,30 @@ class Position extends Model
         Employee::query()
             ->whereHas('activeContract', fn ($q) => $q->where('position_id', $this->id))
             ->update(['updated_at' => now()]);
+    }
+
+    /** Contratos (vigentes e históricos) con este cargo. */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class);
+    }
+
+    /**
+     * Qué impide eliminar el cargo o cambiarlo de departamento: los contratos asociados.
+     *
+     * @return array<string, int> Cantidad por motivo (solo los que tienen al menos uno).
+     */
+    public function deletionBlockers(): array
+    {
+        return array_filter(['contrato' => $this->contracts()->count()]);
+    }
+
+    /** Texto legible de {@see self::deletionBlockers()}, p. ej. "12 contratos". */
+    public function deletionBlockersSummary(): string
+    {
+        return collect($this->deletionBlockers())
+            ->map(fn (int $count, string $label) => $count === 1 ? "1 {$label}" : "{$count} {$label}s")
+            ->implode(' y ');
     }
 
     public function department()

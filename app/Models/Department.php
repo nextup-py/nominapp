@@ -55,8 +55,8 @@ class Department extends Model
     public function deletionBlockers(): array
     {
         return array_filter([
-            'cargos' => $this->positions()->count(),
-            'contratos' => $this->contracts()->count(),
+            'cargo' => $this->positions()->count(),
+            'contrato' => $this->contracts()->count(),
         ]);
     }
 
@@ -64,7 +64,7 @@ class Department extends Model
     public function deletionBlockersSummary(): string
     {
         $parts = collect($this->deletionBlockers())
-            ->map(fn (int $count, string $label) => "{$count} {$label}")
+            ->map(fn (int $count, string $label) => $count === 1 ? "1 {$label}" : "{$count} {$label}s")
             ->values();
 
         return $parts->count() > 1

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DepartmentResource\RelationManagers;
 
+use App\Filament\Resources\PositionResource;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -11,8 +12,6 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\CreateAction;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
@@ -123,12 +122,7 @@ class PositionsRelationManager extends RelationManager
                         ->icon('heroicon-o-pencil-square')
                         ->color('primary')
                         ->successNotificationTitle('Cargo actualizado exitosamente'),
-                    DeleteAction::make()
-                        ->label('Eliminar')
-                        ->icon('heroicon-o-trash')
-                        ->color('danger')
-                        ->modalHeading('¿Eliminar cargo?')
-                        ->modalSubmitActionLabel('Sí, eliminar')
+                    PositionResource::deleteAction()
                         ->successNotificationTitle('Cargo eliminado exitosamente'),
                 ])
                     ->icon('heroicon-o-ellipsis-vertical')
@@ -137,8 +131,7 @@ class PositionsRelationManager extends RelationManager
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->successNotificationTitle('Cargos eliminados exitosamente'),
+                    PositionResource::deleteBulkAction(),
                 ]),
             ])
             ->emptyStateHeading('No hay cargos registrados')

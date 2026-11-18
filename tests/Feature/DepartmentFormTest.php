@@ -86,11 +86,11 @@ it('calcula qué impide eliminar el departamento', function () {
     $company = Company::factory()->create();
 
     expect(Department::create(['company_id' => $company->id, 'name' => 'Vacío'])->deletionBlockers())->toBe([])
-        ->and(departmentInUse($company)->deletionBlockersSummary())->toBe('1 cargos');
+        ->and(departmentInUse($company)->deletionBlockersSummary())->toBe('1 cargo');
 
     $other = Company::factory()->create();
 
-    expect(departmentInUse($other, withContract: true)->deletionBlockersSummary())->toBe('1 cargos y 1 contratos');
+    expect(departmentInUse($other, withContract: true)->deletionBlockersSummary())->toBe('1 cargo y 1 contrato');
 });
 
 it('no se puede eliminar un departamento con cargos o contratos, ni desde la acción ni desde el modelo', function () {

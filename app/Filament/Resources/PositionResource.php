@@ -6,6 +6,8 @@ use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Actions\PositionMergeAction;
 use App\Filament\Resources\PositionResource\Pages;
 use App\Filament\Resources\PositionResource\RelationManagers;
+use App\Models\Company;
+use App\Models\Department;
 use App\Models\Position;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -13,9 +15,11 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Infolists\Components\Section as InfoSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
@@ -23,6 +27,7 @@ use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Collection;
 
 class PositionResource extends Resource
 {
@@ -52,58 +57,77 @@ class PositionResource extends Resource
         return $form
             ->schema([
                 Section::make('Información del Cargo')
+                    ->icon('heroicon-o-briefcase')
                     ->schema([
                         TextInput::make('name')
                             ->label('Nombre del Cargo')
-                            ->placeholder('Ejemplo: Gerente de Ventas')
+                            ->placeholder('Ej: Gerente de Ventas')
                             ->required()
                             ->maxLength(60)
                             ->unique(
                                 ignoreRecord: true,
                                 modifyRuleUsing: fn ($rule, Get $get) => $rule->where('department_id', $get('department_id'))
                             )
-                            ->columnSpan(1),
+                            ->validationMessages(['unique' => 'Ya existe un cargo con este nombre en el departamento.']),
 
                         Select::make('department_id')
                             ->label('Departamento')
-                            ->placeholder('Seleccione un departamento')
+                            ->placeholder('Seleccionar departamento')
                             ->relationship('department', 'name')
-                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->company?->name.' — '.$record->name)
+                            ->getOptionLabelFromRecordUsing(fn ($record) => Company::active()->count() > 1
+                                ? $record->company?->display_name.' — '.$record->name
+                                : $record->name)
                             ->searchable()
                             ->preload()
                             ->native(false)
                             ->required()
-                            ->columnSpan(1),
+                            ->live()
+                            ->afterStateUpdated(function (Set $set): void {
+                                $set('parent_id', null);
+                                $set('terminalBranches', []);
+                            })
+                            ->disabled(fn (?Position $record): bool => $record !== null && $record->deletionBlockers() !== [])
+                            ->helperText(fn (?Position $record): ?string => $record !== null && ($summary = $record->deletionBlockersSummary()) !== ''
+                                ? "No se puede cambiar: el cargo tiene {$summary}. Para unir cargos, usar Fusionar."
+                                : null),
 
                         Select::make('parent_id')
                             ->label('Reporta a')
                             ->placeholder('Ninguno (cargo de nivel superior)')
-                            ->relationship('parent', 'name')
-                            ->options(function (?Position $record) {
-                                $query = Position::with('department');
+                            ->options(function (?Position $record, Get $get): array {
+                                $companyId = Department::query()->whereKey($get('department_id'))->value('company_id');
 
-                                if ($record) {
-                                    $excludeIds = array_merge([$record->id], $record->getAllDescendantIds());
-                                    $query->whereNotIn('id', $excludeIds);
+                                if ($companyId === null) {
+                                    return [];
                                 }
 
-                                return $query->get()->mapWithKeys(
-                                    fn ($p) => [$p->id => $p->name.($p->department ? ' — '.$p->department->name : '')]
-                                );
+                                $query = Position::query()
+                                    ->with('department')
+                                    ->whereHas('department', fn ($department) => $department->where('company_id', $companyId));
+
+                                if ($record) {
+                                    $query->whereNotIn('id', array_merge([$record->id], $record->getAllDescendantIds()));
+                                }
+
+                                return $query->get()
+                                    ->mapWithKeys(fn (Position $p) => [$p->id => $p->name.($p->department ? ' — '.$p->department->name : '')])
+                                    ->all();
                             })
                             ->searchable()
                             ->native(false)
-                            ->helperText('Seleccione el cargo al que este puesto reporta directamente')
-                            ->columnSpan(1),
+                            ->helperText('Cargos de la misma empresa que no dependan de este. Elegir primero el departamento.')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
 
-                        MobileMarkingFields::select('Valor para quienes ocupan este cargo y no tengan el suyo propio. «Heredar» usa el de la sucursal, la empresa o el valor general. Ej.: «Sí» para Supervisores y Gerentes.')
-                            ->columnSpan(1),
-
+                Section::make('Marcación de asistencia')
+                    ->icon('heroicon-o-finger-print')
+                    ->schema([
                         Toggle::make('marks_breaks')
                             ->label('Marca descanso')
                             ->default(true)
-                            ->helperText('Desactivar para cargos que no marcan descanso (ej. repartidores en ruta): no se les ofrece «Inicio descanso» y las horas netas descuentan el descanso de su horario.')
-                            ->columnSpan(1),
+                            ->helperText('Desactivar si no marcan descanso (ej. repartidores en ruta): no se les ofrece «Inicio descanso» y las horas netas lo descuentan del horario.')
+                            ->columnSpanFull(),
 
                         Select::make('terminal_access')
                             ->label('Marcación en terminales')
@@ -112,19 +136,24 @@ class PositionResource extends Resource
                             ->native(false)
                             ->selectablePlaceholder(false)
                             ->live()
-                            ->helperText('Dónde pueden marcar en el terminal quienes ocupan este cargo. Para reconocerlos en otras sucursales, su rostro se copia a los terminales de esas sucursales.')
-                            ->columnSpan(1),
+                            ->helperText('Su rostro se copia a los terminales de las otras sucursales que se habiliten.'),
 
                         Select::make('terminalBranches')
                             ->label('Sucursales adicionales')
-                            ->relationship('terminalBranches', 'name')
+                            ->relationship('terminalBranches', 'name', function ($query, Get $get) {
+                                $companyId = Department::query()->whereKey($get('department_id'))->value('company_id');
+
+                                return $companyId === null ? $query : $query->where('branches.company_id', $companyId);
+                            })
                             ->multiple()
                             ->preload()
                             ->searchable()
                             ->visible(fn (Get $get): bool => $get('terminal_access') === Position::TERMINAL_SELECTED)
                             ->required(fn (Get $get): bool => $get('terminal_access') === Position::TERMINAL_SELECTED)
-                            ->helperText('Además de su propia sucursal, que siempre entra.')
-                            ->columnSpan(1),
+                            ->helperText('Además de su propia sucursal, que siempre entra.'),
+
+                        MobileMarkingFields::select('Rige para quien no tenga el suyo. «Heredar» usa la sucursal, la empresa o el valor general. Ej.: «Sí» para Supervisores.')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);
@@ -169,6 +198,8 @@ class PositionResource extends Resource
 
                     TextEntry::make('department.company.trade_name')
                         ->label('Empresa')
+                        ->getStateUsing(fn (Position $record) => $record->department?->company?->display_name)
+                        ->visible(fn (): bool => Company::active()->count() > 1)
                         ->badge()
                         ->color('gray')
                         ->icon('heroicon-o-building-office-2'),
@@ -247,22 +278,95 @@ class PositionResource extends Resource
             ->actions([
                 PositionMergeAction::make(),
 
-                DeleteAction::make()
-                    ->label('Eliminar')
-                    ->icon('heroicon-o-trash')
-                    ->color('danger')
-                    ->modalHeading('¿Eliminar cargo?')
-                    ->modalSubmitActionLabel('Sí, eliminar'),
+                self::deleteAction(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    self::deleteBulkAction(),
                 ]),
             ])
             ->defaultSort('name')
             ->emptyStateHeading('No hay cargos registrados')
-            ->emptyStateDescription('Comienza a agregar los cargos de tu empresa para asignarlos a los empleados.')
+            ->emptyStateDescription('Agregar los cargos de la empresa para asignarlos a los empleados.')
             ->emptyStateIcon('heroicon-o-briefcase');
+    }
+
+    /**
+     * Eliminación individual que respeta {@see Position::deletionBlockers()}: avisa y no borra un cargo con
+     * contratos (el hook `deleting` del modelo lanzaría una excepción).
+     */
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->label('Eliminar')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->modalHeading('¿Eliminar cargo?')
+            ->modalDescription(fn (Position $record): string => ($summary = $record->deletionBlockersSummary()) !== ''
+                ? "El cargo \"{$record->name}\" tiene {$summary} y no se puede eliminar. Moverlos a otro cargo con Fusionar primero."
+                : "Se eliminará el cargo \"{$record->name}\". Esta acción no se puede deshacer.")
+            ->modalSubmitActionLabel('Sí, eliminar')
+            ->before(function (DeleteAction $action, Position $record): void {
+                if (($summary = $record->deletionBlockersSummary()) === '') {
+                    return;
+                }
+
+                Notification::make()
+                    ->danger()
+                    ->title('No se puede eliminar el cargo')
+                    ->body("Tiene {$summary}. Moverlos a otro cargo con Fusionar antes de eliminarlo.")
+                    ->persistent()
+                    ->send();
+
+                $action->halt();
+            });
+    }
+
+    /**
+     * Eliminación masiva: borra solo los cargos sin contratos y avisa cuáles se omitieron y por qué.
+     */
+    public static function deleteBulkAction(): DeleteBulkAction
+    {
+        return DeleteBulkAction::make()
+            ->label('Eliminar seleccionados')
+            ->modalHeading('Eliminar cargos')
+            ->modalDescription('Se eliminarán solo los cargos sin contratos. Los demás se omiten y se avisa el motivo.')
+            ->modalSubmitActionLabel('Sí, eliminar')
+            ->action(function (Collection $records): void {
+                $deleted = 0;
+                $skipped = [];
+
+                foreach ($records as $record) {
+                    if (! auth()->user()?->can('delete', $record)) {
+                        $skipped[] = "{$record->name} (sin permiso)";
+
+                        continue;
+                    }
+
+                    if ($record->deletionBlockers() !== []) {
+                        $skipped[] = "{$record->name} ({$record->deletionBlockersSummary()})";
+
+                        continue;
+                    }
+
+                    $record->delete();
+                    $deleted++;
+                }
+
+                $notification = Notification::make()
+                    ->title($deleted > 0 ? "{$deleted} cargo(s) eliminado(s)" : 'No se eliminó ningún cargo');
+
+                if ($skipped !== []) {
+                    $notification
+                        ->body('Omitidos: '.implode('; ', $skipped).'. Moverlos a otro cargo con Fusionar antes de eliminarlos.')
+                        ->color($deleted > 0 ? 'warning' : 'danger')
+                        ->icon($deleted > 0 ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-x-circle');
+                } else {
+                    $notification->success();
+                }
+
+                $notification->send();
+            });
     }
 
     /**

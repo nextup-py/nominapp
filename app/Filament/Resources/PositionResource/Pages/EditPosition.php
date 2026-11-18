@@ -7,10 +7,17 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class EditPosition extends EditRecord
 {
     protected static string $resource = PositionResource::class;
+
+    /** Título de la página con el nombre del cargo que se edita. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar: '.$this->record->name;
+    }
 
     /**
      * Definir las acciones que se muestran en el encabezado de la página de edición.
@@ -28,8 +35,30 @@ class EditPosition extends EditRecord
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->modalHeading('¿Eliminar cargo?')
-                ->modalDescription('Esta acción no se puede deshacer. Se eliminará el cargo "'.$this->record->name.'" y todos los registros relacionados, como empleados asociados a este cargo.')
+                ->modalDescription(function (): string {
+                    $summary = $this->record->deletionBlockersSummary();
+
+                    return $summary !== ''
+                        ? 'El cargo "'.$this->record->name.'" tiene '.$summary.' y no se puede eliminar. Moverlos a otro cargo con Fusionar primero.'
+                        : 'Esta acción no se puede deshacer. Se eliminará el cargo "'.$this->record->name.'".';
+                })
                 ->modalSubmitActionLabel('Sí, eliminar')
+                ->before(function (DeleteAction $action): void {
+                    $summary = $this->record->deletionBlockersSummary();
+
+                    if ($summary === '') {
+                        return;
+                    }
+
+                    Notification::make()
+                        ->danger()
+                        ->title('No se puede eliminar el cargo')
+                        ->body("Tiene {$summary}. Moverlos a otro cargo con Fusionar antes de eliminarlo.")
+                        ->persistent()
+                        ->send();
+
+                    $action->halt();
+                })
                 ->successNotificationTitle('Cargo eliminado')
                 ->successRedirectUrl($this->getResource()::getUrl('index')),
         ];

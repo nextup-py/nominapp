@@ -119,7 +119,7 @@ Los departamentos agrupan cargos dentro de una empresa. Cada empresa define sus 
 
 Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse en jerarquía (un cargo puede tener un cargo superior).
 
-**Campos:** nombre, departamento, **Reporta a** (cargo superior, opcional — define la jerarquía del organigrama).
+**Campos:** nombre, departamento y **Reporta a** (cargo superior, opcional — define la jerarquía del organigrama). **Reporta a** solo ofrece cargos de la misma empresa que el departamento elegido, sin incluir al propio cargo ni a los que dependen de él: por eso conviene elegir primero el departamento. El nombre no se puede repetir dentro del departamento.
 
 **Cómo crear un cargo:**
 
@@ -129,11 +129,13 @@ Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse
 4. Si corresponde, seleccionar en **Reporta a** el cargo superior para construir la jerarquía del organigrama
 5. Guardar
 
-**Permisos de marcación por cargo:** el formulario del cargo tiene dos campos que se aplican a todos los que lo ocupan, incluidos los que se incorporen después:
+**Marcación de asistencia por cargo:** la sección **Marcación de asistencia** del formulario del cargo tiene tres campos que se aplican a todos los que lo ocupan, incluidos los que se incorporen después:
 
 - **Marcación desde el celular** (Heredar / Sí / No): ver **Quién puede marcar desde el celular** en el capítulo de Asistencias.
 - **Marca descanso**: activado de fábrica. Se desactiva para los cargos que no marcan descanso (por ejemplo, repartidores en ruta): al terminal y al celular ya no les aparece **Inicio descanso**, aunque el horario del empleado tenga descanso, y las **horas netas** de los reportes descuentan el descanso del horario cuando ese día no marcó uno real. Las horas extra y la nómina no cambian.
 - **Marcación en terminales**: **Solo en su sucursal** (de fábrica), **En su sucursal y en las que se elijan** (aparece el campo **Sucursales adicionales**) o **En cualquier sucursal**. Sirve, por ejemplo, para que los Supervisores marquen en el terminal de cualquier local. Ver **Marcar en el terminal de otra sucursal** en el capítulo de Asistencias.
+
+**Cambiar de departamento o eliminar:** un cargo que ya tiene contratos no puede cambiarse de departamento (el campo queda deshabilitado, con la explicación) ni eliminarse: el sistema avisa cuántos contratos tiene. Para unirlo con otro cargo se usa **Fusionar en otro cargo**. En la eliminación masiva se borran solo los cargos sin contratos y la notificación indica cuáles se omitieron.
 
 > Departamentos y cargos también pueden crearse directamente desde el formulario de contrato del empleado, sin salir de la pantalla.
 
