@@ -10,23 +10,19 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 **Listado:** las pestañas **Todas / Activas / Inactivas / Con datos pendientes** muestran cuántas empresas hay de cada tipo. La columna **Datos** indica si la empresa está completa o cuántas cosas le faltan (al pasar el cursor se ve el detalle): sin logo, sin sucursales, sin cuenta bancaria principal activa o con empleados activos sin contrato vigente. El menú de cada fila (⋮) permite abrir el **Organigrama**, descargarlo en **PDF** y **Activar** o **Desactivar** la empresa. El **Nro. Patronal** y las fechas de creación y actualización están ocultos por defecto (se activan desde el selector de columnas de la tabla). La búsqueda global del panel encuentra empresas por razón social, nombre comercial, RUC o número patronal.
 
-**Campos principales** (todos obligatorios salvo el nombre comercial, la fecha de constitución y el logo):
-- **Razón social** y **nombre comercial** (nombre de fantasía, opcional)
-- **Tipo societario:** SA, SRL, EU, Cooperativa, Fundación, etc.
-- **RUC:** formato `XXXXXXXX-D` (ej: `80012345-6`)
-- **Número patronal IPS**
-- **Representante legal:** nombre y cédula
-- **Logo:** se usa en encabezados de todos los PDFs generados (opcional, pero conviene cargarlo)
-- **Dirección, ciudad, teléfono y correo electrónico**
-- **Activa:** las empresas inactivas no aparecen en los selectores del sistema
+**Formulario:** al editar, la primera sección es **Estado** (el interruptor **Activa**); le siguen **Identidad**, **Constitución Legal** y **Contacto**. Todos los datos son obligatorios salvo el logo, el nombre comercial y la fecha de constitución:
+- **Identidad:** logo (se usa en los encabezados de los PDFs; conviene cargarlo), razón social, nombre comercial (si se deja vacío se usa la razón social), RUC con formato `XXXXXXXX-D` (ej: `80012345-6`) y número patronal IPS. El RUC y el número patronal no se pueden repetir entre empresas.
+- **Constitución Legal:** tipo societario (SA, SRL, EU, Cooperativa, Fundación, etc.), fecha de constitución y representante legal (nombre y cédula, solo dígitos).
+- **Contacto:** dirección, departamento y ciudad, teléfono y correo electrónico.
+- **Ficha del empleado, Aviso de privacidad y Marcación desde el celular:** secciones opcionales; arrancan cerradas y se abren solas si la empresa ya tiene datos cargados.
 
 **Cómo crear una empresa:**
 
 1. Ir a **Organización → Empresas**
 2. Clic en **Nueva empresa**
-3. Completar los datos legales: razón social, RUC, número patronal, tipo societario, representante legal
-4. Completar dirección y contacto. Para la **ciudad**, elegir primero el **Departamento** (opcional, solo filtra la lista) y luego la **Ciudad**; el catálogo incluye los 17 departamentos y las ciudades de Paraguay
-5. Subir el logo (JPG, PNG, WEBP o SVG, máx. 5 MB). Conviene PNG: el SVG se ve en el panel y en los PDFs, pero no en el terminal ni en el celular
+3. En **Identidad**, subir el logo (JPG, PNG, WEBP o SVG, máx. 5 MB; conviene PNG: el SVG se ve en el panel y en los PDFs, pero no en el terminal ni en el celular) y completar razón social, RUC y número patronal
+4. En **Constitución Legal**, elegir el tipo societario y completar el representante legal
+5. En **Contacto**, completar dirección y datos de contacto. Para la **ciudad**, elegir primero el **Departamento** (opcional, solo filtra la lista) y luego la **Ciudad**; el catálogo incluye los 17 departamentos y las ciudades de Paraguay
 6. Guardar
 
 ![Departamento y ciudad en el formulario de la empresa](/docs-images/02-empresa-ciudad.png)
@@ -50,11 +46,11 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 ![Detalle de una empresa](/docs-images/02-empresa-detalle.png)
 
-**Aviso de privacidad:** la sección **Aviso de privacidad** del formulario (se expande sola si ya hay uno cargado) tiene el **texto del aviso** (máximo 3000 caracteres) y, opcionalmente, el **enlace a la política completa**. Lo redacta la empresa; el sistema solo lo muestra en el terminal de asistencia (ver el capítulo *Terminales de Marcación*). Cada vez que se cambia el texto o el enlace la **versión del aviso** sube sola; se ve en la vista de la empresa. Sin texto ni enlace, el terminal no muestra ningún aviso. Con un aviso cargado, además se pide la aceptación al empleado cuando registra su rostro por enlace o vincula su celular (ver *Consentimiento del aviso de privacidad* en el capítulo de Asistencias).
+**Aviso de privacidad:** la sección **Aviso de privacidad** del formulario (se abre sola si ya hay uno cargado) tiene el **texto del aviso** (máximo 3000 caracteres) y, opcionalmente, el **enlace a la política completa**. Lo redacta la empresa; el sistema solo lo muestra en el terminal de asistencia (ver el capítulo *Terminales de Marcación*). Cada vez que se cambia el texto o el enlace la **versión del aviso** sube sola; se ve en la vista de la empresa. Sin texto ni enlace, el terminal no muestra ningún aviso. Con un aviso cargado, además se pide la aceptación al empleado cuando registra su rostro por enlace o vincula su celular (ver *Consentimiento del aviso de privacidad* en el capítulo de Asistencias).
 
 **Datos pendientes:** si a la empresa le falta algo que usan los PDFs o los pagos (logo, dirección o ciudad, representante legal, o una cuenta bancaria principal activa), la parte superior de la vista muestra un aviso con lo que falta. Desaparece solo al completarlo.
 
-**Desactivar o eliminar:** para dejar de usar una empresa, usar la acción **Desactivar** (en el menú de la fila del listado o en el encabezado de la vista) o desmarcar **Activa** en su edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una empresa que tenga empleados activos**: hay que desvincularlos o transferirlos a otra empresa primero, y el sistema avisa cuántos son. Los terminales de sus sucursales no se modifican al desactivarla. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.
+**Desactivar o eliminar:** para dejar de usar una empresa, usar la acción **Desactivar** (en el menú de la fila del listado o en el encabezado de la vista) o desmarcar **Activa** en la sección **Estado** de su edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una empresa que tenga empleados activos**: hay que desvincularlos o transferirlos a otra empresa primero, y el sistema avisa cuántos son. Los terminales de sus sucursales no se modifican al desactivarla. **Eliminar** solo es posible si la empresa está vacía: si tiene sucursales, departamentos, cuentas bancarias, períodos de nómina o aguinaldo, lotes de pago, plantillas de contrato, plantillas de turno o patrones de rotación, el sistema bloquea la eliminación y avisa cuántos hay de cada uno.
 
 > Eliminar una empresa vacía no se puede deshacer. Si ya se usó alguna vez, desactivarla es la opción correcta.
 

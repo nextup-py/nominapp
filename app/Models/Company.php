@@ -80,7 +80,7 @@ class Company extends Model implements Auditable
     {
         static::deleting(function (Company $company): void {
             if ($company->deletionBlockers() !== []) {
-                throw new \DomainException("No se puede eliminar la empresa: tiene {$company->deletionBlockersSummary()}. Desactívela en su lugar.");
+                throw new \DomainException("No se puede eliminar la empresa: tiene {$company->deletionBlockersSummary()}. Desactivarla en su lugar.");
             }
         });
 
@@ -90,7 +90,7 @@ class Company extends Model implements Auditable
             }
 
             if ($company->isDirty('is_active') && ! $company->is_active && $company->activeEmployeesCount() > 0) {
-                throw new \DomainException("No se puede desactivar la empresa: tiene {$company->activeEmployeesCount()} empleados activos. Desvincúlelos o transfiéralos primero.");
+                throw new \DomainException("No se puede desactivar la empresa: tiene {$company->activeEmployeesCount()} empleados activos. Desvincularlos o transferirlos primero.");
             }
         });
 
