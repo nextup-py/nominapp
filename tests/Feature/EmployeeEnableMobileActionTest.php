@@ -124,9 +124,9 @@ it('la ficha muestra el estado del celular', function () {
     enableMobileSuperAdmin();
 
     Livewire::test(ViewEmployee::class, ['record' => enableMobileEmployee()->getKey()])
-        ->assertSee('Marcación desde el celular')
-        ->assertSee('Puede marcar desde el celular')
-        ->assertSee('Celular vinculado');
+        ->assertSee('Marcación: rostro y celular')
+        ->assertSee('Estado del celular')
+        ->assertSee('Puede marcar desde el celular');
 });
 
 it('el aviso de intento bloqueado lleva a la ficha y explica cómo habilitar', function () {
