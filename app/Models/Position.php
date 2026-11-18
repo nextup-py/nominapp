@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\MobileMarkingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -20,7 +21,17 @@ class Position extends Model
         'terminal_access',
         'marks_breaks',
         'is_active',
+        'description',
+        'salary_min',
+        'salary_max',
+        'headcount',
+        'is_managerial',
+        'overtime_allowed',
+        'default_schedule_id',
     ];
+
+    /** Horas extra permitidas cuando ni el cargo ni un nivel superior lo definen (comportamiento actual: se permiten). */
+    public const OVERTIME_ALLOWED_DEFAULT = true;
 
     /** @var array<string, mixed> Los cargos nuevos nacen activos (igual que el default de la base). */
     protected $attributes = [
@@ -36,7 +47,16 @@ class Position extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['mobile_marking_allowed' => 'boolean', 'marks_breaks' => 'boolean', 'is_active' => 'boolean'];
+        return [
+            'mobile_marking_allowed' => 'boolean',
+            'marks_breaks' => 'boolean',
+            'is_active' => 'boolean',
+            'salary_min' => 'integer',
+            'salary_max' => 'integer',
+            'headcount' => 'integer',
+            'is_managerial' => 'boolean',
+            'overtime_allowed' => 'boolean',
+        ];
     }
 
     protected static function booted(): void
@@ -111,6 +131,114 @@ class Position extends Model
                 $query->orWhere('positions.id', $keepId);
             }
         });
+    }
+
+    /** Horario que se sugiere al asignar horario a quien ocupa el cargo (nunca se asigna solo). */
+    public function defaultSchedule(): BelongsTo
+    {
+        return $this->belongsTo(Schedule::class, 'default_schedule_id');
+    }
+
+    /** Horas extra permitidas para el cargo: el valor propio o, si hereda, {@see self::OVERTIME_ALLOWED_DEFAULT}. */
+    public function overtimeAllowed(): bool
+    {
+        return $this->overtime_allowed ?? self::OVERTIME_ALLOWED_DEFAULT;
+    }
+
+    /** Personas con contrato vigente (activo o suspendido) en el cargo. */
+    public function occupiedCount(): int
+    {
+        return $this->activeContractsCount();
+    }
+
+    /** Plazas libres (`headcount` − ocupadas, nunca negativo), o null si el cargo no tiene plazas definidas. */
+    public function vacanciesCount(): ?int
+    {
+        return $this->headcount === null ? null : max(0, $this->headcount - $this->occupiedCount());
+    }
+
+    /**
+     * Aviso si `$salary` queda fuera del rango del cargo (solo informa; el contrato se guarda igual).
+     *
+     * @param  int|float|string|null  $salary  Salario mensual en Gs.
+     */
+    public function salaryRangeWarning(int|float|string|null $salary): ?string
+    {
+        if (! filled($salary) || ($this->salary_min === null && $this->salary_max === null)) {
+            return null;
+        }
+
+        $amount = (int) $salary;
+        $range = $this->salaryRangeLabel();
+
+        if ($this->salary_min !== null && $amount < $this->salary_min) {
+            return "Por debajo del rango del cargo ({$range})";
+        }
+
+        if ($this->salary_max !== null && $amount > $this->salary_max) {
+            return "Por encima del rango del cargo ({$range})";
+        }
+
+        return null;
+    }
+
+    /** Rango salarial legible, p. ej. «Gs. 3.000.000 – 5.000.000», «desde Gs. 3.000.000» o «hasta Gs. 5.000.000». */
+    public function salaryRangeLabel(): ?string
+    {
+        $format = fn (int $amount): string => number_format($amount, 0, ',', '.');
+
+        return match (true) {
+            $this->salary_min !== null && $this->salary_max !== null => 'Gs. '.$format($this->salary_min).' – '.$format($this->salary_max),
+            $this->salary_min !== null => 'desde Gs. '.$format($this->salary_min),
+            $this->salary_max !== null => 'hasta Gs. '.$format($this->salary_max),
+            default => null,
+        };
+    }
+
+    /**
+     * Aviso si el cargo ya tiene todas sus plazas ocupadas (solo informa).
+     *
+     * @param  int|null  $ignoreContractId  Contrato que se está editando, para no contarlo dos veces.
+     */
+    public function headcountWarning(?int $ignoreContractId = null): ?string
+    {
+        if ($this->headcount === null) {
+            return null;
+        }
+
+        $occupied = $this->contracts()
+            ->whereIn('status', ['active', 'suspended'])
+            ->when($ignoreContractId, fn ($query) => $query->whereKeyNot($ignoreContractId))
+            ->count();
+
+        return $occupied >= $this->headcount
+            ? "El cargo ya tiene {$occupied} de {$this->headcount} plazas ocupadas"
+            : null;
+    }
+
+    /**
+     * Aviso de rango salarial para el formulario de contrato (solo salario mensual; el jornal no se compara).
+     *
+     * @param  int|string|null  $positionId  Cargo elegido.
+     */
+    public static function salaryHint(int|string|null $positionId, mixed $salary, ?string $salaryType): ?string
+    {
+        if (blank($positionId) || $salaryType === 'jornal') {
+            return null;
+        }
+
+        return static::query()->find($positionId)?->salaryRangeWarning($salary);
+    }
+
+    /**
+     * Aviso de plazas completas para el formulario de contrato.
+     *
+     * @param  int|string|null  $positionId  Cargo elegido.
+     * @param  int|null  $ignoreContractId  Contrato que se está editando.
+     */
+    public static function headcountHint(int|string|null $positionId, ?int $ignoreContractId = null): ?string
+    {
+        return blank($positionId) ? null : static::query()->find($positionId)?->headcountWarning($ignoreContractId);
     }
 
     /** Contratos vigentes (activos o suspendidos) con este cargo. */

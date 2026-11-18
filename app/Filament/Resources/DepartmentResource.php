@@ -7,12 +7,14 @@ use App\Filament\Resources\DepartmentResource\Pages;
 use App\Filament\Resources\DepartmentResource\RelationManagers;
 use App\Models\Company;
 use App\Models\Department;
+use App\Models\Employee;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Infolists\Components\Section as InfoSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
@@ -22,6 +24,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class DepartmentResource extends Resource
 {
@@ -72,6 +75,7 @@ class DepartmentResource extends Resource
                     ->native(false)
                     ->searchable()
                     ->live()
+                    ->afterStateUpdated(fn (Set $set) => $set('manager_id', null))
                     ->disabled(fn (?Department $record): bool => $record?->deletionBlockers() !== [] && $record !== null)
                     ->helperText(fn (?Department $record): ?string => $record !== null && ($summary = $record->deletionBlockersSummary()) !== ''
                         ? "No se puede cambiar: el departamento tiene {$summary}."
@@ -105,6 +109,42 @@ class DepartmentResource extends Resource
                     ->nullable()
                     ->helperText('Opcional. No se repite dentro de la empresa.'),
 
+                Select::make('manager_id')
+                    ->label('Responsable')
+                    ->placeholder('Sin responsable')
+                    ->searchable()
+                    ->native(false)
+                    ->nullable()
+                    ->searchPrompt('Escribir nombre o CI')
+                    ->getSearchResultsUsing(function (string $search, Get $get, ?Department $record): array {
+                        $companyId = $get('company_id') ?? $record?->company_id;
+
+                        return Employee::query()
+                            ->with('activeContract.position')
+                            ->where('status', 'active')
+                            ->when($companyId, fn ($query) => $query->whereHas('branch', fn ($branch) => $branch->where('company_id', $companyId)))
+                            ->where(fn ($query) => $query
+                                ->where('first_name', 'like', "%{$search}%")
+                                ->orWhere('last_name', 'like', "%{$search}%")
+                                ->orWhere('ci', 'like', "%{$search}%"))
+                            ->orderBy('last_name')->orderBy('first_name')
+                            ->limit(50)
+                            ->get()
+                            ->mapWithKeys(fn (Employee $employee): array => [$employee->id => static::managerLabel($employee)])
+                            ->all();
+                    })
+                    ->getOptionLabelUsing(fn ($value): ?string => ($employee = Employee::query()->with('activeContract.position')->find($value)) ? static::managerLabel($employee) : null)
+                    ->helperText('Empleado activo de la empresa que dirige el departamento.')
+                    ->rules(fn (Get $get, ?Department $record) => [
+                        fn (string $attribute, mixed $value, \Closure $fail) => filled($value) && ! Employee::query()
+                            ->whereKey($value)
+                            ->where('status', 'active')
+                            ->whereHas('branch', fn ($branch) => $branch->where('company_id', $get('company_id') ?? $record?->company_id))
+                            ->exists()
+                                ? $fail('El responsable debe ser un empleado activo de la empresa.')
+                                : null,
+                    ]),
+
                 Textarea::make('description')
                     ->label('Descripción')
                     ->placeholder('Ej: Gestiona el reclutamiento, la capacitación y el bienestar del personal.')
@@ -114,6 +154,14 @@ class DepartmentResource extends Resource
                     ->columnSpanFull(),
             ])
             ->columns(2);
+    }
+
+    /** Etiqueta de un posible responsable: «Apellido, Nombre (Cargo)». */
+    private static function managerLabel(Employee $employee): string
+    {
+        $position = $employee->activeContract?->position?->name;
+
+        return "{$employee->last_name}, {$employee->first_name}".($position ? " ({$position})" : '');
     }
 
     /**
@@ -166,6 +214,11 @@ class DepartmentResource extends Resource
                         ->badge()
                         ->color(fn ($state) => $state ? 'success' : 'danger'),
 
+                    TextEntry::make('manager.full_name')
+                        ->label('Responsable')
+                        ->placeholder('Sin responsable')
+                        ->icon('heroicon-o-user'),
+
                     TextEntry::make('cost_center')
                         ->label('Centro de Costo')
                         ->placeholder('—')
@@ -206,6 +259,22 @@ class DepartmentResource extends Resource
                     ->badge()
                     ->color(fn ($state) => $state ? 'success' : 'danger')
                     ->sortable(),
+
+                TextColumn::make('manager.full_name')
+                    ->label('Responsable')
+                    ->placeholder('Sin responsable')
+                    ->icon('heroicon-o-user')
+                    ->searchable(query: fn (Builder $query, string $search) => $query->whereHas('manager', fn ($manager) => $manager
+                        ->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%"))),
+
+                TextColumn::make('vacancies')
+                    ->label('Vacantes')
+                    ->getStateUsing(fn (Department $record) => $record->vacanciesCount())
+                    ->badge()
+                    ->color(fn (int $state) => $state > 0 ? 'warning' : 'gray')
+                    ->alignCenter()
+                    ->tooltip('Plazas libres de los cargos con plazas definidas'),
 
                 TextColumn::make('description')
                     ->label('Descripción')

@@ -551,6 +551,10 @@ final class EmployeeForm
                     ->minValue(1)
                     ->prefix('Gs.')
                     ->suffix(fn (Get $get) => $get('ic_salary_type') === 'jornal' ? '/día' : '/mes')
+                    ->live(onBlur: true)
+                    ->hint(fn (Get $get): ?string => Position::salaryHint($get('ic_position_id'), $get('ic_salary'), $get('ic_salary_type')))
+                    ->hintColor('warning')
+                    ->hintIcon(fn (Get $get): ?string => Position::salaryHint($get('ic_position_id'), $get('ic_salary'), $get('ic_salary_type')) ? 'heroicon-o-exclamation-triangle' : null)
                     ->dehydrated(false),
 
                 Select::make('ic_payroll_type')
@@ -604,6 +608,10 @@ final class EmployeeForm
                     })
                     ->searchable()
                     ->native(false)
+                    ->live()
+                    ->hint(fn (Get $get): ?string => Position::headcountHint($get('ic_position_id')))
+                    ->hintColor('warning')
+                    ->hintIcon(fn (Get $get): ?string => Position::headcountHint($get('ic_position_id')) ? 'heroicon-o-exclamation-triangle' : null)
                     ->dehydrated(false),
             ]),
         ];

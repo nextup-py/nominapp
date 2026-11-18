@@ -100,7 +100,7 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 
 Los departamentos agrupan cargos dentro de una empresa. Cada empresa define sus propios departamentos de forma independiente.
 
-**Campos:** empresa (solo aparece si hay más de una empresa activa; con una sola, el departamento se crea en ella), nombre, centro de costo (código opcional, ej: `RH-001`) y descripción (opcional).
+**Campos:** empresa (solo aparece si hay más de una empresa activa; con una sola, el departamento se crea en ella), nombre, **Responsable** (opcional: un empleado activo de la empresa que dirige el departamento; se busca por nombre o cédula y se vacía si se cambia la empresa), centro de costo (código opcional, ej: `RH-001`) y descripción (opcional). El listado muestra el **Responsable** y las **Vacantes** (plazas libres de los cargos del departamento que tienen plazas definidas).
 
 **Cómo crear un departamento:**
 
@@ -122,6 +122,8 @@ Los departamentos agrupan cargos dentro de una empresa. Cada empresa define sus 
 Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse en jerarquía (un cargo puede tener un cargo superior).
 
 **Campos:** nombre, departamento y **Reporta a** (cargo superior, opcional — define la jerarquía del organigrama). **Reporta a** solo ofrece cargos de la misma empresa que el departamento elegido, sin incluir al propio cargo ni a los que dependen de él: por eso conviene elegir primero el departamento. El nombre no se puede repetir dentro del departamento.
+
+Además, el cargo puede llevar: **Descripción o funciones**, **Cargo de jefatura** (supervisa a otras personas), **Salario mínimo y máximo** (mensual, en Gs.; el máximo no puede ser menor que el mínimo) y **Plazas autorizadas** (cuántas personas pueden ocupar el cargo; vacío = sin límite), en la sección **Remuneración y plazas**, que arranca cerrada y se abre sola si ya tiene datos. El rango y las plazas **solo avisan**: al cargar un contrato, si el salario mensual queda fuera del rango o el cargo ya tiene todas sus plazas ocupadas, aparece un aviso junto al campo, pero el contrato se guarda igual. En la vista del cargo se ven las plazas ocupadas, las **vacantes** (plazas − personas con contrato vigente) y el rango. En **Marcación de asistencia** se suman **Horas extra** (Heredar / Sí / No; por ahora solo se registra, todavía no cambia el cálculo) y **Horario sugerido**: al usar **Asignar horario** desde Empleados, si no hay una sugerencia por marcaciones se preselecciona el horario del cargo (nunca se asigna solo).
 
 **Cómo crear un cargo:**
 

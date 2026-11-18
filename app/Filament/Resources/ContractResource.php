@@ -234,7 +234,11 @@ class ContractResource extends Resource
                             ->suffix(fn (Get $get) => $get('salary_type') === 'jornal' ? '/día' : '/mes')
                             ->default(fn () => app(PayrollSettings::class)->min_salary_monthly)
                             ->validationMessages(['minValue' => 'El salario no puede ser menor al mínimo legal vigente.'])
-                            ->placeholder('0'),
+                            ->placeholder('0')
+                            ->live(onBlur: true)
+                            ->hint(fn (Get $get): ?string => Position::salaryHint($get('position_id'), $get('salary'), $get('salary_type')))
+                            ->hintColor('warning')
+                            ->hintIcon(fn (Get $get): ?string => Position::salaryHint($get('position_id'), $get('salary'), $get('salary_type')) ? 'heroicon-o-exclamation-triangle' : null),
 
                         Select::make('department_id')
                             ->label('Departamento')
@@ -263,7 +267,11 @@ class ContractResource extends Resource
                             })
                             ->searchable()
                             ->native(false)
-                            ->required(),
+                            ->required()
+                            ->live()
+                            ->hint(fn (Get $get, ?Contract $record): ?string => Position::headcountHint($get('position_id'), $record?->id))
+                            ->hintColor('warning')
+                            ->hintIcon(fn (Get $get, ?Contract $record): ?string => Position::headcountHint($get('position_id'), $record?->id) ? 'heroicon-o-exclamation-triangle' : null),
 
                         Select::make('work_modality')
                             ->label('Modalidad de Trabajo')

@@ -31,6 +31,7 @@ class Department extends Model
         'cost_center',
         'description',
         'is_active',
+        'manager_id',
     ];
 
     /** @var array<string, mixed> Los departamentos nuevos nacen activos (igual que el default de la base). */
@@ -56,6 +57,22 @@ class Department extends Model
     public function positions(): HasMany
     {
         return $this->hasMany(Position::class);
+    }
+
+    /** Empleado que dirige el departamento. */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'manager_id');
+    }
+
+    /**
+     * Plazas libres del departamento: suma de las vacantes de sus cargos activos que tienen plazas definidas.
+     * Los cargos sin plazas definidas no cuentan.
+     */
+    public function vacanciesCount(): int
+    {
+        return (int) $this->positions()->active()->whereNotNull('headcount')->get()
+            ->sum(fn (Position $position) => $position->vacanciesCount());
     }
 
     /** Limita a los departamentos activos (los inactivos no se ofrecen al asignar contratos). */

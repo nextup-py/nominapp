@@ -12,6 +12,7 @@ use App\Models\Department;
 use App\Models\Position;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
@@ -105,6 +106,18 @@ class PositionResource extends Resource
                                 ? "No se puede cambiar: el cargo tiene {$summary}. Para unir cargos, usar Fusionar."
                                 : null),
 
+                        Textarea::make('description')
+                            ->label('Descripción o funciones')
+                            ->placeholder('Ej: Atiende la caja y concilia el arqueo al cierre.')
+                            ->rows(3)
+                            ->maxLength(1000)
+                            ->columnSpanFull(),
+
+                        Toggle::make('is_managerial')
+                            ->label('Cargo de jefatura')
+                            ->helperText('Supervisa a otras personas.')
+                            ->columnSpanFull(),
+
                         Select::make('parent_id')
                             ->label('Reporta a')
                             ->placeholder('Ninguno (cargo de nivel superior)')
@@ -134,6 +147,42 @@ class PositionResource extends Resource
                             ->columnSpanFull(),
                     ])
                     ->columns(2),
+
+                Section::make('Remuneración y plazas')
+                    ->description('Opcional. El rango salarial y las plazas solo avisan al cargar contratos; no bloquean.')
+                    ->icon('heroicon-o-banknotes')
+                    ->collapsible()
+                    ->collapsed(fn (?Position $record): bool => $record === null || (blank($record->salary_min)
+                        && blank($record->salary_max)
+                        && blank($record->headcount)))
+                    ->schema([
+                        TextInput::make('salary_min')
+                            ->label('Salario mínimo')
+                            ->numeric()
+                            ->minValue(0)
+                            ->prefix('Gs.')
+                            ->placeholder('Sin mínimo')
+                            ->helperText('Salario mensual.'),
+
+                        TextInput::make('salary_max')
+                            ->label('Salario máximo')
+                            ->numeric()
+                            ->minValue(0)
+                            ->prefix('Gs.')
+                            ->placeholder('Sin máximo')
+                            ->gte('salary_min')
+                            ->validationMessages(['gte' => 'El máximo no puede ser menor que el mínimo.']),
+
+                        TextInput::make('headcount')
+                            ->label('Plazas autorizadas')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->maxValue(9999)
+                            ->placeholder('Sin límite')
+                            ->helperText('Cuántas personas pueden ocupar el cargo. Vacío = sin límite.'),
+                    ])
+                    ->columns(3),
 
                 Section::make('Marcación de asistencia')
                     ->icon('heroicon-o-finger-print')
@@ -169,6 +218,29 @@ class PositionResource extends Resource
 
                         MobileMarkingFields::select('Rige para quien no tenga el suyo. «Heredar» usa la sucursal, la empresa o el valor general. Ej.: «Sí» para Supervisores.')
                             ->columnSpanFull(),
+
+                        Select::make('overtime_allowed')
+                            ->label('Horas extra')
+                            ->options([
+                                'inherit' => 'Heredar (se permiten)',
+                                'yes' => 'Sí, permitidas',
+                                'no' => 'No, no autorizadas',
+                            ])
+                            ->default('inherit')
+                            ->native(false)
+                            ->selectablePlaceholder(false)
+                            ->formatStateUsing(fn ($state): string => MobileMarkingFields::toOption($state))
+                            ->dehydrateStateUsing(fn ($state): ?bool => MobileMarkingFields::fromOption($state))
+                            ->helperText('Por ahora solo se registra: todavía no cambia el cálculo de horas extra.'),
+
+                        Select::make('default_schedule_id')
+                            ->label('Horario sugerido')
+                            ->relationship('defaultSchedule', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->placeholder('Sin horario sugerido')
+                            ->helperText('Se preselecciona al asignar horario a quien ocupa el cargo; nunca se asigna solo.'),
                     ])
                     ->columns(2),
             ]);
@@ -234,6 +306,53 @@ class PositionResource extends Resource
                         ->label('Reporta a')
                         ->placeholder('Cargo de nivel superior')
                         ->icon('heroicon-o-arrow-up-circle'),
+
+                    TextEntry::make('is_managerial')
+                        ->label('Jefatura')
+                        ->formatStateUsing(fn ($state) => $state ? 'Cargo de jefatura' : 'Sin personal a cargo')
+                        ->badge()
+                        ->color(fn ($state) => $state ? 'info' : 'gray'),
+
+                    TextEntry::make('description')
+                        ->label('Descripción o funciones')
+                        ->placeholder('Sin descripción')
+                        ->columnSpanFull(),
+                ]),
+
+            InfoSection::make('Remuneración y plazas')
+                ->columns(3)
+                ->schema([
+                    TextEntry::make('salary_range')
+                        ->label('Rango salarial')
+                        ->getStateUsing(fn (Position $record) => $record->salaryRangeLabel())
+                        ->placeholder('Sin rango definido'),
+
+                    TextEntry::make('headcount')
+                        ->label('Plazas ocupadas')
+                        ->getStateUsing(fn (Position $record) => $record->headcount === null
+                            ? $record->occupiedCount().' (sin límite)'
+                            : $record->occupiedCount().' de '.$record->headcount)
+                        ->badge()
+                        ->color('info'),
+
+                    TextEntry::make('vacancies')
+                        ->label('Vacantes')
+                        ->getStateUsing(fn (Position $record) => $record->vacanciesCount())
+                        ->placeholder('Sin plazas definidas')
+                        ->badge()
+                        ->color(fn ($state) => (int) $state > 0 ? 'warning' : 'gray'),
+
+                    TextEntry::make('overtime_allowed')
+                        ->label('Horas extra')
+                        ->getStateUsing(fn (Position $record) => match ($record->overtime_allowed) {
+                            true => 'Sí, permitidas',
+                            false => 'No, no autorizadas',
+                            default => 'Heredar (se permiten)',
+                        }),
+
+                    TextEntry::make('defaultSchedule.name')
+                        ->label('Horario sugerido')
+                        ->placeholder('Sin horario sugerido'),
                 ]),
         ]);
     }
