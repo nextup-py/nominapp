@@ -107,6 +107,10 @@ class TerminalPairingActions
             '<strong>Navegador:</strong> '.e($record->user_agent ?: 'no informado'),
         ];
 
+        if ($elsewhere = $record->linkedElsewhere()) {
+            $lines[] = '<strong>Atención: este equipo ya funciona como otro terminal:</strong> «'.e($elsewhere->name).'»'.($elsewhere->branch ? ' ('.e($elsewhere->branch->name).')' : '').'. Si lo aprobás acá, «'.e($elsewhere->name).'» se queda sin equipo y se verá desconectado. Pedile a quien lo usa que abra el enlace de ese terminal.';
+        }
+
         if ($record->replaces_active_device) {
             $lines[] = '<strong>Dispositivo vinculado hoy:</strong> '.e($terminal->currentDeviceSummary());
             $lines[] = match ($record->same_device) {

@@ -123,7 +123,7 @@ export async function initializeSystem(loadingDom, { onReady, onError, onUnlinke
 
         if (!sync.linked) {
             console.warn(`Terminal sin vincular (${sync.reason}) — marcación bloqueada.`);
-            onUnlinked?.(sync.reason, sync.storedCode);
+            onUnlinked?.(sync.reason, sync.storedCode, sync.storedName);
             return;
         }
 
@@ -175,14 +175,15 @@ export async function requestPersistentStorage() {
  * confirmación cancelada, `linked: false` — el caller bloquea la marcación en
  * vez de dejar arrancar la cámara hacia un terminal que no puede identificar
  * ni sincronizar a nadie.
- * @param {{onUnlinked?: (reason: string, storedCode?: string|null) => void, confirmSwitch?: boolean}} [callbacks] - `onUnlinked` se propaga al sync en segundo plano para avisar de una revocación en caliente; con `confirmSwitch: false` un navegador de otro terminal no se limpia ni se pregunta (arranque sin toque)
- * @returns {Promise<{linked: boolean, reason?: 'no_token'|'other_terminal', storedCode?: string|null}>}
+ * @param {{onUnlinked?: (reason: string, storedCode?: string|null, storedName?: string|null) => void}} [callbacks] - `onUnlinked` se propaga al sync en segundo plano para avisar de una revocación en caliente. Un navegador que ya es otro terminal nunca se limpia aquí (ver `switchToCurrentTerminal()`)
+ * @returns {Promise<{linked: boolean, reason?: 'no_token'|'other_terminal', storedCode?: string|null, storedName?: string|null}>}
  */
-export async function initializeOfflineSync({ onUnlinked, confirmSwitch = true } = {}) {
+export async function initializeOfflineSync({ onUnlinked } = {}) {
     await migrateTokenFromLocalStorage();
 
     const storedId = await getMeta('terminal_id');
     const storedCode = await getMeta('terminal_code');
+    const storedName = await getMeta('terminal_name');
     const currentId = window.terminalData?.id;
     const currentCode = window.terminalData?.code;
 
@@ -191,22 +192,11 @@ export async function initializeOfflineSync({ onUnlinked, confirmSwitch = true }
         : (storedCode != null && currentCode != null && storedCode !== currentCode);
 
     if (belongsToOtherTerminal) {
-        // Sin toque del usuario no se pregunta ni se borra nada: lo resuelve el arranque normal tras "Comenzar".
-        if (!confirmSwitch) return { linked: false, reason: 'other_terminal', storedCode: storedCode ?? null };
-
-        const confirmed = window.confirm(
-            `Este dispositivo ya está configurado como el terminal "${storedCode ?? storedId}". `
-            + `¿Querés cambiarlo a este terminal ("${currentCode ?? currentId}")? `
-            + 'Se va a perder toda la caché local del terminal anterior (empleados sincronizados y marcaciones pendientes de sincronizar).',
-        );
-
-        if (!confirmed) {
-            updateIdleSyncStatus(`Este es otro terminal — volvé a /terminal/${storedCode ?? ''}`);
-            return { linked: false, reason: 'other_terminal', storedCode: storedCode ?? null };
-        }
-
-        console.warn(`Datos locales pertenecen a otro terminal (id ${storedId ?? 'desconocido'}, code "${storedCode}") — limpiando antes de continuar.`);
-        await clearTerminalState();
+        // Este navegador ya funciona como otro terminal: no se pregunta ni se borra nada aquí. Antes un `confirm()`
+        // nativo se aceptaba de reflejo, vaciaba el vínculo del otro terminal y pedía un código para este (caso real:
+        // un celular que era «Celular» pasó a pelear por la PC del terminal principal). Ahora la pantalla ofrece ir al
+        // enlace correcto y solo un cambio deliberado llama a `switchToCurrentTerminal()`.
+        return { linked: false, reason: 'other_terminal', storedCode: storedCode ?? null, storedName: storedName ?? null };
     }
 
     const token = await getMeta('api_token');
@@ -272,12 +262,26 @@ let earlySync = null;
  * @returns {Promise<{linked: boolean, reason?: string}>}
  */
 export function startOfflineSyncEarly(callbacks = {}) {
-    earlySync ??= initializeOfflineSync({ ...callbacks, confirmSwitch: false }).catch((error) => {
+    earlySync ??= initializeOfflineSync(callbacks).catch((error) => {
         console.warn('Arranque temprano de la sincronización falló:', error.message);
         return { linked: false, reason: 'error' };
     });
 
     return earlySync;
+}
+
+/**
+ * Convierte este equipo en el terminal de la página actual: borra el estado local del terminal anterior (empleados
+ * sincronizados y marcaciones pendientes) y vuelve a inicializar, lo que deja al equipo sin token y listo para pedir
+ * un código de vinculación. Solo debe llamarse tras una confirmación explícita del usuario.
+ * @param {{onUnlinked?: (reason: string, storedCode?: string|null, storedName?: string|null) => void}} [callbacks]
+ * @returns {Promise<{linked: boolean, reason?: string}>}
+ */
+export async function switchToCurrentTerminal(callbacks = {}) {
+    await clearTerminalState();
+    earlySync = null;
+
+    return initializeOfflineSync(callbacks);
 }
 
 /** Máximo que un comando de recarga/limpieza espera a que el terminal pueda recargarse sin interrumpir a nadie. */

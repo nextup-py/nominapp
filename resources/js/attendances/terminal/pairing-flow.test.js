@@ -135,12 +135,13 @@ describe('pairing-flow', () => {
         expect(db.setMeta).toHaveBeenCalledWith('api_token', 'TOKEN-NUEVO');
         expect(db.setMeta).toHaveBeenCalledWith('terminal_id', 9);
         expect(db.setMeta).toHaveBeenCalledWith('terminal_code', 'abc12345');
+        expect(db.setMeta).toHaveBeenCalledWith('terminal_name', 'T');
         expect(ui.onLinked).toHaveBeenCalledTimes(1);
         expect(flow.isPairingActive()).toBe(false);
 
         // Solo se escriben estas claves de meta: nada más del estado local se toca.
         const keys = db.setMeta.mock.calls.map(([key]) => key);
-        expect(keys.every((key) => ['pairing_session', 'api_token', 'terminal_id', 'terminal_code'].includes(key))).toBe(true);
+        expect(keys.every((key) => ['pairing_session', 'api_token', 'terminal_id', 'terminal_code', 'terminal_name'].includes(key))).toBe(true);
     });
 
     it('consulta el estado cada 3 segundos, no antes', async () => {

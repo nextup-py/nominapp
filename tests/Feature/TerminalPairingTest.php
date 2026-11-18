@@ -521,3 +521,47 @@ it('el aviso de dos equipos se repite pasadas 24 horas', function () {
 
     Notification::assertSentToTimes($manager, TerminalMultipleDevicesNotification::class, 2);
 });
+
+// ─── Equipo que ya funciona como otro terminal ──────────────────────────────
+
+/** Deja al equipo `$deviceId` vinculado y vigente al terminal dado, como si ya hubiera sido aprobado. */
+function linkDeviceTo(Terminal $terminal, string $deviceId): void
+{
+    $terminal->devices()->create(['device_id' => $deviceId, 'linked_via' => 'pairing', 'linked_at' => now()]);
+}
+
+it('detecta que el equipo que pide vincularse ya funciona como otro terminal', function () {
+    $celular = makePairingTerminal(['name' => 'Celular']);
+    $principal = makePairingTerminal(['name' => 'Principal']);
+    linkDeviceTo($celular, 'equipo-celular');
+
+    $request = app(TerminalPairingService::class)->request($principal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-celular'])['request'];
+
+    expect($request->linkedElsewhere()?->is($celular))->toBeTrue();
+    $event = TerminalEvent::where('terminal_id', $principal->id)->where('type', 'pairing_requested')->latest('id')->first();
+    expect($event->payload['linked_elsewhere'])->toEqual(['terminal_id' => $celular->id, 'name' => 'Celular'])
+        ->and($event->detail)->toContain('Celular');
+});
+
+it('no marca como vinculado en otro terminal a un equipo nuevo, sin device_id o ya dado de baja', function () {
+    $otro = makePairingTerminal();
+    $terminal = makePairingTerminal();
+    linkDeviceTo($otro, 'equipo-viejo');
+    $otro->devices()->update(['unlinked_at' => now(), 'unlink_reason' => 'revoked']);
+    $service = app(TerminalPairingService::class);
+
+    expect($service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-viejo'])['request']->linkedElsewhere())->toBeNull()
+        ->and($service->request($terminal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-nuevo'])['request']->linkedElsewhere())->toBeNull()
+        ->and($service->request($terminal, '10.0.0.5', 'Chrome', null)['request']->linkedElsewhere())->toBeNull();
+});
+
+it('el modal de aprobar avisa que el equipo ya es otro terminal', function () {
+    $celular = makePairingTerminal(['name' => 'Celular']);
+    $principal = makePairingTerminal(['name' => 'Principal']);
+    linkDeviceTo($celular, 'equipo-celular');
+    $request = app(TerminalPairingService::class)->request($principal, '10.0.0.5', 'Chrome', null, ['device_id' => 'equipo-celular'])['request'];
+
+    expect((string) TerminalPairingActions::describe($request->load('terminal.branch')))
+        ->toContain('ya funciona como otro terminal')
+        ->toContain('«Celular»');
+});

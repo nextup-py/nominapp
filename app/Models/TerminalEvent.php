@@ -180,6 +180,9 @@ class TerminalEvent extends Model
         if (! empty($payload['late'])) {
             $parts[] = 'Confirmado con retraso';
         }
+        if (! empty($payload['linked_elsewhere']['name'])) {
+            $parts[] = 'El equipo ya es el terminal «'.$payload['linked_elsewhere']['name'].'»';
+        }
         if (isset($payload['devices'])) {
             $parts[] = $payload['devices'].' equipos distintos en 24 horas';
         }

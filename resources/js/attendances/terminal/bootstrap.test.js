@@ -48,9 +48,9 @@ async function loadFreshBootstrap() {
     const queueMod = await import('../terminal-offline/queue.js');
     const statusMod = await import('./sync-status-ui.js');
     const dbMod = await import('../terminal-offline/db.js');
-    const { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe, startOfflineSyncEarly } = await import('./bootstrap.js');
+    const { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe, startOfflineSyncEarly, switchToCurrentTerminal } = await import('./bootstrap.js');
     const cameraMod = await import('./camera.js');
-    return { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe, startOfflineSyncEarly, ...cameraMod, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
+    return { startBackgroundSync, initializeOfflineSync, initializeSystem, checkLegacyTerminalMigration, setBusyProbe, startOfflineSyncEarly, switchToCurrentTerminal, ...cameraMod, ...syncMod, ...queueMod, ...statusMod, ...dbMod };
 }
 
 describe('startBackgroundSync — reporte de TerminalAuthError', () => {
@@ -409,44 +409,43 @@ describe('initializeOfflineSync — confirmación antes de limpiar el estado de 
         expect(flushQueue).not.toHaveBeenCalled();
     });
 
-    it('terminal distinto + confirma: limpia el estado anterior y sincroniza como el nuevo', async () => {
+    it('terminal distinto: no pregunta ni limpia nada y devuelve a qué terminal pertenece', async () => {
         const { initializeOfflineSync, getMeta, clearTerminalState, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
         stubWindow({ confirmReturns: true, terminalCode: 'nuevo-code', terminalId: 99 });
         getMeta.mockImplementation((key) => Promise.resolve({
             terminal_id: 1,
             terminal_code: 'viejo-code',
-            api_token: 'token-viejo',
-        }[key] ?? null));
-        heartbeat.mockResolvedValue(undefined);
-        syncEmployees.mockResolvedValue(undefined);
-        flushQueue.mockResolvedValue({ results: [] });
-
-        const result = await initializeOfflineSync();
-
-        expect(window.confirm).toHaveBeenCalledTimes(1);
-        expect(clearTerminalState).toHaveBeenCalledTimes(1);
-        expect(heartbeat).toHaveBeenCalled();
-        expect(result).toEqual({ linked: true });
-    });
-
-    it('terminal distinto + cancela: NO limpia nada y no intenta sincronizar', async () => {
-        const { initializeOfflineSync, getMeta, clearTerminalState, heartbeat, syncEmployees, flushQueue, updateIdleSyncStatus } = await loadFreshBootstrap();
-        stubWindow({ confirmReturns: false, terminalCode: 'nuevo-code', terminalId: 99 });
-        getMeta.mockImplementation((key) => Promise.resolve({
-            terminal_id: 1,
-            terminal_code: 'viejo-code',
+            terminal_name: 'Celular',
             api_token: 'token-viejo',
         }[key] ?? null));
 
         const result = await initializeOfflineSync();
 
-        expect(result).toEqual({ linked: false, reason: 'other_terminal', storedCode: 'viejo-code' });
-        expect(window.confirm).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ linked: false, reason: 'other_terminal', storedCode: 'viejo-code', storedName: 'Celular' });
+        expect(window.confirm).not.toHaveBeenCalled();
         expect(clearTerminalState).not.toHaveBeenCalled();
         expect(heartbeat).not.toHaveBeenCalled();
         expect(syncEmployees).not.toHaveBeenCalled();
         expect(flushQueue).not.toHaveBeenCalled();
-        expect(updateIdleSyncStatus).toHaveBeenCalledWith('Este es otro terminal — volvé a /terminal/viejo-code');
+    });
+
+    it('sin nombre guardado (vinculado antes de este cambio): devuelve null en storedName', async () => {
+        const { initializeOfflineSync, getMeta } = await loadFreshBootstrap();
+        stubWindow({ confirmReturns: true, terminalCode: 'nuevo-code', terminalId: 99 });
+        getMeta.mockImplementation((key) => Promise.resolve({ terminal_id: 1, terminal_code: 'viejo-code', api_token: 'x' }[key] ?? null));
+
+        expect(await initializeOfflineSync()).toEqual({ linked: false, reason: 'other_terminal', storedCode: 'viejo-code', storedName: null });
+    });
+
+    it('switchToCurrentTerminal: limpia el estado anterior y queda sin token, listo para pedir código', async () => {
+        const { switchToCurrentTerminal, getMeta, clearTerminalState } = await loadFreshBootstrap();
+        stubWindow({ confirmReturns: true, terminalCode: 'nuevo-code', terminalId: 99 });
+        getMeta.mockImplementation((key) => Promise.resolve({ terminal_id: 99 }[key] ?? null));
+
+        const result = await switchToCurrentTerminal();
+
+        expect(clearTerminalState).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ linked: false, reason: 'no_token' });
     });
 });
 
@@ -478,7 +477,7 @@ describe('initializeSystem — terminal sin vincular', () => {
         await vi.advanceTimersByTimeAsync(5000);
         await done;
 
-        expect(callbacks.onUnlinked).toHaveBeenCalledWith('no_token', undefined);
+        expect(callbacks.onUnlinked).toHaveBeenCalledWith('no_token', undefined, undefined);
         expect(callbacks.onReady).not.toHaveBeenCalled();
         expect(callbacks.onError).not.toHaveBeenCalled();
     });

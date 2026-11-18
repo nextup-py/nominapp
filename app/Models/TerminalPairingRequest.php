@@ -77,6 +77,25 @@ class TerminalPairingRequest extends Model
         return $this->belongsTo(Terminal::class);
     }
 
+    /**
+     * Otro terminal al que este mismo equipo ya está vinculado (mismo `device_id`, vínculo vigente), o null. Un equipo
+     * solo puede ser un terminal: aprobarlo acá lo deja sin ser el otro, que pasa a verse desconectado.
+     */
+    public function linkedElsewhere(): ?Terminal
+    {
+        if (blank($this->device_id)) {
+            return null;
+        }
+
+        return TerminalDevice::query()
+            ->where('device_id', $this->device_id)
+            ->whereNull('unlinked_at')
+            ->where('terminal_id', '!=', $this->terminal_id)
+            ->with('terminal.branch')
+            ->latest('linked_at')
+            ->first()?->terminal;
+    }
+
     /** Usuario del panel que aprobó la solicitud. */
     public function approvedBy(): BelongsTo
     {

@@ -79,12 +79,15 @@ class TerminalPairingService
                 'expires_at' => now()->addMinutes(TerminalPairingRequest::TTL_MINUTES),
             ]);
 
+            $elsewhere = $request->linkedElsewhere();
+
             TerminalEvent::record($locked, 'pairing_requested', [
                 'request_id' => $request->id,
                 'ip' => $ip,
                 'replaces_active_device' => $request->replaces_active_device,
                 'device_id' => $deviceId ? substr($deviceId, 0, 8) : null,
                 'same_device' => $sameDevice,
+                'linked_elsewhere' => $elsewhere ? ['terminal_id' => $elsewhere->id, 'name' => $elsewhere->name] : null,
             ]);
 
             $linkLost = $request->replaces_active_device && $this->recordLinkLost($locked, $ip, $context, $sameDevice);
