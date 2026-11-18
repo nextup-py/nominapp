@@ -687,7 +687,7 @@ class EmployeeResource extends Resource
                                 ->date('d/m/Y')
                                 ->badge()
                                 ->color(fn (Employee $record) => $record->isUnderMaternityProtection() ? 'danger' : 'gray')
-                                ->placeholder('No aplica'),
+                                ->visible(fn (Employee $record): bool => $record->maternity_protection_until !== null),
 
                         ]),
                 ])
