@@ -59,8 +59,8 @@ final class EmployeeForm
                                                 self::gender(),
                                                 self::maritalStatus(),
                                                 self::nationality(),
-                                                self::phone(),
-                                                self::email(),
+                                                self::phone()->columnSpan(2),
+                                                self::email()->columnSpan(2),
                                             ]),
                                     ])
                                     ->columnSpan(3),
@@ -79,7 +79,15 @@ final class EmployeeForm
                         self::status(),
 
                         MobileMarkingFields::select('Por defecto se marca solo desde el terminal. «Sí» permite vincular su celular; «No» lo bloquea y revoca el vinculado. «Heredar» usa lo definido en la sucursal, la empresa o Configuración General.'),
+                    ]),
 
+                Section::make('Lugar de trabajo propio (opcional)')
+                    ->description('Solo para quien trabaja en un lugar fijo propio (casa, oficina de un cliente).')
+                    ->icon('heroicon-o-map-pin')
+                    ->collapsible()
+                    ->collapsed(fn (?Employee $record): bool => blank($record?->work_location) && blank($record?->location_radius_m))
+                    ->columns(3)
+                    ->schema([
                         TextInput::make('work_location.lat')
                             ->label('Lugar de trabajo: latitud')
                             ->numeric()
@@ -87,7 +95,7 @@ final class EmployeeForm
                             ->maxValue(90)
                             ->placeholder('-25.286700')
                             ->required(fn (Get $get): bool => filled($get('work_location.lng')))
-                            ->helperText('Solo para quien trabaja en un lugar fijo propio (casa, oficina de un cliente). Vacío = usa el de su sucursal si controla la ubicación; si no, es «de campo» y solo se registra dónde marca.'),
+                            ->helperText('Vacío = usa el de su sucursal si controla la ubicación; si no, es «de campo» y solo se registra dónde marca.'),
 
                         TextInput::make('work_location.lng')
                             ->label('Lugar de trabajo: longitud')
@@ -260,7 +268,7 @@ final class EmployeeForm
             ->helperText('El empleado debe ser mayor de 18 años.');
     }
 
-    /** Género (opcional; habilita la protección de maternidad en la edición). */
+    /** Género (obligatorio; habilita la protección de maternidad en la edición). */
     private static function gender(): Select
     {
         return Select::make('gender')
@@ -268,8 +276,9 @@ final class EmployeeForm
             ->options(Employee::getGenderOptions())
             ->native(false)
             ->live()
-            ->nullable()
-            ->placeholder('Seleccionar');
+            ->required()
+            ->placeholder('Seleccionar')
+            ->helperText('Seleccioná el género del empleado.');
     }
 
     /** Estado civil (opcional). */

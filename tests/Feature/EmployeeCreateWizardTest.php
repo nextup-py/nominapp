@@ -51,6 +51,7 @@ function wizardData(Branch $branch, array $extra = []): array
         'first_name' => 'Juan',
         'last_name' => 'Pérez',
         'birth_date' => '1990-05-10',
+        'gender' => 'masculino',
         'company_id' => $branch->company_id,
         'branch_id' => $branch->id,
     ], $extra);
@@ -62,7 +63,7 @@ it('el alta es un asistente de tres pasos: datos básicos, ubicación y horario,
     expect(wizardStepLabels(Livewire::test(CreateEmployee::class)))->toBe(['Datos básicos', 'Ubicación y horario', 'Contrato']);
 });
 
-it('crea el empleado solo con CI, nombre, apellido, nacimiento y sucursal', function () {
+it('crea el empleado solo con CI, nombre, apellido, nacimiento, género y sucursal', function () {
     $branch = wizardSetup();
 
     Livewire::test(CreateEmployee::class)
@@ -73,17 +74,17 @@ it('crea el empleado solo con CI, nombre, apellido, nacimiento y sucursal', func
     $employee = Employee::where('ci', '4567890')->firstOrFail();
 
     expect($employee->branch_id)->toBe($branch->id)
-        ->and($employee->gender)->toBeNull()
+        ->and($employee->gender)->toBe('masculino')
         ->and($employee->contracts()->count())->toBe(0);
 });
 
-it('exige CI, nombre, apellido, fecha de nacimiento y sucursal', function () {
+it('exige CI, nombre, apellido, fecha de nacimiento, género y sucursal', function () {
     wizardSetup();
 
     Livewire::test(CreateEmployee::class)
-        ->fillForm(['ci' => null, 'first_name' => null, 'last_name' => null, 'birth_date' => null, 'branch_id' => null])
+        ->fillForm(['ci' => null, 'first_name' => null, 'last_name' => null, 'birth_date' => null, 'gender' => null, 'branch_id' => null])
         ->call('create')
-        ->assertHasFormErrors(['ci' => 'required', 'first_name' => 'required', 'last_name' => 'required', 'birth_date' => 'required', 'branch_id' => 'required']);
+        ->assertHasFormErrors(['ci' => 'required', 'first_name' => 'required', 'last_name' => 'required', 'birth_date' => 'required', 'gender' => 'required', 'branch_id' => 'required']);
 });
 
 it('el alta no pide foto, contacto, maternidad ni deducciones, pero la edición sí los tiene', function () {
@@ -159,4 +160,23 @@ it('toma el departamento del contrato desde el cargo cuando no se elige uno', fu
         ->assertHasNoFormErrors();
 
     expect(Employee::where('ci', '4567890')->firstOrFail()->contracts()->firstOrFail()->department_id)->toBe($department->id);
+});
+
+it('la edición agrupa el enrolamiento en «Más acciones» y ya no ofrece Inactivar', function () {
+    $branch = wizardSetup();
+    $employee = Employee::factory()->create(['branch_id' => $branch->id]);
+
+    Livewire::test(EditEmployee::class, ['record' => $employee->getKey()])
+        ->assertActionExists('capture_face')
+        ->assertActionExists('generate_enrollment')
+        ->assertActionDoesNotExist('toggle_status');
+});
+
+it('el lugar de trabajo propio está en una sección aparte de la edición', function () {
+    $branch = wizardSetup();
+    $employee = Employee::factory()->create(['branch_id' => $branch->id]);
+
+    $fields = Livewire::test(EditEmployee::class, ['record' => $employee->getKey()])->instance()->form->getFlatFields(withHidden: true);
+
+    expect($fields)->toHaveKeys(['work_location.lat', 'work_location.lng', 'location_radius_m']);
 });
