@@ -68,7 +68,7 @@ final class EmployeeForm
                     ]),
 
                 Section::make('Asignación Laboral')
-                    ->description('Empresa, sucursal y horario de trabajo del empleado.')
+                    ->description('Empresa, sucursal, superior directo y estado del empleado.')
                     ->icon('heroicon-o-building-office-2')
                     ->collapsible()
                     ->columns(3)
