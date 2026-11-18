@@ -99,6 +99,18 @@ it('rechaza un teléfono con formato inválido', function (string $phone) {
         ->fillForm(['responsible_phone' => $phone])
         ->call('save')
         ->assertHasFormErrors(['responsible_phone']);
+})->with(['incompleto' => '98112345', 'demasiado largo' => '098112345678']);
+
+it('normaliza el teléfono del responsable al salir del campo', function (string $phone) {
+    managedTerminalAdmin();
+    $terminal = managedTerminal();
+
+    Livewire::test(EditTerminal::class, ['record' => $terminal->getKey()])
+        ->fillForm(['responsible_phone' => $phone])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($terminal->fresh()->responsible_phone)->toBe('0981123456');
 })->with(['con prefijo' => '+595981123456', 'con guiones' => '0981-123-456', 'sin cero inicial' => '981123456']);
 
 it('la garantía no puede vencer antes de la compra', function () {

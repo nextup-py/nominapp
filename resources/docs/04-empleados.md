@@ -9,7 +9,7 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 - **Nombre y apellido**, foto
 - **Cédula de identidad (CI):** solo dígitos, sin puntos ni guiones (ej: `4567890`)
 - **Fecha de nacimiento**, sexo (`Masculino` / `Femenino`). El empleado debe ser mayor de 18 años: el calendario abre en una fecha de ejemplo (hace 30 años), y el año se puede cambiar escribiéndolo en la cabecera del calendario
-- **Teléfono:** con 0 inicial, sin espacios (ej: `0981123456`)
+- **Teléfono:** con 0 inicial, sin espacios (ej: `0981123456`). Al salir del campo se acomoda solo: quita espacios, guiones y paréntesis, el prefijo `+595` y agrega el 0 inicial si falta. Si el número queda incompleto, se avisa para corregirlo. Lo mismo rige en Empresas, Sucursales, el responsable del terminal y la importación
 - **Email**
 - **Sucursal** a la que pertenece
 - **Estado:** Activo o Inactivo

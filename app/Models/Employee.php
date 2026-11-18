@@ -8,11 +8,13 @@ use App\Services\DeviceHintsParser;
 use App\Services\RestDayCalculator;
 use App\Settings\GeneralSettings;
 use App\Settings\PayrollSettings;
+use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -1211,10 +1213,9 @@ class Employee extends Model implements AuthenticatableContract
             $data['ci'] = ltrim(str_replace(' ', '', $data['ci']), '0') ?: '0';
         }
 
-        // Limpiar teléfono: eliminar espacios y guiones; conservar el 0 inicial (formato Paraguay)
+        // Teléfono al formato único del sistema (ver PhoneNormalizer)
         if (isset($data['phone'])) {
-            $cleaned = preg_replace('/[\s\-]/', '', $data['phone'] ?? '');
-            $data['phone'] = $cleaned !== '' ? $cleaned : null;
+            $data['phone'] = PhoneNormalizer::normalize($data['phone']);
         }
 
         // Si es creación, asegurar que face_descriptor sea null
@@ -1676,5 +1677,13 @@ class Employee extends Model implements AuthenticatableContract
             'inactive' => $query->whereNotNull('employees.mobile_linked_at')->where('employees.mobile_last_heartbeat_at', '<', $cutoff),
             default => $query->whereNull('employees.mobile_linked_at')->mobileMarking(false),
         };
+    }
+
+    /**
+     * Guarda el teléfono siempre en el formato único del sistema (ver `PhoneNormalizer`), sea cual sea la vía de carga.
+     */
+    protected function phone(): Attribute
+    {
+        return Attribute::set(fn (?string $value) => PhoneNormalizer::normalize($value));
     }
 }
