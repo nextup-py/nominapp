@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CompanyResource\RelationManagers;
 
 use App\Exports\BranchesExport;
 use App\Models\Branch;
+use App\Support\PhoneNormalizer;
 use Cheesegrits\FilamentGoogleMaps\Fields\Map;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\TextInput;
@@ -60,7 +61,9 @@ class BranchesRelationManager extends RelationManager
                     ->tel()
                     ->placeholder('Ej: 0981123456')
                     ->maxLength(10)
-                    ->regex('/^0\d{8,9}$/')
+                    ->regex(PhoneNormalizer::PATTERN)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(PhoneNormalizer::onBlur())
                     ->validationMessages([
                         'regex' => 'Ingrese un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).',
                     ])

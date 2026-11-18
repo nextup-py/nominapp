@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Services\MobileMarkingService;
+use App\Support\PhoneNormalizer;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -561,5 +563,13 @@ class Company extends Model implements Auditable
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Guarda el teléfono siempre en el formato único del sistema (ver `PhoneNormalizer`), sea cual sea la vía de carga.
+     */
+    protected function phone(): Attribute
+    {
+        return Attribute::set(fn (?string $value) => PhoneNormalizer::normalize($value));
     }
 }

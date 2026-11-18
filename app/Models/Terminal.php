@@ -8,10 +8,12 @@ use App\Notifications\TerminalProvisionedNotification;
 use App\Services\DeviceHintsParser;
 use App\Services\LocationRadiusService;
 use App\Settings\GeneralSettings;
+use App\Support\PhoneNormalizer;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -1676,5 +1678,13 @@ class Terminal extends Model implements AuthenticatableContract
     public static function managers(): Collection
     {
         return User::all()->filter(fn (User $user) => $user->can('update_terminal'))->values();
+    }
+
+    /**
+     * Guarda el teléfono siempre en el formato único del sistema (ver `PhoneNormalizer`), sea cual sea la vía de carga.
+     */
+    protected function responsiblePhone(): Attribute
+    {
+        return Attribute::set(fn (?string $value) => PhoneNormalizer::normalize($value));
     }
 }

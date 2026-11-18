@@ -776,6 +776,7 @@ Kiosk/terminal marking and face enrollment run on public routes, served by their
 
 **Teléfonos Paraguay**
 - Guardar **con `0` inicial**, sin prefijo `+595`, sin espacios ni guiones
+- **Una sola definición: `App\Support\PhoneNormalizer`** (`normalize()`, `isValid()`, `PATTERN`, `onBlur()`). Los campos de teléfono usan `->regex(PhoneNormalizer::PATTERN)->live(onBlur: true)->afterStateUpdated(PhoneNormalizer::onBlur())` (normaliza al salir del campo, antes de validar) y los modelos `Employee`, `Company`, `Branch` y `Terminal` (`responsible_phone`) lo aplican en un mutador, así que también cubre la importación y cualquier otra vía. `phones:normalize [--dry-run]` repara lo ya guardado y lista los que siguen inválidos (en Macro había ~137 con otros formatos: 120 de 9 dígitos sin 0, 11 de 10 dígitos, 3 con espacio, 3 de 8 dígitos). No inventa dígitos: un número incompleto queda como está y se valida a mano
 - `->maxLength(10)->regex('/^0\d{8,9}$/')` — cubre móviles (`09XXXXXXXX`, 10 dígitos) y fijos (`021XXXXXX` / `0XXXXXXXX`, 9 dígitos)
 - `->validationMessages(['regex' => 'Ingrese un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).'])`
 - `->helperText('Número sin espacios ni guiones. Ej: 0981123456')`

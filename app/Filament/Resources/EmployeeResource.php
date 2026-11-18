@@ -21,6 +21,7 @@ use App\Models\Schedule;
 use App\Services\EmployeeProfileCompleteness;
 use App\Services\LocationRadiusService;
 use App\Settings\GeneralSettings;
+use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
@@ -258,7 +259,9 @@ class EmployeeResource extends Resource
                                                     ->tel()
                                                     ->placeholder('Ej: 0981123456')
                                                     ->maxLength(10)
-                                                    ->regex('/^0\d{8,9}$/')
+                                                    ->regex(PhoneNormalizer::PATTERN)
+                                                    ->live(onBlur: true)
+                                                    ->afterStateUpdated(PhoneNormalizer::onBlur())
                                                     ->validationMessages(['regex' => 'Ingrese un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).'])
                                                     ->helperText('Número sin espacios ni guiones.')
                                                     ->nullable(),

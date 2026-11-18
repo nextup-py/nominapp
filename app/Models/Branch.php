@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Services\MobileMarkingService;
+use App\Support\PhoneNormalizer;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -379,5 +381,13 @@ class Branch extends Model implements Auditable
         return $this->hasWatchSchedule()
             ? Terminal::windowLabel($this->watch_days ?? [], $this->watch_from, $this->watch_to)
             : 'Sin horario definido';
+    }
+
+    /**
+     * Guarda el teléfono siempre en el formato único del sistema (ver `PhoneNormalizer`), sea cual sea la vía de carga.
+     */
+    protected function phone(): Attribute
+    {
+        return Attribute::set(fn (?string $value) => PhoneNormalizer::normalize($value));
     }
 }

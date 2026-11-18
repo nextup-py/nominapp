@@ -18,6 +18,7 @@ use App\Filament\Traits\HasModuleAccess;
 use App\Models\Company;
 use App\Models\Terminal;
 use App\Settings\GeneralSettings;
+use App\Support\PhoneNormalizer;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
@@ -177,7 +178,9 @@ class TerminalResource extends Resource
                         TextInput::make('responsible_phone')
                             ->label('Teléfono del responsable')
                             ->maxLength(10)
-                            ->regex('/^0\d{8,9}$/')
+                            ->regex(PhoneNormalizer::PATTERN)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(PhoneNormalizer::onBlur())
                             ->validationMessages(['regex' => 'Ingrese un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).'])
                             ->helperText('Número sin espacios ni guiones. Ej: 0981123456'),
 
