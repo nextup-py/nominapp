@@ -66,11 +66,11 @@ Una empresa es la entidad legal empleadora. Puede tener múltiples sucursales.
 
 Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una sucursal específica.
 
-**Campos:** nombre, dirección, ciudad, teléfono, email, estado (activa o inactiva) y coordenadas GPS (mapa interactivo). La **ciudad** se elige del catálogo oficial: primero, opcionalmente, el **Departamento** (solo filtra las ciudades y no se guarda) y luego la **Ciudad**; el mapa completa la dirección, pero ya no la ciudad.
+**Formulario:** al editar, la primera sección es **Estado** (el interruptor **Activa**); le siguen **Información general** (empresa, nombre, teléfono y correo), **Ubicación** (dirección, ciudad y mapa), **Horario de atención (opcional)** y **Marcación desde el celular**. El campo **Empresa** solo aparece si hay más de una empresa activa; con una sola, la sucursal se crea en ella. El nombre no se puede repetir dentro de la empresa ni el correo entre sucursales. Las dos últimas secciones arrancan cerradas y se abren solas si ya tienen datos. La **ciudad** se elige del catálogo oficial: primero, opcionalmente, el **Departamento** (solo filtra las ciudades y no se guarda) y luego la **Ciudad**; el mapa completa la dirección, pero ya no la ciudad.
 
 **Listado:** las pestañas **Todas / Activas / Inactivas / Con datos pendientes** muestran cuántas sucursales hay de cada tipo. La columna **Datos** indica si la sucursal está completa o cuántas cosas le faltan (al pasar el cursor se ve el detalle): sin ubicación en el mapa, sin ciudad, sin teléfono, con empleados activos pero sin terminal activo, o con empleados activos sin contrato vigente. La columna y el filtro **Empresa** solo aparecen si hay más de una empresa activa. El menú de cada fila (⋮) permite abrir la sucursal en el mapa y **Activar** o **Desactivar**.
 
-**Horario de atención:** en la edición, la sección **Horario de atención** define los días y las horas en que la sucursal trabaja (por ejemplo, lunes a sábado de 06:00 a 23:00). Los terminales de la sucursal que no tienen horario de vigilancia propio usan este horario: fuera de él no se avisa que están desconectados (**Fuera de horario**), con lo que se evitan, por ejemplo, las alertas de las 06:00 de un terminal apagado de noche. Ninguno marcado = todos los días; se completan **las dos** horas o ninguna.
+**Horario de atención:** la sección **Horario de atención** define los días y las horas en que la sucursal trabaja (por ejemplo, lunes a sábado de 06:00 a 23:00). Los terminales de la sucursal que no tienen horario de vigilancia propio usan este horario: fuera de él no se avisa que están desconectados (**Fuera de horario**), con lo que se evitan, por ejemplo, las alertas de las 06:00 de un terminal apagado de noche. Ninguno marcado = todos los días; se completan **las dos** horas o ninguna.
 
 **Vista de la sucursal:** el detalle avisa en **Datos pendientes** lo que falta cargar y muestra empleados activos, activos sin contrato, terminales activos, el estado y el horario de atención.
 
@@ -78,13 +78,13 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 
 1. Ir a **Organización → Sucursales** (o desde la pestaña **Sucursales** dentro de la empresa)
 2. Clic en **Nueva sucursal**
-3. Completar los datos de contacto
-4. Opcionalmente, marcar la ubicación en el mapa o ingresar la dirección para que el sistema geolocalice automáticamente
+3. Completar el nombre y los datos de contacto (y la empresa, si hay más de una)
+4. En **Ubicación**, marcar el punto en el mapa o ingresar la dirección para que el sistema geolocalice automáticamente, y elegir la ciudad
 5. Guardar
 
 > Las coordenadas GPS se usan para vincular marcaciones de asistencia a la ubicación de la sucursal.
 
-**Desactivar una sucursal:** para dejar de usar una sucursal sin borrarla (conserva su historial), usar la acción **Desactivar** del listado o del detalle, o desmarcar **Activa** en la edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una sucursal con empleados activos**: hay que reasignarlos a otra sucursal primero y el sistema avisa cuántos son. Una sucursal inactiva deja de ofrecerse al asignar empleados o terminales y de contarse en la tarjeta de asistencia del Escritorio, pero sus terminales no se modifican y las ya asignadas se siguen viendo en los registros existentes. Los reportes siguen mostrándola.
+**Desactivar una sucursal:** para dejar de usar una sucursal sin borrarla (conserva su historial), usar la acción **Desactivar** del listado o del detalle, o desmarcar **Activa** en la sección **Estado** de la edición (el interruptor aparece deshabilitado, con la explicación, mientras haya empleados activos). **No se puede desactivar una sucursal con empleados activos**: hay que reasignarlos a otra sucursal primero y el sistema avisa cuántos son. Una sucursal inactiva deja de ofrecerse al asignar empleados o terminales y de contarse en la tarjeta de asistencia del Escritorio, pero sus terminales no se modifican y las ya asignadas se siguen viendo en los registros existentes. Los reportes siguen mostrándola.
 
 **Eliminar una sucursal:** solo es posible si no tiene empleados, terminales ni fallas de marcación asociadas. Si los tiene, el sistema bloquea la eliminación y avisa cuántos hay de cada uno; hay que reasignarlos primero.
 

@@ -67,8 +67,21 @@ class BranchResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
+            Section::make('Estado')
+                ->icon('heroicon-o-power')
+                ->schema([
+                    Toggle::make('is_active')
+                        ->label('Activa')
+                        ->default(true)
+                        ->disabled(fn (?Branch $record) => $record?->is_active && $record->activeEmployeesCount() > 0)
+                        ->helperText(fn (?Branch $record) => $record?->is_active && ($active = $record->activeEmployeesCount()) > 0
+                            ? "No se puede desactivar: tiene {$active} empleados activos. Reasignarlos primero."
+                            : 'Las sucursales inactivas no se ofrecen al asignar empleados o terminales.'),
+                ])
+                ->hiddenOn('create'),
+
             Section::make('Información general')
-                ->description('Datos básicos de la sucursal.')
+                ->icon('heroicon-o-building-storefront')
                 ->schema([
                     Select::make('company_id')
                         ->label('Empresa')
@@ -79,20 +92,22 @@ class BranchResource extends Resource
                         ->searchable(['name', 'trade_name'])
                         ->preload()
                         ->required()
-                        ->helperText('Empresa a la que pertenece esta sucursal.'),
+                        ->default(fn () => Company::active()->count() === 1 ? Company::active()->value('id') : null)
+                        ->visible(fn (): bool => Company::active()->count() > 1),
 
                     TextInput::make('name')
                         ->label('Nombre')
                         ->placeholder('Ej: Sucursal Central')
                         ->required()
                         ->maxLength(100)
+                        ->columnSpan(fn (): int|string => Company::active()->count() > 1 ? 1 : 'full')
                         ->unique(
                             table: Branch::class,
                             column: 'name',
                             ignoreRecord: true,
                             modifyRuleUsing: fn (Unique $rule, Get $get) => $rule->where('company_id', $get('company_id'))
                         )
-                        ->helperText('El nombre debe ser único dentro de la empresa.'),
+                        ->validationMessages(['unique' => 'Ya existe una sucursal con este nombre en la empresa.']),
 
                     TextInput::make('phone')
                         ->label('Teléfono')
@@ -103,9 +118,9 @@ class BranchResource extends Resource
                         ->live(onBlur: true)
                         ->afterStateUpdated(PhoneNormalizer::onBlur())
                         ->validationMessages([
-                            'regex' => 'Ingrese un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).',
+                            'regex' => 'Ingresar un número válido de Paraguay: móvil (09XXXXXXXX) o fijo (021XXXXXX / 0XXXXXXXX).',
                         ])
-                        ->helperText('Número sin espacios ni guiones. Ej: 0981123456'),
+                        ->helperText('Sin espacios ni guiones.'),
 
                     TextInput::make('email')
                         ->label('Correo electrónico')
@@ -113,51 +128,21 @@ class BranchResource extends Resource
                         ->placeholder('Ej: sucursal@empresa.com')
                         ->maxLength(100)
                         ->unique(Branch::class, 'email', ignoreRecord: true)
-                        ->helperText('Debe ser único entre las sucursales.'),
-
-                    Toggle::make('is_active')
-                        ->label('Activa')
-                        ->default(true)
-                        ->disabled(fn (?Branch $record) => $record?->is_active && $record->activeEmployeesCount() > 0)
-                        ->helperText(fn (?Branch $record) => $record?->is_active && ($active = $record->activeEmployeesCount()) > 0
-                            ? "No se puede desactivar: la sucursal tiene {$active} empleados activos. Reasígnelos primero."
-                            : 'Las sucursales inactivas no se ofrecen al asignar empleados o terminales.')
-                        ->hiddenOn('create'),
-
-                    MobileMarkingFields::select('Valor para los empleados de la sucursal que no tengan el suyo. «Heredar» usa el de la empresa o Configuración General (por defecto, solo terminal).'),
-
-                    Toggle::make('location_control')
-                        ->label('Controlar la ubicación del celular')
-                        ->helperText('Con coordenadas cargadas, las marcaciones desde el celular de sus empleados se comparan con la ubicación de la sucursal; fuera del radio quedan señaladas para revisión. Un empleado con su propio punto usa el suyo.')
-                        ->live(),
-
-                    TextInput::make('location_radius_m')
-                        ->label('Radio de la sucursal')
-                        ->numeric()
-                        ->minValue(LocationRadiusService::MIN_RADIUS)
-                        ->maxValue(LocationRadiusService::MAX_RADIUS)
-                        ->suffix('metros')
-                        ->placeholder('Usar el general')
-                        ->helperText('Vacío = el radio de Configuración General.')
-                        ->visible(fn (Get $get): bool => (bool) $get('location_control')),
+                        ->validationMessages(['unique' => 'Este correo ya está registrado en otra sucursal.'])
+                        ->helperText('No se puede repetir entre sucursales.'),
                 ])
                 ->columns(2)
                 ->collapsible(),
 
-            Section::make('Horario de atención')
-                ->description('Días y horas en que la sucursal trabaja. Los terminales sin horario de vigilancia propio usan este horario: fuera de él no se avisa que están desconectados (por ejemplo, el aviso de las 06:00 de un terminal apagado de noche).')
-                ->schema(TerminalResource::watchWindowFields(forBranch: true))
-                ->columns(2)
-                ->collapsible(),
-
             Section::make('Ubicación')
-                ->description('Dirección y coordenadas GPS de la sucursal.')
+                ->icon('heroicon-o-map-pin')
                 ->schema([
                     TextInput::make('address')
                         ->label('Dirección')
                         ->maxLength(100)
                         ->placeholder('Ej: Av. España 1234 c/ Brasil')
-                        ->helperText('Se autocompleta al mover el pin en el mapa; la ciudad se elige del catálogo.'),
+                        ->helperText('Se completa al mover el pin en el mapa.')
+                        ->columnSpanFull(),
 
                     Select::make('department')
                         ->label('Departamento')
@@ -171,7 +156,7 @@ class BranchResource extends Resource
                         })
                         ->afterStateUpdated(fn (Set $set) => $set('city', null))
                         ->visible(fn () => PyDepartment::query()->exists())
-                        ->helperText('Filtra las ciudades; no se guarda.'),
+                        ->helperText('Solo filtra las ciudades; no se guarda.'),
 
                     Select::make('city')
                         ->label('Ciudad')
@@ -180,8 +165,7 @@ class BranchResource extends Resource
                             $record?->city,
                         ))
                         ->searchable()
-                        ->native(false)
-                        ->helperText('Ciudad del catálogo oficial donde está la sucursal.'),
+                        ->native(false),
 
                     Map::make('coordinates')
                         ->label('Ubicación en el mapa')
@@ -199,6 +183,38 @@ class BranchResource extends Resource
                 ])
                 ->columns(2)
                 ->collapsible(),
+
+            Section::make('Horario de atención (opcional)')
+                ->description('Los terminales sin horario propio lo usan: fuera de él no se avisa que están desconectados.')
+                ->icon('heroicon-o-clock')
+                ->schema(TerminalResource::watchWindowFields(forBranch: true))
+                ->columns(2)
+                ->collapsible()
+                ->collapsed(fn (?Branch $record): bool => ! $record?->hasWatchSchedule()),
+
+            Section::make('Marcación desde el celular')
+                ->icon('heroicon-o-device-phone-mobile')
+                ->schema([
+                    MobileMarkingFields::select('Rige para quien no tenga el suyo. «Heredar» usa la empresa o Configuración General.'),
+
+                    Toggle::make('location_control')
+                        ->label('Controlar la ubicación del celular')
+                        ->helperText('Compara cada marcación con la ubicación de la sucursal (requiere coordenadas); fuera del radio queda para revisión.')
+                        ->live(),
+
+                    TextInput::make('location_radius_m')
+                        ->label('Radio de la sucursal')
+                        ->numeric()
+                        ->minValue(LocationRadiusService::MIN_RADIUS)
+                        ->maxValue(LocationRadiusService::MAX_RADIUS)
+                        ->suffix('metros')
+                        ->placeholder('Usar el general')
+                        ->helperText('Vacío = el radio de Configuración General.')
+                        ->visible(fn (Get $get): bool => (bool) $get('location_control')),
+                ])
+                ->columns(2)
+                ->collapsible()
+                ->collapsed(fn (?Branch $record): bool => $record?->mobile_marking_allowed === null && ! $record?->location_control),
         ]);
     }
 
@@ -506,7 +522,7 @@ class BranchResource extends Resource
 
                 if ($skipped !== []) {
                     $notification
-                        ->body('Omitidas: '.implode('; ', $skipped).'. Reasígnelos antes de eliminarlas.')
+                        ->body('Omitidas: '.implode('; ', $skipped).'. Reasignarlos antes de eliminarlas.')
                         ->color($deleted > 0 ? 'warning' : 'danger')
                         ->icon($deleted > 0 ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-x-circle');
                 } else {

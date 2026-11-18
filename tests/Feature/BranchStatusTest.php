@@ -301,6 +301,70 @@ it('guarda la ciudad elegida sin guardar el departamento', function () {
     expect(Branch::where('name', 'Con Ciudad')->value('city'))->toBe('Luque');
 });
 
+it('con una sola empresa activa oculta el campo Empresa y la asigna al crear', function () {
+    $this->actingAs(statusAdmin());
+    config(['filament-google-maps.keys.web_key' => 'test-key']);
+
+    $company = Company::factory()->create();
+
+    Livewire::test(CreateBranch::class)
+        ->assertFormFieldIsHidden('company_id')
+        ->fillForm(['name' => 'Sola'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Branch::where('name', 'Sola')->value('company_id'))->toBe($company->id);
+
+    Company::factory()->create();
+
+    Livewire::test(CreateBranch::class)->assertFormFieldIsVisible('company_id');
+});
+
+it('el nombre y el correo repetidos muestran un mensaje propio', function () {
+    $this->actingAs(statusAdmin());
+    config(['filament-google-maps.keys.web_key' => 'test-key']);
+
+    $branch = completeBranch(['name' => 'Central', 'email' => 'central@test.com']);
+
+    Livewire::test(CreateBranch::class)
+        ->fillForm(['company_id' => $branch->company_id, 'name' => 'Central', 'email' => 'central@test.com'])
+        ->call('create')
+        ->assertHasFormErrors([
+            'name' => 'Ya existe una sucursal con este nombre en la empresa.',
+            'email' => 'Este correo ya está registrado en otra sucursal.',
+        ]);
+});
+
+it('el título de la edición lleva el nombre y Estado solo existe al editar', function () {
+    $this->actingAs(statusAdmin());
+    config(['filament-google-maps.keys.web_key' => 'test-key']);
+
+    $branch = completeBranch(['name' => 'Villa Morra']);
+
+    Livewire::test(EditBranch::class, ['record' => $branch->getKey()])
+        ->assertSee('Editar: Villa Morra')
+        ->assertFormFieldExists('is_active');
+
+    Livewire::test(CreateBranch::class)->assertFormFieldDoesNotExist('is_active');
+});
+
+it('el horario y la marcación desde el celular se abren solos cuando tienen datos', function () {
+    $this->actingAs(statusAdmin());
+    config(['filament-google-maps.keys.web_key' => 'test-key']);
+
+    $section = fn (Branch $branch, string $heading) => collect(
+        Livewire::test(EditBranch::class, ['record' => $branch->getKey()])->instance()->form->getComponents()
+    )->first(fn ($c) => str_starts_with((string) $c->getHeading(), $heading));
+
+    $empty = completeBranch();
+    $filled = completeBranch(['watch_from' => '08:00', 'watch_to' => '18:00', 'mobile_marking_allowed' => true]);
+
+    foreach (['Horario de atención', 'Marcación desde el celular'] as $heading) {
+        expect($section($empty, $heading)->isCollapsed())->toBeTrue()
+            ->and($section($filled, $heading)->isCollapsed())->toBeFalse();
+    }
+});
+
 // ─── Selectores ─────────────────────────────────────────────────────────────
 
 it('la sucursal inactiva no se ofrece en el formulario de empleados salvo que ya esté asignada', function () {
