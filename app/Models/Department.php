@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,6 +17,12 @@ class Department extends Model
                 throw new \DomainException("No se puede eliminar el departamento: tiene {$department->deletionBlockersSummary()}. Moverlos a otro departamento antes de eliminarlo.");
             }
         });
+
+        static::updating(function (Department $department): void {
+            if ($department->isDirty('is_active') && ! $department->is_active && $department->activeContractsCount() > 0) {
+                throw new \DomainException("No se puede desactivar el departamento: tiene {$department->activeContractsCount()} contratos vigentes. Moverlos a otro departamento primero.");
+            }
+        });
     }
 
     protected $fillable = [
@@ -23,6 +30,17 @@ class Department extends Model
         'name',
         'cost_center',
         'description',
+        'is_active',
+        'manager_id',
+    ];
+
+    /** @var array<string, mixed> Los departamentos nuevos nacen activos (igual que el default de la base). */
+    protected $attributes = [
+        'is_active' => true,
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     /**
@@ -39,6 +57,56 @@ class Department extends Model
     public function positions(): HasMany
     {
         return $this->hasMany(Position::class);
+    }
+
+    /** Empleado que dirige el departamento. */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'manager_id');
+    }
+
+    /**
+     * Plazas libres del departamento: suma de las vacantes de sus cargos activos que tienen plazas definidas.
+     * Los cargos sin plazas definidas no cuentan.
+     */
+    public function vacanciesCount(): int
+    {
+        return (int) $this->positions()->active()->whereNotNull('headcount')->get()
+            ->sum(fn (Position $position) => $position->vacanciesCount());
+    }
+
+    /** Limita a los departamentos activos (los inactivos no se ofrecen al asignar contratos). */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('departments.is_active', true);
+    }
+
+    /** Activos, más el ya asignado (`$keepId`) para que un select de edición no quede vacío. */
+    public function scopeAssignable(Builder $query, ?int $keepId = null): Builder
+    {
+        return $query->where(function (Builder $query) use ($keepId): void {
+            $query->where('departments.is_active', true);
+
+            if ($keepId !== null) {
+                $query->orWhere('departments.id', $keepId);
+            }
+        });
+    }
+
+    /** Contratos vigentes (activos o suspendidos) registrados en el departamento. */
+    public function activeContractsCount(): int
+    {
+        return $this->contracts()->whereIn('status', ['active', 'suspended'])->count();
+    }
+
+    /**
+     * Qué impide desactivar el departamento: los contratos vigentes.
+     *
+     * @return array<string, int> Cantidad por motivo (solo los que tienen al menos uno).
+     */
+    public function deactivationBlockers(): array
+    {
+        return array_filter(['contratos vigentes' => $this->activeContractsCount()]);
     }
 
     /** Contratos (vigentes e históricos) registrados en el departamento. */

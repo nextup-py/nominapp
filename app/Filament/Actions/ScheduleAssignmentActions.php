@@ -106,12 +106,19 @@ class ScheduleAssignmentActions
 
                 $suggestion = app(ScheduleSuggestionService::class)->suggestFor($record);
 
-                return $suggestion
-                    ? "{$text} Sugerido según sus marcaciones: {$suggestion['schedule']->name} ({$suggestion['days']} jornadas completas en los últimos ".ScheduleSuggestionService::LOOKBACK_DAYS.' días, desvío promedio de '.$suggestion['deviation'].' min).'
+                if ($suggestion) {
+                    return "{$text} Sugerido según sus marcaciones: {$suggestion['schedule']->name} ({$suggestion['days']} jornadas completas en los últimos ".ScheduleSuggestionService::LOOKBACK_DAYS.' días, desvío promedio de '.$suggestion['deviation'].' min).';
+                }
+
+                $byPosition = $record->activeContract?->position?->defaultSchedule;
+
+                return $byPosition
+                    ? "{$text} Horario sugerido del cargo: {$byPosition->name}."
                     : $text;
             })
             ->fillForm(fn (Employee $record): array => [
-                'schedule_id' => app(ScheduleSuggestionService::class)->suggestFor($record)['schedule']->id ?? null,
+                'schedule_id' => app(ScheduleSuggestionService::class)->suggestFor($record)['schedule']->id
+                    ?? $record->activeContract?->position?->default_schedule_id,
                 'valid_from' => Carbon::today(),
             ])
             ->form(static::formFields())

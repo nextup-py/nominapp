@@ -154,7 +154,11 @@ class ContractsRelationManager extends RelationManager
                             ->suffix(fn (Get $get) => $get('salary_type') === 'jornal' ? '/día' : '/mes')
                             ->default(fn () => app(PayrollSettings::class)->min_salary_monthly)
                             ->validationMessages(['minValue' => 'El salario no puede ser menor al mínimo legal vigente.'])
-                            ->helperText('Para jornada nocturna, incluir el recargo del 30% en este monto (Art. 196 CLT).'),
+                            ->helperText('Para jornada nocturna, incluir el recargo del 30% en este monto (Art. 196 CLT).')
+                            ->live(onBlur: true)
+                            ->hint(fn (Get $get): ?string => Position::salaryHint($get('position_id'), $get('salary'), $get('salary_type')))
+                            ->hintColor('warning')
+                            ->hintIcon(fn (Get $get): ?string => Position::salaryHint($get('position_id'), $get('salary'), $get('salary_type')) ? 'heroicon-o-exclamation-triangle' : null),
 
                         Select::make('payment_method')
                             ->label('Método de Pago')
@@ -246,7 +250,8 @@ class ContractsRelationManager extends RelationManager
                             ->relationship(
                                 'department',
                                 'name',
-                                fn (Builder $query) => $query
+                                fn (Builder $query, ?Contract $record) => $query
+                                    ->assignable($record?->department_id)
                                     ->where('company_id', $this->getOwnerRecord()->branch?->company_id)
                                     ->orderBy('name')
                             )
@@ -307,20 +312,25 @@ class ContractsRelationManager extends RelationManager
 
                         Select::make('position_id')
                             ->label('Cargo')
-                            ->options(function (Get $get) {
+                            ->options(function (Get $get, ?Contract $record) {
                                 $deptId = $get('department_id');
                                 if ($deptId) {
-                                    return Position::where('department_id', $deptId)
+                                    return Position::assignable($record?->position_id)
+                                        ->where('department_id', $deptId)
                                         ->orderBy('name')
                                         ->pluck('name', 'id')
                                         ->toArray();
                                 }
 
-                                return Position::getOptionsWithDepartment();
+                                return Position::getOptionsWithDepartment($record?->position_id);
                             })
                             ->searchable()
                             ->native(false)
                             ->required()
+                            ->live()
+                            ->hint(fn (Get $get, ?Contract $record): ?string => Position::headcountHint($get('position_id'), $record?->id))
+                            ->hintColor('warning')
+                            ->hintIcon(fn (Get $get, ?Contract $record): ?string => Position::headcountHint($get('position_id'), $record?->id) ? 'heroicon-o-exclamation-triangle' : null)
                             ->createOptionForm(function (Get $get) {
                                 $companyId = $this->getOwnerRecord()->branch?->company_id;
 

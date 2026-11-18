@@ -551,6 +551,10 @@ final class EmployeeForm
                     ->minValue(1)
                     ->prefix('Gs.')
                     ->suffix(fn (Get $get) => $get('ic_salary_type') === 'jornal' ? '/día' : '/mes')
+                    ->live(onBlur: true)
+                    ->hint(fn (Get $get): ?string => Position::salaryHint($get('ic_position_id'), $get('ic_salary'), $get('ic_salary_type')))
+                    ->hintColor('warning')
+                    ->hintIcon(fn (Get $get): ?string => Position::salaryHint($get('ic_position_id'), $get('ic_salary'), $get('ic_salary_type')) ? 'heroicon-o-exclamation-triangle' : null)
                     ->dehydrated(false),
 
                 Select::make('ic_payroll_type')
@@ -567,7 +571,8 @@ final class EmployeeForm
                     ->options(function (Get $get) {
                         $companyId = self::companyIdFromBranch($get('branch_id'));
 
-                        return Department::when($companyId, fn ($q) => $q->where('company_id', $companyId))
+                        return Department::active()
+                            ->when($companyId, fn ($q) => $q->where('company_id', $companyId))
                             ->orderBy('name')
                             ->pluck('name', 'id');
                     })
@@ -584,12 +589,13 @@ final class EmployeeForm
                         $deptId = $get('ic_department_id');
 
                         if ($deptId) {
-                            return Position::where('department_id', $deptId)->orderBy('name')->pluck('name', 'id')->toArray();
+                            return Position::active()->where('department_id', $deptId)->orderBy('name')->pluck('name', 'id')->toArray();
                         }
 
                         $companyId = self::companyIdFromBranch($get('branch_id'));
 
                         return Position::query()
+                            ->assignable()
                             ->when($companyId, fn ($q) => $q->whereHas('department', fn ($d) => $d->where('company_id', $companyId)))
                             ->with('department')
                             ->get()
@@ -602,6 +608,10 @@ final class EmployeeForm
                     })
                     ->searchable()
                     ->native(false)
+                    ->live()
+                    ->hint(fn (Get $get): ?string => Position::headcountHint($get('ic_position_id')))
+                    ->hintColor('warning')
+                    ->hintIcon(fn (Get $get): ?string => Position::headcountHint($get('ic_position_id')) ? 'heroicon-o-exclamation-triangle' : null)
                     ->dehydrated(false),
             ]),
         ];

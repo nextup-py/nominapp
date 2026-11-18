@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Services\MobileMarkingService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -18,6 +20,22 @@ class Position extends Model
         'mobile_marking_allowed',
         'terminal_access',
         'marks_breaks',
+        'is_active',
+        'description',
+        'salary_min',
+        'salary_max',
+        'headcount',
+        'is_managerial',
+        'overtime_allowed',
+        'default_schedule_id',
+    ];
+
+    /** Horas extra permitidas cuando ni el cargo ni un nivel superior lo definen (comportamiento actual: se permiten). */
+    public const OVERTIME_ALLOWED_DEFAULT = true;
+
+    /** @var array<string, mixed> Los cargos nuevos nacen activos (igual que el default de la base). */
+    protected $attributes = [
+        'is_active' => true,
     ];
 
     public const TERMINAL_OWN = 'own';
@@ -29,11 +47,26 @@ class Position extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['mobile_marking_allowed' => 'boolean', 'marks_breaks' => 'boolean'];
+        return [
+            'mobile_marking_allowed' => 'boolean',
+            'marks_breaks' => 'boolean',
+            'is_active' => 'boolean',
+            'salary_min' => 'integer',
+            'salary_max' => 'integer',
+            'headcount' => 'integer',
+            'is_managerial' => 'boolean',
+            'overtime_allowed' => 'boolean',
+        ];
     }
 
     protected static function booted(): void
     {
+        static::updating(function (Position $position): void {
+            if ($position->isDirty('is_active') && ! $position->is_active && $position->activeContractsCount() > 0) {
+                throw new \DomainException("No se puede desactivar el cargo: tiene {$position->activeContractsCount()} contratos vigentes. Moverlos a otro cargo (Fusionar) primero.");
+            }
+        });
+
         static::deleting(function (Position $position): void {
             if ($position->deletionBlockers() !== []) {
                 throw new \DomainException("No se puede eliminar el cargo: tiene {$position->deletionBlockersSummary()}. Moverlos a otro cargo (Fusionar) antes de eliminarlo.");
@@ -78,6 +111,150 @@ class Position extends Model
         Employee::query()
             ->whereHas('activeContract', fn ($q) => $q->where('position_id', $this->id))
             ->update(['updated_at' => now()]);
+    }
+
+    /** Limita a los cargos activos (los inactivos no se ofrecen al asignar contratos ni como superior). */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('positions.is_active', true);
+    }
+
+    /** Activos de departamentos activos, más el ya asignado (`$keepId`) para que un select de edición no quede vacío. */
+    public function scopeAssignable(Builder $query, ?int $keepId = null): Builder
+    {
+        return $query->where(function (Builder $query) use ($keepId): void {
+            $query->where(fn (Builder $active) => $active
+                ->where('positions.is_active', true)
+                ->whereHas('department', fn (Builder $department) => $department->where('departments.is_active', true)));
+
+            if ($keepId !== null) {
+                $query->orWhere('positions.id', $keepId);
+            }
+        });
+    }
+
+    /** Horario que se sugiere al asignar horario a quien ocupa el cargo (nunca se asigna solo). */
+    public function defaultSchedule(): BelongsTo
+    {
+        return $this->belongsTo(Schedule::class, 'default_schedule_id');
+    }
+
+    /** Horas extra permitidas para el cargo: el valor propio o, si hereda, {@see self::OVERTIME_ALLOWED_DEFAULT}. */
+    public function overtimeAllowed(): bool
+    {
+        return $this->overtime_allowed ?? self::OVERTIME_ALLOWED_DEFAULT;
+    }
+
+    /** Personas con contrato vigente (activo o suspendido) en el cargo. */
+    public function occupiedCount(): int
+    {
+        return $this->activeContractsCount();
+    }
+
+    /** Plazas libres (`headcount` − ocupadas, nunca negativo), o null si el cargo no tiene plazas definidas. */
+    public function vacanciesCount(): ?int
+    {
+        return $this->headcount === null ? null : max(0, $this->headcount - $this->occupiedCount());
+    }
+
+    /**
+     * Aviso si `$salary` queda fuera del rango del cargo (solo informa; el contrato se guarda igual).
+     *
+     * @param  int|float|string|null  $salary  Salario mensual en Gs.
+     */
+    public function salaryRangeWarning(int|float|string|null $salary): ?string
+    {
+        if (! filled($salary) || ($this->salary_min === null && $this->salary_max === null)) {
+            return null;
+        }
+
+        $amount = (int) $salary;
+        $range = $this->salaryRangeLabel();
+
+        if ($this->salary_min !== null && $amount < $this->salary_min) {
+            return "Por debajo del rango del cargo ({$range})";
+        }
+
+        if ($this->salary_max !== null && $amount > $this->salary_max) {
+            return "Por encima del rango del cargo ({$range})";
+        }
+
+        return null;
+    }
+
+    /** Rango salarial legible, p. ej. «Gs. 3.000.000 – 5.000.000», «desde Gs. 3.000.000» o «hasta Gs. 5.000.000». */
+    public function salaryRangeLabel(): ?string
+    {
+        $format = fn (int $amount): string => number_format($amount, 0, ',', '.');
+
+        return match (true) {
+            $this->salary_min !== null && $this->salary_max !== null => 'Gs. '.$format($this->salary_min).' – '.$format($this->salary_max),
+            $this->salary_min !== null => 'desde Gs. '.$format($this->salary_min),
+            $this->salary_max !== null => 'hasta Gs. '.$format($this->salary_max),
+            default => null,
+        };
+    }
+
+    /**
+     * Aviso si el cargo ya tiene todas sus plazas ocupadas (solo informa).
+     *
+     * @param  int|null  $ignoreContractId  Contrato que se está editando, para no contarlo dos veces.
+     */
+    public function headcountWarning(?int $ignoreContractId = null): ?string
+    {
+        if ($this->headcount === null) {
+            return null;
+        }
+
+        $occupied = $this->contracts()
+            ->whereIn('status', ['active', 'suspended'])
+            ->when($ignoreContractId, fn ($query) => $query->whereKeyNot($ignoreContractId))
+            ->count();
+
+        return $occupied >= $this->headcount
+            ? "El cargo ya tiene {$occupied} de {$this->headcount} plazas ocupadas"
+            : null;
+    }
+
+    /**
+     * Aviso de rango salarial para el formulario de contrato (solo salario mensual; el jornal no se compara).
+     *
+     * @param  int|string|null  $positionId  Cargo elegido.
+     */
+    public static function salaryHint(int|string|null $positionId, mixed $salary, ?string $salaryType): ?string
+    {
+        if (blank($positionId) || $salaryType === 'jornal') {
+            return null;
+        }
+
+        return static::query()->find($positionId)?->salaryRangeWarning($salary);
+    }
+
+    /**
+     * Aviso de plazas completas para el formulario de contrato.
+     *
+     * @param  int|string|null  $positionId  Cargo elegido.
+     * @param  int|null  $ignoreContractId  Contrato que se está editando.
+     */
+    public static function headcountHint(int|string|null $positionId, ?int $ignoreContractId = null): ?string
+    {
+        return blank($positionId) ? null : static::query()->find($positionId)?->headcountWarning($ignoreContractId);
+    }
+
+    /** Contratos vigentes (activos o suspendidos) con este cargo. */
+    public function activeContractsCount(): int
+    {
+        return $this->contracts()->whereIn('status', ['active', 'suspended'])->count();
+    }
+
+    /**
+     * Qué impide desactivar el cargo: los contratos vigentes.
+     *
+     * @return array<string, int> Cantidad por motivo (solo los que tienen al menos uno).
+     */
+    public function deactivationBlockers(): array
+    {
+        return array_filter(['contratos vigentes' => $this->activeContractsCount()]);
     }
 
     /** Contratos (vigentes e históricos) con este cargo. */
@@ -187,9 +364,10 @@ class Position extends Model
     /**
      * Obtiene las opciones de cargos con sus departamentos para selects
      */
-    public static function getOptionsWithDepartment(): array
+    public static function getOptionsWithDepartment(?int $keepId = null): array
     {
         return static::with('department')
+            ->assignable($keepId)
             ->get()
             ->mapWithKeys(function ($position) {
                 $label = $position->name;

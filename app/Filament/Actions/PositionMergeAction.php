@@ -75,6 +75,7 @@ class PositionMergeAction
         return Position::query()
             ->with('department')
             ->whereKeyNot($position->id)
+            ->active()
             ->whereHas('department', fn ($query) => $query->where('company_id', $companyId))
             ->get()
             ->sortBy('name')
