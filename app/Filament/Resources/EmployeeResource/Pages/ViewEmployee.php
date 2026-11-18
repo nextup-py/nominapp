@@ -44,7 +44,6 @@ class ViewEmployee extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EmployeeTerminationAction::make(),
             EmployeeRehireAction::make(),
             ActionGroup::make([
                 UserInviteAction::forEmployee(),
@@ -86,6 +85,8 @@ class ViewEmployee extends ViewRecord
                             ])
                             ->send();
                     }),
+
+                EmployeeTerminationAction::make()->color('danger'),
             ])
                 ->label('Más acciones')
                 ->icon('heroicon-m-ellipsis-vertical')
