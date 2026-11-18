@@ -12,6 +12,8 @@ use App\Models\Employee;
 use App\Models\Position;
 use App\Models\Schedule;
 use App\Services\LocationRadiusService;
+use App\Services\ReportingLineService;
+use App\Support\Nationalities;
 use App\Support\PhoneNormalizer;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -68,7 +70,7 @@ final class EmployeeForm
                     ]),
 
                 Section::make('Asignación Laboral')
-                    ->description('Empresa, sucursal, superior directo y estado del empleado.')
+                    ->description('Sucursal, superior directo, estado y marcación desde el celular.')
                     ->icon('heroicon-o-building-office-2')
                     ->collapsible()
                     ->columns(3)
@@ -78,7 +80,7 @@ final class EmployeeForm
                         self::reportsTo(),
                         self::status(),
 
-                        MobileMarkingFields::select('Por defecto se marca solo desde el terminal. «Sí» permite vincular su celular; «No» lo bloquea y revoca el vinculado. «Heredar» usa lo definido en la sucursal, la empresa o Configuración General.'),
+                        MobileMarkingFields::select('«Heredar» usa el valor de la sucursal, la empresa o Configuración General.'),
                     ]),
 
                 Section::make('Lugar de trabajo propio (opcional)')
@@ -119,7 +121,7 @@ final class EmployeeForm
                     ->description('Ley N° 5508/15 — Protección durante el embarazo y hasta el primer año de vida del hijo')
                     ->icon('heroicon-o-heart')
                     ->collapsible()
-                    ->collapsed()
+                    ->collapsed(fn (?Employee $record): bool => blank($record?->maternity_protection_until))
                     ->visible(fn (Get $get) => $get('gender') === 'femenino')
                     ->schema([
                         Grid::make(2)
@@ -222,6 +224,7 @@ final class EmployeeForm
             ->step(1)
             ->required()
             ->unique(Employee::class, 'ci', ignoreRecord: true)
+            ->validationMessages(['unique' => 'Ya existe un empleado con esta cédula.'])
             ->helperText('Número sin puntos ni guiones.')
             ->live(onBlur: true)
             ->hint(fn (Get $get, ?Employee $record) => self::ciDuplicateWarning($get, $record) ? 'Ya existe un empleado con esta CI' : null)
@@ -277,8 +280,7 @@ final class EmployeeForm
             ->native(false)
             ->live()
             ->required()
-            ->placeholder('Seleccionar')
-            ->helperText('Seleccioná el género del empleado.');
+            ->placeholder('Seleccionar');
     }
 
     /** Estado civil (opcional). */
@@ -293,12 +295,14 @@ final class EmployeeForm
     }
 
     /** Nacionalidad (opcional). */
-    private static function nationality(): TextInput
+    private static function nationality(): Select
     {
-        return TextInput::make('nationality')
+        return Select::make('nationality')
             ->label('Nacionalidad')
-            ->maxLength(60)
-            ->default('Paraguaya')
+            ->options(fn (?Employee $record): array => Nationalities::optionsWith($record?->nationality))
+            ->default(Nationalities::DEFAULT)
+            ->searchable()
+            ->native(false)
             ->nullable();
     }
 
@@ -327,6 +331,7 @@ final class EmployeeForm
             ->placeholder('Ej: info@empresa.com')
             ->maxLength(100)
             ->unique(Employee::class, 'email', ignoreRecord: true)
+            ->validationMessages(['unique' => 'Este correo ya está registrado en otro empleado.'])
             ->nullable()
             ->helperText('Si se ingresa, debe ser único en el sistema.');
     }
@@ -343,7 +348,8 @@ final class EmployeeForm
             ->dehydrated(false)
             ->default(fn () => Company::active()->count() === 1 ? Company::active()->value('id') : null)
             ->afterStateUpdated(fn (callable $set) => $set('branch_id', null))
-            ->helperText('Seleccioná la empresa para filtrar las sucursales.')
+            ->helperText('Filtra las sucursales disponibles.')
+            ->visible(fn (): bool => Company::active()->count() > 1)
             ->afterStateHydrated(function (callable $set, callable $get) {
                 $branchId = $get('branch_id');
                 if ($branchId) {
@@ -363,7 +369,7 @@ final class EmployeeForm
                 $companyId = $get('company_id');
                 $currentId = $get('branch_id');
 
-                return Branch::when($companyId, fn ($q) => $q->where('company_id', $companyId))
+                return Branch::when($companyId, fn ($q) => $q->where('company_id', $companyId), fn ($q) => $q->whereHas('company', fn ($c) => $c->active()))
                     ->where(fn ($q) => $q->where('is_active', true)->when($currentId, fn ($q) => $q->orWhere('id', $currentId)))
                     ->orderBy('name')
                     ->pluck('name', 'id');
@@ -371,39 +377,62 @@ final class EmployeeForm
             ->searchable()
             ->native(false)
             ->required()
+            ->live()
+            ->hint(fn (Get $get, ?Employee $record): ?string => $record?->activeContract !== null && filled($get('branch_id')) && (int) $get('branch_id') !== $record->branch_id
+                ? 'Al cambiar de sucursal, el empleado marcará en los terminales de la nueva.'
+                : null)
+            ->hintColor('warning')
+            ->hintIcon(fn (Get $get, ?Employee $record): ?string => $record?->activeContract !== null && filled($get('branch_id')) && (int) $get('branch_id') !== $record->branch_id
+                ? 'heroicon-o-exclamation-triangle'
+                : null)
             ->default(function (callable $get) {
                 $companyId = $get('company_id');
                 $query = Branch::active()->when($companyId, fn ($q) => $q->where('company_id', $companyId));
 
                 return $query->count() === 1 ? $query->value('id') : null;
-            })
-            ->helperText('Sucursal donde trabaja el empleado.');
+            });
     }
 
-    /** Superior directo (solo edición). */
+    /** Superior directo (solo edición): busca por nombre o CI entre quienes pueden serlo. */
     private static function reportsTo(): Select
     {
         return Select::make('reports_to_id')
             ->label('Reporta a')
-            ->options(function (Get $get, ?Employee $record) {
-                $companyId = $get('company_id');
-
-                return Employee::where('status', 'active')
-                    ->when($companyId, fn ($q) => $q->whereHas('branch', fn ($b) => $b->where('company_id', $companyId)))
-                    ->when($record?->id, fn ($q) => $q->where('id', '!=', $record->id))
-                    ->orderBy('last_name')->orderBy('first_name')
-                    ->get()
-                    ->mapWithKeys(fn ($e) => [
-                        $e->id => $e->last_name.', '.$e->first_name.($e->activeContract?->position ? ' ('.$e->activeContract->position->name.')' : ''),
-                    ])
-                    ->toArray();
-            })
             ->searchable()
             ->native(false)
             ->nullable()
             ->placeholder('Sin superior directo')
+            ->searchPrompt('Escribir nombre o CI')
+            ->getSearchResultsUsing(function (string $search, Get $get, ?Employee $record): array {
+                $companyId = $get('company_id') ?? $record?->branch?->company_id;
+                $excluded = $record ? [$record->id, ...app(ReportingLineService::class)->descendantIds($record)] : [];
+
+                return Employee::query()
+                    ->with('activeContract.position')
+                    ->where('status', 'active')
+                    ->when($companyId, fn ($q) => $q->whereHas('branch', fn ($b) => $b->where('company_id', $companyId)))
+                    ->whereNotIn('id', $excluded)
+                    ->where(fn ($q) => $q
+                        ->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('ci', 'like', "%{$search}%"))
+                    ->orderBy('last_name')->orderBy('first_name')
+                    ->limit(50)
+                    ->get()
+                    ->mapWithKeys(fn (Employee $e): array => [$e->id => self::managerLabel($e)])
+                    ->all();
+            })
+            ->getOptionLabelUsing(fn ($value): ?string => ($manager = Employee::query()->with('activeContract.position')->find($value)) ? self::managerLabel($manager) : null)
             ->rules(fn (?Employee $record) => [ReportingLineActions::managerRule($record)])
-            ->helperText('Superior jerárquico directo del empleado. No puede ser él mismo ni alguien que ya le reporte, directa o indirectamente.');
+            ->helperText('Solo pueden ser superior empleados activos de la empresa que no le reporten a él.');
+    }
+
+    /** Etiqueta de un posible superior: «Apellido, Nombre (Cargo)». */
+    private static function managerLabel(Employee $employee): string
+    {
+        $position = $employee->activeContract?->position?->name;
+
+        return $employee->last_name.', '.$employee->first_name.($position ? " ({$position})" : '');
     }
 
     /** Estado del empleado (solo edición; con contrato vigente la baja va por «Dar de baja»). */
@@ -425,7 +454,9 @@ final class EmployeeForm
             ->disabled(fn (?Employee $record): bool => $record?->status === 'active' && $record->activeContract !== null)
             ->helperText(fn (?Employee $record): string => $record?->status === 'active' && $record->activeContract !== null
                 ? 'Con contrato vigente, la baja se registra con «Dar de baja» desde la ficha.'
-                : 'Seleccioná el estado del empleado.');
+                : ($record?->status === 'inactive'
+                    ? 'Para reactivarlo con un contrato nuevo, usar «Reingresar» desde la ficha.'
+                    : 'Al inactivar se cierran su horario, percepciones y deducciones.'));
     }
 
     /** Horario inicial (virtual, solo alta). */
@@ -438,7 +469,7 @@ final class EmployeeForm
             ->native(false)
             ->nullable()
             ->dehydrated(false)
-            ->helperText('Opcional. Se asignará desde hoy. Podés ajustarlo después desde la pestaña "Horarios".');
+            ->helperText('Opcional. Se asigna desde hoy y puede ajustarse después desde la pestaña «Horarios».');
     }
 
     /**

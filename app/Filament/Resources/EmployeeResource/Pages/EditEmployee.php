@@ -12,6 +12,7 @@ use Filament\Actions\ViewAction;
 use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Auth;
 
 class EditEmployee extends EditRecord
@@ -83,6 +84,14 @@ class EditEmployee extends EditRecord
     }
 
     /**
+     * Muestra el nombre del empleado en el título para no editar a otra persona por error.
+     */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar: '.$this->record->full_name;
+    }
+
+    /**
      * Obtiene la URL de redirección después de guardar los cambios.
      */
     protected function getRedirectUrl(): string
@@ -105,7 +114,7 @@ class EditEmployee extends EditRecord
             Notification::make()
                 ->danger()
                 ->title('No se puede desactivar')
-                ->body('El empleado tiene un contrato activo. Procesá una Liquidación primero para cerrar el contrato y liquidar los haberes correctamente.')
+                ->body('El empleado tiene un contrato activo. Procesar primero una Liquidación para cerrar el contrato y liquidar los haberes correctamente.')
                 ->persistent()
                 ->send();
 

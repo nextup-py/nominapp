@@ -8,10 +8,10 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 
 - **Nombre y apellido**, foto
 - **Cédula de identidad (CI):** solo dígitos, sin puntos ni guiones (ej: `4567890`)
-- **Fecha de nacimiento**, sexo (`Masculino` / `Femenino`). El empleado debe ser mayor de 18 años: el calendario abre en una fecha de ejemplo (hace 30 años), y el año se puede cambiar escribiéndolo en la cabecera del calendario
+- **Fecha de nacimiento**, género (`Masculino` / `Femenino`) y **nacionalidad** (lista con Paraguaya por defecto; un valor cargado antes que no esté en la lista se conserva). El empleado debe ser mayor de 18 años: el calendario abre en una fecha de ejemplo (hace 30 años), y el año se puede cambiar escribiéndolo en la cabecera del calendario
 - **Teléfono:** con 0 inicial, sin espacios (ej: `0981123456`). Al salir del campo se acomoda solo: quita espacios, guiones y paréntesis, el prefijo `+595` y agrega el 0 inicial si falta. Si el número queda incompleto, se avisa para corregirlo. Lo mismo rige en Empresas, Sucursales, el responsable del terminal y la importación
 - **Email**
-- **Sucursal** a la que pertenece
+- **Empresa y sucursal** a las que pertenece (el campo **Empresa** solo se muestra si hay más de una empresa activa; sirve para filtrar las sucursales)
 - **Estado:** Activo o Inactivo
 - **Marcación desde el celular:** Heredar, Sí o No (por defecto se marca solo desde el terminal). También se puede habilitar con el botón **Habilitar celular** de la ficha del empleado o con la acción **Habilitar celular** del menú de cada fila del listado; si el cargo ya lo habilita, queda en «Heredar». Ver **Quién puede marcar desde el celular** en el capítulo de Asistencias, donde también se explica el **Estado del celular** (columna **Celular** y filtro del listado).
 - **Lugar de trabajo propio (opcional):** sección colapsada (se abre sola si ya tiene datos) con latitud, longitud y **Radio de marcación**; solo para quien trabaja en un lugar fijo propio; la marcación desde el celular se compara con ese punto. Vacíos = usa el de su sucursal (si controla la ubicación) o es «de campo». Ver **Control de ubicación del celular** en Asistencias.
@@ -32,9 +32,15 @@ La foto, el teléfono, el correo, el domicilio, el superior directo y la protecc
 
 > Los nombres se capitalizan automáticamente al guardar. La CI debe ser única en el sistema.
 
+### Editar un empleado
+
+El título de la pantalla lleva el nombre del empleado («Editar: María González»). El formulario se organiza en **Datos Personales**, **Asignación Laboral** (sucursal, superior directo, estado y marcación desde el celular; con varias empresas, también la empresa), **Lugar de trabajo propio (opcional)** y, solo para mujeres, **Protección de Maternidad** (se abre sola si ya tiene fecha). Arriba están **Ver** y el menú **Más acciones** (**Enrolar** o **Re-enrolar** y **Generar enlace de enrolamiento**). Al cambiar la sucursal de alguien con contrato vigente, el campo avisa que marcará en los terminales de la nueva sucursal.
+
+Si el empleado está inactivo, la ayuda del campo **Estado** indica que, para reactivarlo con un contrato nuevo, se usa **Reingresar** desde la ficha. La CI y el correo repetidos se rechazan con un mensaje propio.
+
 ### Superior directo («Reporta a»)
 
-El campo **Reporta a** de la ficha indica el superior jerárquico directo del empleado. Debe ser un empleado **activo de la misma empresa**, y no puede ser él mismo ni alguien que ya le reporte, directa o indirectamente (el sistema lo rechaza para evitar ciclos). En el listado se puede mostrar la columna **Reporta a** y filtrar por **Sin superior directo**.
+El campo **Reporta a** de la ficha indica el superior jerárquico directo del empleado. Se busca escribiendo nombre, apellido o CI, y solo ofrece empleados **activos de la misma empresa** que no sean él ni alguien que ya le reporte, directa o indirectamente (el sistema también lo valida al guardar para evitar ciclos). En el listado se puede mostrar la columna **Reporta a** y filtrar por **Sin superior directo**.
 
 Para cargarlo en muchos empleados a la vez:
 
