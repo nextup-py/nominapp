@@ -100,16 +100,18 @@ Cada empresa puede tener una o varias sucursales. Los empleados se asignan a una
 
 Los departamentos agrupan cargos dentro de una empresa. Cada empresa define sus propios departamentos de forma independiente.
 
-**Campos:** nombre, centro de costo (código opcional, ej: `RH-001`), descripción.
+**Campos:** empresa (solo aparece si hay más de una empresa activa; con una sola, el departamento se crea en ella), nombre, centro de costo (código opcional, ej: `RH-001`) y descripción (opcional).
 
 **Cómo crear un departamento:**
 
 1. Ir a **Organización → Departamentos**
 2. Clic en **Nuevo departamento**
-3. Seleccionar la empresa e ingresar el nombre
+3. Ingresar el nombre (y elegir la empresa, si hay más de una)
 4. Guardar
 
-> El nombre del departamento debe ser único dentro de la misma empresa.
+> El nombre y el centro de costo no se pueden repetir dentro de la misma empresa.
+
+**Cambiar de empresa o eliminar:** un departamento que ya tiene cargos o contratos no puede cambiarse de empresa (el campo queda deshabilitado, con la explicación) ni eliminarse: el sistema avisa cuántos cargos y contratos tiene. Para eliminarlo hay que mover antes sus cargos y contratos a otro departamento.
 
 ---
 

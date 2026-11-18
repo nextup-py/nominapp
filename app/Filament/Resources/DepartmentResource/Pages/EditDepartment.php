@@ -7,10 +7,17 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class EditDepartment extends EditRecord
 {
     protected static string $resource = DepartmentResource::class;
+
+    /** Título de la página con el nombre del departamento que se edita. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar: '.$this->record->name;
+    }
 
     /**
      * Definir las acciones que se muestran en el encabezado de la página de edición.
@@ -28,8 +35,30 @@ class EditDepartment extends EditRecord
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->modalHeading('¿Eliminar departamento?')
-                ->modalDescription('Esta acción no se puede deshacer. Se eliminará el departamento "'.$this->record->name.'" y todos los registros relacionados, como cargos y empleados asociados a este departamento.')
+                ->modalDescription(function (): string {
+                    $summary = $this->record->deletionBlockersSummary();
+
+                    return $summary !== ''
+                        ? 'El departamento "'.$this->record->name.'" tiene '.$summary.' y no se puede eliminar. Moverlos a otro departamento primero.'
+                        : 'Esta acción no se puede deshacer. Se eliminará el departamento "'.$this->record->name.'".';
+                })
                 ->modalSubmitActionLabel('Sí, eliminar')
+                ->before(function (DeleteAction $action): void {
+                    $summary = $this->record->deletionBlockersSummary();
+
+                    if ($summary === '') {
+                        return;
+                    }
+
+                    Notification::make()
+                        ->danger()
+                        ->title('No se puede eliminar el departamento')
+                        ->body("Tiene {$summary}. Moverlos a otro departamento antes de eliminarlo.")
+                        ->persistent()
+                        ->send();
+
+                    $action->halt();
+                })
                 ->successNotificationTitle('Departamento eliminado')
                 ->successRedirectUrl($this->getResource()::getUrl('index')),
         ];
@@ -63,7 +92,7 @@ class EditDepartment extends EditRecord
         return Notification::make()
             ->success()
             ->title('Departamento actualizado')
-            ->body('El departamento "'.$this->record->name.'" de la empresa "'.$this->record->company->trade_name.'" ha sido actualizado exitosamente.')
+            ->body('El departamento "'.$this->record->name.'" de la empresa "'.$this->record->company->display_name.'" ha sido actualizado exitosamente.')
             ->send();
     }
 }
