@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\DepartmentResource\Pages;
 
+use App\Filament\Actions\OrgUnitStatusAction;
 use App\Filament\Resources\DepartmentResource;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -16,6 +18,8 @@ class ViewDepartment extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            OrgUnitStatusAction::make(Action::class),
+
             EditAction::make()
                 ->label('Editar')
                 ->icon('heroicon-o-pencil-square')

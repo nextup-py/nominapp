@@ -567,7 +567,8 @@ final class EmployeeForm
                     ->options(function (Get $get) {
                         $companyId = self::companyIdFromBranch($get('branch_id'));
 
-                        return Department::when($companyId, fn ($q) => $q->where('company_id', $companyId))
+                        return Department::active()
+                            ->when($companyId, fn ($q) => $q->where('company_id', $companyId))
                             ->orderBy('name')
                             ->pluck('name', 'id');
                     })
@@ -584,12 +585,13 @@ final class EmployeeForm
                         $deptId = $get('ic_department_id');
 
                         if ($deptId) {
-                            return Position::where('department_id', $deptId)->orderBy('name')->pluck('name', 'id')->toArray();
+                            return Position::active()->where('department_id', $deptId)->orderBy('name')->pluck('name', 'id')->toArray();
                         }
 
                         $companyId = self::companyIdFromBranch($get('branch_id'));
 
                         return Position::query()
+                            ->assignable()
                             ->when($companyId, fn ($q) => $q->whereHas('department', fn ($d) => $d->where('company_id', $companyId)))
                             ->with('department')
                             ->get()

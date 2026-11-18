@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\OrgUnitStatusAction;
 use App\Filament\Resources\DepartmentResource\Pages;
 use App\Filament\Resources\DepartmentResource\RelationManagers;
 use App\Models\Company;
@@ -9,14 +10,17 @@ use App\Models\Department;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Infolists\Components\Section as InfoSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class DepartmentResource extends Resource
@@ -46,6 +50,16 @@ class DepartmentResource extends Resource
     {
         return $form
             ->schema([
+                Toggle::make('is_active')
+                    ->label('Activo')
+                    ->default(true)
+                    ->disabled(fn (?Department $record): bool => $record !== null && $record->is_active && $record->activeContractsCount() > 0)
+                    ->helperText(fn (?Department $record): string => $record !== null && $record->is_active && ($count = $record->activeContractsCount()) > 0
+                        ? 'No se puede desactivar: tiene '.($count === 1 ? '1 contrato vigente' : "{$count} contratos vigentes").'. Moverlos a otro departamento primero.'
+                        : 'Los departamentos inactivos no se ofrecen al asignar contratos.')
+                    ->hiddenOn('create')
+                    ->columnSpanFull(),
+
                 Select::make('company_id')
                     ->label('Empresa')
                     ->options(fn (?Department $record) => Company::query()
@@ -146,6 +160,12 @@ class DepartmentResource extends Resource
                         ->weight('bold')
                         ->icon('heroicon-o-building-library'),
 
+                    TextEntry::make('is_active')
+                        ->label('Estado')
+                        ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                        ->badge()
+                        ->color(fn ($state) => $state ? 'success' : 'danger'),
+
                     TextEntry::make('cost_center')
                         ->label('Centro de Costo')
                         ->placeholder('—')
@@ -179,6 +199,13 @@ class DepartmentResource extends Resource
                     ->label('Nombre')
                     ->sortable()
                     ->searchable(),
+
+                TextColumn::make('is_active')
+                    ->label('Estado')
+                    ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'danger')
+                    ->sortable(),
 
                 TextColumn::make('description')
                     ->label('Descripción')
@@ -223,6 +250,13 @@ class DepartmentResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                TernaryFilter::make('is_active')
+                    ->label('Estado')
+                    ->placeholder('Todos')
+                    ->trueLabel('Activos')
+                    ->falseLabel('Inactivos')
+                    ->native(false),
+
                 SelectFilter::make('company_id')
                     ->label('Empresa')
                     ->options(fn () => Company::active()->get()->mapWithKeys(fn (Company $company) => [$company->id => $company->display_name])->all())
@@ -242,6 +276,9 @@ class DepartmentResource extends Resource
                         'without' => $query->doesntHave('positions'),
                         default => $query,
                     }),
+            ])
+            ->actions([
+                OrgUnitStatusAction::make(Action::class),
             ])
             ->emptyStateHeading('No hay departamentos registrados')
             ->emptyStateDescription('Agregar el primer departamento de la empresa.')

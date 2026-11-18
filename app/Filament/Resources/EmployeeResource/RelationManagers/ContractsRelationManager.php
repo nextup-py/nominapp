@@ -246,7 +246,8 @@ class ContractsRelationManager extends RelationManager
                             ->relationship(
                                 'department',
                                 'name',
-                                fn (Builder $query) => $query
+                                fn (Builder $query, ?Contract $record) => $query
+                                    ->assignable($record?->department_id)
                                     ->where('company_id', $this->getOwnerRecord()->branch?->company_id)
                                     ->orderBy('name')
                             )
@@ -307,16 +308,17 @@ class ContractsRelationManager extends RelationManager
 
                         Select::make('position_id')
                             ->label('Cargo')
-                            ->options(function (Get $get) {
+                            ->options(function (Get $get, ?Contract $record) {
                                 $deptId = $get('department_id');
                                 if ($deptId) {
-                                    return Position::where('department_id', $deptId)
+                                    return Position::assignable($record?->position_id)
+                                        ->where('department_id', $deptId)
                                         ->orderBy('name')
                                         ->pluck('name', 'id')
                                         ->toArray();
                                 }
 
-                                return Position::getOptionsWithDepartment();
+                                return Position::getOptionsWithDepartment($record?->position_id);
                             })
                             ->searchable()
                             ->native(false)

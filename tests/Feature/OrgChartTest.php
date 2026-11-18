@@ -370,3 +370,15 @@ it('la página del organigrama muestra la vista por personas y oculta el PDF', f
 
     $this->get(route('org-chart.show', ['company' => $this->company]))->assertOk()->assertSee('Exportar PDF');
 });
+
+it('oculta los cargos inactivos sin empleados pero muestra los que todavía tienen gente', function () {
+    $free = Position::create(['name' => 'Cargo viejo', 'department_id' => $this->sales->id, 'is_active' => false]);
+    $occupied = Position::create(['name' => 'Cargo ocupado', 'department_id' => $this->sales->id, 'is_active' => false]);
+    $active = Position::create(['name' => 'Cargo activo', 'department_id' => $this->sales->id]);
+    orgEmployee($this->branch, $occupied);
+
+    $names = orgPositionNames(orgBuild($this->company, ['vacancies' => true])['tree']);
+
+    expect($names)->toContain('Cargo activo', 'Cargo ocupado')
+        ->and($names)->not->toContain('Cargo viejo');
+});

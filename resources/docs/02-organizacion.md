@@ -111,7 +111,9 @@ Los departamentos agrupan cargos dentro de una empresa. Cada empresa define sus 
 
 > El nombre y el centro de costo no se pueden repetir dentro de la misma empresa.
 
-**Cambiar de empresa o eliminar:** un departamento que ya tiene cargos o contratos no puede cambiarse de empresa (el campo queda deshabilitado, con la explicación) ni eliminarse: el sistema avisa cuántos cargos y contratos tiene. Para eliminarlo hay que mover antes sus cargos y contratos a otro departamento.
+**Activar y desactivar:** para dejar de usar un departamento sin perder su historial, usar la acción **Desactivar** (menú de la fila del listado o encabezado de la vista) o desmarcar **Activo** en la edición. Un departamento inactivo deja de ofrecerse al asignar contratos y al dar de alta empleados, pero los contratos históricos y los reportes lo siguen mostrando. **No se puede desactivar un departamento con contratos vigentes**: hay que mover antes esos contratos a otro departamento, y el sistema avisa cuántos son. El listado tiene el filtro **Estado** y la columna **Estado**.
+
+**Cambiar de empresa o eliminar:** un departamento que ya tiene cargos o contratos no puede cambiarse de empresa (el campo queda deshabilitado, con la explicación) ni eliminarse: el sistema avisa cuántos cargos y contratos tiene. Para dejar de usarlo, desactivarlo; para eliminarlo hay que mover antes sus cargos y contratos a otro departamento.
 
 ---
 
@@ -134,6 +136,8 @@ Los cargos (puestos de trabajo) pertenecen a un departamento. Pueden organizarse
 - **Marcación desde el celular** (Heredar / Sí / No): ver **Quién puede marcar desde el celular** en el capítulo de Asistencias.
 - **Marca descanso**: activado de fábrica. Se desactiva para los cargos que no marcan descanso (por ejemplo, repartidores en ruta): al terminal y al celular ya no les aparece **Inicio descanso**, aunque el horario del empleado tenga descanso, y las **horas netas** de los reportes descuentan el descanso del horario cuando ese día no marcó uno real. Las horas extra y la nómina no cambian.
 - **Marcación en terminales**: **Solo en su sucursal** (de fábrica), **En su sucursal y en las que se elijan** (aparece el campo **Sucursales adicionales**) o **En cualquier sucursal**. Sirve, por ejemplo, para que los Supervisores marquen en el terminal de cualquier local. Ver **Marcar en el terminal de otra sucursal** en el capítulo de Asistencias.
+
+**Activar y desactivar:** igual que en los departamentos: **Desactivar** (menú de la fila o encabezado de la vista) o desmarcar **Activo** en la edición. Un cargo inactivo deja de ofrecerse al asignar contratos, como superior en **Reporta a**, como destino de **Fusionar** y en el organigrama (si no tiene empleados); los reportes históricos lo siguen mostrando. **No se puede desactivar un cargo con contratos vigentes**: hay que moverlos antes a otro cargo con **Fusionar**.
 
 **Cambiar de departamento o eliminar:** un cargo que ya tiene contratos no puede cambiarse de departamento (el campo queda deshabilitado, con la explicación) ni eliminarse: el sistema avisa cuántos contratos tiene. Para unirlo con otro cargo se usa **Fusionar en otro cargo**. En la eliminación masiva se borran solo los cargos sin contratos y la notificación indica cuáles se omitieron.
 

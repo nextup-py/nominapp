@@ -238,16 +238,13 @@ class ContractResource extends Resource
 
                         Select::make('department_id')
                             ->label('Departamento')
-                            ->options(function (Get $get) {
-                                $employeeId = $get('employee_id');
-                                if (! $employeeId) {
-                                    return Department::orderBy('name')->pluck('name', 'id');
-                                }
-                                $companyId = Employee::find($employeeId)?->branch?->company_id;
+                            ->options(function (Get $get, ?Contract $record) {
+                                $companyId = Employee::find($get('employee_id'))?->branch?->company_id;
 
-                                return $companyId
-                                    ? Department::where('company_id', $companyId)->orderBy('name')->pluck('name', 'id')
-                                    : Department::orderBy('name')->pluck('name', 'id');
+                                return Department::assignable($record?->department_id)
+                                    ->when($companyId, fn ($query) => $query->where('company_id', $companyId))
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id');
                             })
                             ->searchable()
                             ->native(false)
@@ -257,12 +254,12 @@ class ContractResource extends Resource
 
                         Select::make('position_id')
                             ->label('Cargo')
-                            ->options(function (Get $get) {
+                            ->options(function (Get $get, ?Contract $record) {
                                 $deptId = $get('department_id');
 
                                 return $deptId
-                                    ? Position::where('department_id', $deptId)->orderBy('name')->pluck('name', 'id')->toArray()
-                                    : Position::getOptionsWithDepartment();
+                                    ? Position::assignable($record?->position_id)->where('department_id', $deptId)->orderBy('name')->pluck('name', 'id')->toArray()
+                                    : Position::getOptionsWithDepartment($record?->position_id);
                             })
                             ->searchable()
                             ->native(false)

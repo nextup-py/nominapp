@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\MobileMarkingFields;
+use App\Filament\Actions\OrgUnitStatusAction;
 use App\Filament\Actions\PositionMergeAction;
 use App\Filament\Resources\PositionResource\Pages;
 use App\Filament\Resources\PositionResource\RelationManagers;
@@ -21,11 +22,14 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Collection;
 
@@ -59,6 +63,16 @@ class PositionResource extends Resource
                 Section::make('Información del Cargo')
                     ->icon('heroicon-o-briefcase')
                     ->schema([
+                        Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true)
+                            ->disabled(fn (?Position $record): bool => $record !== null && $record->is_active && $record->activeContractsCount() > 0)
+                            ->helperText(fn (?Position $record): string => $record !== null && $record->is_active && ($count = $record->activeContractsCount()) > 0
+                                ? 'No se puede desactivar: tiene '.($count === 1 ? '1 contrato vigente' : "{$count} contratos vigentes").'. Moverlos a otro cargo con Fusionar primero.'
+                                : 'Los cargos inactivos no se ofrecen al asignar contratos ni como superior.')
+                            ->hiddenOn('create')
+                            ->columnSpanFull(),
+
                         TextInput::make('name')
                             ->label('Nombre del Cargo')
                             ->placeholder('Ej: Gerente de Ventas')
@@ -73,7 +87,7 @@ class PositionResource extends Resource
                         Select::make('department_id')
                             ->label('Departamento')
                             ->placeholder('Seleccionar departamento')
-                            ->relationship('department', 'name')
+                            ->relationship('department', 'name', fn ($query, ?Position $record) => $query->assignable($record?->department_id))
                             ->getOptionLabelFromRecordUsing(fn ($record) => Company::active()->count() > 1
                                 ? $record->company?->display_name.' — '.$record->name
                                 : $record->name)
@@ -103,6 +117,7 @@ class PositionResource extends Resource
 
                                 $query = Position::query()
                                     ->with('department')
+                                    ->assignable($record?->parent_id)
                                     ->whereHas('department', fn ($department) => $department->where('company_id', $companyId));
 
                                 if ($record) {
@@ -204,6 +219,12 @@ class PositionResource extends Resource
                         ->color('gray')
                         ->icon('heroicon-o-building-office-2'),
 
+                    TextEntry::make('is_active')
+                        ->label('Estado')
+                        ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                        ->badge()
+                        ->color(fn ($state) => $state ? 'success' : 'danger'),
+
                     TextEntry::make('name')
                         ->label('Nombre del Cargo')
                         ->weight('bold')
@@ -231,6 +252,13 @@ class PositionResource extends Resource
                     ->weight('bold')
                     ->icon('heroicon-o-briefcase')
                     ->iconColor('primary'),
+
+                TextColumn::make('is_active')
+                    ->label('Estado')
+                    ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'danger')
+                    ->sortable(),
 
                 TextColumn::make('department.name')
                     ->label('Departamento')
@@ -268,6 +296,13 @@ class PositionResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                TernaryFilter::make('is_active')
+                    ->label('Estado')
+                    ->placeholder('Todos')
+                    ->trueLabel('Activos')
+                    ->falseLabel('Inactivos')
+                    ->native(false),
+
                 SelectFilter::make('department')
                     ->label('Departamento')
                     ->relationship('department', 'name')
@@ -276,9 +311,13 @@ class PositionResource extends Resource
                     ->native(false),
             ])
             ->actions([
-                PositionMergeAction::make(),
+                ActionGroup::make([
+                    PositionMergeAction::make(),
 
-                self::deleteAction(),
+                    OrgUnitStatusAction::make(Action::class),
+
+                    self::deleteAction(),
+                ]),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

@@ -45,6 +45,7 @@ class OrgChartService
         $positions = Position::query()
             ->with('department:id,name')
             ->where(fn ($query) => $query->whereIn('department_id', $departmentIds)->orWhereIn('id', $positionIdsInUse))
+            ->where(fn ($query) => $query->assignable()->orWhereIn('positions.id', $positionIdsInUse))
             ->get()
             ->keyBy('id');
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\MobileMarkingService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,6 +19,12 @@ class Position extends Model
         'mobile_marking_allowed',
         'terminal_access',
         'marks_breaks',
+        'is_active',
+    ];
+
+    /** @var array<string, mixed> Los cargos nuevos nacen activos (igual que el default de la base). */
+    protected $attributes = [
+        'is_active' => true,
     ];
 
     public const TERMINAL_OWN = 'own';
@@ -29,11 +36,17 @@ class Position extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['mobile_marking_allowed' => 'boolean', 'marks_breaks' => 'boolean'];
+        return ['mobile_marking_allowed' => 'boolean', 'marks_breaks' => 'boolean', 'is_active' => 'boolean'];
     }
 
     protected static function booted(): void
     {
+        static::updating(function (Position $position): void {
+            if ($position->isDirty('is_active') && ! $position->is_active && $position->activeContractsCount() > 0) {
+                throw new \DomainException("No se puede desactivar el cargo: tiene {$position->activeContractsCount()} contratos vigentes. Moverlos a otro cargo (Fusionar) primero.");
+            }
+        });
+
         static::deleting(function (Position $position): void {
             if ($position->deletionBlockers() !== []) {
                 throw new \DomainException("No se puede eliminar el cargo: tiene {$position->deletionBlockersSummary()}. Moverlos a otro cargo (Fusionar) antes de eliminarlo.");
@@ -78,6 +91,42 @@ class Position extends Model
         Employee::query()
             ->whereHas('activeContract', fn ($q) => $q->where('position_id', $this->id))
             ->update(['updated_at' => now()]);
+    }
+
+    /** Limita a los cargos activos (los inactivos no se ofrecen al asignar contratos ni como superior). */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('positions.is_active', true);
+    }
+
+    /** Activos de departamentos activos, más el ya asignado (`$keepId`) para que un select de edición no quede vacío. */
+    public function scopeAssignable(Builder $query, ?int $keepId = null): Builder
+    {
+        return $query->where(function (Builder $query) use ($keepId): void {
+            $query->where(fn (Builder $active) => $active
+                ->where('positions.is_active', true)
+                ->whereHas('department', fn (Builder $department) => $department->where('departments.is_active', true)));
+
+            if ($keepId !== null) {
+                $query->orWhere('positions.id', $keepId);
+            }
+        });
+    }
+
+    /** Contratos vigentes (activos o suspendidos) con este cargo. */
+    public function activeContractsCount(): int
+    {
+        return $this->contracts()->whereIn('status', ['active', 'suspended'])->count();
+    }
+
+    /**
+     * Qué impide desactivar el cargo: los contratos vigentes.
+     *
+     * @return array<string, int> Cantidad por motivo (solo los que tienen al menos uno).
+     */
+    public function deactivationBlockers(): array
+    {
+        return array_filter(['contratos vigentes' => $this->activeContractsCount()]);
     }
 
     /** Contratos (vigentes e históricos) con este cargo. */
@@ -187,9 +236,10 @@ class Position extends Model
     /**
      * Obtiene las opciones de cargos con sus departamentos para selects
      */
-    public static function getOptionsWithDepartment(): array
+    public static function getOptionsWithDepartment(?int $keepId = null): array
     {
         return static::with('department')
+            ->assignable($keepId)
             ->get()
             ->mapWithKeys(function ($position) {
                 $label = $position->name;
