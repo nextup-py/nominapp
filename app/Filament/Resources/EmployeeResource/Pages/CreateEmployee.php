@@ -3,18 +3,23 @@
 namespace App\Filament\Resources\EmployeeResource\Pages;
 
 use App\Filament\Resources\EmployeeResource;
+use App\Filament\Resources\EmployeeResource\Schemas\EmployeeForm;
 use App\Models\Contract;
 use App\Models\Employee;
+use App\Models\Position;
 use App\Models\Schedule;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
+use Filament\Forms\Components\Wizard\Step;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Database\Eloquent\Model;
+use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
 use Illuminate\Support\Facades\Auth;
 
 class CreateEmployee extends CreateRecord
 {
+    use HasWizard;
+
     protected static string $resource = EmployeeResource::class;
 
     /**
@@ -29,23 +34,13 @@ class CreateEmployee extends CreateRecord
     }
 
     /**
-     * Crea el empleado con el flag de deducciones activo para que el observer
-     * no asigne automáticamente todas las obligatorias — eso lo hace afterCreate()
-     * según la selección del usuario.
+     * Pasos del asistente de alta (datos básicos, ubicación y horario, contrato).
      *
-     * @param  array<string, mixed>  $data
+     * @return array<int, Step>
      */
-    protected function handleRecordCreation(array $data): Model
+    protected function getSteps(): array
     {
-        Employee::$skipMandatoryDeductions = true;
-
-        try {
-            $record = parent::handleRecordCreation($data);
-        } finally {
-            Employee::$skipMandatoryDeductions = false;
-        }
-
-        return $record;
+        return EmployeeForm::wizardSteps();
     }
 
     /**
@@ -68,17 +63,12 @@ class CreateEmployee extends CreateRecord
     }
 
     /**
-     * Muestra un aviso persistente si el empleado fue creado sin contrato.
+     * Crea el contrato y el horario iniciales si se completaron (las deducciones obligatorias las asigna el observer)
+     * y avisa si el empleado quedó sin contrato.
      */
     protected function afterCreate(): void
     {
         $state = $this->data;
-
-        // Asignar solo las deducciones obligatorias que el usuario seleccionó
-        $selectedIds = array_map('intval', $state['mandatory_deduction_ids'] ?? []);
-        if (! empty($selectedIds)) {
-            $this->record->assignMandatoryDeductions($selectedIds);
-        }
 
         // Crear contrato inicial si se completaron los campos mínimos
         if ((auth()->user()?->can('create_contract') ?? false) && filled($state['ic_salary'] ?? null) && filled($state['ic_position_id'] ?? null)) {
@@ -92,7 +82,7 @@ class CreateEmployee extends CreateRecord
                 'salary' => $state['ic_salary'],
                 'payroll_type' => $state['ic_payroll_type'] ?? 'monthly',
                 'position_id' => $state['ic_position_id'],
-                'department_id' => $state['ic_department_id'] ?? null,
+                'department_id' => $state['ic_department_id'] ?? Position::find($state['ic_position_id'])?->department_id,
                 'work_modality' => $state['ic_work_modality'] ?? 'presencial',
                 'payment_method' => $state['ic_payment_method'] ?? 'debit',
                 'status' => 'active',
