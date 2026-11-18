@@ -7,10 +7,12 @@ use App\Models\Employee;
 use App\Models\FaceEnrollment;
 use App\Settings\GeneralSettings;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Auth;
 
 class EditEmployee extends EditRecord
@@ -28,95 +30,65 @@ class EditEmployee extends EditRecord
                 ->icon('heroicon-o-eye')
                 ->color('gray'),
 
-            Action::make('capture_face')
-                ->label(fn () => $this->record->has_face ? 'Re-enrolar' : 'Enrolar')
-                ->icon('heroicon-o-camera')
-                ->color(fn () => $this->record->has_face ? 'warning' : 'success')
-                ->url(fn () => route('face.capture', $this->record))
-                ->visible(fn () => $this->record->status === 'active'),
+            ActionGroup::make([
+                Action::make('capture_face')
+                    ->label(fn () => $this->record->has_face ? 'Re-enrolar' : 'Enrolar')
+                    ->icon('heroicon-o-camera')
+                    ->color(fn () => $this->record->has_face ? 'warning' : 'success')
+                    ->url(fn () => route('face.capture', $this->record))
+                    ->visible(fn () => $this->record->status === 'active'),
 
-            Action::make('generate_enrollment')
-                ->label('Generar enlace de enrolamiento')
-                ->icon('heroicon-o-link')
-                ->color('info')
-                ->visible(fn () => $this->record->status === 'active')
-                ->requiresConfirmation()
-                ->modalHeading('Generar Enlace de Registro Facial')
-                ->modalDescription(function () {
-                    $hours = app(GeneralSettings::class)->face_enrollment_expiry_hours;
+                Action::make('generate_enrollment')
+                    ->label('Generar enlace de enrolamiento')
+                    ->icon('heroicon-o-link')
+                    ->color('info')
+                    ->visible(fn () => $this->record->status === 'active')
+                    ->requiresConfirmation()
+                    ->modalHeading('Generar Enlace de Registro Facial')
+                    ->modalDescription(function () {
+                        $hours = app(GeneralSettings::class)->face_enrollment_expiry_hours;
 
-                    return "Se generará un enlace temporal para que {$this->record->first_name} {$this->record->last_name} registre su rostro. El enlace expirará en {$hours} horas.";
-                })
-                ->modalSubmitActionLabel('Generar Enlace')
-                ->action(function () {
-                    $settings = app(GeneralSettings::class);
-                    $enrollment = FaceEnrollment::createForEmployee(
-                        $this->record,
-                        Auth::id(),
-                        $settings->face_enrollment_expiry_hours
-                    );
+                        return "Se generará un enlace temporal para que {$this->record->first_name} {$this->record->last_name} registre su rostro. El enlace expirará en {$hours} horas.";
+                    })
+                    ->modalSubmitActionLabel('Generar Enlace')
+                    ->action(function () {
+                        $settings = app(GeneralSettings::class);
+                        $enrollment = FaceEnrollment::createForEmployee(
+                            $this->record,
+                            Auth::id(),
+                            $settings->face_enrollment_expiry_hours
+                        );
 
-                    $url = route('face-enrollment.show', $enrollment->token);
+                        $url = route('face-enrollment.show', $enrollment->token);
 
-                    Notification::make()
-                        ->success()
-                        ->title('Enlace generado — expira en '.$settings->face_enrollment_expiry_hours.'h')
-                        ->body($url)
-                        ->persistent()
-                        ->actions([
-                            NotificationAction::make('send_whatsapp')
-                                ->label('Enviar por WhatsApp')
-                                ->url('https://api.whatsapp.com/send?phone=595'.ltrim($this->record->phone ?? '', '0').'&text='.urlencode("Hola {$this->record->first_name}, usa este enlace para registrar tu rostro: {$url}"))
-                                ->openUrlInNewTab()
-                                ->visible(fn () => filled($this->record->phone)),
-                        ])
-                        ->send();
-                }),
-
-            Action::make('toggle_status')
-                ->label(fn () => $this->record->status === 'inactive' ? 'Activar' : 'Inactivar')
-                ->icon(fn () => $this->record->status === 'inactive' ? 'heroicon-o-check-circle' : 'heroicon-o-x-circle')
-                ->color(fn () => $this->record->status === 'inactive' ? 'success' : 'danger')
-                ->visible(fn () => in_array($this->record->status, ['active', 'inactive']))
-                ->requiresConfirmation()
-                ->modalHeading(fn () => $this->record->status === 'inactive' ? 'Activar empleado' : 'Inactivar empleado')
-                ->modalDescription(function () {
-                    if ($this->record->status === 'inactive') {
-                        return "Se activará al empleado {$this->record->full_name}. Podrá operar con normalidad en el sistema.";
-                    }
-
-                    if ($this->record->activeContract !== null) {
-                        return "No se puede inactivar a {$this->record->full_name} porque tiene un contrato activo. Procesá una Liquidación primero para cerrar el contrato y liquidar los haberes correctamente.";
-                    }
-
-                    return "Se inactivará al empleado {$this->record->full_name}. Esta acción puede revertirse activándolo nuevamente.";
-                })
-                ->modalSubmitActionLabel(fn () => $this->record->status === 'inactive' ? 'Sí, activar' : 'Sí, inactivar')
-                ->action(function (Action $action) {
-                    if ($this->record->status === 'active' && $this->record->activeContract !== null) {
                         Notification::make()
-                            ->danger()
-                            ->title('No se puede inactivar')
-                            ->body('El empleado tiene un contrato activo. Procesá una Liquidación primero para cerrar el contrato y liquidar los haberes correctamente.')
+                            ->success()
+                            ->title('Enlace generado — expira en '.$settings->face_enrollment_expiry_hours.'h')
+                            ->body($url)
                             ->persistent()
+                            ->actions([
+                                NotificationAction::make('send_whatsapp')
+                                    ->label('Enviar por WhatsApp')
+                                    ->url('https://api.whatsapp.com/send?phone=595'.ltrim($this->record->phone ?? '', '0').'&text='.urlencode("Hola {$this->record->first_name}, usa este enlace para registrar tu rostro: {$url}"))
+                                    ->openUrlInNewTab()
+                                    ->visible(fn () => filled($this->record->phone)),
+                            ])
                             ->send();
-                        $action->halt();
-
-                        return;
-                    }
-
-                    $newStatus = $this->record->status === 'inactive' ? 'active' : 'inactive';
-                    $this->record->update(['status' => $newStatus]);
-
-                    Notification::make()
-                        ->success()
-                        ->title($newStatus === 'active' ? 'Empleado activado' : 'Empleado inactivado')
-                        ->body("El estado de {$this->record->full_name} fue actualizado correctamente.")
-                        ->send();
-
-                    $this->redirectRoute('filament.admin.resources.employees.view', $this->record);
-                }),
+                    }),
+            ])
+                ->label('Más acciones')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->color('gray')
+                ->button(),
         ];
+    }
+
+    /**
+     * Muestra el nombre del empleado en el título para no editar a otra persona por error.
+     */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar: '.$this->record->full_name;
     }
 
     /**
@@ -142,7 +114,7 @@ class EditEmployee extends EditRecord
             Notification::make()
                 ->danger()
                 ->title('No se puede desactivar')
-                ->body('El empleado tiene un contrato activo. Procesá una Liquidación primero para cerrar el contrato y liquidar los haberes correctamente.')
+                ->body('El empleado tiene un contrato activo. Procesar primero una Liquidación para cerrar el contrato y liquidar los haberes correctamente.')
                 ->persistent()
                 ->send();
 

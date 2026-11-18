@@ -88,6 +88,30 @@ class ReportingLineService
     }
 
     /**
+     * Ids de todos los subordinados de un empleado, directos e indirectos (candidatos que cerrarían un ciclo
+     * como superior suyo). Recorre por niveles con el mismo tope de profundidad que `createsCycle()`.
+     *
+     * @return array<int, int>
+     */
+    public function descendantIds(Employee $employee): array
+    {
+        $found = [];
+        $level = [$employee->id];
+
+        for ($depth = 0; $depth < self::MAX_DEPTH && $level !== []; $depth++) {
+            $level = Employee::query()
+                ->whereIn('reports_to_id', $level)
+                ->whereNotIn('id', [...$found, $employee->id])
+                ->pluck('id')
+                ->all();
+
+            $found = [...$found, ...$level];
+        }
+
+        return $found;
+    }
+
+    /**
      * Asigna (o quita, con null) el superior de un empleado. Devuelve la clave del error, o null si se guardó.
      */
     public function assign(Employee $employee, ?Employee $manager): ?string
