@@ -148,7 +148,7 @@ Al pasar el cursor sobre el estado se ve la fecha de la última conexión. **Est
 - Al **deshabilitar** a un empleado (o a su cargo, sucursal o empresa) se **revoca en el momento** su celular vinculado; el celular deja de marcar en su próxima conexión.
 - Si alguien sin permiso intenta vincular su celular, ve el mensaje «Tu usuario no está habilitado para marcar desde el celular» y RR.HH. recibe el aviso **Vinculación de celular sin permiso** (no se repite mientras no se lea).
 
-**Habilitar a una persona en pocos pasos:** desde el aviso de la campanita, **Ver empleado y habilitar** abre su ficha. Ahí, el botón **Habilitar celular** (arriba, junto a **Editar**) pide confirmación y le da el permiso solo a esa persona. Al terminar aparece el aviso **Celular habilitado** con el botón **Avisar por WhatsApp**, que abre un mensaje listo para enviarle con el enlace de vinculación y lo que tiene que hacer (cédula y fecha de nacimiento). El botón solo aparece si el empleado está activo, todavía no puede marcar desde el celular y quien mira tiene permiso para editar empleados. La ficha tiene además la sección **Marcación desde el celular**: si puede marcar (y de dónde sale ese permiso), si ya tiene un celular vinculado y cuándo se conectó por última vez.
+**Habilitar a una persona en pocos pasos:** desde el aviso de la campanita, **Ver empleado y habilitar** abre su ficha. Ahí, el botón **Habilitar celular** (menú **Más acciones**, arriba junto a **Editar**) pide confirmación y le da el permiso solo a esa persona. Al terminar aparece el aviso **Celular habilitado** con el botón **Avisar por WhatsApp**, que abre un mensaje listo para enviarle con el enlace de vinculación y lo que tiene que hacer (cédula y fecha de nacimiento). El botón solo aparece si el empleado está activo, todavía no puede marcar desde el celular y quien mira tiene permiso para editar empleados. La ficha tiene además la sección **Marcación: rostro y celular**: el estado del rostro, el estado del celular (con la fecha de vinculación si ya lo vinculó), si puede marcar (y de dónde sale ese permiso) y cuándo se conectó por última vez.
 
 ### Cómo se vincula un empleado
 
@@ -200,7 +200,7 @@ El sistema usa reconocimiento facial para identificar al empleado sin usuario ni
 
 ### Proceso completo de registro facial
 
-Para encontrar a quienes todavía no tienen rostro, ir a **Empleados** y filtrar **Reconocimiento facial → Sin rostro registrado**. Hay dos formas de enrolar a un empleado activo, ambas desde el menú de acciones de su fila o desde la sección **Reconocimiento Facial** de su detalle:
+Para encontrar a quienes todavía no tienen rostro, ir a **Empleados** y filtrar **Reconocimiento facial → Sin rostro registrado**. Hay dos formas de enrolar a un empleado activo, ambas desde el menú de acciones de su fila o desde la sección **Marcación: rostro y celular** de su detalle:
 
 **Opción A — Enrolar rostro (el administrador captura):**
 

@@ -36,7 +36,6 @@ use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\Grid as InfoGrid;
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\Section as InfoSection;
 use Filament\Infolists\Components\TextEntry;
@@ -688,7 +687,7 @@ class EmployeeResource extends Resource
                                 ->date('d/m/Y')
                                 ->badge()
                                 ->color(fn (Employee $record) => $record->isUnderMaternityProtection() ? 'danger' : 'gray')
-                                ->placeholder('No aplica'),
+                                ->visible(fn (Employee $record): bool => $record->maternity_protection_until !== null),
 
                         ]),
                 ])
@@ -799,7 +798,8 @@ class EmployeeResource extends Resource
                 ])
                 ->collapsible(),
 
-            InfoSection::make('Reconocimiento Facial')
+            InfoSection::make('Marcación: rostro y celular')
+                ->description('Por defecto se marca desde el terminal; el celular se habilita en «Más acciones».')
                 ->icon('heroicon-o-camera')
                 ->columns(4)
                 ->headerActions([
@@ -845,39 +845,18 @@ class EmployeeResource extends Resource
                         }),
                 ])
                 ->schema([
-                    IconEntry::make('has_face')
-                        ->label('Rostro registrado')
-                        ->getStateUsing(fn (Employee $record) => $record->has_face)
-                        ->boolean()
-                        ->trueIcon('heroicon-o-check-circle')
-                        ->falseIcon('heroicon-o-x-circle')
-                        ->trueColor('success')
-                        ->falseColor('warning'),
-
                     TextEntry::make('face_tooltip')
-                        ->label('Estado facial')
+                        ->label('Rostro')
                         ->getStateUsing(fn (Employee $record) => $record->face_tooltip)
                         ->badge()
                         ->color(fn (Employee $record) => $record->has_face ? 'success' : 'warning'),
 
-                    TextEntry::make('created_at')
-                        ->label('Registrado')
-                        ->getStateUsing(fn (Employee $record) => $record->created_at->format('d/m/Y H:i').' · '.$record->created_at_since),
-
-                    TextEntry::make('updated_at')
-                        ->label('Última actualización')
-                        ->getStateUsing(fn (Employee $record) => $record->updated_at->format('d/m/Y H:i').' · '.$record->updated_at_since),
-                ])
-                ->collapsible(),
-
-            InfoSection::make('Marcación desde el celular')
-                ->description('Por defecto se marca solo desde el terminal. Si el empleado necesita su celular, se habilita con «Habilitar celular» (arriba) o desde Editar.')
-                ->icon('heroicon-o-device-phone-mobile')
-                ->columns(4)
-                ->schema([
                     TextEntry::make('_mobile_status')
                         ->label('Estado del celular')
                         ->getStateUsing(fn (Employee $record) => Employee::getMobileStatusLabels()[$record->mobileStatus()])
+                        ->hint(fn (Employee $record): ?string => $record->hasMobileLinked()
+                            ? 'Vinculado el '.$record->mobile_linked_at->format('d/m/Y H:i')
+                            : null)
                         ->badge()
                         ->color(fn (Employee $record) => Employee::getMobileStatusColors()[$record->mobileStatus()]),
 
@@ -887,18 +866,24 @@ class EmployeeResource extends Resource
                         ->badge()
                         ->color(fn (Employee $record) => $record->canMarkFromMobile() ? 'success' : 'gray'),
 
-                    TextEntry::make('mobile_linked_at')
-                        ->label('Celular vinculado')
-                        ->getStateUsing(fn (Employee $record) => $record->hasMobileLinked()
-                            ? 'Sí, desde el '.$record->mobile_linked_at->format('d/m/Y H:i')
-                            : 'No')
-                        ->badge()
-                        ->color(fn (Employee $record) => $record->hasMobileLinked() ? 'success' : 'gray'),
-
                     TextEntry::make('mobile_last_heartbeat_at')
                         ->label('Última conexión del celular')
                         ->since()
                         ->placeholder('Nunca se conectó'),
+                ])
+                ->collapsible(),
+
+            InfoSection::make('Registro')
+                ->icon('heroicon-o-clock')
+                ->columns(2)
+                ->schema([
+                    TextEntry::make('created_at')
+                        ->label('Registrado')
+                        ->getStateUsing(fn (Employee $record) => $record->created_at->format('d/m/Y H:i').' · '.$record->created_at_since),
+
+                    TextEntry::make('updated_at')
+                        ->label('Última actualización')
+                        ->getStateUsing(fn (Employee $record) => $record->updated_at->format('d/m/Y H:i').' · '.$record->updated_at_since),
                 ])
                 ->collapsible(),
         ]);

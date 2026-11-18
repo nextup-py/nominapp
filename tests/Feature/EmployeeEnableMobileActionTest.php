@@ -124,9 +124,9 @@ it('la ficha muestra el estado del celular', function () {
     enableMobileSuperAdmin();
 
     Livewire::test(ViewEmployee::class, ['record' => enableMobileEmployee()->getKey()])
-        ->assertSee('Marcación desde el celular')
-        ->assertSee('Puede marcar desde el celular')
-        ->assertSee('Celular vinculado');
+        ->assertSee('Marcación: rostro y celular')
+        ->assertSee('Estado del celular')
+        ->assertSee('Puede marcar desde el celular');
 });
 
 it('el aviso de intento bloqueado lleva a la ficha y explica cómo habilitar', function () {
@@ -136,4 +136,18 @@ it('el aviso de intento bloqueado lleva a la ficha y explica cómo habilitar', f
     expect($data['body'])->toContain('Habilitar celular')
         ->and($data['actions'][0]['label'])->toBe('Ver empleado y habilitar')
         ->and($data['actions'][0]['url'])->toContain((string) $employee->getKey());
+});
+
+it('la ficha muestra el nombre como título y un avatar local con iniciales', function () {
+    enableMobileSuperAdmin();
+    $employee = enableMobileEmployee();
+
+    Livewire::test(ViewEmployee::class, ['record' => $employee->getKey()])
+        ->assertSeeHtml('<h1')
+        ->assertSee($employee->full_name);
+
+    $avatar = $employee->avatar_url;
+    expect($avatar)->toStartWith('data:image/svg+xml;base64,')
+        ->and(base64_decode(substr($avatar, strlen('data:image/svg+xml;base64,'))))
+        ->toContain(mb_strtoupper(mb_substr($employee->first_name, 0, 1).mb_substr($employee->last_name, 0, 1)));
 });
