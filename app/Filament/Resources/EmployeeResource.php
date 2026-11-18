@@ -799,7 +799,7 @@ class EmployeeResource extends Resource
                 ->collapsible(),
 
             InfoSection::make('Marcación: rostro y celular')
-                ->description('Por defecto se marca solo desde el terminal. Si el empleado necesita su celular, se habilita con «Habilitar celular» (menú «Más acciones») o desde Editar.')
+                ->description('Por defecto se marca desde el terminal; el celular se habilita en «Más acciones».')
                 ->icon('heroicon-o-camera')
                 ->columns(4)
                 ->headerActions([

@@ -137,3 +137,17 @@ it('el aviso de intento bloqueado lleva a la ficha y explica cómo habilitar', f
         ->and($data['actions'][0]['label'])->toBe('Ver empleado y habilitar')
         ->and($data['actions'][0]['url'])->toContain((string) $employee->getKey());
 });
+
+it('la ficha muestra el nombre como título y un avatar local con iniciales', function () {
+    enableMobileSuperAdmin();
+    $employee = enableMobileEmployee();
+
+    Livewire::test(ViewEmployee::class, ['record' => $employee->getKey()])
+        ->assertSeeHtml('<h1')
+        ->assertSee($employee->full_name);
+
+    $avatar = $employee->avatar_url;
+    expect($avatar)->toStartWith('data:image/svg+xml;base64,')
+        ->and(base64_decode(substr($avatar, strlen('data:image/svg+xml;base64,'))))
+        ->toContain(mb_strtoupper(mb_substr($employee->first_name, 0, 1).mb_substr($employee->last_name, 0, 1)));
+});

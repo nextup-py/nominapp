@@ -13,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ViewEmployee extends ViewRecord
 {
@@ -27,6 +28,14 @@ class ViewEmployee extends ViewRecord
             'branch.company',
             'activeContract.position.department',
         ])->findOrFail($key);
+    }
+
+    /**
+     * Muestra el nombre del empleado como título de la ficha.
+     */
+    public function getTitle(): string|Htmlable
+    {
+        return $this->record->full_name;
     }
 
     /**
