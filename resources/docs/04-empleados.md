@@ -39,6 +39,8 @@ Para cargarlo en muchos empleados a la vez:
 
 ### Ficha completa o incompleta
 
+El listado de empleados muestra por defecto **Foto**, **Nombre** (con la CI), **Cargo** (con la sucursal debajo), **Ficha**, **Estado**, **Contacto** y **Celular**. Las demás columnas (**Sucursal** aparte, **Reporta a**, **Nómina**, **Marca desde el celular**, **Aviso de privacidad**, datos del dispositivo y fechas) se activan desde el botón de columnas de la tabla.
+
 El listado de empleados tiene la columna **Ficha**: el porcentaje de datos requeridos que ya están cargados (verde al 100 %, amarillo desde 70 %, rojo por debajo). Al pasar el cursor se ve qué falta. En la ficha de un empleado incompleto aparece la sección **Ficha incompleta** con la lista, y el filtro **Ficha: falta** deja solo a quienes no tienen un dato puntual (por ejemplo, domicilio), útil para completarlos de a uno.
 
 Los datos requeridos de fábrica son teléfono, fecha de nacimiento, domicilio, foto, rostro enrolado y cuenta bancaria (esta última solo si el contrato paga por transferencia). También se pueden exigir correo y contrato firmado (PDF cargado). Cada empresa elige los suyos en **Organización → Empresas → Editar → Ficha del empleado**.

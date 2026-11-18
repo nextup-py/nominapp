@@ -933,6 +933,7 @@ class EmployeeResource extends Resource
                 TextColumn::make('activeContract.position.name')
                     ->label('Cargo')
                     ->icon('heroicon-o-briefcase')
+                    ->description(fn (Employee $record): ?string => $record->branch?->name)
                     // Filament ordenaría con una subconsulta sobre todos los contratos del empleado: con más de uno
                     // (uno vencido y otro vigente, renovaciones) MySQL falla con «Subquery returns more than 1 row».
                     // Se ordena por el cargo del contrato vigente más reciente, el mismo que muestra la columna.
@@ -949,9 +950,7 @@ class EmployeeResource extends Resource
                     ->searchable()
                     ->toggleable()
                     ->wrap()
-                    ->badge()
-                    ->color('primary')
-                    ->default('-'),
+                    ->placeholder('Sin contrato vigente'),
 
                 TextColumn::make('reportsTo.full_name')
                     ->label('Reporta a')
@@ -965,7 +964,7 @@ class EmployeeResource extends Resource
                     ->icon('heroicon-o-building-storefront')
                     ->sortable()
                     ->searchable()
-                    ->toggleable()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->wrap()
                     ->badge()
                     ->color('info'),
@@ -1024,7 +1023,7 @@ class EmployeeResource extends Resource
                     ->getStateUsing(fn (Employee $record): string => $record->mobileMarkingLabel())
                     ->badge()
                     ->color(fn (Employee $record): string => $record->canMarkFromMobile() ? 'success' : 'gray')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('privacy_consent')
                     ->label('Aviso de privacidad')
