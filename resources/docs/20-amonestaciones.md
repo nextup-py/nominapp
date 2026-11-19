@@ -69,7 +69,9 @@ Una vez que el empleado firme el documento impreso, se puede adjuntar el escanea
 
 1. Abrir la amonestación y clic en **Editar**
 2. Expandir la sección **Documento Firmado**
-3. Subir el archivo PDF (máximo 5 MB)
+3. Subir el archivo PDF (solo PDF, máximo 5 MB)
+
+El título de la edición muestra el nombre del empleado (**Editar amonestación: …**) y, si el empleado pasó a inactivo después de emitirla, sigue apareciendo en el campo **Empleado**.
 4. Guardar
 
 > El botón **Firmado** aparece en la tabla solo cuando hay un PDF adjunto, y permite descargarlo directamente.

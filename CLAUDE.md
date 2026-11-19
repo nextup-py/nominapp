@@ -288,6 +288,8 @@ Registro de amonestaciones laborales emitidas a empleados. Salvo la suspensión 
 - **Dependencia:** el código `SUS-DIS` se crea on-demand con `firstOrCreate` (`type = other`, `is_mandatory = false`) y también lo siembran `ProductionSeeder` y `DeductionSeeder`.
 - **Pendiente fuera de alcance:** el reporte de la suspensión en el REOP (MTESS) es manual; el sistema solo deja el registro y el sumario.
 
+**Textos (nov. 2026):** el select de empleado conserva al ya asignado aunque esté inactivo, título «Editar amonestación: {empleado}», placeholders «Sin cargo»/«Sin empresa» en la ficha.
+
 **Formulario de creación:** `issued_at` e `issued_by_id` se inyectan automáticamente en `CreateWarning::mutateFormDataBeforeCreate()` — no aparecen en el form de create, sí en edit. La sección "Documento Firmado" también es `->visibleOn('edit')`. La sección "Suspensión disciplinaria" (colapsada salvo que ya tenga suspensión) está en create y edit; `CreateWarning`/`EditWarning` usan el trait `HaltsOnSuspensionErrors` para convertir los errores del servicio en una notificación y detener el guardado.
 
 **UI:**
