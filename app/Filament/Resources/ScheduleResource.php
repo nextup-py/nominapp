@@ -58,7 +58,6 @@ class ScheduleResource extends Resource
         return $form
             ->schema([
                 Section::make('Información del Horario')
-                    ->description('Datos generales del horario de trabajo.')
                     ->schema([
                         TextInput::make('name')
                             ->label('Nombre')
@@ -66,8 +65,7 @@ class ScheduleResource extends Resource
                             ->required()
                             ->maxLength(60)
                             ->unique(ignoreRecord: true)
-                            ->validationMessages(['unique' => 'Ya existe un horario con ese nombre. Usá uno distinto para no confundirlos al asignar.'])
-                            ->helperText('Nombre descriptivo para identificar el horario'),
+                            ->validationMessages(['unique' => 'Ya existe un horario con ese nombre. Usar uno distinto para no confundirlos al asignar.']),
 
                         Select::make('shift_type')
                             ->label('Tipo de Jornada')
@@ -79,7 +77,7 @@ class ScheduleResource extends Resource
 
                                 return $suggested
                                     ? 'Según las horas cargadas se sugiere: '.Schedule::getShiftTypeLabels()[$suggested].'.'
-                                    : 'Selecciona el tipo de jornada laboral';
+                                    : 'Se sugiere según las horas cargadas en los días.';
                             }),
 
                         TextInput::make('description')
@@ -87,20 +85,19 @@ class ScheduleResource extends Resource
                             ->placeholder('Ej: Horario de trabajo diurno con 8 horas de jornada y descansos establecidos.')
                             ->nullable()
                             ->maxLength(100)
-                            ->helperText('Descripción opcional para detallar características del horario. Máximo 100 caracteres.')
                             ->columnSpanFull(),
                     ])
                     ->columns(2),
 
                 Section::make('Configuración de Días')
-                    ->description('Activá los días laborales e ingresá los horarios. Los horarios nocturnos pueden tener hora de salida menor a la de entrada.')
+                    ->description('Activar los días laborales y cargar entrada y salida. En un turno nocturno la salida puede ser menor que la entrada.')
                     ->schema([
                         Placeholder::make('few_days_notice')
                             ->label('Pocos días activos')
                             ->content(function (Get $get): string {
                                 $active = collect($get('days') ?? [])->where('is_active', true)->count();
 
-                                return "Este horario tiene solo {$active} día(s) activo(s): quien lo tenga asignado se considerará libre los demás días. Si es un turno partido por días, cargá todos los días en un único horario.";
+                                return "Este horario tiene solo {$active} día(s) activo(s): quien lo tenga asignado se considerará libre los demás días. Si es un turno partido por días, cargar todos los días en un único horario.";
                             })
                             ->visible(function (Get $get): bool {
                                 $active = collect($get('days') ?? [])->where('is_active', true)->count();

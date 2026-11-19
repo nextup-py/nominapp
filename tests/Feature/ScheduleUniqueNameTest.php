@@ -123,3 +123,10 @@ it('duplica desde el detalle del horario', function () {
 
     expect(Schedule::where('name', 'Detalle copia')->first()?->days()->count())->toBe(1);
 });
+
+it('el título de edición de un horario lleva su nombre', function () {
+    $schedule = Schedule::create(['name' => 'Turno tarde central', 'shift_type' => 'diurno']);
+
+    Livewire::test(EditSchedule::class, ['record' => $schedule->getKey()])
+        ->assertSee('Editar: Turno tarde central');
+});
