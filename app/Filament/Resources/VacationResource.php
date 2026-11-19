@@ -74,7 +74,12 @@ class VacationResource extends Resource
                     ->schema([
                         Select::make('employee_id')
                             ->label('Empleado')
-                            ->relationship('employee', 'first_name', fn ($query) => $query->where('status', 'active')->orderBy('first_name'))
+                            ->relationship('employee', 'first_name', modifyQueryUsing: fn ($query, ?Vacation $record) => $query
+                                ->where(fn ($query) => $query
+                                    ->where('status', 'active')
+                                    ->when($record?->employee_id, fn ($query, int $id) => $query->orWhere('employees.id', $id)))
+                                ->orderBy('first_name')
+                                ->orderBy('last_name'))
                             ->searchable(['first_name', 'last_name', 'ci'])
                             ->preload()
                             ->native(false)
@@ -112,7 +117,7 @@ class VacationResource extends Resource
                                     return new HtmlString("
                                         <div class='space-y-1 text-sm'>
                                             <p><strong>Antigüedad:</strong> <span class='{$antiquityColor}'>{$employee->antiquity_description}</span></p>
-                                            <p class='text-danger-600'>⛔ Sin derecho a vacaciones. Se requiere mínimo {$minYears} año(s) de antigüedad.</p>
+                                            <p class='text-danger-600'>Sin derecho a vacaciones: se requiere un mínimo de {$minYears} año(s) de antigüedad.</p>
                                         </div>
                                     ");
                                 }
@@ -137,7 +142,7 @@ class VacationResource extends Resource
 
                                 $availColor = $totalAvail === 0 ? 'text-danger-600' : 'text-success-600';
                                 $availMsg = $totalAvail === 0
-                                    ? "<span class='text-danger-600'>⛔ Sin días disponibles. No es posible solicitar vacaciones.</span>"
+                                    ? "<span class='text-danger-600'>Sin días disponibles: no es posible solicitar vacaciones.</span>"
                                     : "<strong>Disponibles:</strong> <span class='{$availColor}'>{$totalAvail} días</span> {$breakdownHtml}";
 
                                 return new HtmlString("
@@ -188,8 +193,8 @@ class VacationResource extends Resource
                             ->required()
                             ->live()
                             ->helperText(fn (Get $get) => match ($get('payment_method')) {
-                                'immediate' => 'El empleado cobrará la remuneración vacacional antes de iniciar las vacaciones.',
-                                'with_payroll' => 'La remuneración vacacional se incluirá automáticamente en la nómina del período.',
+                                'immediate' => 'Se cobra antes de iniciar las vacaciones.',
+                                'with_payroll' => 'Se incluye en la nómina del período.',
                                 default => null,
                             }),
 
@@ -267,7 +272,7 @@ class VacationResource extends Resource
                                 $holidays = Holiday::whereBetween('date', [$start, $end])->orderBy('date')->get();
 
                                 $daysColor = $businessDays > $available ? 'text-danger-600' : 'text-success-600';
-                                $returnFormatted = $returnDate ? Carbon::parse($returnDate)->format('d/m/Y') : '-';
+                                $returnFormatted = $returnDate ? Carbon::parse($returnDate)->format('d/m/Y') : 'Sin calcular';
 
                                 // Estimación del monto si hay empleado y días
                                 $amountHtml = '';
@@ -294,7 +299,7 @@ class VacationResource extends Resource
                                 if ($holidays->isNotEmpty()) {
                                     $list = $holidays->map(fn ($h) => $h->date->format('d/m').' – '.e($h->name))->join(', ');
                                     $label = $holidays->count() === 1 ? '1 feriado' : $holidays->count().' feriados';
-                                    $holidaysHtml = "<p class='text-info-600 text-xs mt-1'>📅 {$label}: {$list}</p>";
+                                    $holidaysHtml = "<p class='text-info-600 text-xs mt-1'>{$label}: {$list}</p>";
                                 }
 
                                 $reasonLabels = ['day_off' => 'días sin turno según su horario', 'not_working_day' => 'días no hábiles (domingos u otros según el ajuste)'];
@@ -311,7 +316,7 @@ class VacationResource extends Resource
                                     : '';
 
                                 $warningHtml = ($businessDays > 0 && $businessDays < 6)
-                                    ? "<p class='text-warning-600 text-xs mt-1'>⚠️ El fraccionamiento mínimo legal es de 6 días hábiles</p>"
+                                    ? "<p class='text-warning-600 text-xs mt-1'>El fraccionamiento mínimo legal es de 6 días hábiles.</p>"
                                     : '';
 
                                 return new HtmlString("
@@ -505,7 +510,7 @@ class VacationResource extends Resource
                         $base = "¿Revertir la aprobación de las vacaciones de {$record->employee->full_name}? La solicitud volverá a estado pendiente.";
 
                         if (! $record->start_date->isFuture()) {
-                            $base = "⚠️ Atención: estas vacaciones ya comenzaron o ya pasaron. Al desaprobar, los días usados se devolverán al balance. Proceda solo si fue un error de carga.\n\n".$base;
+                            $base = "Atención: estas vacaciones ya comenzaron o ya pasaron. Al desaprobar, los días usados se devolverán al balance. Proceda solo si fue un error de carga.\n\n".$base;
                         }
 
                         return $base;
