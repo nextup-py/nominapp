@@ -33,6 +33,7 @@ use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -71,9 +72,14 @@ class EmployeeLeaveResource extends Resource
                     ->schema([
                         Select::make('employee_id')
                             ->label('Empleado')
-                            ->relationship('employee', 'first_name')
-                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->first_name} {$record->last_name}")
-                            ->searchable(['first_name', 'last_name', 'email'])
+                            ->relationship('employee', 'first_name', modifyQueryUsing: fn (Builder $query, ?EmployeeLeave $record) => $query
+                                ->where(fn (Builder $query) => $query
+                                    ->where('status', 'active')
+                                    ->when($record?->employee_id, fn (Builder $query, int $id) => $query->orWhere('employees.id', $id)))
+                                ->orderBy('first_name')
+                                ->orderBy('last_name'))
+                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->first_name} {$record->last_name} (CI: {$record->ci})")
+                            ->searchable(['first_name', 'last_name', 'ci'])
                             ->preload()
                             ->required()
                             ->columnSpan(2),
@@ -86,7 +92,8 @@ class EmployeeLeaveResource extends Resource
                             ->required()
                             ->disabled()
                             ->dehydrated(fn (?EmployeeLeave $record): bool => $record === null)
-                            ->helperText('Cambia con Aprobar o Rechazar: aprobar justifica las ausencias del período, algo que no hace editar este campo.')
+                            ->visibleOn('edit')
+                            ->helperText('Se cambia con Aprobar o Rechazar, no desde aquí.')
                             ->columnSpan(1),
 
                         Select::make('type')
@@ -140,7 +147,7 @@ class EmployeeLeaveResource extends Resource
                                 $endTime = $get('end_time');
 
                                 if (! $start || ! $end) {
-                                    return '-';
+                                    return 'Completar las fechas';
                                 }
 
                                 // Permiso parcial: mostrar horas
@@ -167,7 +174,7 @@ class EmployeeLeaveResource extends Resource
                     ->columns(3),
 
                 Section::make('Permiso por horas (opcional)')
-                    ->description('Completa este bloque solo si el permiso es parcial (no abarca el día completo).')
+                    ->description('Solo si el permiso no abarca el día completo.')
                     ->schema([
                         TimePicker::make('start_time')
                             ->label('Hora de inicio')
@@ -194,7 +201,7 @@ class EmployeeLeaveResource extends Resource
                     ->schema([
                         Toggle::make('generates_deduction')
                             ->label('Genera descuento en la próxima nómina')
-                            ->helperText('Permiso por horas: se descuentan las horas tomadas. Licencia de días completos (por ejemplo, sin goce de sueldo): se descuenta cada día laborable del período, sin feriados. Se genera al aprobar y se deshace si la licencia se anula.')
+                            ->helperText('Se genera al aprobar y se deshace si la licencia se anula. Descuenta las horas tomadas o, en licencias de días completos, cada día laborable (sin feriados).')
                             ->default(false)
                             ->columnSpanFull(),
                     ])
@@ -205,8 +212,8 @@ class EmployeeLeaveResource extends Resource
                         FileUpload::make('document_path')
                             ->label('Documento de soporte')
                             ->helperText(fn (Get $get) => $get('type') === 'medical_leave'
-                                ? 'Comprobante médico requerido'
-                                : 'Sube un documento relevante (opcional)')
+                                ? 'Comprobante médico obligatorio. PDF o imagen, máximo 5 MB.'
+                                : 'Opcional. PDF o imagen, máximo 5 MB.')
                             ->disk('public')
                             ->directory('employee-leaves')
                             ->acceptedFileTypes(['application/pdf', 'image/*'])

@@ -7,10 +7,17 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class EditEmployeeLeaves extends EditRecord
 {
     protected static string $resource = EmployeeLeaveResource::class;
+
+    /** Título de la página con el nombre del empleado de la licencia. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar licencia: '.($this->record->employee?->full_name ?? 'sin empleado');
+    }
 
     protected function getHeaderActions(): array
     {
@@ -25,7 +32,7 @@ class EditEmployeeLeaves extends EditRecord
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->modalHeading('¿Eliminar licencia?')
-                ->modalDescription('¿Estás seguro de que deseas eliminar esta licencia? Esta acción no se puede deshacer.')
+                ->modalDescription('Esta acción no se puede deshacer.')
                 ->modalSubmitActionLabel('Sí, eliminar')
                 ->successNotificationTitle('Licencia eliminada')
                 ->successRedirectUrl($this->getResource()::getUrl('index')),
@@ -38,7 +45,6 @@ class EditEmployeeLeaves extends EditRecord
             ->success()
             ->title('Licencia actualizada con éxito')
             ->body('Los cambios en la licencia han sido guardados correctamente.')
-            ->duration(5000)
-            ->send();
+            ->duration(5000);
     }
 }

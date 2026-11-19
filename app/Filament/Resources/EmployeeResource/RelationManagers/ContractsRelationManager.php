@@ -120,7 +120,7 @@ class ContractsRelationManager extends RelationManager
                             ->maxValue(5)
                             ->default(0)
                             ->visible(fn (Get $get) => $get('type') === 'plazo_fijo')
-                            ->helperText('Cuántas veces ya se renovó este plazo fijo (incluyendo contratos cargados a mano). Con 1 o más, la próxima renovación pasa a indefinido (Art. 53 CLT).'),
+                            ->helperText('Con 1 o más, la próxima renovación pasa a indefinido (Art. 53 CLT).'),
                     ])
                     ->columns(3),
 
@@ -191,7 +191,6 @@ class ContractsRelationManager extends RelationManager
                     ->columns(2),
 
                 Section::make('Cuenta Bancaria')
-                    ->description('Información de cuenta para acreditación del salario')
                     ->icon('heroicon-o-credit-card')
                     ->compact()
                     ->visible(fn (Get $get) => $get('payment_method') === 'debit')
@@ -228,7 +227,7 @@ class ContractsRelationManager extends RelationManager
                     ->schema([
                         RichEditor::make('body')
                             ->label('Cuerpo del Contrato')
-                            ->helperText('Se pre-rellena con la plantilla del tipo elegido. Podés editarlo libremente.')
+                            ->helperText('Se pre-rellena con la plantilla del tipo elegido. Es editable.')
                             ->columnSpanFull()
                             ->toolbarButtons([
                                 'bold',

@@ -11,6 +11,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class EditVacation extends EditRecord
 {
@@ -32,6 +33,12 @@ class EditVacation extends EditRecord
 
             $this->redirect($this->getResource()::getUrl('view', ['record' => $this->record]));
         }
+    }
+
+    /** Título de la página con el nombre del empleado de la vacación. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar vacación: '.($this->record->employee?->full_name ?? 'sin empleado');
     }
 
     /**

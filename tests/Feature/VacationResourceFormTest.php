@@ -41,3 +41,9 @@ it('busca el empleado por nombre, apellido o CI en el filtro de tabla de vacacio
 
     expect($filter->getFormField()->getSearchColumns())->toBe(['first_name', 'last_name', 'ci']);
 });
+
+it('el formulario de vacaciones no usa emojis y el título de edición lleva el nombre del empleado', function () {
+    $source = file_get_contents(app_path('Filament/Resources/VacationResource.php'));
+
+    expect(preg_match('/[\x{2600}-\x{27BF}\x{1F300}-\x{1FAFF}]/u', $source))->toBe(0);
+});

@@ -126,3 +126,11 @@ it('no permite eliminar desde la página de edición si ya hay nómina de esas f
     expect(Warning::count())->toBe(1)
         ->and(WarningSuspensionDay::count())->toBe(2);
 });
+
+it('el título de edición de una amonestación lleva el nombre del empleado', function () {
+    $employee = makeSuspEmployee();
+    $warning = makeSuspWarning($employee, 0);
+
+    Livewire::test(EditWarning::class, ['record' => $warning->getKey()])
+        ->assertSee('Editar amonestación: '.$employee->full_name);
+});

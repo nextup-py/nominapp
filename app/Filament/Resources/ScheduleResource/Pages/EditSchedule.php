@@ -8,10 +8,17 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class EditSchedule extends EditRecord
 {
     protected static string $resource = ScheduleResource::class;
+
+    /** Título de la página con el nombre del horario que se edita. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar: '.$this->record->name;
+    }
 
     /**
      * Retorna las acciones del encabezado: ver registro y eliminar.

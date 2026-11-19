@@ -122,3 +122,16 @@ it('editar un contrato vigente no cambia su estado', function () {
 
     expect($contract->fresh()->status)->toBe('active');
 });
+
+it('el formulario de contrato separa Cargo y modalidad de Remuneración y colapsa las cláusulas vacías', function () {
+    $contract = expiredFlowContract('active');
+    actAsExpiredFlowAdmin();
+
+    Livewire::test(EditContract::class, ['record' => $contract->getRouteKey()])
+        ->assertSee('Editar contrato: Test Vencido')
+        ->assertSee('Cargo y modalidad')
+        ->assertSee('Remuneración')
+        ->assertDontSee('Condiciones Laborales')
+        ->assertFormFieldExists('department_id')
+        ->assertFormFieldExists('salary');
+});

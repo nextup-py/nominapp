@@ -79,8 +79,10 @@ class WarningResource extends Resource
                             ->label('Empleado')
                             ->relationship(
                                 name: 'employee',
-                                modifyQueryUsing: fn (Builder $query) => $query
-                                    ->where('status', 'active')
+                                modifyQueryUsing: fn (Builder $query, ?Warning $record) => $query
+                                    ->where(fn (Builder $query) => $query
+                                        ->where('status', 'active')
+                                        ->when($record?->employee_id, fn (Builder $query, int $id) => $query->orWhere('employees.id', $id)))
                                     ->orderBy('first_name')
                                     ->orderBy('last_name'),
                             )
@@ -130,7 +132,7 @@ class WarningResource extends Resource
                     ]),
 
                 Section::make('Suspensión disciplinaria')
-                    ->description('Opcional. Suspensión sin goce de sueldo: se descuenta en nómina por cada día laborable suspendido. La antigüedad, las vacaciones y la cobertura IPS siguen corriendo.')
+                    ->description('Opcional. Sin goce de sueldo: se descuenta cada día laborable suspendido. Antigüedad, vacaciones e IPS siguen corriendo.')
                     ->icon('heroicon-o-no-symbol')
                     ->collapsible()
                     ->collapsed(fn (?Warning $record) => ! $record?->hasSuspension())
@@ -187,6 +189,7 @@ class WarningResource extends Resource
                     ->schema([
                         FileUpload::make('document_path')
                             ->label('PDF firmado')
+                            ->helperText('Solo PDF, máximo 5 MB.')
                             ->disk('public')
                             ->directory('warnings')
                             ->acceptedFileTypes(['application/pdf'])
@@ -222,14 +225,14 @@ class WarningResource extends Resource
                                 ->icon('heroicon-o-briefcase')
                                 ->badge()
                                 ->color('info')
-                                ->placeholder('-'),
+                                ->placeholder('Sin cargo'),
 
                             TextEntry::make('employee.branch.company.name')
                                 ->label('Empresa')
                                 ->icon('heroicon-o-building-office-2')
                                 ->badge()
                                 ->color('success')
-                                ->placeholder('-'),
+                                ->placeholder('Sin empresa'),
                         ])->columns(2),
                     ]),
 

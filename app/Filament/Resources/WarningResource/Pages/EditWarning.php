@@ -9,6 +9,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -19,7 +20,11 @@ class EditWarning extends EditRecord
 
     protected static string $resource = WarningResource::class;
 
-    protected static ?string $title = 'Editar';
+    /** Título de la página con el nombre del empleado amonestado. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar amonestación: '.($this->record->employee?->full_name ?? 'sin empleado');
+    }
 
     /**
      * Define las acciones del encabezado de la página de edición.

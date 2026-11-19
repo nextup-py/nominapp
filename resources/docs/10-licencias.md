@@ -36,7 +36,7 @@ El sistema distingue dos modalidades que coexisten en el mismo módulo:
 1. Ir a **Empleados → Licencias**
 2. Clic en **Nueva Licencia**
 3. Completar:
-   - **Empleado** y **Tipo de licencia**
+   - **Empleado** (solo aparecen los activos; se busca por nombre, apellido o CI) y **Tipo de licencia**
    - **Fecha de inicio** y **Fecha de fin**
    - **Motivo** (opcional)
    - **Documento de soporte** (obligatorio para Reposo Médico)
@@ -85,7 +85,7 @@ El descuento se registra como una deducción **fechada el día del permiso** y s
 | **Rechazado** | No autorizado |
 | **Anulada** | Estaba aprobada y se anuló: se deshicieron sus efectos |
 
-> **El estado solo cambia con Aprobar o Rechazar.** En el formulario de edición el campo **Estado** se muestra pero no se puede modificar: antes se podía cambiar a «Aprobado» desde ahí, y eso no justificaba las ausencias del período (una licencia de maternidad quedó aprobada con 82 ausencias pendientes en **Por resolver**).
+> **El estado solo cambia con Aprobar o Rechazar.** En el formulario de edición el campo **Estado** se muestra (al crear no aparece: siempre nace Pendiente) pero no se puede modificar: antes se podía cambiar a «Aprobado» desde ahí, y eso no justificaba las ausencias del período (una licencia de maternidad quedó aprobada con 82 ausencias pendientes en **Por resolver**).
 
 ---
 

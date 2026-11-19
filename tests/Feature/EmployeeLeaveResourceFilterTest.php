@@ -23,3 +23,13 @@ it('busca el empleado por nombre o apellido en el filtro de tabla de permisos y 
 
     expect($filter->getFormField()->getSearchColumns())->toBe(['first_name', 'last_name']);
 });
+
+it('el formulario de licencias oculta el estado al crear', function () {
+    $user = User::factory()->create();
+    $user->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']));
+    $this->actingAs($user);
+
+    Livewire::test(\App\Filament\Resources\EmployeeLeaveResource\Pages\CreateEmployeeLeaves::class)
+        ->assertFormFieldIsHidden('status')
+        ->assertFormFieldExists('employee_id');
+});
