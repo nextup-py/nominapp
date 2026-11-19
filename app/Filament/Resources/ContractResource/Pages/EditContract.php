@@ -14,11 +14,18 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Storage;
 
 class EditContract extends EditRecord
 {
     protected static string $resource = ContractResource::class;
+
+    /** Título de la página con el nombre del empleado del contrato. */
+    public function getTitle(): string|Htmlable
+    {
+        return 'Editar contrato: '.($this->record->employee?->full_name ?? 'sin empleado');
+    }
 
     /**
      * Define las acciones disponibles en el encabezado de la página de edición.
@@ -53,7 +60,7 @@ class EditContract extends EditRecord
                         ->acceptedFileTypes(['application/pdf'])
                         ->maxSize(10240)
                         ->required()
-                        ->helperText('Suba el documento escaneado del contrato firmado. Solo PDF, máximo 10 MB.'),
+                        ->helperText('Contrato firmado escaneado. Solo PDF, máximo 10 MB.'),
                 ])
                 ->modalHeading(fn (Contract $record) => $record->document_path ? 'Reemplazar Documento Firmado' : 'Subir Contrato Firmado')
                 ->modalDescription(fn (Contract $record) => $record->document_path

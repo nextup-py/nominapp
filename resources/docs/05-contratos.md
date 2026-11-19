@@ -25,7 +25,7 @@ El módulo de contratos gestiona el ciclo de vida laboral de cada empleado, desd
 
 1. Ir a **Empleados → Contratos**
 2. Clic en **Nuevo Contrato**
-3. Completar los datos: empleado, tipo, fechas, salario, cargo, modalidad de trabajo. Si el cargo tiene un rango salarial o plazas autorizadas, un aviso junto al **salario** (mensual) o al **cargo** indica que el salario queda fuera del rango o que las plazas ya están ocupadas; es solo informativo y el contrato se puede guardar igual
+3. Completar las secciones del formulario: **Información del Contrato** (empleado y tipo), **Período del Contrato** (fechas y días de prueba), **Cargo y modalidad** (departamento, cargo y modalidad de trabajo) y **Remuneración** (tipo, salario y método de pago). Si el tipo no tiene plantilla en la empresa, el formulario avisa que el PDF saldrá sin cláusulas predefinidas. Las **Cláusulas Adicionales** aparecen colapsadas y se abren solo si hacen falta. Si el cargo tiene un rango salarial o plazas autorizadas, un aviso junto al **salario** (mensual) o al **cargo** indica que el salario queda fuera del rango o que las plazas ya están ocupadas; es solo informativo y el contrato se puede guardar igual
 4. Elegir cómo guardar:
    - **Crear** — el contrato queda Vigente de inmediato
    - **Guardar borrador y previsualizar** — queda en Borrador para revisar el PDF antes de activar

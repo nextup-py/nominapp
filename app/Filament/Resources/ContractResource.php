@@ -46,7 +46,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\HtmlString;
 
 class ContractResource extends Resource
 {
@@ -75,7 +74,6 @@ class ContractResource extends Resource
         return $form
             ->schema([
                 Section::make('Información del Contrato')
-                    ->description('Datos generales del contrato laboral')
                     ->icon('heroicon-o-document-text')
                     ->schema([
                         Select::make('employee_id')
@@ -96,7 +94,7 @@ class ContractResource extends Resource
                             ->live()
                             ->disabled(fn (string $operation) => $operation === 'edit')
                             ->columnSpan(2)
-                            ->helperText('Solo se muestran empleados activos sin contrato vigente o en borrador'),
+                            ->helperText('Solo empleados activos sin contrato vigente ni en borrador.'),
 
                         Select::make('type')
                             ->label('Tipo de Contrato')
@@ -112,10 +110,9 @@ class ContractResource extends Resource
                             }),
 
                         Placeholder::make('template_warning')
-                            ->label('')
-                            ->content(new HtmlString(
-                                '<div style="color:#b45309;font-size:12px;">⚠️ No hay plantilla configurada para este tipo de contrato en esta empresa. El PDF se generará sin cláusulas predefinidas.</div>'
-                            ))
+                            ->label('Plantilla')
+                            ->content('No hay plantilla configurada para este tipo de contrato en la empresa: el PDF se generará sin cláusulas predefinidas.')
+                            ->extraAttributes(['class' => 'text-warning-600 dark:text-warning-400'])
                             ->visible(function (Get $get) {
                                 $type = $get('type');
                                 $employeeId = $get('employee_id');
@@ -135,7 +132,6 @@ class ContractResource extends Resource
                     ->columns(3),
 
                 Section::make('Período del Contrato')
-                    ->description('Fechas y duración del contrato')
                     ->icon('heroicon-o-calendar')
                     ->schema([
                         DatePicker::make('start_date')
@@ -167,7 +163,7 @@ class ContractResource extends Resource
                             ->helperText(function (Get $get) {
                                 $type = $get('type');
                                 if (in_array($type, ['plazo_fijo', 'aprendizaje'])) {
-                                    return 'Art. 53 CLT: Máximo 1 año para contratos a plazo determinado';
+                                    return 'Máximo 1 año en contratos a plazo determinado (Art. 53 CLT).';
                                 }
 
                                 return null;
@@ -189,57 +185,13 @@ class ContractResource extends Resource
                             ->maxValue(5)
                             ->default(0)
                             ->visible(fn (Get $get) => $get('type') === 'plazo_fijo')
-                            ->helperText('Cuántas veces ya se renovó este plazo fijo (incluyendo contratos cargados a mano). Con 1 o más, la próxima renovación pasa a indefinido (Art. 53 CLT).'),
+                            ->helperText('Con 1 o más, la próxima renovación pasa a indefinido (Art. 53 CLT).'),
                     ])
                     ->columns(3),
 
-                Section::make('Condiciones Laborales')
-                    ->description('Salario, cargo y modalidad de trabajo')
+                Section::make('Cargo y modalidad')
                     ->icon('heroicon-o-briefcase')
                     ->schema([
-                        Select::make('salary_type')
-                            ->label('Tipo de Remuneración')
-                            ->options(Contract::getSalaryTypeOptions())
-                            ->native(false)
-                            ->default('mensual')
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(function (Set $set, ?string $state) {
-                                $settings = app(PayrollSettings::class);
-                                if ($state === 'mensual') {
-                                    $set('payroll_type', 'monthly');
-                                    $set('salary', $settings->min_salary_monthly);
-                                } elseif ($state === 'jornal') {
-                                    $set('salary', $settings->min_salary_daily_jornal);
-                                }
-                            })
-                            ->helperText('Art. 231 CLT: Forma de remuneración del trabajador'),
-
-                        Select::make('payroll_type')
-                            ->label('Tipo de Nómina')
-                            ->options(Employee::getPayrollTypeOptions())
-                            ->native(false)
-                            ->default('monthly')
-                            ->required()
-                            ->hidden(fn (Get $get) => $get('salary_type') === 'mensual')
-                            ->dehydrated()
-                            ->helperText('Define la frecuencia de pago del empleado'),
-
-                        TextInput::make('salary')
-                            ->label(fn (Get $get) => $get('salary_type') === 'jornal' ? 'Jornal Diario' : 'Salario Mensual')
-                            ->numeric()
-                            ->required()
-                            ->minValue(fn (Get $get) => Contract::getMinSalaryFor($get('salary_type')))
-                            ->prefix('Gs.')
-                            ->suffix(fn (Get $get) => $get('salary_type') === 'jornal' ? '/día' : '/mes')
-                            ->default(fn () => app(PayrollSettings::class)->min_salary_monthly)
-                            ->validationMessages(['minValue' => 'El salario no puede ser menor al mínimo legal vigente.'])
-                            ->placeholder('0')
-                            ->live(onBlur: true)
-                            ->hint(fn (Get $get): ?string => Position::salaryHint($get('position_id'), $get('salary'), $get('salary_type')))
-                            ->hintColor('warning')
-                            ->hintIcon(fn (Get $get): ?string => Position::salaryHint($get('position_id'), $get('salary'), $get('salary_type')) ? 'heroicon-o-exclamation-triangle' : null),
-
                         Select::make('department_id')
                             ->label('Departamento')
                             ->options(function (Get $get, ?Contract $record) {
@@ -279,6 +231,52 @@ class ContractResource extends Resource
                             ->native(false)
                             ->default('presencial')
                             ->required(),
+                    ])
+                    ->columns(3),
+
+                Section::make('Remuneración')
+                    ->icon('heroicon-o-banknotes')
+                    ->schema([
+                        Select::make('salary_type')
+                            ->label('Tipo de Remuneración')
+                            ->options(Contract::getSalaryTypeOptions())
+                            ->native(false)
+                            ->default('mensual')
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, ?string $state) {
+                                $settings = app(PayrollSettings::class);
+                                if ($state === 'mensual') {
+                                    $set('payroll_type', 'monthly');
+                                    $set('salary', $settings->min_salary_monthly);
+                                } elseif ($state === 'jornal') {
+                                    $set('salary', $settings->min_salary_daily_jornal);
+                                }
+                            }),
+
+                        Select::make('payroll_type')
+                            ->label('Tipo de Nómina')
+                            ->options(Employee::getPayrollTypeOptions())
+                            ->native(false)
+                            ->default('monthly')
+                            ->required()
+                            ->hidden(fn (Get $get) => $get('salary_type') === 'mensual')
+                            ->dehydrated(),
+
+                        TextInput::make('salary')
+                            ->label(fn (Get $get) => $get('salary_type') === 'jornal' ? 'Jornal Diario' : 'Salario Mensual')
+                            ->numeric()
+                            ->required()
+                            ->minValue(fn (Get $get) => Contract::getMinSalaryFor($get('salary_type')))
+                            ->prefix('Gs.')
+                            ->suffix(fn (Get $get) => $get('salary_type') === 'jornal' ? '/día' : '/mes')
+                            ->default(fn () => app(PayrollSettings::class)->min_salary_monthly)
+                            ->validationMessages(['minValue' => 'El salario no puede ser menor al mínimo legal vigente.'])
+                            ->placeholder('0')
+                            ->live(onBlur: true)
+                            ->hint(fn (Get $get): ?string => Position::salaryHint($get('position_id'), $get('salary'), $get('salary_type')))
+                            ->hintColor('warning')
+                            ->hintIcon(fn (Get $get): ?string => Position::salaryHint($get('position_id'), $get('salary'), $get('salary_type')) ? 'heroicon-o-exclamation-triangle' : null),
 
                         Select::make('payment_method')
                             ->label('Método de Pago')
@@ -291,7 +289,6 @@ class ContractResource extends Resource
                     ->columns(2),
 
                 Section::make('Cuenta Bancaria')
-                    ->description('Información de cuenta para acreditación del salario')
                     ->icon('heroicon-o-credit-card')
                     ->visible(fn (Get $get) => $get('payment_method') === 'debit')
                     ->schema(function (Get $get) {
@@ -347,7 +344,6 @@ class ContractResource extends Resource
                     ->columns(2),
 
                 Section::make('Documento Firmado')
-                    ->description('Documento escaneado del contrato firmado')
                     ->icon('heroicon-o-paper-clip')
                     ->schema([
                         FileUpload::make('document_path')
@@ -359,19 +355,19 @@ class ContractResource extends Resource
                             ->downloadable()
                             ->previewable()
                             ->openable()
-                            ->helperText('Suba el documento escaneado del contrato firmado. Solo PDF, máximo 10 MB.')
+                            ->helperText('Contrato firmado escaneado. Solo PDF, máximo 10 MB.')
                             ->columnSpanFull(),
                     ])
                     ->visible(fn (string $operation) => $operation === 'edit'),
 
                 Section::make('Cláusulas Adicionales')
-                    ->description('Cláusulas específicas para este contrato, que se agregan al final del cuerpo de la plantilla')
                     ->icon('heroicon-o-document-plus')
                     ->collapsible()
+                    ->collapsed(fn (?Contract $record) => blank($record?->additional_clauses))
                     ->schema([
                         RichEditor::make('additional_clauses')
                             ->label('Cláusulas adicionales')
-                            ->helperText('Se mostrarán después de las cláusulas estándar de la plantilla en el PDF.')
+                            ->helperText('Se agregan al final de las cláusulas de la plantilla en el PDF.')
                             ->toolbarButtons(['bold', 'italic', 'underline', 'orderedList', 'bulletList', 'redo', 'undo'])
                             ->columnSpanFull(),
                     ])
@@ -388,27 +384,26 @@ class ContractResource extends Resource
 
                         Placeholder::make('created_by')
                             ->label('Creado por')
-                            ->content(fn (?Contract $record) => $record?->createdBy?->name ?? '-')
+                            ->content(fn (?Contract $record) => $record?->createdBy?->name ?? 'Sin registro')
                             ->visible(fn (string $operation) => $operation === 'edit'),
 
                         Placeholder::make('duration')
                             ->label('Duración')
-                            ->content(fn (?Contract $record) => $record?->duration_description ?? '-')
+                            ->content(fn (?Contract $record) => $record?->duration_description ?? 'Sin dato')
                             ->visible(fn (string $operation) => $operation === 'edit'),
 
                         Placeholder::make('expiration')
                             ->label('Vencimiento')
-                            ->content(fn (?Contract $record) => $record?->expiration_description ?? '-')
+                            ->content(fn (?Contract $record) => $record?->expiration_description ?? 'Sin vencimiento')
                             ->visible(fn (string $operation, ?Contract $record = null) => $operation === 'edit' && $record?->end_date),
 
                         Placeholder::make('trial_status')
                             ->label('Período de Prueba')
                             ->content(function (?Contract $record) {
                                 if (! $record || ! $record->trial_days) {
-                                    return '-';
+                                    return 'Sin período de prueba';
                                 }
                                 if ($record->isInTrialPeriod()) {
-                                    // Mostrar días restantes, formatear en entero para evitar decimales
                                     $daysLeft = (int) $record->trial_days_left;
 
                                     return "{$daysLeft} días restantes";
