@@ -142,6 +142,10 @@ Schedule::command('contracts:notify-trial-ending')
     ->dailyAt('08:05')
     ->withoutOverlapping();
 
+Schedule::command('attendance:notify-silent-employees')
+    ->weeklyOn(1, '08:58')
+    ->withoutOverlapping();
+
 Schedule::command('attendance:notify-no-schedule')
     ->dailyAt('08:55')
     ->withoutOverlapping();
