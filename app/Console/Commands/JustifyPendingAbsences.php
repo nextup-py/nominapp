@@ -36,8 +36,7 @@ class JustifyPendingAbsences extends Command
             ->where('absences.status', 'pending')
             ->whereHas('attendanceDay', fn ($q) => $q->where('attendance_days.date', '<=', $until))
             ->with('attendanceDay')
-            ->orderBy('absences.id')
-            ->each(function (Absence $absence) use ($reviewerId, &$count) {
+            ->eachById(function (Absence $absence) use ($reviewerId, &$count) {
                 $count++;
 
                 if (! $this->option('dry-run')) {

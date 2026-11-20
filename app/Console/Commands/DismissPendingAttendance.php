@@ -45,7 +45,7 @@ class DismissPendingAttendance extends Command
             $dismissed = 0;
             $locked = 0;
 
-            AttendanceDay::query()->whereRaw($sql)->where('attendance_days.date', '<', $before)->orderBy('attendance_days.id')->each(function (AttendanceDay $day) use ($closer, $column, $dryRun, &$dismissed, &$locked) {
+            AttendanceDay::query()->whereRaw($sql)->where('attendance_days.date', '<', $before)->eachById(function (AttendanceDay $day) use ($closer, $column, $dryRun, &$dismissed, &$locked) {
                 if ($closer->isPayrollLocked($day)) {
                     $locked++;
 
