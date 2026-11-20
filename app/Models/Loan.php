@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Settings\PayrollSettings;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -158,6 +160,31 @@ class Loan extends Model implements Auditable
             'rejected' => 'Rechazado',
             'cancelled' => 'Cancelado',
         ];
+    }
+
+    // =========================================================================
+    // HELPERS ESTÁTICOS PARA MOTIVO
+    // =========================================================================
+
+    /**
+     * Opciones de motivo del préstamo.
+     *
+     * @return array<string, string>
+     */
+    public static function getReasonOptions(): array
+    {
+        return [
+            'personal' => 'Personal',
+            'medical' => 'Médico',
+            'education' => 'Educación',
+            'other' => 'Otro',
+        ];
+    }
+
+    /** Etiqueta del motivo ('Sin motivo' si no hay valor). */
+    public static function getReasonLabel(?string $reason): string
+    {
+        return $reason === null ? 'Sin motivo' : (self::getReasonOptions()[$reason] ?? $reason);
     }
 
     // =========================================================================
@@ -377,7 +404,7 @@ class Loan extends Model implements Auditable
         // Validar límite de cuota como % del salario (configurable en PayrollSettings)
         $salaryBase = $this->getLoanDeductionBase();
         if ($salaryBase > 0) {
-            $capPercent = app(\App\Settings\PayrollSettings::class)->loan_installment_cap_percent;
+            $capPercent = app(PayrollSettings::class)->loan_installment_cap_percent;
             $cap = round($salaryBase * $capPercent / 100, 2);
             if ($pmt > $cap) {
                 $capFormatted = number_format($cap, 0, ',', '.');
@@ -385,7 +412,7 @@ class Loan extends Model implements Auditable
 
                 return [
                     'success' => false,
-                    'message' => "La cuota de Gs. {$pmtFormatted} supera el límite del {$capPercent}% del salario (máximo Gs. {$capFormatted}). Reducí el monto, aumentá la cantidad de cuotas o ajustá la tasa.",
+                    'message' => "La cuota de Gs. {$pmtFormatted} supera el límite del {$capPercent}% del salario (máximo Gs. {$capFormatted}). Reducir el monto, aumentar la cantidad de cuotas o ajustar la tasa.",
                 ];
             }
         }
@@ -538,15 +565,47 @@ class Loan extends Model implements Auditable
      */
     protected function getLoanDeductionBase(): float
     {
-        if ($this->employee->base_salary && $this->employee->base_salary > 0) {
-            return (float) $this->employee->base_salary;
+        return self::deductionBaseFor($this->employee);
+    }
+
+    /**
+     * Base salarial mensual de un empleado para el tope de cuota (0 si no tiene salario ni jornal).
+     */
+    public static function deductionBaseFor(Employee $employee): float
+    {
+        if ($employee->base_salary && $employee->base_salary > 0) {
+            return (float) $employee->base_salary;
         }
 
-        if ($this->employee->daily_rate && $this->employee->daily_rate > 0) {
-            return round((float) $this->employee->daily_rate * 30, 2);
+        if ($employee->daily_rate && $employee->daily_rate > 0) {
+            return round((float) $employee->daily_rate * 30, 2);
         }
 
         return 0.0;
+    }
+
+    /**
+     * Resumen de un préstamo según monto, cuotas y tasa: cuota, total a devolver, intereses y tope de cuota.
+     *
+     * @return array{installment: float, total: float, interest: float, cap: ?float, cap_percent: int, percent_of_salary: ?float, exceeds_cap: bool}
+     */
+    public static function summarize(float $amount, int $installments, float $annualRate, ?Employee $employee = null): array
+    {
+        $installment = self::computePmt($amount, $installments, $annualRate);
+        $total = $installment * $installments;
+        $capPercent = (int) app(PayrollSettings::class)->loan_installment_cap_percent;
+        $base = $employee ? self::deductionBaseFor($employee) : 0.0;
+        $cap = $base > 0 ? round($base * $capPercent / 100, 2) : null;
+
+        return [
+            'installment' => $installment,
+            'total' => $total,
+            'interest' => max(0.0, $total - $amount),
+            'cap' => $cap,
+            'cap_percent' => $capPercent,
+            'percent_of_salary' => $base > 0 ? round($installment / $base * 100, 1) : null,
+            'exceeds_cap' => $cap !== null && $installment > $cap,
+        ];
     }
 
     /**
@@ -622,8 +681,8 @@ class Loan extends Model implements Auditable
     /**
      * Filtra por estado.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeByStatus($query, string $status)
     {
@@ -633,8 +692,8 @@ class Loan extends Model implements Auditable
     /**
      * Filtra préstamos aprobados (en curso de cobro).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeApproved($query)
     {
@@ -644,8 +703,8 @@ class Loan extends Model implements Auditable
     /**
      * Filtra préstamos pendientes.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopePending($query)
     {
@@ -655,8 +714,8 @@ class Loan extends Model implements Auditable
     /**
      * Filtra préstamos de un empleado específico.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeForEmployee($query, int $employeeId)
     {
