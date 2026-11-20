@@ -267,9 +267,9 @@ Cada vez que un empleado interactúa con el sistema de asistencia, se registra u
 | **Entrada jornada** | Inicio del turno |
 | **Inicio descanso** | Pausa (ej: almuerzo) |
 | **Fin descanso** | Regreso de pausa |
+| **Salida jornada** | Fin del turno |
 
 > Estando en pausa también se puede marcar **Salida** directamente (por ejemplo, quien se va sin marcar el fin del descanso). Esa pausa no se descuenta de las horas trabajadas, porque no tiene fin.
-| **Salida jornada** | Fin del turno |
 
 ### Segundo turno el mismo día
 
