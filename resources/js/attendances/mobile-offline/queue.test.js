@@ -49,6 +49,10 @@ describe('allowedNextEventTypes', () => {
     it('tras check_out, solo permite una nueva entrada (segundo turno del día)', () => {
         expect(allowedNextEventTypes('check_out')).toEqual(['check_in']);
     });
+
+    it('desde un inicio de descanso permite el fin del descanso o la salida', () => {
+        expect(allowedNextEventTypes('break_start')).toEqual(['break_end', 'check_out']);
+    });
 });
 
 describe('resolveOwnStatus', () => {

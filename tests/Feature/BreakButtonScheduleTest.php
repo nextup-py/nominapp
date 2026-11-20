@@ -154,7 +154,20 @@ it('una vez iniciado el descanso, siempre se puede cerrar (break_end nunca se fi
     ]);
 
     $state = AttendanceDay::currentStateFor($employee, Carbon::now());
-    expect($state['allowed'])->toBe(['break_end']);
+    expect($state['allowed'])->toBe(['break_end', 'check_out']);
 
     expect(markAttendanceEvent($employee, 'break_end')['ok'])->toBeTrue();
+});
+
+it('permite marcar la salida directamente en pleno descanso (sin marcar el fin del descanso)', function () {
+    $employee = makeBreakTestEmployee();
+
+    expect(markAttendanceEvent($employee, 'check_in')['ok'])->toBeTrue();
+    expect(markAttendanceEvent($employee, 'break_start')['ok'])->toBeTrue();
+
+    $day = AttendanceDay::where('employee_id', $employee->id)->first();
+    AttendanceEvent::where('attendance_day_id', $day->id)->update(['recorded_at' => now()->subHours(3)]);
+    AttendanceEvent::where('attendance_day_id', $day->id)->where('event_type', 'break_start')->update(['recorded_at' => now()->subHours(2)]);
+
+    expect(markAttendanceEvent($employee, 'check_out')['ok'])->toBeTrue();
 });

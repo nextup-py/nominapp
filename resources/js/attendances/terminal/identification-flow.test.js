@@ -491,6 +491,15 @@ describe('confirmación de salida y tiempo de espera de la selección', () => {
         expect(registerMark).not.toHaveBeenCalled();
     });
 
+    it('en pleno descanso se ofrecen Fin de descanso y Salida, para poder irse sin marcar el fin', async () => {
+        setup({ lastEvent: 'break_start', allowedEvents: ['break_end', 'check_out'] });
+
+        await identifyOnce();
+
+        expect(showTypeSelectionForEmployee.mock.calls[0][3]).toEqual(['break_end', 'check_out']);
+        expect(registerMark).not.toHaveBeenCalled();
+    });
+
     it('la entrada sigue registrándose sola', async () => {
         setup({ lastEvent: null, allowedEvents: ['check_in'] });
 
