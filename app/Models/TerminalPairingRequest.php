@@ -96,6 +96,22 @@ class TerminalPairingRequest extends Model
             ->first()?->terminal;
     }
 
+    /**
+     * Indica si aprobar esta solicitud cortaría a un equipo que hoy está funcionando: la pide otro dispositivo
+     * mientras el vinculado sigue en línea, o el equipo que la pide ya es otro terminal. En esos casos el panel exige
+     * escribir el nombre del terminal para confirmar (un toque por costumbre dejó terminales sin equipo).
+     */
+    public function requiresReplacementConfirmation(): bool
+    {
+        if ($this->linkedElsewhere() !== null) {
+            return true;
+        }
+
+        return $this->replaces_active_device
+            && $this->same_device !== true
+            && (bool) $this->terminal?->isReportingNow();
+    }
+
     /** Usuario del panel que aprobó la solicitud. */
     public function approvedBy(): BelongsTo
     {

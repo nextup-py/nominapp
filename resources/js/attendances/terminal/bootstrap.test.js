@@ -482,6 +482,22 @@ describe('initializeSystem — terminal sin vincular', () => {
         expect(callbacks.onError).not.toHaveBeenCalled();
     });
 
+    it('si la carga de modelos nunca termina, el vigía avisa con onError y no llega a onReady', async () => {
+        const { initializeSystem, loadModels } = await loadFreshBootstrap();
+        stubBrowser();
+        loadModels.mockReturnValue(new Promise(() => {}));
+        const callbacks = { onReady: vi.fn(), onError: vi.fn(), onUnlinked: vi.fn() };
+
+        initializeSystem({}, callbacks, { stallMs: 20_000 });
+        await vi.advanceTimersByTimeAsync(19_000);
+        expect(callbacks.onError).not.toHaveBeenCalled();
+
+        await vi.advanceTimersByTimeAsync(2_000);
+        expect(callbacks.onError).toHaveBeenCalledTimes(1);
+        expect(callbacks.onError.mock.calls[0][0]).toContain('40%');
+        expect(callbacks.onReady).not.toHaveBeenCalled();
+    });
+
     it('con token: llama a onReady y no a onUnlinked', async () => {
         const { initializeSystem, loadModels, getMeta, heartbeat, syncEmployees, flushQueue } = await loadFreshBootstrap();
         stubBrowser();

@@ -565,3 +565,37 @@ it('el modal de aprobar avisa que el equipo ya es otro terminal', function () {
         ->toContain('ya funciona como otro terminal')
         ->toContain('«Celular»');
 });
+
+it('si el equipo actual está en línea y pide otro dispositivo, aprobar exige escribir el nombre del terminal', function () {
+    $terminal = makePairingTerminal();
+    $terminal->claimSanctumToken();
+    $terminal->forceFill(['last_heartbeat_at' => now()])->save();
+    ['request' => $request] = requestPairing($terminal);
+    $request->update(['same_device' => false]);
+    $this->actingAs(makePairingSuperAdmin());
+
+    expect($request->fresh()->requiresReplacementConfirmation())->toBeTrue();
+
+    Livewire::test(TerminalPairingInbox::class)
+        ->callTableAction('approve_pairing', $request, ['code' => $request->code, 'confirm_name' => 'otro nombre']);
+    expect($request->fresh()->status)->toBe('pending');
+
+    Livewire::test(TerminalPairingInbox::class)
+        ->callTableAction('approve_pairing', $request, ['code' => $request->code, 'confirm_name' => '  '.strtoupper($terminal->name).' ']);
+    expect($request->fresh()->status)->toBe('approved');
+});
+
+it('no pide el nombre cuando el dispositivo actual no está en línea o es el mismo equipo', function () {
+    $terminal = makePairingTerminal();
+    $terminal->claimSanctumToken();
+    $terminal->forceFill(['last_heartbeat_at' => now()->subHour()])->save();
+    ['request' => $request] = requestPairing($terminal);
+    $request->update(['same_device' => false]);
+
+    expect($request->fresh()->requiresReplacementConfirmation())->toBeFalse();
+
+    $terminal->forceFill(['last_heartbeat_at' => now()])->save();
+    $request->update(['same_device' => true]);
+
+    expect($request->fresh()->requiresReplacementConfirmation())->toBeFalse();
+});

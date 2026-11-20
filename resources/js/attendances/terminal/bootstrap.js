@@ -80,15 +80,37 @@ export async function checkLegacyTerminalMigration() {
     }
 }
 
+/** Milisegundos sin avanzar tras los cuales el arranque se considera trabado. */
+export const INIT_STALL_TIMEOUT_MS = 20_000;
+
 /**
  * @param {{loadingProgress?, loadingPercentage?, loadingMessage?, loadingStep1?, loadingStep2?, loadingStep3?}} loadingDom
  * @param {{onReady: () => void, onError: (message: string) => void, onUnlinked?: (reason: string, storedCode?: string|null) => void}} callbacks
  *        `onUnlinked` reemplaza a `onReady` cuando el terminal no puede marcar (sin token,
  *        o el navegador pertenece a otro terminal): no se llega a la pantalla idle.
  */
-export async function initializeSystem(loadingDom, { onReady, onError, onUnlinked }) {
+export async function initializeSystem(loadingDom, { onReady, onError, onUnlinked }, { stallMs = INIT_STALL_TIMEOUT_MS } = {}) {
+    // Vigía: si el arranque no avanza en `stallMs` (un paso que nunca termina), se muestra un error con
+    // «Recargar» en vez de dejar el terminal mudo en «Cargando sistema».
+    let stalled = false;
+    let lastPercent = 0;
+    let stallTimer = null;
+    const stopWatchdog = () => clearTimeout(stallTimer);
+    const progress = (percent, message, step) => {
+        lastPercent = percent;
+        updateLoadingProgress(loadingDom, percent, message, step);
+        stopWatchdog();
+        if (percent < 100) {
+            stallTimer = setTimeout(() => {
+                stalled = true;
+                console.error(`Arranque detenido al ${lastPercent}%`);
+                onError(`El sistema se quedó detenido al ${lastPercent}% de la carga. Si se repite, revisar la fecha y hora del equipo y la conexión.`);
+            }, stallMs);
+        }
+    };
+
     try {
-        updateLoadingProgress(loadingDom, 10, 'Verificando compatibilidad del navegador...', 1);
+        progress(10, 'Verificando compatibilidad del navegador...', 1);
         await sleep(300);
 
         if (typeof faceapi === 'undefined') {
@@ -98,28 +120,30 @@ export async function initializeSystem(loadingDom, { onReady, onError, onUnlinke
             throw new Error('Tu navegador no soporta acceso a la cámara');
         }
 
-        updateLoadingProgress(loadingDom, 30, 'Navegador compatible ✓', 1);
+        progress(30, 'Navegador compatible ✓', 1);
         await sleep(200);
 
-        updateLoadingProgress(loadingDom, 40, 'Cargando modelos de reconocimiento facial...', 2);
+        progress(40, 'Cargando modelos de reconocimiento facial...', 2);
         const modelsResult = await camera.loadModels();
         if (!modelsResult.ok) {
             throw new Error(modelsResult.message);
         }
 
-        updateLoadingProgress(loadingDom, 80, 'Modelos cargados correctamente ✓', 2);
+        progress(80, 'Modelos cargados correctamente ✓', 2);
         await sleep(300);
 
-        updateLoadingProgress(loadingDom, 90, 'Preparando sistema de marcación...', 3);
+        progress(90, 'Preparando sistema de marcación...', 3);
         await sleep(300);
 
-        updateLoadingProgress(loadingDom, 100, 'Sistema listo ✓', 3);
+        progress(100, 'Sistema listo ✓', 3);
         await sleep(500);
+        if (stalled) return;
 
         await acquireWakeLock();
         // Si el arranque temprano ya dejó el terminal sincronizando, no se repite (ver `startOfflineSyncEarly()`).
         const early = earlySync ? await earlySync : null;
         const sync = early?.linked ? early : await initializeOfflineSync({ onUnlinked });
+        if (stalled) return;
 
         if (!sync.linked) {
             console.warn(`Terminal sin vincular (${sync.reason}) — marcación bloqueada.`);
@@ -130,6 +154,8 @@ export async function initializeSystem(loadingDom, { onReady, onError, onUnlinke
         console.log('Sistema inicializado correctamente');
         onReady();
     } catch (error) {
+        stopWatchdog();
+        if (stalled) return;
         console.error('Error en la inicialización:', error);
         if (loadingDom.loadingMessage) {
             loadingDom.loadingMessage.textContent = `Error: ${error.message}`;

@@ -18,13 +18,16 @@ class TerminalAttentionBanner
     /**
      * Terminales activos que figuran Sin vincular o Desconectados (los que están fuera de su horario no cuentan).
      *
-     * @return list<array{id: int, name: string, branch: ?string, status: string}>
+     * `pending` cuenta los códigos de vinculación que esperan aprobación (con el terminal sin vincular, es lo que lo destraba).
+     *
+     * @return list<array{id: int, name: string, branch: ?string, status: string, pending: int}>
      */
     public static function items(): array
     {
         return Cache::remember('terminal-attention-banner', self::CACHE_SECONDS, function (): array {
             return Terminal::query()
                 ->withSyncTokenFlag()
+                ->withCount(['pairingRequests as pending_requests_count' => fn ($query) => $query->pending()])
                 ->with('branch')
                 ->orderBy('name')
                 ->get()
@@ -33,6 +36,7 @@ class TerminalAttentionBanner
                     'name' => $terminal->name,
                     'branch' => $terminal->branch?->name,
                     'status' => $terminal->isInactive() ? 'ok' : self::statusOf($terminal),
+                    'pending' => (int) $terminal->pending_requests_count,
                 ])
                 ->filter(fn (array $item): bool => $item['status'] !== 'ok')
                 ->values()

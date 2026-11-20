@@ -89,7 +89,7 @@ En unos segundos el dispositivo recibe su acceso y recarga la página. Hay que t
 
 ### Si ya había un dispositivo vinculado
 
-La solicitud aparece marcada como **Reemplaza dispositivo** y el cuadro de aprobación muestra el **dispositivo vinculado hoy** (marca y modelo, IP, cuándo se vinculó y su último latido). Si ese dispositivo está en línea, el cuadro agrega una advertencia: *este terminal está en línea en otro dispositivo*. Aprobarla **revoca el acceso del dispositivo anterior**, que vuelve a pedir un código. Aprobar solo si realmente se quiere cambiar el equipo.
+La solicitud aparece marcada como **Reemplaza dispositivo** y el cuadro de aprobación muestra el **dispositivo vinculado hoy** (marca y modelo, IP, cuándo se vinculó y su último latido). Si ese dispositivo está en línea, el cuadro agrega una advertencia: *este terminal está en línea en otro dispositivo*. Aprobarla **revoca el acceso del dispositivo anterior**, que vuelve a pedir un código. Aprobar solo si realmente se quiere cambiar el equipo. Cuando el terminal está en línea en otro dispositivo (o el equipo que pide el código ya es otro terminal), además del código hay que **escribir el nombre del terminal** para confirmar: sin eso no se aprueba. Evita cortar por costumbre un equipo que está marcando.
 
 El cuadro también dice si quien pide es **el mismo dispositivo que está vinculado** (perdió su acceso, por ejemplo porque el navegador borró sus datos: es seguro aprobar) o **otro dispositivo distinto** (si los dos siguen en uso se dejan sin acceso uno al otro). Esa comparación se hace con el **ID del dispositivo**; en los equipos que todavía no lo informaron, el cuadro no la muestra.
 
@@ -115,6 +115,8 @@ Ir a **Asistencias → Solicitudes de vinculación** para ver todas las solicitu
 | **Aprobada por** | Usuario que la aprobó |
 
 - Por defecto se muestran solo las **Pendientes**. El filtro **Estado** permite ver las resueltas o vencidas.
+> El cartel rojo del panel (arriba de cada pantalla, para quien gestiona terminales) muestra además **Esperan aprobación** con la cantidad de códigos pendientes de cada terminal sin vincular y el enlace **Aprobar ahora**. Mientras un terminal esté sin vincular, nadie puede marcar en esa sucursal.
+
 - **Aprobar** y **Rechazar** están en cada fila. Al rechazar, el dispositivo lo informa y ofrece pedir un código nuevo.
 - Cada terminal admite hasta **3 solicitudes pendientes** a la vez; si se piden más, vence la más antigua.
 - Las mismas solicitudes, filtradas por terminal, están en la pestaña **Solicitudes de vinculación** del detalle de cada terminal.
@@ -601,3 +603,7 @@ El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: 
 - Quién aprobó cada vinculación se ve en la columna **Aprobada por** de la bandeja (en las vinculadas por ventana figura quien la abrió); aprobaciones, rechazos, ventanas abiertas y cerradas, enlaces generados y desvinculaciones quedan además en la pestaña **Bitácora** del terminal.
 - El enlace de configuración viaja en el **fragmento** de la URL (lo que va después del `#`), que el navegador no envía al servidor al abrirla, así que no queda en los registros de acceso. En la base solo se guarda su huella (hash), nunca el enlace.
 - Los enlaces de configuración con el formato anterior (token en la ruta) ya no se aceptan: hay que generar uno nuevo.
+
+## Si el terminal queda en «Cargando sistema»
+
+Si el arranque no avanza en 20 segundos, el terminal deja de mostrar la barra de carga y presenta un error con el avance alcanzado (por ejemplo, «se quedó detenido al 40 % de la carga») y el botón para recargar. Si se repite, revisar que la **fecha y hora del equipo** sean correctas (activar la hora automática) y que tenga conexión. Si la pantalla está completamente congelada (el reloj no avanza), el navegador está bloqueado: cerrar la aplicación y volver a abrirla.

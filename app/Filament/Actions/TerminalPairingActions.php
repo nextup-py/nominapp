@@ -9,6 +9,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Actions\Action;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 /**
  * Acciones de fila para resolver solicitudes de vinculación de terminales —
@@ -39,14 +40,27 @@ class TerminalPairingActions
             ->form([
                 TextInput::make('code')
                     ->label('Código que muestra la pantalla del terminal')
-                    ->helperText('Tipeá el código tal como lo ves en el dispositivo que vas a vincular. Si no coincide, no se aprueba.')
+                    ->helperText('Escribir el código tal como se ve en el dispositivo que se va a vincular. Si no coincide, no se aprueba.')
                     ->required()
                     ->maxLength(12)
                     ->autocomplete(false)
                     ->extraInputAttributes(['class' => 'uppercase tracking-widest']),
+                TextInput::make('confirm_name')
+                    ->label('Nombre del terminal')
+                    ->helperText(fn (TerminalPairingRequest $record) => 'Este terminal tiene un equipo funcionando que quedará sin acceso. Para confirmar, escribir: '.$record->terminal?->name)
+                    ->required(fn (TerminalPairingRequest $record) => $record->requiresReplacementConfirmation())
+                    ->visible(fn (TerminalPairingRequest $record) => $record->requiresReplacementConfirmation())
+                    ->autocomplete(false),
             ])
             ->action(function (TerminalPairingRequest $record, array $data, Action $action) {
                 abort_unless(static::canManage(), 403);
+
+                if ($record->requiresReplacementConfirmation() && ! static::nameMatches($data['confirm_name'] ?? null, $record->terminal?->name)) {
+                    Notification::make()->danger()->title('No se aprobó')->body('El nombre escrito no coincide con el del terminal. Revisar que sea el equipo correcto antes de reemplazar al actual.')->send();
+                    $action->halt();
+
+                    return;
+                }
 
                 try {
                     app(TerminalPairingService::class)->approve($record, auth()->user(), $data['code']);
@@ -63,6 +77,14 @@ class TerminalPairingActions
                     ->body('El dispositivo recibirá el acceso en unos segundos.')
                     ->send();
             });
+    }
+
+    /** Compara el nombre escrito con el del terminal sin distinguir mayúsculas, tildes ni espacios sobrantes. */
+    public static function nameMatches(?string $typed, ?string $name): bool
+    {
+        $normalize = fn (?string $value) => mb_strtolower(trim(preg_replace('/\s+/', ' ', Str::ascii((string) $value))));
+
+        return $normalize($name) !== '' && $normalize($typed) === $normalize($name);
     }
 
     /** Rechazar la solicitud. */
@@ -108,7 +130,7 @@ class TerminalPairingActions
         ];
 
         if ($elsewhere = $record->linkedElsewhere()) {
-            $lines[] = '<strong>Atención: este equipo ya funciona como otro terminal:</strong> «'.e($elsewhere->name).'»'.($elsewhere->branch ? ' ('.e($elsewhere->branch->name).')' : '').'. Si lo aprobás acá, «'.e($elsewhere->name).'» se queda sin equipo y se verá desconectado. Pedile a quien lo usa que abra el enlace de ese terminal.';
+            $lines[] = '<strong>Atención: este equipo ya funciona como otro terminal:</strong> «'.e($elsewhere->name).'»'.($elsewhere->branch ? ' ('.e($elsewhere->branch->name).')' : '').'. Si se aprueba acá, «'.e($elsewhere->name).'» se queda sin equipo y se verá desconectado. Pedir a quien lo usa que abra el enlace de ese terminal.';
         }
 
         if ($record->replaces_active_device) {
