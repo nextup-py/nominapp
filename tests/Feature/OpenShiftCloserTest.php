@@ -320,3 +320,32 @@ it('el comando acepta las reglas de marcación real y no admite las dos a la vez
 
     expect($day->fresh()->events()->orderBy('recorded_at')->get()->last()->event_type)->toBe('check_out');
 });
+
+it('cierra en el fin de descanso con segundos sin dejar la salida antes de esa marcación', function () {
+    $day = closerDay(closerEmployee(), 3, [['check_in', '08:55:08'], ['break_start', '12:00:12'], ['break_end', '16:20:13']]);
+
+    expect(app(OpenShiftCloser::class)->closeWithRealMark($day, OpenShiftCloser::STRATEGY_LAST_MARK))->toBeNull();
+
+    $events = $day->fresh()->events()->orderBy('recorded_at')->orderBy('id')->get();
+
+    expect($events->last()->event_type)->toBe('check_out')
+        ->and($events->last()->recorded_at->format('H:i'))->toBe('16:21')
+        ->and(AttendanceDay::query()->missingCheckOut()->whereKey($day->id)->exists())->toBeFalse();
+});
+
+it('repara la salida que quedó al minuto antes de la última marcación', function () {
+    $day = closerDay(closerEmployee(), 3, [['check_in', '08:55:08'], ['break_start', '12:00:12'], ['check_out', '16:20:00'], ['break_end', '16:20:13']]);
+
+    expect(AttendanceDay::query()->missingCheckOut()->whereKey($day->id)->exists())->toBeTrue();
+
+    $this->artisan('attendance:repair-last-mark-exits', ['--dry-run' => true])->assertSuccessful();
+    expect(AttendanceDay::query()->missingCheckOut()->whereKey($day->id)->exists())->toBeTrue();
+
+    $this->artisan('attendance:repair-last-mark-exits')->assertSuccessful();
+
+    $events = $day->fresh()->events()->orderBy('recorded_at')->orderBy('id')->get();
+
+    expect($events->last()->event_type)->toBe('check_out')
+        ->and($events->last()->recorded_at->format('H:i'))->toBe('16:21')
+        ->and(AttendanceDay::query()->missingCheckOut()->whereKey($day->id)->exists())->toBeFalse();
+});

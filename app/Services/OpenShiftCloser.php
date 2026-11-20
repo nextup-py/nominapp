@@ -221,12 +221,23 @@ class OpenShiftCloser
             ->all();
 
         if ($strategy === self::STRATEGY_LAST_MARK) {
-            $rows[] = ['event_type' => 'check_out', 'recorded_at' => $exit];
+            $rows[] = ['event_type' => 'check_out', 'recorded_at' => $this->exitAfter($exit)];
         }
 
         $this->corrections->apply($day, $rows);
 
         return null;
+    }
+
+    /**
+     * Hora de la salida agregada tras la última marcación: el servicio de correcciones trabaja al minuto, así que
+     * con segundos la salida se lleva al minuto siguiente para no quedar antes de esa marcación.
+     */
+    public function exitAfter(Carbon $lastMark): Carbon
+    {
+        $exit = $lastMark->copy()->seconds(0);
+
+        return $lastMark->second > 0 ? $exit->addMinute() : $exit;
     }
 
     /**
