@@ -134,7 +134,7 @@ El campo **Marcación desde el celular** tiene tres valores: **Heredar**, **Sí,
 
 En **Empleados** se ve la columna **Marca desde el celular** (con el nivel que la define, por ejemplo «No (de la sucursal)») y el filtro **Marcación desde el celular**. Para cambiar varios a la vez: seleccionar y usar la acción masiva **Marcación desde el celular**. Para una sola persona, sin abrir la ficha: en el menú de acciones de la fila, **Habilitar celular** / **Deshabilitar celular** (pide confirmación) y, cuando ya puede marcar pero todavía no vinculó su celular, **Avisar por WhatsApp (vincular celular)**.
 
-**Estado del celular.** La columna **Celular** del listado de Empleados (también en la ficha, como **Estado del celular**) y su filtro **Estado del celular** resumen en qué punto está cada persona:
+**Estado del celular.** El detalle de la columna **Marca con** del listado de Empleados (también en la ficha, como **Estado del celular**) y su filtro **Estado del celular** resumen en qué punto está cada persona:
 
 | Estado | Qué significa | Qué hacer |
 |--------|---------------|-----------|

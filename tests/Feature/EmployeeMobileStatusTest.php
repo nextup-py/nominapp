@@ -104,13 +104,13 @@ it('el listado filtra por el estado del celular', function () {
         ->assertCanNotSeeTableRecords([$set['not_enabled'], $set['active'], $set['inactive'], $set['never_connected']]);
 });
 
-it('el listado muestra la columna Celular con el estado', function () {
+it('el listado muestra la columna Marca con y el estado del celular como detalle', function () {
     mobileStatusAdmin();
     mobileStatusSet();
 
     Livewire::test(ListEmployees::class)
         ->set('activeTab', 'active')
-        ->assertTableColumnExists('mobile_status')
+        ->assertTableColumnExists('mark_channel')
         ->assertSee('Habilitado, sin vincular')
         ->assertSee('Sin uso reciente');
 });
