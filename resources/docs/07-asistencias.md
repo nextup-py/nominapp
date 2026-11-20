@@ -19,6 +19,7 @@ Ir a **Asistencias → Por resolver** para ver en una sola pantalla todo lo que 
 | **Ausencias por revisar** | Ausencias en estado *Pendiente* | **Ausencias**, pestaña *Pendientes* |
 | **Fallos de marcación** | Fallos *Pendientes* que se pueden resolver (no cuenta los rostros no reconocidos) | **Fallos de marcación**, pestaña *Para revisar* |
 | **Empleados sin horario** | Empleados activos sin horario fijo, rotación ni turnos planificados (no se les calculan horas, tardanzas ni ausencias) | **Empleados**, filtro *Sin horario asignado* (acción **Asignar horario**) |
+| **Empleados sin ninguna marcación** | Empleados activos que no marcaron nada en los últimos 7 días y no están de vacaciones ni con licencia aprobada (ni ingresaron hace menos de 7 días) | Aviso semanal en la campanita, los lunes 08:58 (ver **Notificaciones**) |
 | **Celulares habilitados sin vincular** | Empleados activos habilitados para marcar desde el celular que todavía no vincularon el suyo (no pueden marcar hasta que lo hagan) | **Empleados**, filtro *Estado del celular* = *Habilitado, sin vincular* (acción **Avisar por WhatsApp** al habilitar, o pedirles que abran el enlace de vinculación) |
 | **Contratos vencidos sin renovar** | Empleados activos cuyo contrato venció y que no tienen otro vigente (siguen cobrando y marcando hasta que se renueve o termine el contrato) | **Empleados**, filtro *Contrato vencido sin renovar* (acciones **Renovar** o **Terminar** desde el contrato) |
 

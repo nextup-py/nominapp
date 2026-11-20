@@ -18,7 +18,7 @@ La pantalla muestra únicamente los avisos de los módulos a los que el usuario 
 | **Canal** | **Campanita**, **Correo** o ambos. Con el aviso activo hay que elegir al menos uno |
 | **Frecuencia** | **Al instante** (llega cuando ocurre) o **En el resumen diario** (se junta con los demás y llega una vez al día) |
 
-Los avisos que ya llegan **una vez al día por sí mismos** (**Jornadas sin salida**, **Empleados sin horario** y **Contratos por vencer o vencidos** y **Fin del período de prueba**) solo se envían al instante: la frecuencia aparece bloqueada con la indicación *Ya llega una vez al día*.
+Los avisos que ya llegan **una vez al día por sí mismos** (**Jornadas sin salida**, **Empleados sin horario**, **Empleados sin ninguna marcación** y **Contratos por vencer o vencidos** y **Fin del período de prueba**) solo se envían al instante: la frecuencia aparece bloqueada con la indicación *Ya llega una vez al día*.
 
 Los cambios aplican **desde el próximo aviso**; lo que ya llegó no se modifica.
 
@@ -92,6 +92,7 @@ Requieren el permiso **Editar Terminal**.
 |-------|-------------------|--------------|
 | **Jornadas sin salida** | Ver asistencias | Resumen diario (08:52) de jornadas con entrada y sin salida |
 | **Empleados sin horario** | Editar horarios | Resumen diario (08:55) de empleados activos sin horario |
+| **Empleados sin ninguna marcación** | Ver asistencias | Resumen semanal (lunes 08:58) de empleados activos que no marcaron nada en los últimos 7 días y no están de vacaciones ni con licencia aprobada; sirve para detectar a quien no tiene celular, terminal u horario. No se repite mientras el anterior esté sin leer |
 | **Conflicto de sincronización** | Editar fallos de marcación | Una marcación hecha sin conexión no pudo registrarse |
 | **Autoenrolamiento facial pendiente** | Editar enrolamientos faciales | Un empleado completó su registro facial y espera aprobación |
 
