@@ -83,6 +83,32 @@ class TerminalAttentionBanner
         ]);
     }
 
+    /** Pantallas del panel donde se muestra el cartel (donde se actúa sobre terminales o asistencia). */
+    public const PAGE_ROUTES = [
+        'filament.admin.pages.dashboard',
+        'filament.admin.resources.terminales.*',
+        'filament.admin.pages.por-resolver',
+        'filament.admin.pages.monitor-en-vivo',
+        'filament.admin.pages.terminal-pairing-inbox',
+    ];
+
+    /** Si la pantalla actual es una de las que muestran el cartel. */
+    public static function showsOnCurrentPage(): bool
+    {
+        return request()->routeIs(...self::PAGE_ROUTES);
+    }
+
+    /**
+     * Huella de lo que muestra el cartel (terminales, motivos y códigos pendientes): al cambiar, un cartel que el
+     * usuario cerró vuelve a aparecer.
+     *
+     * @param  list<array{id: int, status: string, pending: int}>  $items
+     */
+    public static function signature(array $items): string
+    {
+        return md5(collect($items)->map(fn (array $item): string => "{$item['id']}:{$item['status']}:{$item['pending']}")->implode('|'));
+    }
+
     /** Si el usuario actual debe ver el cartel: gestiona terminales y el módulo está disponible para su rol. */
     public static function visibleToCurrentUser(): bool
     {

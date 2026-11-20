@@ -116,3 +116,18 @@ it('cuenta los códigos de vinculación pendientes de un terminal sin vincular y
 
     expect($html)->toContain('Esperan aprobación')->toContain('Aprobar ahora');
 });
+
+it('la huella del cartel cambia cuando cambia el problema y se puede cerrar desde la vista', function () {
+    $one = bannerTerminal('Uno', linked: false);
+    $items = TerminalAttentionBanner::items();
+    $signature = TerminalAttentionBanner::signature($items);
+
+    bannerTerminal('Dos', linked: false);
+    TerminalAttentionBanner::forget();
+
+    expect(TerminalAttentionBanner::signature(TerminalAttentionBanner::items()))->not->toBe($signature)
+        ->and(TerminalAttentionBanner::signature($items))->toBe($signature);
+
+    $this->actingAs(bannerManager());
+    expect(view('filament.hooks.terminal-alert-banner')->render())->toContain('dismiss()')->toContain('Ocultar el aviso');
+});

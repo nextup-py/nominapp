@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\MyNotifications;
 use App\Http\Middleware\EnsureSetupIsComplete;
+use App\Services\TerminalAttentionBanner;
 use App\Support\PanelGlobalSearchProvider;
 use App\Support\ThemeResolver;
 use EightyNine\FilamentDocs\FilamentDocsPlugin;
@@ -81,7 +82,7 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsed(),
             ])
             ->renderHook(PanelsRenderHook::BODY_END, fn (): string => view('filament.hooks.open-active-nav-group')->render())
-            ->renderHook(PanelsRenderHook::PAGE_START, fn (): string => view('filament.hooks.terminal-alert-banner')->render())
+            ->renderHook(PanelsRenderHook::PAGE_START, fn (): string => TerminalAttentionBanner::showsOnCurrentPage() ? view('filament.hooks.terminal-alert-banner')->render() : '')
             ->userMenuItems([
                 MenuItem::make()
                     ->label('Mis notificaciones')
