@@ -986,5 +986,6 @@ it('attendance:review-long-lates lista solo atrasos pendientes de más de 60 min
     expect($exitCode)->toBe(0)
         ->and($output)->toContain('Personas con atrasos de más de 60 min: 1')
         ->and($output)->toContain('esperado: 06:00')
+        ->and($output)->toContain('entra: 14:00 a 14:00')
         ->and((int) $day->fresh()->late_minutes)->toBe($before);
 });

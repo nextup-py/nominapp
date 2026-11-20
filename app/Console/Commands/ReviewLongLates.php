@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\AttendanceDay;
 use App\Models\Employee;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 /**
@@ -40,7 +41,7 @@ class ReviewLongLates extends Command
             $employee = $employees[$employeeId] ?? null;
             $schedule = $employee?->getScheduleForDate($group->last()->date);
             $expected = $group->pluck('expected_check_in')->filter()->map(fn ($time) => substr((string) $time, 0, 5))->unique()->implode(', ');
-            $actual = $group->pluck('check_in_time')->filter()->map(fn ($time) => $time instanceof \DateTimeInterface ? $time->format('H:i') : substr((string) $time, 11, 5))->sort()->values();
+            $actual = $group->pluck('check_in_time')->filter()->map(fn ($time) => Carbon::parse($time instanceof \DateTimeInterface ? $time->format('H:i:s') : (string) $time)->format('H:i'))->sort()->values();
 
             $this->line(sprintf(
                 '#%d %s | %s | %d día(s), %d min en promedio | esperado: %s | entra: %s a %s | horario fijo: %s',
