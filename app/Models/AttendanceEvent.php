@@ -266,7 +266,7 @@ class AttendanceEvent extends Model
         return match ($last) {
             null => ['check_in'],
             'check_in' => ['break_start', 'check_out'],
-            'break_start' => ['break_end'],
+            'break_start' => ['break_end', 'check_out'],
             'break_end' => ['break_start', 'check_out'],
             'check_out' => ['check_in'],
             default => ['check_in'],

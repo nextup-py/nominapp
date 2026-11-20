@@ -18,7 +18,7 @@ Las ausencias registran los días en que un empleado no asistió sin justificaci
 
 ![Detalle de una ausencia con sus acciones](/docs-images/09-ausencia-detalle.png)
 
-1. Ir a **Asistencias → Ausencias** (el menú muestra como insignia **todas** las ausencias pendientes, sin importar el día en que se detectaron)
+1. Ir a **Asistencias → Ausencias** (la insignia del menú y la tarjeta de **Por resolver** cuentan las ausencias pendientes de los **últimos 30 días**, para que el historial sin resolver no tape lo urgente; el listado abre en **Por revisar** y las más antiguas están en **Todas las pendientes**)
 2. Resolver la ausencia de una de dos formas:
    - **Desde la lista:** en la fila, menú **Resolver** (ícono de check) con las tres acciones de abajo, sin abrir el detalle.
    - **Desde el detalle:** clic sobre la ausencia; las mismas acciones están en el encabezado.
@@ -70,7 +70,7 @@ Desde el listado, seleccionando varias ausencias con el checkbox, están disponi
 - **Justificar seleccionadas** — justifica en bloque (requiere que cada una tenga cómo justificarse).
 - **Marcar injustificadas** — marca en bloque y genera las deducciones correspondientes.
 
-El listado también tiene pestañas para filtrar rápido: **Todas**, **Pendientes**, **Justificadas**, **Injustificadas**.
+El listado también tiene pestañas para filtrar rápido: **Todas**, **Por revisar (últimos 30 días)**, **Todas las pendientes**, **Justificadas**, **Injustificadas**.
 
 **Nueva Ausencia** (botón del encabezado): permite crear manualmente el registro de ausencia para un día que el sistema ya marcó como ausente (`AttendanceDay` en estado "ausente") pero que todavía no tiene un registro de `Absence` asociado — un caso excepcional de limpieza de datos, no la forma normal en que se generan las ausencias.
 

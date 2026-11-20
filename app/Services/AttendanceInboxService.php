@@ -64,11 +64,11 @@ class AttendanceInboxService
 
         if (AbsenceResource::canViewAny()) {
             $sections[] = self::section(
-                'absences', 'Ausencias por revisar', 'Ausencias detectadas que RR.HH. todavía no justificó ni marcó como injustificadas.',
+                'absences', 'Ausencias por revisar', 'Ausencias de los últimos '.AttendanceDay::ATTENTION_WINDOW_DAYS.' días que RR.HH. todavía no justificó ni marcó como injustificadas (las más antiguas siguen en el listado de Ausencias).',
                 'heroicon-o-user-minus', 'warning',
-                Absence::query()->where('status', 'pending'),
+                Absence::query()->pendingToReview(),
                 'created_at',
-                AbsenceResource::getUrl('index', ['activeTab' => 'pending']),
+                AbsenceResource::getUrl('index', ['activeTab' => 'to_review']),
             );
         }
 

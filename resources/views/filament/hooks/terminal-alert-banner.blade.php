@@ -14,5 +14,14 @@
         </strong>
         {{ collect($terminals)->map(fn ($t) => $t['name'].($t['branch'] ? " ({$t['branch']})" : '').' — '.['unlinked' => 'sin vincular', 'stale' => 'sin conexión', 'outside' => 'fuera de la sucursal'][$t['status']])->implode('; ') }}.
         <a href="{{ \App\Filament\Resources\TerminalResource::getUrl('index') }}">Ver terminales</a>
+        @php($waiting = collect($terminals)->where('status', 'unlinked')->where('pending', '>', 0))
+        @if ($waiting->isNotEmpty())
+            <div style="margin-top: .5rem;">
+                <strong>Esperan aprobación:</strong>
+                {{ $waiting->map(fn ($t) => $t['name'].' ('.$t['pending'].($t['pending'] === 1 ? ' código' : ' códigos').')')->implode('; ') }}.
+                Sin aprobar, nadie puede marcar ahí.
+                <a href="{{ \App\Filament\Pages\TerminalPairingInbox::getUrl() }}">Aprobar ahora</a>
+            </div>
+        @endif
     </div>
 @endif

@@ -76,3 +76,25 @@ it('sin terminales con problemas no hay cartel', function () {
 
     expect(trim(view('filament.hooks.terminal-alert-banner')->render()))->toBe('');
 });
+
+it('cuenta los códigos de vinculación pendientes de un terminal sin vincular y el cartel invita a aprobarlos', function () {
+    $terminal = bannerTerminal('Terminal Luque Test', false);
+    $terminal->pairingRequests()->create([
+        'code' => 'ABCDEF',
+        'poll_secret_hash' => hash('sha256', 'x'),
+        'status' => 'pending',
+        'expires_at' => now()->addMinutes(8),
+        'ip_address' => '127.0.0.1',
+    ]);
+    TerminalAttentionBanner::forget();
+
+    $item = collect(TerminalAttentionBanner::items())->firstWhere('id', $terminal->id);
+
+    expect($item['status'])->toBe('unlinked')
+        ->and($item['pending'])->toBe(1);
+
+    $this->actingAs(bannerManager());
+    $html = view('filament.hooks.terminal-alert-banner')->render();
+
+    expect($html)->toContain('Esperan aprobación')->toContain('Aprobar ahora');
+});

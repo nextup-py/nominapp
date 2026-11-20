@@ -523,7 +523,7 @@ class AbsenceResource extends Resource
      */
     public static function getNavigationBadge(): ?string
     {
-        $pendingCount = Absence::query()->where('status', 'pending')->count();
+        $pendingCount = Absence::query()->pendingToReview()->count();
 
         return $pendingCount > 0 ? (string) $pendingCount : null;
     }
@@ -541,6 +541,6 @@ class AbsenceResource extends Resource
      */
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Ausencias pendientes de revisión';
+        return 'Ausencias pendientes de revisión de los últimos '.AttendanceDay::ATTENTION_WINDOW_DAYS.' días';
     }
 }

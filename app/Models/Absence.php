@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\HtmlString;
@@ -157,6 +158,20 @@ class Absence extends Model implements Auditable
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
+    }
+
+    /**
+     * Pendientes de revisar: ausencias pendientes cuya jornada cae dentro de la ventana de atención
+     * (`AttendanceDay::ATTENTION_WINDOW_DAYS`). Lo más viejo sigue en el listado, pero no se destaca en «Por resolver»
+     * ni en la insignia del menú: un historial sin resolver taparía lo urgente.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePendingToReview($query)
+    {
+        return $query->where('absences.status', 'pending')
+            ->whereHas('attendanceDay', fn ($day) => $day->where('attendance_days.date', '>=', AttendanceDay::attentionWindowStart()));
     }
 
     /**

@@ -148,3 +148,19 @@ it('muestra "Todo al día" cuando no hay nada pendiente', function () {
 
     expect(AttendanceInbox::getNavigationBadge())->toBeNull();
 });
+
+it('las ausencias pendientes más viejas que la ventana no cuentan en Por resolver ni en la insignia', function () {
+    $employee = inboxEmployee();
+    $recent = inboxDay($employee, 3);
+    $old = inboxDay($employee, AttendanceDay::ATTENTION_WINDOW_DAYS + 20);
+    Absence::create(['employee_id' => $employee->id, 'attendance_day_id' => $recent->id, 'status' => 'pending']);
+    Absence::create(['employee_id' => $employee->id, 'attendance_day_id' => $old->id, 'status' => 'pending']);
+
+    expect(Absence::pendingToReview()->count())->toBe(1)
+        ->and(Absence::where('status', 'pending')->count())->toBe(2);
+
+    $this->actingAs(tap(User::factory()->create(), fn (User $u) => $u->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+
+    $section = collect(AttendanceInboxService::sections())->firstWhere('key', 'absences');
+    expect($section['count'])->toBe(1);
+});
