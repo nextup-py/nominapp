@@ -447,6 +447,10 @@ class AttendanceDayResource extends Resource
 
                     AttendanceDayActions::revokeTardinessBulk(),
 
+                    AttendanceDayActions::dismissOvertimeBulk(),
+
+                    AttendanceDayActions::dismissTardinessBulk(),
+
                     self::getCloseOpenShiftsBulkAction(),
 
                     self::getDiscardUnscheduledDaysBulkAction(),
