@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Absence;
 use App\Models\AttendanceDay;
 use App\Models\AttendanceEvent;
 use App\Models\Branch;
@@ -988,4 +989,45 @@ it('attendance:review-long-lates lista solo atrasos pendientes de más de 60 min
         ->and($output)->toContain('esperado: 06:00')
         ->and($output)->toContain('entra: 14:00 a 14:00')
         ->and((int) $day->fresh()->late_minutes)->toBe($before);
+});
+
+it('attendance:discard-branch-backlog limpia los pendientes de una sucursal y no toca otras ni lo protegido', function () {
+    seedAttSettings();
+    app(GeneralSettings::class)->attendance_late_tolerance_minutes = 5;
+    $admin = App\Models\User::factory()->create();
+
+    $pendingDay = function (Employee $employee, array $attributes = []) {
+        $day = makeAttDay($employee, now()->subDays(2)->toDateString(), ['expected_check_in' => '07:00:00', 'expected_check_out' => '15:00:00', 'expected_hours' => 8.0] + $attributes);
+        addEvent($day, 'check_in', '17:30:00');
+        AttendanceCalculator::apply($day);
+        $day->save();
+
+        return $day->fresh();
+    };
+
+    $lab = makeAttEmployee();
+    $lab->branch->update(['name' => 'LABORATORIO TEST']);
+    $other = makeAttEmployee();
+
+    $labDay = $pendingDay($lab);
+    $protectedDay = $pendingDay(makeAttEmployee(), ['manual_adjustment' => true]);
+    $protectedDay->employee->update(['branch_id' => $lab->branch_id]);
+    $otherDay = $pendingDay($other);
+
+    $absentDay = makeAttDay($lab, now()->subDays(3)->toDateString());
+    $absence = Absence::firstOrCreate(['attendance_day_id' => $absentDay->id], ['employee_id' => $lab->id, 'status' => 'pending']);
+
+    expect($labDay->late_minutes)->toBeGreaterThan(0);
+
+    Artisan::call('attendance:discard-branch-backlog', ['--branch' => 'LABORATORIO TEST', '--reason' => 'Sin terminal', '--user' => $admin->id, '--dry-run' => true]);
+    expect($labDay->fresh()->excluded_from_calculation)->toBeFalsy()
+        ->and($absence->fresh()->status)->toBe('pending');
+
+    Artisan::call('attendance:discard-branch-backlog', ['--branch' => 'LABORATORIO TEST', '--reason' => 'Sin terminal', '--user' => $admin->id]);
+
+    expect($labDay->fresh()->excluded_from_calculation)->toBeTrue()
+        ->and($labDay->fresh()->exclusion_reason)->toBe('Sin terminal')
+        ->and($protectedDay->fresh()->excluded_from_calculation)->toBeFalsy()
+        ->and($otherDay->fresh()->excluded_from_calculation)->toBeFalsy()
+        ->and($absence->fresh()->status)->toBe('justified');
 });
