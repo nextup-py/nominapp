@@ -962,3 +962,29 @@ it('attendance:reapply-tolerance pone en 0 las extras y tardanzas pendientes den
         ->and((int) $normal->fresh()->late_minutes)->toBe(0)
         ->and((float) $protected->fresh()->extra_hours)->toBe(0.17);
 });
+
+it('attendance:review-long-lates lista solo atrasos pendientes de más de 60 minutos y no cambia nada', function () {
+    seedAttSettings();
+    app(GeneralSettings::class)->attendance_late_tolerance_minutes = 5;
+
+    $day = makeAttDay(makeAttEmployee(), now()->subDays(2)->toDateString(), ['expected_check_in' => '06:00:00', 'expected_check_out' => '14:00:00', 'expected_hours' => 8.0]);
+    addEvent($day, 'check_in', '14:00:00');
+    addEvent($day, 'check_out', '22:00:00');
+    AttendanceCalculator::apply($day);
+    $day->save();
+
+    $short = makeAttDay(makeAttEmployee(), now()->subDays(2)->toDateString(), ['expected_check_in' => '08:00:00', 'expected_check_out' => '17:00:00', 'expected_hours' => 9.0]);
+    addEvent($short, 'check_in', '08:20:00');
+    addEvent($short, 'check_out', '17:00:00');
+    AttendanceCalculator::apply($short);
+    $short->save();
+
+    $before = (int) $day->fresh()->late_minutes;
+    $exitCode = Artisan::call('attendance:review-long-lates');
+    $output = Artisan::output();
+
+    expect($exitCode)->toBe(0)
+        ->and($output)->toContain('Personas con atrasos de más de 60 min: 1')
+        ->and($output)->toContain('esperado: 06:00')
+        ->and((int) $day->fresh()->late_minutes)->toBe($before);
+});
