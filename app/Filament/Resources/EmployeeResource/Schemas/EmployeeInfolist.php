@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\EmployeeResource\Schemas;
 
+use App\Models\AttendanceEvent;
 use App\Models\Employee;
 use App\Models\FaceEnrollment;
 use App\Services\EmployeeProfileCompleteness;
@@ -306,6 +307,38 @@ final class EmployeeInfolist
                         ->label('Última conexión del celular')
                         ->since()
                         ->placeholder('Nunca se conectó'),
+
+                    TextEntry::make('_mark_channel')
+                        ->label('Marca con (últimos '.Employee::MARK_CHANNEL_DAYS.' días)')
+                        ->getStateUsing(fn (Employee $record) => Employee::getMarkChannelLabels()[$record->markChannel()])
+                        ->badge()
+                        ->color(fn (Employee $record) => Employee::getMarkChannelColors()[$record->markChannel()]),
+
+                    TextEntry::make('_mark_counts')
+                        ->label('Marcaciones por canal')
+                        ->getStateUsing(function (Employee $record): string {
+                            $counts = $record->markCounts();
+
+                            return "Terminal {$counts['terminal']} · Celular {$counts['mobile']} · Manual {$counts['manual']}";
+                        }),
+
+                    TextEntry::make('_last_terminal_mark')
+                        ->label('Última marcación en terminal')
+                        ->getStateUsing(fn (Employee $record): string => self::describeLastMark($record->lastMark('terminal')))
+                        ->columnSpan(2),
+
+                    TextEntry::make('_last_mobile_mark')
+                        ->label('Última marcación con celular')
+                        ->getStateUsing(fn (Employee $record): string => self::describeLastMark($record->lastMark('mobile')))
+                        ->columnSpan(2),
+
+                    TextEntry::make('_mark_mismatch')
+                        ->label('Atención')
+                        ->getStateUsing(fn (): string => 'Marcó con el celular en los últimos '.Employee::MARK_CHANNEL_DAYS.' días, pero hoy no lo tiene habilitado. Si debe seguir marcando así, usar Habilitar celular en Más acciones.')
+                        ->color('warning')
+                        ->icon('heroicon-o-exclamation-triangle')
+                        ->columnSpanFull()
+                        ->visible(fn (Employee $record): bool => $record->hasMobileMarkMismatch()),
                 ])
                 ->collapsible(),
 
@@ -323,5 +356,19 @@ final class EmployeeInfolist
                 ])
                 ->collapsible(),
         ]);
+    }
+
+    /**
+     * Texto de una marcación para la ficha: fecha y hora, con el terminal o la sucursal donde se hizo.
+     */
+    private static function describeLastMark(?AttendanceEvent $event): string
+    {
+        if ($event === null) {
+            return 'Sin marcaciones';
+        }
+
+        $where = $event->terminal?->name ?? $event->branch_name;
+
+        return $event->recorded_at->format('d/m/Y H:i').($where ? " · {$where}" : '');
     }
 }

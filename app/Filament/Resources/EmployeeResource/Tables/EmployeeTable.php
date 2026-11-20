@@ -40,7 +40,7 @@ final class EmployeeTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['branch.company', 'activeContract'])->withExists(['addresses', 'bankAccounts'])->withLatestConsentVersion())
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['branch.company', 'activeContract'])->withExists(['addresses', 'bankAccounts'])->withLatestConsentVersion()->withMarkChannelCounts())
             ->columns([
                 ImageColumn::make('photo')
                     ->label('Foto')
@@ -138,14 +138,14 @@ final class EmployeeTable
                     ->color('info')
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('mobile_status')
-                    ->label('Celular')
-                    ->getStateUsing(fn (Employee $record): string => Employee::getMobileStatusLabels()[$record->mobileStatus()])
+                TextColumn::make('mark_channel')
+                    ->label('Marca con')
+                    ->getStateUsing(fn (Employee $record): string => Employee::getMarkChannelLabels()[$record->markChannel()])
                     ->badge()
-                    ->color(fn (Employee $record): string => Employee::getMobileStatusColors()[$record->mobileStatus()])
-                    ->tooltip(fn (Employee $record): ?string => $record->mobile_last_heartbeat_at
-                        ? 'Última conexión: '.$record->mobile_last_heartbeat_at->format('d/m/Y H:i')
-                        : null)
+                    ->color(fn (Employee $record): string => Employee::getMarkChannelColors()[$record->markChannel()])
+                    ->description(fn (Employee $record): string => 'Celular: '.Employee::getMobileStatusLabels()[$record->mobileStatus()])
+                    ->tooltip(fn (Employee $record): string => 'Canal con el que marcó en los últimos '.Employee::MARK_CHANNEL_DAYS.' días'
+                        .($record->mobile_last_heartbeat_at ? '. Última conexión del celular: '.$record->mobile_last_heartbeat_at->format('d/m/Y H:i') : ''))
                     ->toggleable(),
 
                 TextColumn::make('mobile_marking_allowed')
@@ -292,6 +292,13 @@ final class EmployeeTable
                         false: fn (Builder $query) => $query->mobileMarking(false),
                         blank: fn (Builder $query) => $query,
                     ),
+
+                SelectFilter::make('mark_channel')
+                    ->label('Marca con')
+                    ->options(Employee::getMarkChannelLabels())
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->markChannel($data['value'])
+                        : $query),
 
                 SelectFilter::make('mobile_status')
                     ->label('Estado del celular')

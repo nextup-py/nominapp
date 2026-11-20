@@ -1684,6 +1684,154 @@ class Employee extends Model implements AuthenticatableContract
         };
     }
 
+    /** Días hacia atrás con los que se calcula por qué canal marca un empleado. */
+    public const MARK_CHANNEL_DAYS = 30;
+
+    /** @return array<string, string> */
+    public static function getMarkChannelLabels(): array
+    {
+        return [
+            'terminal' => 'Terminal',
+            'mobile' => 'Celular',
+            'both' => 'Ambos',
+            'none' => 'Ninguno',
+            'new' => 'Nuevo',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function getMarkChannelColors(): array
+    {
+        return [
+            'terminal' => 'success',
+            'mobile' => 'info',
+            'both' => 'primary',
+            'none' => 'warning',
+            'new' => 'gray',
+        ];
+    }
+
+    /**
+     * Agrega `terminal_marks` y `mobile_marks`: marcaciones del empleado por canal en los últimos
+     * `MARK_CHANNEL_DAYS` días (las manuales no cuentan). Evita una consulta por fila en el listado.
+     *
+     * @param  Builder<Employee>  $query
+     * @return Builder<Employee>
+     */
+    public function scopeWithMarkChannelCounts(Builder $query): Builder
+    {
+        if (empty($query->getQuery()->columns)) {
+            $query->select('employees.*');
+        }
+
+        $since = now()->subDays(self::MARK_CHANNEL_DAYS);
+        $count = fn (string $source) => AttendanceEvent::query()
+            ->selectRaw('count(*)')
+            ->whereColumn('attendance_events.employee_id', 'employees.id')
+            ->where('attendance_events.source', $source)
+            ->where('attendance_events.recorded_at', '>=', $since);
+
+        return $query->addSelect(['terminal_marks' => $count('terminal'), 'mobile_marks' => $count('mobile')]);
+    }
+
+    /**
+     * Marcaciones del empleado por canal en los últimos `MARK_CHANNEL_DAYS` días.
+     *
+     * @return array{terminal: int, mobile: int, manual: int}
+     */
+    public function markCounts(): array
+    {
+        $counts = AttendanceEvent::query()
+            ->where('employee_id', $this->id)
+            ->where('recorded_at', '>=', now()->subDays(self::MARK_CHANNEL_DAYS))
+            ->selectRaw('source, count(*) as total')
+            ->groupBy('source')
+            ->pluck('total', 'source');
+
+        return [
+            'terminal' => (int) ($counts['terminal'] ?? 0),
+            'mobile' => (int) ($counts['mobile'] ?? 0),
+            'manual' => (int) ($counts['manual'] ?? 0),
+        ];
+    }
+
+    /**
+     * Canal con el que realmente marca en los últimos `MARK_CHANNEL_DAYS` días: `terminal`, `mobile`, `both` o
+     * `none`; `new` si no marcó nada y su contrato vigente empezó dentro de esa ventana. Misma definición que
+     * `scopeMarkChannel()` (mantener ambas en sincronía). Usa `scopeWithMarkChannelCounts()` si el listado la trajo.
+     *
+     * @return 'terminal'|'mobile'|'both'|'none'|'new'
+     */
+    public function markChannel(): string
+    {
+        if (array_key_exists('terminal_marks', $this->attributes) && array_key_exists('mobile_marks', $this->attributes)) {
+            $terminal = (int) $this->attributes['terminal_marks'];
+            $mobile = (int) $this->attributes['mobile_marks'];
+        } else {
+            ['terminal' => $terminal, 'mobile' => $mobile] = $this->markCounts();
+        }
+
+        if ($terminal > 0 && $mobile > 0) {
+            return 'both';
+        }
+
+        if ($terminal > 0) {
+            return 'terminal';
+        }
+
+        if ($mobile > 0) {
+            return 'mobile';
+        }
+
+        $start = $this->activeContract?->start_date;
+
+        return $start !== null && $start->gt(now()->subDays(self::MARK_CHANNEL_DAYS)) ? 'new' : 'none';
+    }
+
+    /**
+     * Filtra por el canal con el que marca (misma definición que `markChannel()`, resuelta en SQL).
+     *
+     * @param  Builder<Employee>  $query
+     * @return Builder<Employee>
+     */
+    public function scopeMarkChannel(Builder $query, string $channel): Builder
+    {
+        $since = now()->subDays(self::MARK_CHANNEL_DAYS);
+        $marked = fn (string $source) => fn ($sub) => $sub->selectRaw('1')->from('attendance_events')
+            ->whereColumn('attendance_events.employee_id', 'employees.id')
+            ->where('attendance_events.source', $source)
+            ->where('attendance_events.recorded_at', '>=', $since);
+        $newContract = fn ($sub) => $sub->selectRaw('1')->from('contracts')
+            ->whereColumn('contracts.employee_id', 'employees.id')
+            ->whereIn('contracts.status', ['active', 'suspended'])
+            ->where('contracts.start_date', '>', $since->toDateString());
+
+        return match ($channel) {
+            'terminal' => $query->whereExists($marked('terminal'))->whereNotExists($marked('mobile')),
+            'mobile' => $query->whereNotExists($marked('terminal'))->whereExists($marked('mobile')),
+            'both' => $query->whereExists($marked('terminal'))->whereExists($marked('mobile')),
+            'new' => $query->whereNotExists($marked('terminal'))->whereNotExists($marked('mobile'))->whereExists($newContract),
+            default => $query->whereNotExists($marked('terminal'))->whereNotExists($marked('mobile'))->whereNotExists($newContract),
+        };
+    }
+
+    /** Última marcación del empleado por el canal indicado (`terminal` o `mobile`), con su terminal. */
+    public function lastMark(string $source): ?AttendanceEvent
+    {
+        return AttendanceEvent::query()
+            ->with('terminal')
+            ->where('employee_id', $this->id)
+            ->where('source', $source)
+            ->latest('recorded_at')
+            ->first();
+    }
+
+    /** Indica si marcó con el celular en la ventana pero hoy no tiene el celular habilitado (típico de antes del modo opcional). */
+    public function hasMobileMarkMismatch(): bool
+    {
+        return ! $this->canMarkFromMobile() && $this->markCounts()['mobile'] > 0;
+    }
+
     /**
      * Guarda el teléfono siempre en el formato único del sistema (ver `PhoneNormalizer`), sea cual sea la vía de carga.
      */
