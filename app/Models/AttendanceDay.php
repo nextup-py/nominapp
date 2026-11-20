@@ -25,6 +25,8 @@ class AttendanceDay extends Model implements Auditable
         'excluded_from_calculation',
         'exclusion_reason',
         'tardiness_deduction_approved',
+        'overtime_dismissed_at',
+        'tardiness_dismissed_at',
         'notes',
         'manual_adjustment',
         'extra_hours_diurnas',
@@ -61,6 +63,8 @@ class AttendanceDay extends Model implements Auditable
         'exclusion_reason',
         'overtime_limit_exceeded',
         'tardiness_deduction_approved',
+        'overtime_dismissed_at',
+        'tardiness_dismissed_at',
         'on_vacation',
         'justified_absence',
         'is_calculated',
@@ -93,6 +97,8 @@ class AttendanceDay extends Model implements Auditable
         'justified_absence' => 'boolean',
         'is_calculated' => 'boolean',
         'calculated_at' => 'datetime',
+        'overtime_dismissed_at' => 'datetime',
+        'tardiness_dismissed_at' => 'datetime',
     ];
 
     public function employee(): BelongsTo
@@ -241,10 +247,10 @@ class AttendanceDay extends Model implements Auditable
     public const ATTENTION_WINDOW_DAYS = 30;
 
     /** Condición SQL de tardanza con descuento todavía sin decidir por RR.HH. */
-    public const PENDING_TARDINESS_SQL = 'attendance_days.late_minutes > 0 and coalesce(attendance_days.tardiness_deduction_approved, 0) = 0';
+    public const PENDING_TARDINESS_SQL = 'attendance_days.late_minutes > 0 and coalesce(attendance_days.tardiness_deduction_approved, 0) = 0 and attendance_days.tardiness_dismissed_at is null';
 
     /** Condición SQL de horas extra sin aprobar (un doble turno aceptado como jornada normal no cuenta). */
-    public const PENDING_OVERTIME_SQL = 'attendance_days.extra_hours > 0 and coalesce(attendance_days.overtime_approved, 0) = 0 and coalesce(attendance_days.second_shift_regular, 0) = 0';
+    public const PENDING_OVERTIME_SQL = 'attendance_days.extra_hours > 0 and coalesce(attendance_days.overtime_approved, 0) = 0 and coalesce(attendance_days.second_shift_regular, 0) = 0 and attendance_days.overtime_dismissed_at is null';
 
     /**
      * Condición SQL de jornada calculada con marcaciones pero sin horario esperado ese día: el empleado no
@@ -395,11 +401,11 @@ class AttendanceDay extends Model implements Auditable
             $reasons[] = 'Sin salida';
         }
 
-        if ((int) $this->late_minutes > 0 && ! $this->tardiness_deduction_approved) {
+        if ((int) $this->late_minutes > 0 && ! $this->tardiness_deduction_approved && ! $this->tardiness_dismissed_at) {
             $reasons[] = 'Tardanza por aprobar';
         }
 
-        if ((float) $this->extra_hours > 0 && ! $this->overtime_approved && ! $this->second_shift_regular) {
+        if ((float) $this->extra_hours > 0 && ! $this->overtime_approved && ! $this->second_shift_regular && ! $this->overtime_dismissed_at) {
             $reasons[] = 'Extras por aprobar';
         }
 

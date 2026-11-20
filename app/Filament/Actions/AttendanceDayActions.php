@@ -596,6 +596,80 @@ class AttendanceDayActions
             });
     }
 
+    /** Acción masiva `dismiss_overtime`: da por revisadas las horas extra sin aprobarlas (no se pagan y salen de «Por resolver»). */
+    public static function dismissOvertimeBulk(): BulkAction
+    {
+        return BulkAction::make('dismiss_overtime')
+            ->authorize(fn (): bool => AttendanceDayResource::canManageDays())
+            ->label('Descartar horas extra')
+            ->icon('heroicon-o-archive-box-x-mark')
+            ->color('gray')
+            ->requiresConfirmation()
+            ->modalHeading('Descartar horas extra seleccionadas')
+            ->modalDescription('Las horas extra pendientes quedan revisadas y sin aprobar: no se pagan y dejan de aparecer como pendientes. El dato se conserva en la jornada.')
+            ->modalSubmitActionLabel('Sí, descartar')
+            ->deselectRecordsAfterCompletion()
+            ->action(function (Collection $records) {
+                $dismissed = 0;
+                $skipped = 0;
+                $locked = 0;
+                $closer = app(OpenShiftCloser::class);
+                foreach ($records as $day) {
+                    if ($closer->isPayrollLocked($day)) {
+                        $locked++;
+                    } elseif ($day->extra_hours > 0 && ! $day->overtime_approved && ! $day->overtime_dismissed_at) {
+                        $day->overtime_dismissed_at = now();
+                        $day->save();
+                        $dismissed++;
+                    } else {
+                        $skipped++;
+                    }
+                }
+                Notification::make()
+                    ->title('Descarte completado')
+                    ->body("Descartadas: {$dismissed} | Omitidas: {$skipped}".self::lockedSuffix($locked))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /** Acción masiva `dismiss_tardiness`: da por revisada la tardanza sin descontarla (sale de «Por resolver»). */
+    public static function dismissTardinessBulk(): BulkAction
+    {
+        return BulkAction::make('dismiss_tardiness')
+            ->authorize(fn (): bool => AttendanceDayResource::canManageDays())
+            ->label('Descartar tardanza')
+            ->icon('heroicon-o-archive-box-x-mark')
+            ->color('gray')
+            ->requiresConfirmation()
+            ->modalHeading('Descartar tardanzas seleccionadas')
+            ->modalDescription('La tardanza pendiente queda revisada sin descuento: no se descuenta en nómina y deja de aparecer como pendiente. El dato se conserva en la jornada.')
+            ->modalSubmitActionLabel('Sí, descartar')
+            ->deselectRecordsAfterCompletion()
+            ->action(function (Collection $records) {
+                $dismissed = 0;
+                $skipped = 0;
+                $locked = 0;
+                $closer = app(OpenShiftCloser::class);
+                foreach ($records as $day) {
+                    if ($closer->isPayrollLocked($day)) {
+                        $locked++;
+                    } elseif ($day->late_minutes > 0 && ! $day->tardiness_deduction_approved && ! $day->tardiness_dismissed_at) {
+                        $day->tardiness_dismissed_at = now();
+                        $day->save();
+                        $dismissed++;
+                    } else {
+                        $skipped++;
+                    }
+                }
+                Notification::make()
+                    ->title('Descarte completado')
+                    ->body("Descartadas: {$dismissed} | Omitidas: {$skipped}".self::lockedSuffix($locked))
+                    ->success()
+                    ->send();
+            });
+    }
+
     /** Acción masiva `revoke_tardiness`. */
     public static function revokeTardinessBulk(): BulkAction
     {

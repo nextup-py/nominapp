@@ -460,13 +460,15 @@ El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Ca
 
 | Pestaña | Descripción |
 |---------|-------------|
-| **Requieren atención** | Jornadas de los **últimos 30 días** que están **sin salida** (de días anteriores a hoy), con **tardanza por aprobar**, con **horas extra por aprobar** o **sin horario ese día**. Al resolver una (aprobar, corregir la salida, aceptar el doble turno) sale de la lista |
+| **Requieren atención** | Jornadas de los **últimos 30 días** que están **sin salida** (de días anteriores a hoy), con **tardanza por aprobar**, con **horas extra por aprobar** o **sin horario ese día**. Al resolver una (aprobar, **descartar**, corregir la salida, aceptar el doble turno) sale de la lista |
 | **Ayer** | Todas las jornadas de ayer, para revisar el día completo |
 | **Hoy** | Las jornadas de hoy, en curso |
 | **Todos** | Todos los registros presentes |
 | **Calculados** | Registros donde ya se ejecutó el cálculo de horas |
 | **Sin calcular** | Registros pendientes de cálculo (recién creados o con eventos nuevos) |
 | **Incompletos** | Registros sin horas calculadas (por ejemplo, con entrada y sin salida) |
+
+> **Descartar horas extra y tardanza.** Para dar por revisadas, **sin pagarlas ni descontarlas**, las horas extra o la tardanza pendientes de varias jornadas, seleccionarlas y usar, en el menú de acciones masivas, **Descartar horas extra** o **Descartar tardanza** (requiere permiso para editar asistencias; omite las jornadas con nómina generada). La jornada conserva el dato: solo deja de figurar como pendiente en **Por resolver** y en **Requieren atención**. Para aprobar el pago o el descuento, usar **Aprobar**.
 
 > **Sin horario ese día:** un empleado sin horario asignado puede marcar entrada y salida con normalidad, pero la jornada se calcula sin horas esperadas (sin tardanza ni extras) y no se le detectan faltas. Esas jornadas quedan marcadas con el motivo *Sin horario ese día* hasta que se le asigne un horario (y, si corresponde, se recalculen). Además, **cada día a las 08:55** la campanita avisa a quienes pueden asignar horarios cuántos empleados activos siguen sin uno (no se repite mientras el aviso anterior esté sin leer). Quien no tiene horario sí puede marcar **Inicio descanso** y **Fin descanso** (el descanso real se descuenta de las horas trabajadas); el botón de inicio de descanso solo se oculta cuando el turno de ese día no tiene descanso configurado o cuando el cargo del empleado tiene desactivado **Marca descanso** (ver **Organización → Cargos**). En esos cargos las horas netas descuentan el descanso del horario si el empleado no marcó uno real.
 
