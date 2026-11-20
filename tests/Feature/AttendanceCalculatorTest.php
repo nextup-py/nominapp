@@ -935,3 +935,30 @@ it('no cuenta como hora extra el tiempo dentro de la tolerancia y pasada cuenta 
     app(GeneralSettings::class)->attendance_overtime_tolerance_minutes = 0;
     expect($extra('17:10:00'))->toBe(0.17);
 });
+
+it('attendance:reapply-tolerance pone en 0 las extras y tardanzas pendientes dentro de la tolerancia, sin tocar las protegidas', function () {
+    seedAttSettings();
+    app(GeneralSettings::class)->attendance_overtime_tolerance_minutes = 15;
+    app(GeneralSettings::class)->attendance_late_tolerance_minutes = 5;
+
+    $stale = function (array $attributes = []) {
+        $day = makeAttDay(makeAttEmployee(), now()->subDays(2)->toDateString(), ['expected_check_in' => '08:00:00', 'expected_check_out' => '17:00:00', 'expected_hours' => 9.0] + $attributes);
+        addEvent($day, 'check_in', '08:03:00');
+        addEvent($day, 'check_out', '17:10:00');
+        $day->update(['extra_hours' => 0.17, 'late_minutes' => 3, 'is_calculated' => true]);
+
+        return $day->fresh();
+    };
+
+    $normal = $stale();
+    $protected = $stale(['manual_adjustment' => true]);
+
+    Artisan::call('attendance:reapply-tolerance', ['--dry-run' => true]);
+    expect((float) $normal->fresh()->extra_hours)->toBe(0.17);
+
+    Artisan::call('attendance:reapply-tolerance');
+
+    expect((float) $normal->fresh()->extra_hours)->toBe(0.0)
+        ->and((int) $normal->fresh()->late_minutes)->toBe(0)
+        ->and((float) $protected->fresh()->extra_hours)->toBe(0.17);
+});
