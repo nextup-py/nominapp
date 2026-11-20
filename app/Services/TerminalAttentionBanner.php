@@ -15,6 +15,9 @@ class TerminalAttentionBanner
     /** Segundos que se reutiliza el resultado. */
     public const CACHE_SECONDS = 60;
 
+    /** Minutos sin latido que debe llevar un terminal para figurar «sin conexión» en el cartel (evita parpadeos por cortes cortos). */
+    public const MIN_OFFLINE_MINUTES = 30;
+
     /**
      * Terminales activos que figuran Sin vincular o Desconectados (los que están fuera de su horario no cuentan).
      *
@@ -52,11 +55,32 @@ class TerminalAttentionBanner
     {
         $connectivity = $terminal->connectivity_status;
 
-        if (in_array($connectivity, ['unlinked', 'stale'], true)) {
+        if ($connectivity === 'unlinked') {
             return $connectivity;
         }
 
+        if ($connectivity === 'stale') {
+            return $terminal->last_heartbeat_at?->diffInMinutes(now()) >= self::MIN_OFFLINE_MINUTES ? 'stale' : 'ok';
+        }
+
         return $connectivity === 'online' && ($terminal->health_snapshot['outside'] ?? false) ? 'outside' : 'ok';
+    }
+
+    /**
+     * Cuántos terminales hay por motivo, para el resumen del cartel (solo los motivos presentes).
+     *
+     * @param  list<array{status: string}>  $items
+     * @return array<string, int>
+     */
+    public static function countsByStatus(array $items): array
+    {
+        $counts = array_count_values(array_column($items, 'status'));
+
+        return array_filter([
+            'stale' => $counts['stale'] ?? 0,
+            'unlinked' => $counts['unlinked'] ?? 0,
+            'outside' => $counts['outside'] ?? 0,
+        ]);
     }
 
     /** Si el usuario actual debe ver el cartel: gestiona terminales y el módulo está disponible para su rol. */

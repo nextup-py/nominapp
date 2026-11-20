@@ -52,6 +52,24 @@ it('lista los terminales sin vincular o sin conexión y no los que están en lí
     expect($names)->toBe(['Caído', 'Sin vínculo']);
 });
 
+it('no muestra un terminal con un corte de menos de 30 minutos y sí uno más largo', function () {
+    bannerTerminal('Corte corto', linked: true, heartbeat: now()->subMinutes(10)->toDateTimeString(), attributes: ['stale_after_minutes' => 5]);
+    bannerTerminal('Corte largo', linked: true, heartbeat: now()->subMinutes(45)->toDateTimeString(), attributes: ['stale_after_minutes' => 5]);
+
+    expect(collect(TerminalAttentionBanner::items())->pluck('name')->all())->toBe(['Corte largo']);
+});
+
+it('el cartel resume por motivo y deja el detalle desplegable', function () {
+    bannerTerminal('Uno', linked: false);
+    bannerTerminal('Dos', linked: true, heartbeat: now()->subHours(5)->toDateTimeString());
+    bannerTerminal('Tres', linked: true, heartbeat: now()->subHours(6)->toDateTimeString());
+
+    $this->actingAs(bannerManager());
+    $html = view('filament.hooks.terminal-alert-banner')->render();
+
+    expect($html)->toContain('3 terminales necesitan atención')->toContain('2 sin conexión · 1 sin vincular')->toContain('Ver el detalle');
+});
+
 it('no cuenta un terminal fuera de su horario de vigilancia', function () {
     $terminal = bannerTerminal('De noche', linked: true, heartbeat: now()->subHours(5)->toDateTimeString());
     $terminal->update(['watch_from' => now()->addHours(3)->format('H:i:s'), 'watch_to' => now()->addHours(5)->format('H:i:s')]);
