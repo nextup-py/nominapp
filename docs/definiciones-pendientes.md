@@ -148,5 +148,13 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - Esteban Pereira (Casa Central) aparece sin ningún contrato cargado; puede ser uno de los contratos eliminados por Lourdes Mendieta (los dos de 20/11 eran de personas que empezaron el 31/08 y 02/09/2026).
 - Acción de RR.HH.: **Renovar** el contrato vencido desde el panel (la acción funciona sobre contratos vencidos y aplica el Art. 53: la segunda renovación pasa a indefinido) y crear el contrato de Esteban Pereira. Los 5 vencidos no se vuelven a activar solos a propósito: el vencimiento automático deja activo al empleado.
 
+## 3h. Preparación para pagar salarios (verificado 21/11)
+- Dos empresas, ambas con RUC, número patronal y cuenta bancaria principal: Federico Portillo y Macro Alliance SRL.
+- Ajustes de nómina cargados: mínimo mensual Gs. 3.044.000, jornal mínimo Gs. 101.467, IPS 9% (código `IPS001`), IRP, topes de extras, préstamos, adelantos y mercadería. Deducciones del catálogo: `ADE001`, `AUS001`, `IPS00`, `IPS001`, `MER001`, `PRE001` (faltan `SUS-DIS` y `LIC001`, que se crean a demanda). Percepciones: 8, con nombres repetidos («plus por cargo» ×2, «Plus Encargada» y «Plus - Encargada»).
+- 129 contratos vigentes, todos mensuales, ninguno sin sueldo; 75 por transferencia y 54 en efectivo. Hay más contratos vigentes (129) que empleados activos con contrato (118): quedan contratos de bajas sin cerrar.
+- Verificador previo de nómina: Federico Portillo: 2 sin IPS, 1 percepción sin IPS, **13 contratos bajo el mínimo**. Macro Alliance: **6 sin contrato (no entran en la nómina)**, 2 sin IPS, 5 percepciones sin IPS y **59 contratos bajo el mínimo**. Ningún caso de pago por débito sin cuenta bancaria.
+- **72 de 129 contratos están por debajo del mínimo legal vigente en el sistema (Gs. 3.044.000).** Probable salario aún al mínimo anterior (Gs. 2.899.048). Pendiente: confirmar con el asesor la fecha de vigencia del nuevo mínimo y actualizar los sueldos.
+- Para pagar desde el sistema falta además: renovar los contratos vencidos, resolver extras, tardanzas y ausencias pendientes, corregir los horarios (sábados de Casa Central y salida de las 18:30) y decidir qué se hace con las 319 cuotas de mercadería vencidas (el calculador solo toma cuotas con vencimiento dentro del período).
+
 ## 4. Deploy a Macro
 - Está pendiente desplegar los últimos commits (columna «Marca con» y aviso semanal de empleados silenciosos). Decisión: después de cerrar estas definiciones.
