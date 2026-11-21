@@ -139,5 +139,9 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - Marcaciones por origen (14 días): terminal ~300 por día, celular 25 a 42, manuales 3 a 13 (bajando; ninguna el 20 y 21/11). Los terminales bajaron de ~335 a ~270–320 desde el 17/11.
 - **Retiros de mercadería en uso intensivo:** 370 aprobados (Gs. 26.007.570), 26 pendientes (Gs. 3.412.826), 4 cancelados y 4 rechazados. Sin nómina generada en el sistema, las cuotas nunca se descuentan. Pendiente: cómo cobra Macro esas cuotas y qué hacer con las cuotas vencidas.
 
+## 3f. Contratos eliminados y cuotas de mercadería (verificado 21/11)
+- Los 3 contratos eliminados por Lourdes Mendieta no se pueden asignar a un empleado desde la auditoría (`Contract` no usa borrado lógico y `$auditInclude` no incluye `employee_id`). Para saber si fueron un error, se revisa el historial de contratos de los 6 empleados activos sin contrato vigente. Pendiente de decidir: guardar `employee_id` en la auditoría de contratos y evitar el borrado de contratos con historial (terminar o renovar en su lugar).
+- **Cuotas de retiros de mercadería:** 370 pendientes por Gs. 26.007.570, de las cuales 319 ya vencidas, ninguna pagada y 4 canceladas. Cada retiro aprobado tiene una cuota y todas siguen pendientes porque la nómina no se genera en el sistema. Pendiente: confirmar cómo cobra Macro esas cuotas y decidir si el sistema debe permitir registrar un cobro por fuera (hoy las cuotas son solo de lectura).
+
 ## 4. Deploy a Macro
 - Está pendiente desplegar los últimos commits (columna «Marca con» y aviso semanal de empleados silenciosos). Decisión: después de cerrar estas definiciones.
