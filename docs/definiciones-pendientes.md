@@ -28,6 +28,18 @@ Lo marcado como **Verificado** salió de consultas de solo lectura en el servido
 5. ¿Norma Báez, Manuel Miranda y María de los Ángeles Cáceres siguen trabajando? Pararon el 05 o 06/11.
 6. Guarambare, Capiata, Itauguá y Luque: configurar «nunca suspender» y abrir la app instalada.
 
+### Verificado el sábado 21/11 (Casa Central y sucursales)
+- Casa Central generó 37 ausencias pendientes en un sábado. De ellas, unas 19 personas trabajaron 0 de los últimos 4 sábados y otras tienen 1 a 3: el horario fijo les asigna el sábado a todos pero se trabaja por turnos. Lo mismo, en menor escala, en Colaboradores Externos (5), Julia Miranda y Itauguá. Sin horario ese día no se generó ausencia (25 casos, correcto).
+- Casa Central, sábado: el horario dice 07:30–12:00 y 17 de 18 personas entraron entre las 08:58 y las 09:16 (90 minutos de atraso falso). Probable inicio real: 09:00.
+- Al menos 7 personas de Casa Central vinieron y quedaron con ausencia porque su marcación (probablemente salida sin entrada) cayó en conflicto de sincronización entre las 11:56 y las 12:26, justo cuando `Terminal Casa Central 1` se reconectó (estuvo sin conexión toda la mañana). Hay además 5 jornadas «presentes» sin entrada registrada.
+- Los terminales de sucursales se caen escalonados entre las 09:54 y las 11:49 y se recuperan casi juntos entre las 11:58 y las 12:55: posible causa común (servidor, red o límites). Sin confirmar.
+- Reporte de RR.HH. de Macro (21/11): en la pantalla de marcación aparece la salida esperada a las 18:00 y muchos salen a las 18:30, en varios locales. Probable horario mal cargado; falta verificar con la consulta de salida esperada contra salida real.
+
+### Pendiente derivado
+- Decidir cómo se manejan los sábados rotativos: patrones de rotación o turnos puntuales en el Planificador, en vez de horario fijo con sábado para todos.
+- Confirmar el horario real de los locales (¿18:00 o 18:30?) y el inicio real del sábado en Casa Central (¿09:00?).
+- Resolver en «Fallos de marcación» los conflictos de Casa Central del 21/11 y justificar o cargar la asistencia de esas personas.
+
 ### Dudas técnicas abiertas
 - Por qué no se generaron ausencias del 16 al 18/11 en Laboratorio y sí el 19 (¿regla `branchCannotMark` de `attendance:check-missing`?).
 - Si una marcación tardía del mismo día resuelve sola una ausencia `pending`.
