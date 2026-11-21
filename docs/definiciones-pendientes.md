@@ -143,5 +143,10 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - Los 3 contratos eliminados por Lourdes Mendieta no se pueden asignar a un empleado desde la auditoría (`Contract` no usa borrado lógico y `$auditInclude` no incluye `employee_id`). Para saber si fueron un error, se revisa el historial de contratos de los 6 empleados activos sin contrato vigente. Pendiente de decidir: guardar `employee_id` en la auditoría de contratos y evitar el borrado de contratos con historial (terminar o renovar en su lugar).
 - **Cuotas de retiros de mercadería:** 370 pendientes por Gs. 26.007.570, de las cuales 319 ya vencidas, ninguna pagada y 4 canceladas. Cada retiro aprobado tiene una cuota y todas siguen pendientes porque la nómina no se genera en el sistema. Pendiente: confirmar cómo cobra Macro esas cuotas y decidir si el sistema debe permitir registrar un cobro por fuera (hoy las cuotas son solo de lectura).
 
+## 3g. Los 6 activos sin contrato vigente (verificado 21/11)
+- 5 tienen un contrato a plazo fijo **vencido y no renovado**: Ninfa Acosta (13/04 a 12/10/2026, vencido hace ~40 días), Marianella Alonso (08/05 a 07/11), María Montserrat Tilleria (08/05 a 07/11), Ramón Cáceres (11/05 a 10/11) y Liliana Arias (03/08 a 03/11, tres meses). Marianella y María Montserrat siguen trabajando (marcaron el 21/11). No tiene que ver con los contratos eliminados.
+- Esteban Pereira (Casa Central) aparece sin ningún contrato cargado; puede ser uno de los contratos eliminados por Lourdes Mendieta (los dos de 20/11 eran de personas que empezaron el 31/08 y 02/09/2026).
+- Acción de RR.HH.: **Renovar** el contrato vencido desde el panel (la acción funciona sobre contratos vencidos y aplica el Art. 53: la segunda renovación pasa a indefinido) y crear el contrato de Esteban Pereira. Los 5 vencidos no se vuelven a activar solos a propósito: el vencimiento automático deja activo al empleado.
+
 ## 4. Deploy a Macro
 - Está pendiente desplegar los últimos commits (columna «Marca con» y aviso semanal de empleados silenciosos). Decisión: después de cerrar estas definiciones.
