@@ -122,5 +122,11 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - Los errores aislados son del deploy del sábado 14/11 entre 06:29 y 08:15 (Sanctum, clave larga, vista, cardinalidad) y de una caída momentánea de MySQL el 16/11 a las 06:43. No hay migraciones pendientes. Desde el 16/11 no hay errores.
 - Las oleadas de terminales sin conexión del 21/11 no dejaron ningún error en el log de Laravel. El log de acceso del servidor web de ese día: 1131 respuestas 200, 88 304, 9 302 y 2 404; ningún 429 ni 5xx, y todos los latidos de terminales respondieron 200. El servidor no rechazó ni falló: la causa está del lado de los equipos o de su red (suspensión, app oculta, sin cargador).
 
+## 3c. Contratos, personal sin preparar y nómina (verificado 21/11)
+- Contratos a plazo fijo que vencen en 45 días (9): Joel Fernández (**24/11**, Casa Central), Marta Noguera (05/12, Mcal. Estigarribia), Lourdes Mendieta (16/12), Richard Paiva (18/12), Yessica Robledo (28/12) y el 31/12 David Domínguez (Casa Central) y Cristian Ruiz, Alexis Jacquet y Maikol Enciso (Laboratorio). Hay que renovar respetando el Art. 53 (máximo un año; la segunda renovación pasa a indefinido).
+- 6 empleados activos sin contrato vigente, y al menos 2 siguen trabajando: María Montserrat Tilleria (Mcal. Estigarribia) y Marianella Alonso (Julia Miranda) marcaron el 21/11; también Ninfa Acosta (Externos), Ramón Cáceres, Liliana Arias y Esteban Pereira (Casa Central). Probable plazo fijo vencido sin renovar (el vencimiento automático deja activo al empleado a propósito).
+- 3 sin horario: Lourdes Mendieta (Casa Central), Claudia Ortiz de Trinidad (Luque, trabajó el 21/11) y Blanca Galeano (Externos).
+- Nómina en el sistema: solo 3 períodos (mayo ×2 en procesamiento y agosto en borrador). Macro no usa la nómina del sistema, así que extras, tardanzas y ausencias hoy son informativas y no afectan ningún pago.
+
 ## 4. Deploy a Macro
 - Está pendiente desplegar los últimos commits (columna «Marca con» y aviso semanal de empleados silenciosos). Decisión: después de cerrar estas definiciones.
