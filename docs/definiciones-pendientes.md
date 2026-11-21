@@ -42,6 +42,14 @@ Lo marcado como **Verificado** salió de consultas de solo lectura en el servido
 - 80 asignaciones vigentes pertenecen a empleados inactivos (Casa Central 46, Mcal. Estigarribia 13, resto repartidas): nunca se cerraron. Impacto bajo, pero conviene un comando de limpieza que las cierre.
 - Todo Casa Central comparte un único horario (sábado 07:30, salida 18:00): causa de fondo de las ausencias de sábado y de las extras falsas de las 18:30.
 
+### Sábados de Casa Central (verificado, últimos 8 sábados)
+No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
+- **A, sábado fijo (~23):** Alcides Fernández, Blanca González, Christian Verón, Clara González, Guillermo Ortigoza, Juan Salinas, Juan Ledezma, Leticia Zapattini, Pedro Martínez, Perla Velázquez, Santiago Sanabria, Silvia Romero, Yessica Robledo (8 de 8) y, con 1 o 2 faltas, Alcides Giménez, Aldo Benítez, Claudio Velázquez, Ever Cardozo, Óscar Cáceres, Osvaldo Chaparro, Samuel Riquelme, Iván Samaniego, Joel Fernández y Jorge Salinas. Casi los mismos que salen a las 18:30 de lunes a viernes.
+- **B, nunca o casi nunca (~21):** generan ausencia falsa cada sábado.
+- **C, intermitente (~14):** bloques de semanas o irregular.
+- Totales por sábado (26/09 a 14/11): 28, 34, 34, 31, 29, 19, 26, 27.
+- **Propuesta:** horario «Casa Central largo + sábado» para A (07:30–18:30, sábado desde las 09:00, a confirmar con Macro); horario «Casa Central sin sábado» para B; C con el horario sin sábado y los sábados que trabajen cargados semana a semana en el Planificador.
+
 ### Pendiente derivado
 - Comando de limpieza: cerrar con fecha de fin las asignaciones de horario vigentes de empleados inactivos (80 en Macro).
 - Decidir cómo se manejan los sábados rotativos: patrones de rotación o turnos puntuales en el Planificador, en vez de horario fijo con sábado para todos.
