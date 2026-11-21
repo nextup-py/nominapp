@@ -37,9 +37,19 @@ Lo marcado como **Verificado** salió de consultas de solo lectura en el servido
 ### Decidido
 - Aprobación en cadena: jefe y luego RR.HH.
 
+### Decidido: horas extra (etapas B, C y D)
+- **B, permiso Heredar/Sí/No** por empleado, cargo, sucursal y empresa: el nivel más específico gana (mismo criterio que el permiso de marcar desde el celular). Si ningún nivel define, las horas extra están permitidas.
+- **Extra sin autorización:** se registra con la marca «no autorizada» y RR.HH. decide caso por caso (solo se paga lo aprobado, como hoy).
+- **Cargos gerenciales:** sin regla fija. Se configuran con el mismo permiso a nivel de cargo (poner «No» donde corresponda). Si deben quedar fuera por ley, lo confirma el asesor.
+- **C, confirmación al salir:** el motivo es obligatorio y se elige de una lista (terminal y celular). Falta decidir si además admite nota libre.
+- **D, pedido previo:** lo puede crear el jefe para su equipo o el propio empleado; vale para un día o para un rango de fechas; aprobación en cadena jefe y luego RR.HH.
+- **Exceso sobre lo pedido:** lo pedido queda autorizado y el exceso cuenta como no autorizado.
+
 ### Pendiente
-- Orden de las etapas de horas extra: B (permiso Heredar/Sí/No por empleado, cargo, sucursal y empresa), C (confirmación al salir con motivo) y D (pedido previo con jefe).
+- Orden de construcción de las etapas B, C y D (hay dependencias: D necesita «Jefe directo» y el rol de Jefe).
+- Si el motivo de la etapa C admite nota libre además de la lista, y quién administra esa lista.
 - Si las licencias cortas las puede aprobar el jefe solo.
+- Consultar al asesor si los cargos de dirección/confianza pueden quedar sin recargo por horas extra.
 
 ## 3. Otros pendientes sin definir
 
