@@ -114,5 +114,12 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - Plataforma: 2FA para Super Admin, correo configurado en Macro, PIN de administrador en el menú del terminal.
 - Simulación de nómina: comparar contra el Excel del cliente.
 
+## 3b. Salud del sistema y logs de Macro (verificado 21/11)
+- Programador y cola OK; hoy 0 errores en el log. Correo no configurado (solo campanita). Disco 89% usado con 716 GB libres.
+- `contracts:notify-expiring` falla todos los días (8 corridas): `Undefined property: stdClass::$data->contract_id`. El arreglo ya está en el repo (usa `$notification->data['contract_id']`); Macro corre una versión anterior. Mientras tanto no llegan avisos de contratos por vencer.
+- Un intento de correr `leaves:justify-absences` falló con «no commands defined in the leaves namespace»: ese comando todavía no está desplegado en Macro.
+- Errores aislados: `Trait Laravel\Sanctum\HasApiTokens not found` (2, durante un deploy), `Specified key was too long` (1, migración con motor MyISAM; verificar migraciones pendientes), `SQLSTATE[HY000] [2002]` (4, conexión a MySQL caída un instante), `Cardinality violation` en una consulta de empleados (2) y un error de vista Filament con registro nulo (1).
+- Las oleadas de terminales sin conexión del 21/11 (10:00 a 12:00) no dejaron ningún error en el log de Laravel: la causa no es una excepción del servidor. Pendiente revisar los logs de acceso del servidor web.
+
 ## 4. Deploy a Macro
 - Está pendiente desplegar los últimos commits (columna «Marca con» y aviso semanal de empleados silenciosos). Decisión: después de cerrar estas definiciones.
