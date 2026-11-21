@@ -36,7 +36,14 @@ Lo marcado como **Verificado** salió de consultas de solo lectura en el servido
 - Reporte de RR.HH. de Macro (21/11): en la pantalla de marcación aparece la salida esperada a las 18:00 y muchos salen a las 18:30. Verificado: unas 10 personas de Casa Central (Ledezma, Verón, Riquelme, Salinas, Benítez, Cardozo, Ortigoza, Clara González, Perla Velázquez, Alcides Fernández) salen de lunes a viernes a las 18:30 casi exactas, y entran a su hora (07:30). Cada una acumula 30 min de extra pendiente por día, que supera la tolerancia de 15 min. Falta saber si el turno real termina a las 18:30 o si se quedan por su cuenta.
 - Sueltos: Beatriz Ojeda (Julia Miranda) con turno hasta las 17:00 sale a las 17:41 todos los días (probable 17:30); Diego Franco Ortiz (Externos) entra 08:11 y sale 19:04 con turno 08:00–18:00; Nilda Florentín (Externos) sale a las 18:45.
 
+### Horarios en Macro (verificado 21/11)
+- 11 horarios, todos de tipo diurno: Casa Central (59 empleados activos), Laboratorio (22), Promotores y Vendedores (11), Mcal. Estigarribia (8), Itauguá (4), Luque (4), Capiata (3), Guarambare (3), Julia Miranda (3), Supervisores (1) y Horario Especial (1).
+- 119 empleados activos tienen un horario cada uno; ninguno tiene dos vigentes.
+- 80 asignaciones vigentes pertenecen a empleados inactivos (Casa Central 46, Mcal. Estigarribia 13, resto repartidas): nunca se cerraron. Impacto bajo, pero conviene un comando de limpieza que las cierre.
+- Todo Casa Central comparte un único horario (sábado 07:30, salida 18:00): causa de fondo de las ausencias de sábado y de las extras falsas de las 18:30.
+
 ### Pendiente derivado
+- Comando de limpieza: cerrar con fecha de fin las asignaciones de horario vigentes de empleados inactivos (80 en Macro).
 - Decidir cómo se manejan los sábados rotativos: patrones de rotación o turnos puntuales en el Planificador, en vez de horario fijo con sábado para todos.
 - Confirmar el horario real de los locales (¿18:00 o 18:30?) y el inicio real del sábado en Casa Central (¿09:00?).
 - Resolver en «Fallos de marcación» los conflictos de Casa Central del 21/11 y justificar o cargar la asistencia de esas personas.
