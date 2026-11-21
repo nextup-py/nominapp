@@ -65,6 +65,11 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - «Celular» (Mcal. Estigarribia): desconectado desde el 17/11 y con app desactualizada; decidir si se retira de servicio.
 - Orden recomendado: enchufar todos los equipos y activar «mantener la pantalla encendida mientras carga»; instalar Guarambare como app; dejar visibles las apps de Casa Central 1 y Luque; decidir sobre el «Celular» y Laboratorio 1; revisar cámara de Mcal. Estigarribia 1.
 
+### Pendientes de aprobación y preparación del personal (verificado 21/11)
+- Extras por aprobar (30 días): Casa Central 373 jornadas / 208,6 h, Externos 43 / 35,8 h, Capiata 38 / 19,6 h, Mcal. Estigarribia 28 / 18,6 h, Julia Miranda 17 / 6,5 h y 6 más: unas 505 jornadas y 291 horas. La mayor parte es la media hora de las 18:30 en Casa Central. Tardanzas por aprobar: 34 (Casa Central 18).
+- Empleados activos: 124. Sin contrato vigente: 6. Sin rostro enrolado: 1 (Yeni Elizabeth Velázquez, Casa Central, que además no trabajó ninguno de los últimos 8 sábados). Sin horario: 3.
+- Fallos de marcación: del 07 al 13/11 hubo cientos por día de rostro no reconocido o ambiguo (hasta 161); desde el 14/11 ya no se registran (cambio de versión del 16/11), así que solo queda como medida la tasa de identificación del terminal. Los conflictos de sincronización suben cada día: 1 (14/11), 2 (16/11), 3 (19/11), 6 (20/11), 13 (21/11).
+
 ### Pendiente derivado
 - Comando de limpieza: cerrar con fecha de fin las asignaciones de horario vigentes de empleados inactivos (80 en Macro).
 - Decidir cómo se manejan los sábados rotativos: patrones de rotación o turnos puntuales en el Planificador, en vez de horario fijo con sábado para todos.
