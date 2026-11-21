@@ -56,6 +56,15 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - Feriados cargados hasta el 25/12/2026; **falta cargar el calendario 2027** (el 1/1/2027 cae dentro de 41 días): desde Feriados, «Copiar al Próximo Año» (solo copia los fijos).
 - Pendiente de preguntar a Macro: cómo se descuentan las faltas reales (¿por fuera del sistema?).
 
+### Estado de los terminales (verificado 21/11)
+- Todo bien en cámara, service worker, reloj, almacenamiento y app actualizada (salvo el «Celular»). La caché coincide con los enrolados; en Casa Central falta enrolar el rostro de 1 persona (61 de 62).
+- 7 de 10 equipos funcionan con batería, sin cargador (casi todos celulares Android; solo Casa Central 1, Casa Central 2 y Mcal. Estigarribia 1 cargan). Disponibilidad de 7 días: 41% a 64% (Laboratorio 17%, «Celular» 3%); cortes largos de 700 a 816 minutos. Lo recomendable es 90% o más.
+- Casa Central 1 y Luque: app oculta o minimizada. Guarambare: abierto en el navegador y Wake Lock rechazado. Julia Miranda: Wake Lock sin informar. Capiata: batería 29%, 2 GB de memoria.
+- Laboratorio 1: caído desde el 20/11, 2 GB de memoria, 54% de identificación (7/13).
+- Mcal. Estigarribia 1 (PC): 67% de identificación (31/46); revisar cámara e iluminación.
+- «Celular» (Mcal. Estigarribia): desconectado desde el 17/11 y con app desactualizada; decidir si se retira de servicio.
+- Orden recomendado: enchufar todos los equipos y activar «mantener la pantalla encendida mientras carga»; instalar Guarambare como app; dejar visibles las apps de Casa Central 1 y Luque; decidir sobre el «Celular» y Laboratorio 1; revisar cámara de Mcal. Estigarribia 1.
+
 ### Pendiente derivado
 - Comando de limpieza: cerrar con fecha de fin las asignaciones de horario vigentes de empleados inactivos (80 en Macro).
 - Decidir cómo se manejan los sábados rotativos: patrones de rotación o turnos puntuales en el Planificador, en vez de horario fijo con sábado para todos.
