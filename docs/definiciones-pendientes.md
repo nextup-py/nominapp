@@ -50,6 +50,12 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - Totales por sábado (26/09 a 14/11): 28, 34, 34, 31, 29, 19, 26, 27.
 - **Propuesta:** horario «Casa Central largo + sábado» para A (07:30–18:30, sábado desde las 09:00, a confirmar con Macro); horario «Casa Central sin sábado» para B; C con el horario sin sábado y los sábados que trabajen cargados semana a semana en el Planificador.
 
+### Generación de ausencias: verificado (45 días, 996 ausencias)
+- 0 ausencias en feriados, domingos, días de vacaciones, ni dentro de vacaciones o licencias aprobadas sin justificar; 0 en días sin turno (697 revisadas contra horario/rotación). La generación respeta todo eso.
+- Estado: 945 justificadas (66 vinculadas a licencia, el resto con nota), 98 pendientes, 0 injustificadas y 0 con descuento: hoy ninguna falta se descuenta desde el sistema.
+- Feriados cargados hasta el 25/12/2026; **falta cargar el calendario 2027** (el 1/1/2027 cae dentro de 41 días): desde Feriados, «Copiar al Próximo Año» (solo copia los fijos).
+- Pendiente de preguntar a Macro: cómo se descuentan las faltas reales (¿por fuera del sistema?).
+
 ### Pendiente derivado
 - Comando de limpieza: cerrar con fecha de fin las asignaciones de horario vigentes de empleados inactivos (80 en Macro).
 - Decidir cómo se manejan los sábados rotativos: patrones de rotación o turnos puntuales en el Planificador, en vez de horario fijo con sábado para todos.
