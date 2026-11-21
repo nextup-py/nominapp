@@ -34,8 +34,14 @@ Lo marcado como **Verificado** salió de consultas de solo lectura en el servido
 
 ## 2. Flujo del jefe y horas extra
 
-### Decidido
+### Decidido: flujo del jefe («Mi equipo»)
 - Aprobación en cadena: jefe y luego RR.HH.
+- **Configurable desde el panel, por empresa**, en una sección «Flujo del jefe» (solo Super Admin). Un interruptor general (apagado por defecto: sin cambios para quien no lo use) y uno por tipo de aprobación. Con el general encendido: licencias y horas extra activadas; vacaciones, tardanzas y ausencias apagadas (generan descuentos, las decide RR.HH.).
+- **Quién es el jefe:** solo el superior directo («Reporta a»).
+- **Jefe ausente** (vacaciones o licencia): aprueba el superior del jefe; si no tiene superior, RR.HH.
+- **Demora:** a las 48 horas sin respuesta se avisa por campanita al jefe y a RR.HH., sin cambiar el estado del pedido.
+- **RR.HH. puede aprobar siempre**, sin esperar al jefe; queda registrado quién aprobó.
+- **Qué ve el jefe:** la foto de hoy más licencias próximas y pendientes de su equipo. Alertas de contrato y documentos del equipo quedan para después.
 
 ### Decidido: horas extra (etapas B, C y D)
 - **B, permiso Heredar/Sí/No** por empleado, cargo, sucursal y empresa: el nivel más específico gana (mismo criterio que el permiso de marcar desde el celular). Si ningún nivel define, las horas extra están permitidas.
