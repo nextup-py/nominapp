@@ -128,5 +128,10 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - 3 sin horario: Lourdes Mendieta (Casa Central), Claudia Ortiz de Trinidad (Luque, trabajó el 21/11) y Blanca Galeano (Externos).
 - Nómina en el sistema: solo 3 períodos (mayo ×2 en procesamiento y agosto en borrador). Macro no usa la nómina del sistema, así que extras, tardanzas y ausencias hoy son informativas y no afectan ningún pago.
 
+## 3d. Vacaciones, usuarios y avisos (verificado 21/11)
+- Vacaciones pendientes de aprobar: 0. Licencias pendientes: 6. Vacaciones aprobadas en curso o próximas, todas sin pagar (pago por fuera): Juan Manuel Valenzuela (16 a 28/11), Maximiliano Malarino (20 a 27/11) y Jhonny Cabral (30/11 a 12/12).
+- Usuarios del panel (5): Edgar Franco (Super Admin), Richar Sánchez (Super Admin; también figura como empleado de Casa Central), Rocío Ortiz (**sin rol**, no puede entrar), Lourdes Mendieta (Asistente de RRHH; también empleada, sin horario) y Yeni Velázquez (RRHH y Contador/Nómina a la vez, creada el 17/11; también empleada, sin rostro enrolado). Pendiente de confirmar: si Rocío Ortiz debe tener acceso o eliminarse, y si Yeni Velázquez debe tener ambos roles (RRHH y Contador/Nómina juntos permiten crear contratos y también aprobar y pagar nómina y créditos).
+- Avisos sin leer en la campanita: unos 500, sobre todo salud de terminales (175), conflictos de sincronización (91) y alertas de contratos (62). Casi todo es ruido repetido. Conviene que cada usuario configure «Mis notificaciones» (resumen diario para salud de terminales y conflictos) y marque como leído lo viejo.
+
 ## 4. Deploy a Macro
 - Está pendiente desplegar los últimos commits (columna «Marca con» y aviso semanal de empleados silenciosos). Decisión: después de cerrar estas definiciones.
