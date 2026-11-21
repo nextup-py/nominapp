@@ -119,7 +119,8 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - `contracts:notify-expiring` falla todos los días (8 corridas): `Undefined property: stdClass::$data->contract_id`. El arreglo ya está en el repo (usa `$notification->data['contract_id']`); Macro corre una versión anterior. Mientras tanto no llegan avisos de contratos por vencer.
 - Un intento de correr `leaves:justify-absences` falló con «no commands defined in the leaves namespace»: ese comando todavía no está desplegado en Macro.
 - Errores aislados: `Trait Laravel\Sanctum\HasApiTokens not found` (2, durante un deploy), `Specified key was too long` (1, migración con motor MyISAM; verificar migraciones pendientes), `SQLSTATE[HY000] [2002]` (4, conexión a MySQL caída un instante), `Cardinality violation` en una consulta de empleados (2) y un error de vista Filament con registro nulo (1).
-- Las oleadas de terminales sin conexión del 21/11 (10:00 a 12:00) no dejaron ningún error en el log de Laravel: la causa no es una excepción del servidor. Pendiente revisar los logs de acceso del servidor web.
+- Los errores aislados son del deploy del sábado 14/11 entre 06:29 y 08:15 (Sanctum, clave larga, vista, cardinalidad) y de una caída momentánea de MySQL el 16/11 a las 06:43. No hay migraciones pendientes. Desde el 16/11 no hay errores.
+- Las oleadas de terminales sin conexión del 21/11 no dejaron ningún error en el log de Laravel. El log de acceso del servidor web de ese día: 1131 respuestas 200, 88 304, 9 302 y 2 404; ningún 429 ni 5xx, y todos los latidos de terminales respondieron 200. El servidor no rechazó ni falló: la causa está del lado de los equipos o de su red (suspensión, app oculta, sin cargador).
 
 ## 4. Deploy a Macro
 - Está pendiente desplegar los últimos commits (columna «Marca con» y aviso semanal de empleados silenciosos). Decisión: después de cerrar estas definiciones.
