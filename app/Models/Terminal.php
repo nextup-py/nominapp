@@ -97,6 +97,7 @@ class Terminal extends Model implements AuthenticatableContract
         'watch_days',
         'watch_from',
         'watch_to',
+        'watch_day_hours',
         'device_report',
         'device_report_at',
         'queue_backlog_since',
@@ -124,6 +125,7 @@ class Terminal extends Model implements AuthenticatableContract
         'stale_after_minutes' => 'integer',
         'confirm_exit' => 'boolean',
         'watch_days' => 'array',
+        'watch_day_hours' => 'array',
         'is_mobile' => 'boolean',
         'device_report' => 'array',
         'device_report_at' => 'datetime',
@@ -142,6 +144,10 @@ class Terminal extends Model implements AuthenticatableContract
             if (empty($terminal->code)) {
                 $terminal->code = static::generateUniqueCode();
             }
+        });
+
+        static::saving(function (Terminal $terminal) {
+            $terminal->watch_day_hours = static::normalizeDayHours($terminal->watch_day_hours);
         });
     }
 
@@ -417,27 +423,27 @@ class Terminal extends Model implements AuthenticatableContract
      * Horario de vigilancia efectivo del terminal: el propio si tiene alguno configurado y, si no,
      * el de su sucursal (`Branch::watch_*`); sin ninguno de los dos se vigila siempre (24/7).
      *
-     * @return array{days: array<int, int>, from: ?string, to: ?string, source: string} `source` = terminal|branch|none
+     * @return array{days: array<int, int>, from: ?string, to: ?string, day_hours: array<int, array{from: string, to: string}>, source: string} `source` = terminal|branch|none
      */
     public function watchConfig(): array
     {
         if ($this->hasOwnWatchSchedule()) {
-            return ['days' => array_map('intval', $this->watch_days ?? []), 'from' => $this->watch_from, 'to' => $this->watch_to, 'source' => 'terminal'];
+            return ['days' => array_map('intval', $this->watch_days ?? []), 'from' => $this->watch_from, 'to' => $this->watch_to, 'day_hours' => static::dayHoursMap($this->watch_day_hours), 'source' => 'terminal'];
         }
 
         $branch = $this->branch;
 
         if ($branch && $branch->hasWatchSchedule()) {
-            return ['days' => array_map('intval', $branch->watch_days ?? []), 'from' => $branch->watch_from, 'to' => $branch->watch_to, 'source' => 'branch'];
+            return ['days' => array_map('intval', $branch->watch_days ?? []), 'from' => $branch->watch_from, 'to' => $branch->watch_to, 'day_hours' => static::dayHoursMap($branch->watch_day_hours), 'source' => 'branch'];
         }
 
-        return ['days' => [], 'from' => null, 'to' => null, 'source' => 'none'];
+        return ['days' => [], 'from' => null, 'to' => null, 'day_hours' => [], 'source' => 'none'];
     }
 
     /** Indica si el terminal tiene días u horas de vigilancia propios (los tiene prioridad sobre los de la sucursal). */
     public function hasOwnWatchSchedule(): bool
     {
-        return ! empty($this->watch_days) || filled($this->watch_from) || filled($this->watch_to);
+        return ! empty($this->watch_days) || filled($this->watch_from) || filled($this->watch_to) || ! empty($this->watch_day_hours);
     }
 
     /**
@@ -448,7 +454,7 @@ class Terminal extends Model implements AuthenticatableContract
     {
         $config = $this->watchConfig();
 
-        return static::windowContains($config['days'], $config['from'], $config['to'], $at);
+        return static::windowContains($config['days'], $config['from'], $config['to'], $at, $config['day_hours']);
     }
 
     /**
@@ -456,71 +462,153 @@ class Terminal extends Model implements AuthenticatableContract
      * (ej. 22:00–06:00) pertenece al día en que empieza: a las 02:00 del martes cuenta como el
      * turno del lunes. Compartido por terminales y sucursales.
      *
+     * `$dayHours` (ver {@see self::dayHoursMap()}) cambia las horas de ciertos días (por ejemplo, el sábado hasta el
+     * mediodía); los demás días usan `$from`/`$to`. Los días de la semana que se vigilan siguen siendo `$days`.
+     *
      * @param  array<int, int|string>  $days  Días ISO 1–7; vacío = todos.
+     * @param  array<int, array{from: string, to: string}>  $dayHours  Horas propias por día ISO.
      */
-    public static function windowContains(array $days, ?string $from, ?string $to, ?CarbonInterface $at = null): bool
+    public static function windowContains(array $days, ?string $from, ?string $to, ?CarbonInterface $at = null, array $dayHours = []): bool
     {
         $days = array_map('intval', $days);
-        $from = $from ? Carbon::createFromTimeString($from) : null;
-        $to = $to ? Carbon::createFromTimeString($to) : null;
 
-        if ($days === [] && ! $from && ! $to) {
+        if ($days === [] && ! $from && ! $to && $dayHours === []) {
             return true;
         }
 
         $at = Carbon::instance($at ?? now())->setTimezone(config('app.timezone'));
         $minutes = $at->hour * 60 + $at->minute;
-        $dayOfWindow = $at->isoWeekday();
-        $withinHours = true;
 
-        if ($from && $to) {
-            $fromMinutes = $from->hour * 60 + $from->minute;
-            $toMinutes = $to->hour * 60 + $to->minute;
-
-            if ($fromMinutes < $toMinutes) {
-                $withinHours = $minutes >= $fromMinutes && $minutes < $toMinutes;
-            } elseif ($fromMinutes > $toMinutes) {
-                $withinHours = $minutes >= $fromMinutes || $minutes < $toMinutes;
-                if ($minutes < $toMinutes) {
-                    $dayOfWindow = $at->copy()->subDay()->isoWeekday();
-                }
-            }
+        // Un rango que cruza medianoche empezó ayer: ese tramo cuenta con las horas del día en que empezó.
+        $yesterday = static::dayRange($at->copy()->subDay()->isoWeekday(), $days, $from, $to, $dayHours);
+        if ($yesterday !== null && $yesterday[0] > $yesterday[1] && $minutes < $yesterday[1]) {
+            return true;
         }
 
-        return $withinHours && ($days === [] || in_array($dayOfWindow, $days, true));
+        $today = static::dayRange($at->isoWeekday(), $days, $from, $to, $dayHours);
+
+        if ($today === null) {
+            return false;
+        }
+
+        [$fromMinutes, $toMinutes] = $today;
+
+        return match (true) {
+            $fromMinutes < $toMinutes => $minutes >= $fromMinutes && $minutes < $toMinutes,
+            $fromMinutes > $toMinutes => $minutes >= $fromMinutes,
+            default => true,
+        };
+    }
+
+    /**
+     * Rango de minutos (desde, hasta) que se vigila el día ISO `$day`, o null si ese día no se vigila.
+     * Sin horas (ni generales ni propias del día) se vigila el día entero.
+     *
+     * @param  array<int, int>  $days
+     * @param  array<int, array{from: string, to: string}>  $dayHours
+     * @return array{0: int, 1: int}|null
+     */
+    private static function dayRange(int $day, array $days, ?string $from, ?string $to, array $dayHours): ?array
+    {
+        if ($days !== [] && ! in_array($day, $days, true)) {
+            return null;
+        }
+
+        if (isset($dayHours[$day])) {
+            [$from, $to] = [$dayHours[$day]['from'], $dayHours[$day]['to']];
+        }
+
+        if (! $from || ! $to) {
+            return [0, 0];
+        }
+
+        $f = Carbon::createFromTimeString($from);
+        $t = Carbon::createFromTimeString($to);
+
+        return [$f->hour * 60 + $f->minute, $t->hour * 60 + $t->minute];
+    }
+
+    /**
+     * Normaliza la lista `{day, from, to}` del formulario: días ISO únicos y ordenados, con las dos horas cargadas.
+     * Devuelve null si no queda ninguno (así la base guarda null y no una lista vacía).
+     *
+     * @param  array<int, mixed>|null  $rows
+     * @return array<int, array{day: int, from: string, to: string}>|null
+     */
+    public static function normalizeDayHours(?array $rows): ?array
+    {
+        $byDay = [];
+
+        foreach ($rows ?? [] as $row) {
+            $day = (int) ($row['day'] ?? 0);
+
+            if ($day < 1 || $day > 7 || blank($row['from'] ?? null) || blank($row['to'] ?? null)) {
+                continue;
+            }
+
+            $byDay[$day] = ['day' => $day, 'from' => substr((string) $row['from'], 0, 5), 'to' => substr((string) $row['to'], 0, 5)];
+        }
+
+        ksort($byDay);
+
+        return $byDay === [] ? null : array_values($byDay);
+    }
+
+    /**
+     * Mapa día ISO => horas propias a partir de la lista guardada, para consultarlo por día.
+     *
+     * @param  array<int, mixed>|null  $rows
+     * @return array<int, array{from: string, to: string}>
+     */
+    public static function dayHoursMap(?array $rows): array
+    {
+        $map = [];
+
+        foreach (static::normalizeDayHours($rows) ?? [] as $row) {
+            $map[$row['day']] = ['from' => $row['from'], 'to' => $row['to']];
+        }
+
+        return $map;
     }
 
     /** Texto legible del horario de vigilancia efectivo; si lo hereda de la sucursal lo aclara. */
     public function watchScheduleLabel(): string
     {
         $config = $this->watchConfig();
-        $label = static::windowLabel($config['days'], $config['from'], $config['to']);
+        $label = static::windowLabel($config['days'], $config['from'], $config['to'], $config['day_hours']);
 
         return $config['source'] === 'branch' ? "{$label} (de la sucursal)" : $label;
     }
 
     /**
-     * Texto legible de un horario de vigilancia (ej. "Lun a Vie · 08:00–20:00" o "Siempre (24/7)").
+     * Texto legible de un horario de vigilancia (ej. "Lun a Vie · 08:00–20:00" o "Siempre (24/7)"). Con horas propias
+     * en ciertos días las agrega al final (ej. "Lun, Mar, Sáb · 06:30–19:00 · Sáb 06:30–13:00").
      *
      * @param  array<int, int|string>  $days
+     * @param  array<int, array{from: string, to: string}>  $dayHours
      */
-    public static function windowLabel(array $days, ?string $from, ?string $to): string
+    public static function windowLabel(array $days, ?string $from, ?string $to, array $dayHours = []): string
     {
         $days = collect($days)->map(fn ($d) => (int) $d)->sort()->values();
         $hours = $from && $to
             ? Carbon::createFromTimeString($from)->format('H:i').'–'.Carbon::createFromTimeString($to)->format('H:i')
             : null;
+        $short = [1 => 'Lun', 2 => 'Mar', 3 => 'Mié', 4 => 'Jue', 5 => 'Vie', 6 => 'Sáb', 7 => 'Dom'];
 
-        if ($days->isEmpty() && ! $hours) {
+        $extra = collect($dayHours)->sortKeys()
+            ->map(fn (array $range, int $day) => "{$short[$day]} ".Carbon::createFromTimeString($range['from'])->format('H:i').'–'.Carbon::createFromTimeString($range['to'])->format('H:i'))
+            ->implode(' · ');
+
+        if ($days->isEmpty() && ! $hours && $extra === '') {
             return 'Siempre (24/7)';
         }
 
-        $short = [1 => 'Lun', 2 => 'Mar', 3 => 'Mié', 4 => 'Jue', 5 => 'Vie', 6 => 'Sáb', 7 => 'Dom'];
         $daysLabel = $days->isEmpty() || $days->count() === 7
             ? 'Todos los días'
             : $days->map(fn (int $d) => $short[$d])->implode(', ');
+        $base = $hours ? "{$daysLabel} · {$hours}" : $daysLabel;
 
-        return $hours ? "{$daysLabel} · {$hours}" : $daysLabel;
+        return $extra === '' ? $base : "{$base} · {$extra}";
     }
 
     /**
@@ -558,8 +646,8 @@ class Terminal extends Model implements AuthenticatableContract
         return static::query()
             ->with('branch')
             ->where(fn (Builder $q) => $q
-                ->whereNotNull('watch_days')->orWhereNotNull('watch_from')->orWhereNotNull('watch_to')
-                ->orWhereHas('branch', fn (Builder $b) => $b->whereNotNull('watch_days')->orWhereNotNull('watch_from')->orWhereNotNull('watch_to')))
+                ->whereNotNull('watch_days')->orWhereNotNull('watch_from')->orWhereNotNull('watch_to')->orWhereNotNull('watch_day_hours')
+                ->orWhereHas('branch', fn (Builder $b) => $b->whereNotNull('watch_days')->orWhereNotNull('watch_from')->orWhereNotNull('watch_to')->orWhereNotNull('watch_day_hours')))
             ->get()
             ->reject(fn (Terminal $terminal) => $terminal->isWithinWatchWindow())
             ->pluck('id')

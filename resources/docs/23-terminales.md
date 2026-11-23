@@ -205,6 +205,7 @@ Al crear o editar un terminal, la sección **Marcación y monitoreo** permite aj
 | **Considerar desconectado tras** | Minutos sin latido para pasar a **Desconectado** (mínimo 5; el terminal reporta cada ~90 segundos). Vacío = usa el umbral general |
 | **Días que se vigila** | Días de la semana en los que se avisa de una desconexión. Ninguno marcado = todos |
 | **Vigilar desde / hasta** | Franja horaria (hora de Asunción). Vacío = todo el día. Se completan **las dos** o ninguna. Un rango que cruza la medianoche (por ejemplo, 22:00 a 06:00) pertenece al día en que empieza |
+| **Horas distintas en ciertos días** | Para un día con otro horario: **Agregar un día con otro horario**, elegir el día y sus horas. Por ejemplo, de lunes a sábado de 06:30 a 19:00 pero el sábado solo hasta las 13:00, así el sábado por la tarde no figura como corte. Los demás días usan las horas de arriba; un día no se puede repetir |
 
 ![Sección Monitoreo del formulario de un terminal](/docs-images/23-terminal-monitoreo.png)
 

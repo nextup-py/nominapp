@@ -69,12 +69,13 @@ class TerminalMonitoringActions
 
         $reset = (bool) ($data['reset'] ?? false);
         $values = $reset
-            ? ['stale_after_minutes' => null, 'watch_days' => null, 'watch_from' => null, 'watch_to' => null]
+            ? ['stale_after_minutes' => null, 'watch_days' => null, 'watch_from' => null, 'watch_to' => null, 'watch_day_hours' => null]
             : [
                 'stale_after_minutes' => filled($data['stale_after_minutes'] ?? null) ? (int) $data['stale_after_minutes'] : null,
                 'watch_days' => ! empty($data['watch_days']) ? array_map('intval', $data['watch_days']) : null,
                 'watch_from' => filled($data['watch_from'] ?? null) ? $data['watch_from'] : null,
                 'watch_to' => filled($data['watch_to'] ?? null) ? $data['watch_to'] : null,
+                'watch_day_hours' => Terminal::normalizeDayHours($data['watch_day_hours'] ?? null),
             ];
 
         foreach ($terminals as $terminal) {
