@@ -424,6 +424,21 @@ Si el dispositivo se perdió, se reemplazó o se sospecha que está comprometido
 
 ---
 
+## PIN de administrador
+
+Protege la acción de **pasar un equipo a otro terminal** (el botón **Usar este equipo en este terminal** de la pantalla **Este equipo ya funciona como otro terminal**), que borra el vínculo y las marcaciones pendientes del terminal anterior. Es **opcional**: sin PIN todo funciona como siempre.
+
+**Definirlo:** en **Terminales → Editar** abrir la sección **PIN de administrador** y escribir de 4 a 8 dígitos. Para cambiarlo, escribir uno nuevo; para quitarlo, marcar **Quitar el PIN**. El detalle del terminal muestra **Definido** o **Sin PIN** (nunca el número) y cada cambio queda en la **Bitácora**.
+
+**Cómo funciona:**
+- El equipo recibe el PIN en la **próxima sincronización** y lo verifica **sin conexión**. Hasta entonces sigue con el PIN anterior (o sin PIN).
+- Al tocar **Usar este equipo en este terminal**, el equipo pide el PIN **del terminal que tenía vinculado**. Tras **3 intentos fallidos** se bloquea durante 1 minuto.
+- Si se olvidó el PIN, definir uno nuevo en el panel y abrir el enlace del terminal anterior en ese equipo para que sincronice.
+
+> El PIN **no protege el primer emparejamiento** ni **Pedir código nuevo**: un equipo que todavía no está vinculado no conoce ningún PIN, y vincularlo requiere de todos modos que un usuario apruebe el código en el panel. Tampoco reemplaza la seguridad física: quien tenga acceso a las herramientas del navegador del equipo puede leer el dato con el que se verifica.
+
+---
+
 ## Cambiar la URL del terminal
 
 Si la URL fue compartida por error, usar **Cambiar URL del terminal** (menú **Más acciones** del detalle) para generar un código nuevo.
@@ -588,7 +603,7 @@ El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: 
 | Cartel rojo arriba del panel: **N terminales necesitan atención** | Hay terminales **sin vincular** o **sin conexión desde hace 30 minutos o más dentro de su horario de vigilancia**. El cartel resume la cantidad por motivo (por ejemplo «2 sin conexión · 1 sin vincular») y en **Ver el detalle** los terminales figuran agrupados por su **responsable** (con su teléfono, para saber a quién llamar) y al final los que no tienen responsable cargado. Para que de noche no figuren como caídos, cargar el **horario de atención** de cada sucursal. Se ve en el Escritorio, en **Terminales**, en **Por resolver**, en el **Monitor en vivo** y en **Solicitudes de vinculación**, y se puede cerrar con la **X**: queda oculto en ese navegador hasta que cambie el problema (otro terminal o motivo) o pasen 24 horas. Lo ve quien puede editar terminales; se actualiza una vez por minuto y desaparece cuando todos están en línea | Entrar a **Ver terminales** y resolver cada uno |
 | Un terminal pide vincularse una y otra vez desde dos equipos distintos (por ejemplo una PC y un celular) | Hay **dos dispositivos abiertos en la misma URL del terminal**. Cada vez que uno se vincula, el otro queda sin acceso y vuelve a pedir un código. En la **Bitácora** aparece **Dispositivo reemplazado** y llega el aviso **Dispositivo reemplazado en un terminal** | Elegir qué equipo es el terminal, cerrar o desinstalar la app en el otro y aprobar un solo código. Si se necesitan los dos equipos, crear otro terminal para el segundo |
 | Aviso **Terminal perdió el vínculo** y el dispositivo correcto sigue funcionando | Otro dispositivo abrió la URL del terminal mientras el verdadero seguía en línea | Si el terminal sigue latiendo el sistema no lo toma como pérdida: aparece como una **Solicitud de vinculación** común (con *Reemplaza al dispositivo actual*). Rechazarla y cerrar la página del otro dispositivo |
-| La pantalla dice **Este equipo ya funciona como otro terminal** | Ese navegador ya estaba vinculado a un terminal distinto y se abrió el enlace de otro | Tocar **Ir a mi terminal**. **Usar este equipo en este terminal** es un cambio deliberado: pide confirmación y borra los datos locales del terminal anterior, **incluidas sus marcaciones pendientes de enviar**. Usar un navegador o perfil exclusivo para cada terminal, y borrar el ícono de la app que ya no corresponde |
+| La pantalla dice **Este equipo ya funciona como otro terminal** | Ese navegador ya estaba vinculado a un terminal distinto y se abrió el enlace de otro | Tocar **Ir a mi terminal**. **Usar este equipo en este terminal** es un cambio deliberado: pide el **PIN de administrador** (si el terminal anterior tiene uno), pide confirmación y borra los datos locales del terminal anterior, **incluidas sus marcaciones pendientes de enviar**. Usar un navegador o perfil exclusivo para cada terminal, y borrar el ícono de la app que ya no corresponde |
 | Por la mañana todos ven **¡Hasta mañana! Tu jornada del día ha sido completada** y no pueden marcar la entrada | Antes, sin conexión con el servidor, el equipo creía que la jornada de ayer seguía cerrada. Ahora una salida de otro día no cuenta y se ofrece **Entrada**. Si igual aparece, el equipo tiene una versión vieja de la aplicación | Recargar la página del terminal (o enviar **Recargar app**) y revisar que esté **En línea**; si figura **Sin vincular** o **Desconectado**, resolver eso primero (ver las filas de vinculación) |
 | Dice **Sin empleados sincronizados** | El terminal todavía no descargó rostros | Verificar conexión y tocar **Sincronizar ahora**. Solo se descargan los empleados **activos** de la **sucursal del terminal** que tengan su **registro facial** completo |
 | El terminal figura **Desconectado** | Dispositivo apagado, sin internet o con la página cerrada | Encenderlo, verificar internet y abrir la URL del terminal |
