@@ -26,6 +26,10 @@ use Illuminate\Support\Facades\Schema;
  *   ADMIN_NAME     Nombre del usuario admin     (default: "Administrador")
  *   ADMIN_EMAIL    Email del usuario admin      (default: "admin@example.com")
  *   ADMIN_PASSWORD Contraseña del usuario admin (default: "password")
+ *   DEMO_USERS_PASSWORD Contraseña de los usuarios por rol de la demo (default: "DemoNominapp2026")
+ *
+ * Con APP_DEMO=true el programador corre `demo:refresh` cada 10 minutos para que el día de hoy, los latidos de los
+ * terminales y los avisos se vean siempre vigentes.
  */
 class DemoSeeder extends Seeder
 {
@@ -58,6 +62,8 @@ class DemoSeeder extends Seeder
 
             // Empleados y asignaciones
             EmployeeSeeder::class,
+            // Completa la plantilla hasta ~40 empleados con rostro y superior por sucursal (antes de horarios y asistencia)
+            DemoStaffSeeder::class,
             ScheduleAssignmentSeeder::class,
             ShiftTemplateSeeder::class,
             RotationPatternSeeder::class,
@@ -71,6 +77,9 @@ class DemoSeeder extends Seeder
             // Asistencia y calendario
             HolidaySeeder::class,
             AttendanceDayWithEventsSeeder::class,
+            // Terminales en estados distintos y el día de HOY respecto de la hora actual (se refresca con demo:refresh)
+            DemoTerminalSeeder::class,
+            DemoLiveAttendanceSeeder::class,
 
             // Vacaciones y permisos (antes de AbsenceSeeder: las ausencias
             // justificadas vinculan un EmployeeLeave aprobado, como exige
@@ -95,6 +104,9 @@ class DemoSeeder extends Seeder
             // Procesos anuales e históricos
             AguinaldoSeeder::class,
             LiquidacionSeeder::class,
+
+            // Un usuario por rol para mostrar permisos (el admin ya se creó al inicio)
+            DemoUsersSeeder::class,
         ]);
 
         $this->command->newLine();
@@ -201,6 +213,16 @@ class DemoSeeder extends Seeder
             // Otros
             'holidays',
             'terminals',
+            'terminal_events',
+            'terminal_daily_stats',
+            'terminal_pairing_requests',
+            'terminal_devices',
+            'terminal_commands',
+            'personal_access_tokens',
+            'attendance_mark_failures',
+            'notifications',
+            'notification_preferences',
+            'notification_digest_items',
             // `settings` NO se trunca: la crean las migraciones de `database/settings` (todos los grupos y
             // propiedades), y `SettingsSeeder` solo pisa los valores de demo de general/payroll. Truncarla dejaba
             // sin cargar los módulos y las propiedades nuevas, y la app caía con `MissingSettings` al iniciar sesión.

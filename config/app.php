@@ -65,6 +65,12 @@ return [
     |
     */
 
+    /*
+    | Instancia de demostración: habilita `demo:refresh` en el programador (marcaciones de hoy y latidos de los
+    | terminales siempre vigentes). Nunca activar en una instalación con datos reales.
+    */
+    'demo' => (bool) env('APP_DEMO', false),
+
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*

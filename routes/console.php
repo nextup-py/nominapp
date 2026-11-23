@@ -292,3 +292,6 @@ Schedule::command('logs:rotate')->dailyAt('03:50')->withoutOverlapping();
 
 /** Avisa a RR.HH. si faltan los feriados del año (diario, a la mañana). */
 Schedule::command('holidays:notify-missing')->dailyAt('08:40')->withoutOverlapping();
+
+/** Solo en una instancia de demostración (APP_DEMO=true): mantiene el día de hoy y los terminales vigentes. */
+Schedule::command('demo:refresh')->everyTenMinutes()->withoutOverlapping()->when(fn () => (bool) config('app.demo'));
