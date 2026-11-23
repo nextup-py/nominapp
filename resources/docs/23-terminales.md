@@ -440,6 +440,16 @@ Un terminal que figura **Desconectado** a media mañana casi siempre es un equip
 5. **Fecha y hora automáticas:** si el reloj se desajusta, el panel avisa (**Reloj del terminal desajustado**). Las marcaciones se corrigen con el desfase detectado, pero conviene dejar la hora automática.
 6. **Permiso de cámara concedido** y la página del terminal abierta (sin cerrar la pestaña).
 
+### Celular o tablet Android
+
+1. Abrir la URL del terminal en **Chrome** y vincularlo (código de emparejamiento o enlace de configuración).
+2. **Instalar como app:** en el menú **⋮** de Chrome elegir **Instalar aplicación** (o **Añadir a pantalla de inicio**, según la versión), o tocar **Instalar app** en el aviso de la pantalla de reposo del terminal. Aparece un ícono en la pantalla de inicio: **abrir siempre el terminal desde ese ícono**, no desde Chrome. En el detalle del terminal, el **Modo** pasa a **Instalada como app**.
+3. Conceder el permiso de **cámara** cuando lo pida.
+4. **Enchufar el equipo** y, en los ajustes, activar que la pantalla se mantenga encendida mientras carga (*Opciones de desarrollador → Permanecer activo*, o *Pantalla → Tiempo de espera* al máximo).
+5. En *Batería*, quitar la app de la optimización de batería.
+6. **Dejar la app visible:** el terminal debe quedar en primer plano, sin minimizarla ni cambiar a otra aplicación. Si el equipo se usa para otra cosa (por ejemplo, un celular de ventas), volver al terminal al terminar y no dejar el equipo bloqueado. Con la app oculta el navegador frena el terminal, suelta el bloqueo de pantalla y no se puede marcar hasta que vuelva a mostrarse.
+7. Verificar en el panel que el detalle muestre **Instalada como app**, **Pantalla encendida: Activa** y el estado **En línea**.
+
 ### PC con Windows
 
 En las PCs de escritorio el ajuste que más pesa es el **plan de energía**:
