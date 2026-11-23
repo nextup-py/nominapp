@@ -88,7 +88,9 @@ class LiveAttendanceMonitor
      *     truncated: bool,
      *     alerts: array<int, array<string, mixed>>,
      *     feed: array<int, array<string, mixed>>,
-     *     offline_terminals: int
+     *     offline_terminals: int,
+     *     terminals: array<int, array<string, mixed>>,
+     *     branches: array<int, array<string, mixed>>
      * }
      */
     public static function snapshot(array $filters = [], ?Carbon $now = null): array
@@ -121,6 +123,8 @@ class LiveAttendanceMonitor
 
         $counts = self::countRows($rows);
         $alerts = [...self::alerts($rows), ...self::locationAlerts($ids, $today)];
+        $terminals = self::terminals($filters);
+        $branches = self::branchSummary($rows, $terminals);
 
         if (filled($filters['state'] ?? null)) {
             $rows = array_values(array_filter($rows, fn (array $row) => self::matchesStateFilter($row, (string) $filters['state'])));
@@ -139,7 +143,9 @@ class LiveAttendanceMonitor
             'truncated' => $truncated,
             'alerts' => $alerts,
             'feed' => self::feed($ids, $today),
-            'offline_terminals' => self::offlineTerminals(),
+            'offline_terminals' => count(array_filter($terminals, fn (array $terminal) => $terminal['status'] === 'stale')),
+            'terminals' => $terminals,
+            'branches' => $branches,
         ];
     }
 
@@ -519,15 +525,79 @@ class LiveAttendanceMonitor
             ->all();
     }
 
-    /** Terminales activos que dejaron de reportar (dentro de su horario de vigilancia). */
-    private static function offlineTerminals(): int
+    /**
+     * Terminales activos dentro del alcance del filtro, con su conectividad actual. Sirve para distinguir una falta
+     * real de un equipo caído: si el terminal de una sucursal no reporta, lo que figura como «sin marcar» puede no serlo.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<int, array{id: int, name: string, branch: string|null, branch_id: int|null, status: string, label: string, heartbeat: string|null}>
+     */
+    private static function terminals(array $filters = []): array
     {
+        $labels = Terminal::getConnectivityStatusLabels();
+
         return Terminal::query()
             ->withSyncTokenFlag()
             ->with('branch')
             ->where('status', 'active')
+            ->when(filled($filters['branch_id'] ?? null), fn (Builder $q) => $q->where('branch_id', (int) $filters['branch_id']))
+            ->when(filled($filters['company_id'] ?? null), fn (Builder $q) => $q->whereHas('branch', fn (Builder $b) => $b->where('company_id', (int) $filters['company_id'])))
+            ->orderBy('name')
             ->get()
-            ->filter(fn (Terminal $terminal) => $terminal->connectivity_status === 'stale')
-            ->count();
+            ->map(fn (Terminal $terminal) => [
+                'id' => $terminal->id,
+                'name' => $terminal->name,
+                'branch' => $terminal->branch?->name,
+                'branch_id' => $terminal->branch_id,
+                'status' => $terminal->connectivity_status,
+                'label' => $labels[$terminal->connectivity_status] ?? $terminal->connectivity_status,
+                'heartbeat' => $terminal->last_heartbeat_at?->diffForHumans(short: true),
+            ])
+            ->all();
+    }
+
+    /**
+     * Resumen por sucursal a partir de las filas del día (antes del filtro de estado): cuántos hay presentes, cuántos
+     * faltan o están ausentes, la última marcación y el estado de sus terminales. Ordenado con lo que pide acción primero.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @param  array<int, array<string, mixed>>  $terminals
+     * @return array<int, array<string, mixed>>
+     */
+    private static function branchSummary(array $rows, array $terminals): array
+    {
+        $summary = [];
+
+        foreach ($rows as $row) {
+            $name = $row['branch'] ?? 'Sin sucursal';
+            $summary[$name] ??= ['branch' => $name, 'total' => 0, 'present' => 0, 'missing' => 0, 'absent' => 0, 'no_exit' => 0, 'last_event_at' => null, 'terminals' => []];
+
+            $summary[$name]['total']++;
+
+            if (in_array($row['state'], ['working', 'on_break'], true)) {
+                $summary[$name]['present']++;
+            }
+
+            foreach (['missing', 'absent', 'no_exit'] as $state) {
+                if ($row['state'] === $state) {
+                    $summary[$name][$state]++;
+                }
+            }
+
+            if ($row['last_event_at'] !== null && ($summary[$name]['last_event_at'] === null || $row['last_event_at'] > $summary[$name]['last_event_at'])) {
+                $summary[$name]['last_event_at'] = $row['last_event_at'];
+            }
+        }
+
+        foreach ($terminals as $terminal) {
+            if (isset($summary[$terminal['branch']])) {
+                $summary[$terminal['branch']]['terminals'][] = ['name' => $terminal['name'], 'status' => $terminal['status'], 'label' => $terminal['label'], 'heartbeat' => $terminal['heartbeat']];
+            }
+        }
+
+        $branches = array_values($summary);
+        usort($branches, fn (array $a, array $b) => [-($a['missing'] + $a['absent'] + $a['no_exit']), $a['branch']] <=> [-($b['missing'] + $b['absent'] + $b['no_exit']), $b['branch']]);
+
+        return $branches;
     }
 }

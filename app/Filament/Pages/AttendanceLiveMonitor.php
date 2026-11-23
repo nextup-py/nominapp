@@ -56,9 +56,13 @@ class AttendanceLiveMonitor extends Page
     #[Url(as: 'estado')]
     public ?string $state = null;
 
-    /** Modo pantalla grande: oculta el menú y agranda la letra. */
+    /** Modo pantalla grande: oculta el menú y los filtros, y agranda la letra. */
     #[Url(as: 'pantalla')]
     public bool $kiosk = false;
+
+    /** Agrupa la lista de empleados por sucursal (falso = lista plana ordenada por estado). */
+    #[Url(as: 'agrupar')]
+    public bool $grouped = false;
 
     /** Mismo permiso que las listas de Asistencias. */
     public static function canAccess(): bool
