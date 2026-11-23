@@ -78,9 +78,9 @@ afterEach(fn () => Carbon::setTestNow());
 
 // ─── Umbral de desconexión ──────────────────────────────────────────────────
 
-it('usa el umbral propio en minutos y, sin él, el global en horas', function () {
+it('usa el umbral propio en minutos y, sin él, el global (también en minutos)', function () {
     $settings = app(GeneralSettings::class);
-    $settings->terminal_stale_threshold_hours = 2;
+    $settings->terminal_stale_threshold_minutes = 120;
     $settings->save();
 
     $default = makeHealthTerminal();
@@ -95,9 +95,23 @@ it('usa el umbral propio en minutos y, sin él, el global en horas', function ()
         ->and($custom->fresh()->connectivity_status)->toBe('stale');
 });
 
+it('el umbral global puede ser menor a una hora y se aplica a los terminales sin umbral propio', function () {
+    $settings = app(GeneralSettings::class);
+    $settings->terminal_stale_threshold_minutes = 20;
+    $settings->save();
+
+    $terminal = makeHealthTerminal(['last_heartbeat_at' => now()->subMinutes(25)]);
+    $fresh = makeHealthTerminal(['last_heartbeat_at' => now()->subMinutes(15)]);
+
+    expect($terminal->effectiveStaleMinutes())->toBe(20)
+        ->and($terminal->connectivity_status)->toBe('stale')
+        ->and($fresh->connectivity_status)->toBe('online')
+        ->and(Terminal::heartbeatStale()->pluck('id')->all())->toContain($terminal->id)->not->toContain($fresh->id);
+});
+
 it('las consultas SQL de heartbeat vencido/vigente respetan el umbral propio de cada terminal', function () {
     $settings = app(GeneralSettings::class);
-    $settings->terminal_stale_threshold_hours = 2;
+    $settings->terminal_stale_threshold_minutes = 120;
     $settings->save();
 
     $a = makeHealthTerminal(['stale_after_minutes' => 10, 'last_heartbeat_at' => now()->subMinutes(30)]);

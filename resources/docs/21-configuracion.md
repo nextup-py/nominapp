@@ -41,7 +41,7 @@ Acceder desde **Configuración → Configuración General**.
 
 ### Terminales de Marcación
 
-- **Umbral de desconexión:** horas sin un heartbeat (latido) exitoso antes de que el panel marque un terminal como **Desconectado** (por defecto 2 horas; entre 1 y 72). No afecta a los estados *Sin vincular* ni *Nunca conectado*. Cada terminal puede definir su propio umbral en minutos. Ver el capítulo **Terminales de Marcación**.
+- **Umbral de desconexión:** minutos sin un heartbeat (latido) exitoso antes de que el panel marque un terminal como **Desconectado** (por defecto 120 minutos; entre 5 y 4320). Un terminal sano reporta cada ~90 segundos, así que un valor de 15 a 20 minutos detecta los equipos dormidos a tiempo. No afecta a los estados *Sin vincular* ni *Nunca conectado*. Cada terminal puede definir su propio umbral en minutos. Ver el capítulo **Terminales de Marcación**.
 - **Cola de marcaciones atascada:** minutos con marcaciones pendientes o en conflicto sin vaciarse (con el terminal en línea) antes de avisar por la campanita (por defecto 15; entre 5 y 1440).
 - **Batería baja:** porcentaje por debajo del cual se avisa que un terminal sin cargador se está quedando sin batería (por defecto 20 %; entre 5 y 50). Solo aplica a navegadores que informan la batería.
 - **Terminal sin cargador:** minutos sin cargador a partir de los cuales el terminal le recomienda a quien lo usa que lo enchufe y se avisa a quien gestiona terminales, antes de que la batería esté baja (por defecto 30; **0** lo apaga). Solo funciona si el navegador informa la batería.

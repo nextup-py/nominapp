@@ -47,7 +47,7 @@ class SettingsSeeder extends Seeder
             'face_min_confidence_gap' => 0.1,
 
             // Terminales de asistencia
-            'terminal_stale_threshold_hours' => 2,
+            'terminal_stale_threshold_minutes' => 120,
         ]);
 
         $this->command->info('GeneralSettings sembrados.');

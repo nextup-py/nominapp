@@ -55,7 +55,7 @@ it('el listado muestra el badge "Sin vincular" solo en terminales sin token vige
 it('el filtro de conectividad separa sin vincular de los demás estados', function () {
     actAsSuperAdminForUnlinked();
     $settings = app(GeneralSettings::class);
-    $settings->terminal_stale_threshold_hours = 2;
+    $settings->terminal_stale_threshold_minutes = 120;
     $settings->save();
 
     $unlinked = makeUnlinkedStatusTerminal('T Sin Vincular', linked: false);
