@@ -43,9 +43,14 @@
                 <a class="terminal-alert-link" href="{{ \App\Filament\Resources\TerminalResource::getUrl('index') }}">Ver terminales</a>
                 <details style="margin-top: .375rem;">
                     <summary style="cursor: pointer;">Ver el detalle</summary>
-                    <div style="margin-top: .375rem;">
-                        {{ collect($terminals)->map(fn ($t) => $t['name'].($t['branch'] ? " ({$t['branch']})" : '').' — '.$labels[$t['status']])->implode('; ') }}.
-                    </div>
+                    <ul style="margin-top: .375rem; list-style: none; padding: 0;">
+                        @foreach (\App\Services\TerminalAttentionBanner::groupedByResponsible($terminals) as $group)
+                            <li style="margin-bottom: .25rem;">
+                                <strong>{{ $group['responsible'] ?? 'Sin responsable cargado' }}:</strong>
+                                {{ collect($group['terminals'])->map(fn ($t) => $t['name'].($t['branch'] ? " ({$t['branch']})" : '').' — '.$labels[$t['status']])->implode('; ') }}.
+                            </li>
+                        @endforeach
+                    </ul>
                 </details>
                 @php($waiting = collect($terminals)->where('status', 'unlinked')->where('pending', '>', 0))
                 @if ($waiting->isNotEmpty())

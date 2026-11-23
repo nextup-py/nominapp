@@ -131,3 +131,20 @@ it('la huella del cartel cambia cuando cambia el problema y se puede cerrar desd
     $this->actingAs(bannerManager());
     expect(view('filament.hooks.terminal-alert-banner')->render())->toContain('dismiss()')->toContain('Ocultar el aviso');
 });
+
+it('agrupa el detalle por responsable, con los sin responsable al final', function () {
+    bannerTerminal('Caja 1', linked: false, attributes: ['responsible_name' => 'Lourdes Mendieta', 'responsible_phone' => '0972204874']);
+    bannerTerminal('Caja 2', linked: false, attributes: ['responsible_name' => 'Lourdes Mendieta', 'responsible_phone' => '0972204874']);
+    bannerTerminal('Taller', linked: false, attributes: ['responsible_name' => 'Ana Acuña']);
+    bannerTerminal('Huérfano', linked: false);
+
+    $groups = TerminalAttentionBanner::groupedByResponsible(TerminalAttentionBanner::items());
+
+    expect(array_column($groups, 'responsible'))->toBe(['Ana Acuña', 'Lourdes Mendieta (0972204874)', null])
+        ->and(collect($groups[1]['terminals'])->pluck('name')->sort()->values()->all())->toBe(['Caja 1', 'Caja 2']);
+
+    $this->actingAs(bannerManager());
+    expect(view('filament.hooks.terminal-alert-banner')->render())
+        ->toContain('Lourdes Mendieta (0972204874):')
+        ->toContain('Sin responsable cargado:');
+});
