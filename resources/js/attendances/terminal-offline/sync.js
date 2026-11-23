@@ -233,6 +233,9 @@ export async function heartbeat() {
         if (Number.isFinite(data.config.no_charger_minutes)) {
             await setMeta('no_charger_minutes', data.config.no_charger_minutes);
         }
+        if (Number.isFinite(data.config.low_battery_percent)) {
+            await setMeta('low_battery_percent', data.config.low_battery_percent);
+        }
         if (typeof data.config.confirm_exit === 'boolean') {
             await setMeta('terminal_confirm_exit', data.config.confirm_exit);
         }

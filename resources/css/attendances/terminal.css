@@ -68,6 +68,25 @@ body {
     padding: var(--sp-2) var(--sp-4);
 }
 
+/* Cartel de batería baja sin cargador, bajo el encabezado: informa, nunca bloquea (ver terminal/low-battery-alert.js). */
+.battery-alert {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: var(--sp-2) var(--sp-4);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--c-warning-bg);
+    border-bottom: 1px solid var(--c-warning-ring);
+    color: var(--c-warning);
+    font-size: clamp(.8125rem, 1.8vw, 1rem);
+    font-weight: 700;
+    text-align: center;
+}
+.battery-alert.is-critical {
+    background: var(--c-danger-bg);
+    border-bottom-color: var(--c-danger);
+    color: var(--c-danger);
+    font-size: clamp(.9375rem, 2.2vw, 1.25rem);
+}
+
 .terminal-header {
     background: var(--c-surface);
     border-bottom: 1px solid var(--c-border);

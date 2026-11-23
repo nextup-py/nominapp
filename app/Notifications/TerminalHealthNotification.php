@@ -66,8 +66,10 @@ class TerminalHealthNotification extends Notification
                 ->icon('heroicon-o-queue-list')
                 ->warning(),
             'battery_low' => $notification
-                ->title('Batería baja en terminal')
-                ->body("El terminal {$name} está al {$this->terminal->reportedBatteryLevel()}% y sin cargador.")
+                ->title($this->reminder ? 'Terminal sigue con la batería baja' : 'Batería baja en terminal')
+                ->body($this->reminder
+                    ? "El terminal {$name} sigue al {$this->terminal->reportedBatteryLevel()}% y sin cargador hace más de ".TerminalHealthService::BATTERY_REMINDER_HOURS.' horas: está por apagarse y dejar de marcar. Pedir que lo enchufen.'.$this->responsibleLine()
+                    : "El terminal {$name} está al {$this->terminal->reportedBatteryLevel()}% y sin cargador.".$this->responsibleLine())
                 ->icon('heroicon-o-battery-0')
                 ->warning(),
             'no_enrolled' => $notification

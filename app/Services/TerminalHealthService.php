@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Log;
  * - `recovered`: volvió a estar en línea tras haber avisado la desconexión.
  * - `unlinked`: un terminal que estaba vinculado quedó sin acceso.
  * - `queue_stuck`: la cola de marcaciones no se vacía hace más del umbral (con el terminal en línea).
- * - `battery_low`: bajó del nivel configurado sin cargador.
+ * - `battery_low`: bajó del nivel configurado sin cargador; si sigue así tras `BATTERY_REMINDER_HOURS` horas se recuerda una vez.
  * La normalización de la cola y de la batería queda en la bitácora pero no notifica.
  */
 class TerminalHealthService
@@ -40,6 +40,9 @@ class TerminalHealthService
 
     /** Horas sin conexión tras las cuales se recuerda una sola vez que el terminal sigue caído. */
     public const OFFLINE_REMINDER_HOURS = 4;
+
+    /** Horas con la batería baja y sin cargador tras las cuales se recuerda una sola vez que nadie lo enchufó. */
+    public const BATTERY_REMINDER_HOURS = 2;
 
     /** Minutos seguidos en una pestaña del navegador o con la pestaña oculta (terminal en línea y en su horario) antes de avisar. */
     public const DISPLAY_ALERT_MINUTES = 120;
@@ -84,6 +87,8 @@ class TerminalHealthService
             'offline_reminded' => (bool) ($previous['offline_reminded'] ?? false),
             'queue_stuck' => (bool) ($previous['queue_stuck'] ?? false),
             'low_battery' => (bool) ($previous['low_battery'] ?? false),
+            'low_battery_since' => $previous['low_battery_since'] ?? null,
+            'low_battery_reminded' => (bool) ($previous['low_battery_reminded'] ?? false),
             'cache_empty' => (bool) ($previous['cache_empty'] ?? false),
             'no_enrolled' => (bool) ($previous['no_enrolled'] ?? false),
             'clock_skew' => (bool) ($previous['clock_skew'] ?? false),
@@ -110,6 +115,7 @@ class TerminalHealthService
         if ($previous === null) {
             $snapshot['queue_stuck'] = $terminal->isQueueStuck();
             $snapshot['low_battery'] = $this->lowBattery($terminal, false) ?? false;
+            $snapshot['low_battery_since'] = $snapshot['low_battery'] ? now()->toIso8601String() : null;
             $snapshot['no_enrolled'] = $linked && $terminal->enrolledEmployeesCount() === 0;
             $snapshot['cache_empty'] = $this->cacheEmpty($terminal, $connectivity, $terminal->enrolledEmployeesCount()) ?? false;
             $snapshot['clock_report_at'] = $terminal->device_report_at?->toIso8601String();
@@ -287,11 +293,23 @@ class TerminalHealthService
     {
         $low = $this->lowBattery($terminal, $snapshot['low_battery']);
 
-        if ($low === null || $low === $snapshot['low_battery']) {
+        if ($low === null) {
+            return [];
+        }
+
+        if ($low === $snapshot['low_battery']) {
+            if ($low && $this->batteryReminderDue($snapshot)) {
+                $snapshot['low_battery_reminded'] = true;
+
+                return [$this->remindBattery($terminal)];
+            }
+
             return [];
         }
 
         $snapshot['low_battery'] = $low;
+        $snapshot['low_battery_since'] = $low ? now()->toIso8601String() : null;
+        $snapshot['low_battery_reminded'] = false;
 
         if ($low) {
             return [$this->raise($terminal, 'battery_low', 'health_battery_low', ['level' => $terminal->reportedBatteryLevel()])];
@@ -300,6 +318,34 @@ class TerminalHealthService
         $this->record($terminal, 'health_battery_ok', ['level' => $terminal->reportedBatteryLevel()]);
 
         return [];
+    }
+
+    /**
+     * Si la batería sigue baja y sin cargador pasadas `BATTERY_REMINDER_HOURS` horas desde el primer aviso y todavía
+     * no se recordó. Una sola vez: un equipo que se apagó por falta de carga no debe llenar la campanita.
+     *
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function batteryReminderDue(array $snapshot): bool
+    {
+        if ($snapshot['low_battery_reminded'] || empty($snapshot['low_battery_since'])) {
+            return false;
+        }
+
+        return Carbon::parse($snapshot['low_battery_since'])->diffInMinutes(now()) >= self::BATTERY_REMINDER_HOURS * 60;
+    }
+
+    /** Recordatorio de un equipo que sigue con la batería baja y sin cargador: queda en la bitácora y avisa aparte. */
+    private function remindBattery(Terminal $terminal): string
+    {
+        $this->record($terminal, 'health_battery_low_reminder', [
+            'hours_low' => self::BATTERY_REMINDER_HOURS,
+            'level' => $terminal->reportedBatteryLevel(),
+        ]);
+
+        $this->notifyManagers(new TerminalHealthNotification($terminal, 'battery_low', reminder: true), 'battery_low', $terminal);
+
+        return 'battery_low';
     }
 
     /**

@@ -40,10 +40,11 @@ export function describeChargerNotice({ charging, level, unchargedSince, now, mi
  * @param {() => Promise<{charging: boolean|null, level: number|null}>} deps.readBattery - estado actual de la batería.
  * @param {() => Promise<number>} deps.getMinutes - minutos configurados (0 = apagado).
  * @param {() => number} [deps.now]
+ * @param {() => boolean} [deps.isSuppressed] - true mientras otro cartel más urgente (batería baja) ya está a la vista.
  * @param {{notice: HTMLElement|null, text: HTMLElement|null, dismissButton: HTMLElement|null}} deps.elements
  * @returns {{check: () => Promise<void>, start: () => () => void, dismissNotice: () => void}}
  */
-export function createChargerNotice({ readBattery, getMinutes, now = Date.now, elements }) {
+export function createChargerNotice({ readBattery, getMinutes, now = Date.now, isSuppressed = () => false, elements }) {
     let unchargedSince = null;
     let dismissedUntil = 0;
     let last = { charging: null, level: null };
@@ -51,7 +52,7 @@ export function createChargerNotice({ readBattery, getMinutes, now = Date.now, e
 
     /** Repinta el aviso con el último estado conocido. */
     function render() {
-        const text = describeChargerNotice({ ...last, unchargedSince, now: now(), minMinutes: minutes, dismissedUntil });
+        const text = isSuppressed() ? null : describeChargerNotice({ ...last, unchargedSince, now: now(), minMinutes: minutes, dismissedUntil });
 
         elements.notice?.classList.toggle('hidden', text === null);
         if (text !== null && elements.text) elements.text.textContent = text;

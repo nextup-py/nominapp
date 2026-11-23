@@ -317,6 +317,7 @@ La pestaña **Bitácora** del detalle es de solo lectura y lista, de lo más nue
 | **Quedó sin vincular** | Un terminal vinculado perdió su acceso |
 | **Cola de marcaciones atascada** / **normalizada** | La cola dejó de vaciarse o volvió a la normalidad |
 | **Batería baja** / **recuperada** | El nivel cruzó el porcentaje configurado |
+| **Sigue con la batería baja** | La batería sigue baja y sin cargador 2 horas después del primer aviso (se registra una sola vez) |
 | **Sin cargador** / **Cargador conectado** | El terminal lleva el tiempo configurado sin cargador (por defecto 30 minutos) / se enchufó de nuevo |
 | **Fuera de la sucursal** / **De vuelta en la sucursal** | Un equipo móvil mandó dos lecturas seguidas de ubicación fuera del radio de su sucursal / volvió. El detalle indica la distancia |
 | **Sucursal sin empleados enrolados** / **con empleados enrolados** | La sucursal del terminal se quedó sin ningún empleado activo con rostro registrado, o volvió a tenerlos |
@@ -343,6 +344,7 @@ Cada minuto el sistema revisa los terminales activos y avisa por la **campanita*
 | **Terminal sin vincular** | Un terminal que estaba vinculado perdió su acceso (se desvinculó o venció) |
 | **Cola de marcaciones atascada** | Con el terminal en línea, las marcaciones **pendientes** no se envían hace más del tiempo configurado. Las marcaciones **en conflicto** no cuentan: el servidor ya las rechazó y quedan en **Fallos de Marcación** para revisar |
 | **Batería baja en terminal** | El nivel bajó del porcentaje configurado y no está cargando (solo si el navegador informa la batería) |
+| **Terminal sigue con la batería baja** | Si pasan **2 horas** y el equipo sigue con la batería baja y sin cargador, se avisa **una sola vez más**: está por apagarse y dejar de marcar. El aviso incluye al **Responsable del equipo**, si el terminal lo tiene |
 | **Terminal sin cargador** | El terminal en línea lleva más de los minutos configurados sin cargador (por defecto 30), antes de que la batería esté baja. Dice cómo corregirlo: enchufarlo y dejar la pantalla encendida y la app visible. Una sola vez hasta que se enchufe (solo si el navegador informa la batería) |
 | **Terminal sin empleados enrolados** | La sucursal del terminal no tiene ningún empleado activo con rostro registrado: no podrá identificar a nadie. Enrolar a los empleados o revisar a qué sucursal pertenecen |
 | **Terminal sin empleados en caché** | El terminal está en línea pero reporta 0 empleados en su caché, aunque su sucursal tiene empleados enrolados. Enviar el comando remoto **Limpiar caché** o **Recargar app** |
@@ -509,7 +511,7 @@ Un terminal marcado como **Equipo móvil** compara su ubicación con la de la **
 
 En el detalle del terminal aparece la sección **Recomendaciones** cuando el último reporte del equipo muestra algo que corregir: **enchufar el equipo**, **mantener la pantalla encendida**, **dejar la app visible**, **abrir como app o en modo kiosko**, **corregir la fecha y hora** o **actualizar la app**. Desaparece sola cuando todo está bien.
 
-**Equipo que también se usa para otra cosa:** un celular de ventas, por ejemplo, puede ser terminal sin ser exclusivo. Lo que importa es que esté **enchufado**, con la **pantalla encendida** y con **esta app visible** cuando alguien tenga que marcar. Si queda desenchufado, el propio terminal muestra en reposo un aviso discreto (**Este equipo no está enchufado…**, con **Ocultar**, que vuelve a los 30 minutos) y nunca impide marcar.
+**Equipo que también se usa para otra cosa:** un celular de ventas, por ejemplo, puede ser terminal sin ser exclusivo. Lo que importa es que esté **enchufado**, con la **pantalla encendida** y con **esta app visible** cuando alguien tenga que marcar. Si queda desenchufado, el propio terminal muestra en reposo un aviso discreto (**Este equipo no está enchufado…**, con **Ocultar**, que vuelve a los 30 minutos) y nunca impide marcar. Con la **batería baja** (por debajo del porcentaje de **Configuración General**, el mismo que usa el panel) el aviso es más fuerte: un cartel bajo el encabezado, visible también mientras alguien se identifica, que dice **Batería baja (N%). Avise a la encargada para enchufar el equipo.** El botón **Entendido** lo oculta solo 5 minutos y vuelve a aparecer; con la batería en **10 % o menos** el cartel se vuelve rojo, dice que está por apagarse y no se puede ocultar. Tampoco impide marcar.
 
 ---
 

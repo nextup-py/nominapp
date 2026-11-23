@@ -13,6 +13,7 @@ import { initManualSearch } from './terminal/manual-search.js';
 import { createCameraControl } from './terminal/camera-control.js';
 import { createInstallNotice } from './terminal/install-notice.js';
 import { createChargerNotice } from './terminal/charger-notice.js';
+import { createLowBatteryAlert } from './terminal/low-battery-alert.js';
 import { probeStorage, describeStorageNotice, hasLinkMarker } from './terminal/storage-probe.js';
 import { createPrivacyNotice } from './terminal/privacy-notice.js';
 import { getCameraPrefs, setCameraPrefs, listVideoInputs } from './terminal/camera-prefs.js';
@@ -693,13 +694,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================================
     // CARGADOR — recomienda enchufar el equipo tras un rato sin cargador (ver terminal/charger-notice.js)
     // ============================================================================
-    createChargerNotice({
-        readBattery: async () => {
-            const battery = await navigator.getBattery();
+    const readBattery = async () => {
+        const battery = await navigator.getBattery();
 
-            return { charging: Boolean(battery.charging), level: Math.round(battery.level * 100) };
+        return { charging: Boolean(battery.charging), level: Math.round(battery.level * 100) };
+    };
+
+    // Cartel de batería baja: visible en cualquier pantalla (ver terminal/low-battery-alert.js)
+    const lowBatteryAlert = createLowBatteryAlert({
+        readBattery,
+        getLowPercent: async () => (await getMeta('low_battery_percent')) ?? 0,
+        elements: {
+            banner: document.getElementById('batteryAlert'),
+            text: document.getElementById('batteryAlertText'),
+            dismissButton: document.getElementById('btnBatteryAlertDismiss'),
         },
+    });
+    lowBatteryAlert.start();
+
+    createChargerNotice({
+        readBattery,
         getMinutes: async () => (await getMeta('no_charger_minutes')) ?? 0,
+        isSuppressed: () => lowBatteryAlert.isShowing(),
         elements: {
             notice: document.getElementById('chargerNotice'),
             text: document.getElementById('chargerNoticeText'),
