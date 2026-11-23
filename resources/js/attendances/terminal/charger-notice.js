@@ -42,9 +42,10 @@ export function describeChargerNotice({ charging, level, unchargedSince, now, mi
  * @param {() => number} [deps.now]
  * @param {() => boolean} [deps.isSuppressed] - true mientras otro cartel más urgente (batería baja) ya está a la vista.
  * @param {{notice: HTMLElement|null, text: HTMLElement|null, dismissButton: HTMLElement|null}} deps.elements
+ * @param {(text: string|null, battery: {charging: boolean|null, level: number|null}) => void} [deps.onChange] - se llama en cada repintado con el texto (null si no corresponde) y el último estado de la batería: lo usa el cartel único de estado del equipo.
  * @returns {{check: () => Promise<void>, start: () => () => void, dismissNotice: () => void}}
  */
-export function createChargerNotice({ readBattery, getMinutes, now = Date.now, isSuppressed = () => false, elements }) {
+export function createChargerNotice({ readBattery, getMinutes, now = Date.now, isSuppressed = () => false, elements, onChange = () => {} }) {
     let unchargedSince = null;
     let dismissedUntil = 0;
     let last = { charging: null, level: null };
@@ -56,6 +57,7 @@ export function createChargerNotice({ readBattery, getMinutes, now = Date.now, i
 
         elements.notice?.classList.toggle('hidden', text === null);
         if (text !== null && elements.text) elements.text.textContent = text;
+        onChange(text, last);
     }
 
     /** Lee la batería y la configuración; nunca lanza (un navegador sin Battery API simplemente no avisa). */

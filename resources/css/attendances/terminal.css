@@ -473,6 +473,36 @@ body {
 .idle-install-notice.hidden { display: none; }
 .idle-install-notice-actions { display: flex; gap: var(--sp-2); }
 
+/* Cartel único «Cómo dejar el equipo» de la pantalla de reposo (ver terminal/device-checklist.js). */
+.device-checklist {
+    display: flex; flex-direction: column; gap: var(--sp-2);
+    width: 100%; max-width: 34rem;
+    margin-top: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
+    border: 1px solid var(--c-border-s);
+    border-left: 3px solid var(--c-warning);
+    border-radius: var(--r-lg);
+    background: var(--c-surface);
+    color: var(--c-muted);
+    font-size: clamp(.6875rem, 1.5vw, .8125rem);
+    line-height: 1.4;
+    text-align: left;
+}
+.device-checklist.hidden { display: none; }
+.device-checklist-title { margin: 0; color: inherit; font-size: 1em; font-weight: 600; }
+.device-checklist-list { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; }
+.device-checklist-row { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.device-checklist-row--ok { opacity: .75; }
+.device-checklist-mark {
+    flex: none; width: 1.1em; height: 1.1em; margin-top: .1em;
+    border-radius: 50%; font-size: .85em; font-weight: 700; line-height: 1.1em; text-align: center;
+}
+.device-checklist-row--ok .device-checklist-mark { background: var(--c-success, #16a34a); color: #fff; }
+.device-checklist-row--ok .device-checklist-mark::before { content: "\2713"; }
+.device-checklist-row--warn .device-checklist-mark { background: var(--c-warning); color: #fff; }
+.device-checklist-row--warn .device-checklist-mark::before { content: "!"; }
+.device-checklist-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); }
+
 /* Aviso de privacidad de la empresa: pie de reposo, línea al identificarse y ventana completa (ver terminal/privacy-notice.js). */
 .privacy-footer {
     margin-top: var(--sp-3);
