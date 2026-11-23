@@ -54,7 +54,7 @@ class GeneralSettings extends Settings
 
     public float $face_min_confidence_gap;
 
-    public int $terminal_stale_threshold_hours;
+    public int $terminal_stale_threshold_minutes;
 
     /** Minutos con la cola offline sin vaciarse antes de avisar que está atascada. */
     public int $terminal_queue_stuck_minutes;

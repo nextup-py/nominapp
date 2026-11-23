@@ -71,7 +71,7 @@ Si el terminal sincroniza un evento offline cuya secuencia ya no es válida en e
 
 ### Heartbeat / staleness (`Terminal`)
 
-`connectivity_status` (`never_connected` / `online` / `stale`, según `GeneralSettings->terminal_stale_threshold_hours`) y `sync_queue_status` (`ok` / `pending` / `conflict`), visibles en `TerminalResource` (columnas, filtros, infolist).
+`connectivity_status` (`never_connected` / `online` / `stale`, según `GeneralSettings->terminal_stale_threshold_minutes`) y `sync_queue_status` (`ok` / `pending` / `conflict`), visibles en `TerminalResource` (columnas, filtros, infolist).
 
 ### Hardening
 
@@ -135,4 +135,4 @@ Notificación a admins (`MobileDeviceRelinkedNotification`) cuando un empleado q
 
 **Dispositivo:** `app/Models/Employee.php` (sección "Marcación offline por dispositivo"), `app/Http/Controllers/MobileLinkController.php`, `app/Http/Controllers/Api/Mobile{Heartbeat,Status,EventSync}Controller.php`, `app/Services/MobileEventSyncService.php`, `resources/js/attendances/{mark,mobile-offline/*}.js`, `resources/views/attendances/device-link.blade.php`.
 
-**Configuración:** `app/Settings/GeneralSettings.php` (`face_threshold`, `face_min_confidence_gap`, `terminal_stale_threshold_hours`), `config/attendance.php`.
+**Configuración:** `app/Settings/GeneralSettings.php` (`face_threshold`, `face_min_confidence_gap`, `terminal_stale_threshold_minutes`), `config/attendance.php`.

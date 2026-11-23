@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Terminal;
 use App\Services\LocationRadiusService;
 use App\Services\MailConfigurator;
 use App\Settings\GeneralSettings;
@@ -360,14 +361,16 @@ class ManageGeneralSettings extends SettingsPage
                     ->description('Configuración de conectividad para terminales offline (marcación vía PWA)')
                     ->icon('heroicon-o-wifi')
                     ->schema([
-                        TextInput::make('terminal_stale_threshold_hours')
+                        TextInput::make('terminal_stale_threshold_minutes')
                             ->label('Umbral de desconexión')
                             ->numeric()
-                            ->minValue(1)
-                            ->maxValue(72)
-                            ->default(2)
-                            ->suffix('horas')
-                            ->helperText('Horas sin heartbeat exitoso antes de marcar un terminal como desconectado en el panel. Cada terminal puede definir su propio umbral en minutos.'),
+                            ->integer()
+                            ->required()
+                            ->minValue(Terminal::MIN_STALE_MINUTES)
+                            ->maxValue(4320)
+                            ->default(120)
+                            ->suffix('minutos')
+                            ->helperText('Minutos sin latido exitoso antes de marcar un terminal como desconectado en el panel (mínimo '.Terminal::MIN_STALE_MINUTES.'). Un terminal sano reporta cada ~90 segundos; cada terminal puede definir su propio umbral.'),
 
                         TextInput::make('terminal_queue_stuck_minutes')
                             ->label('Cola de marcaciones atascada')

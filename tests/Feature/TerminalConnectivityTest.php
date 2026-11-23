@@ -79,7 +79,7 @@ it('withSyncTokenFlag resuelve connectivity_status de varios terminales sin cons
     }
     makeConnectivityTerminal();
     // Resuelve y cachea los settings antes de contar, para medir solo las consultas de tokens.
-    app(GeneralSettings::class)->terminal_stale_threshold_hours;
+    app(GeneralSettings::class)->terminal_stale_threshold_minutes;
 
     $tokenQueries = 0;
     DB::listen(function ($query) use (&$tokenQueries) {
@@ -103,7 +103,7 @@ it('nunca conectado cuando está vinculado pero last_heartbeat_at es null', func
 
 it('en línea cuando el último heartbeat está dentro del umbral configurado', function () {
     $settings = app(GeneralSettings::class);
-    $settings->terminal_stale_threshold_hours = 2;
+    $settings->terminal_stale_threshold_minutes = 120;
     $settings->save();
 
     $terminal = linkConnectivityTerminal(makeConnectivityTerminal());
@@ -114,7 +114,7 @@ it('en línea cuando el último heartbeat está dentro del umbral configurado', 
 
 it('desconectado cuando el último heartbeat superó el umbral configurado', function () {
     $settings = app(GeneralSettings::class);
-    $settings->terminal_stale_threshold_hours = 2;
+    $settings->terminal_stale_threshold_minutes = 120;
     $settings->save();
 
     $terminal = linkConnectivityTerminal(makeConnectivityTerminal());

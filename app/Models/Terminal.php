@@ -383,7 +383,7 @@ class Terminal extends Model implements AuthenticatableContract
      *   (nunca se provisionó, se revocó, o el enlace de setup no se reclamó).
      * - 'never_connected': vinculado pero sin ningún heartbeat exitoso todavía.
      * - 'online': el último heartbeat exitoso está dentro del umbral
-     *   configurado (`GeneralSettings->terminal_stale_threshold_hours`).
+     *   configurado (`GeneralSettings->terminal_stale_threshold_minutes`).
      * - 'stale': el último heartbeat exitoso superó el umbral.
      */
     public function getConnectivityStatusAttribute(): string
@@ -410,7 +410,7 @@ class Terminal extends Model implements AuthenticatableContract
     /** Minutos sin heartbeat para considerarlo desconectado: el propio del terminal o, si no tiene, el global. */
     public function effectiveStaleMinutes(): int
     {
-        return $this->stale_after_minutes ?? app(GeneralSettings::class)->terminal_stale_threshold_hours * 60;
+        return $this->stale_after_minutes ?? app(GeneralSettings::class)->terminal_stale_threshold_minutes;
     }
 
     /**
@@ -532,7 +532,7 @@ class Terminal extends Model implements AuthenticatableContract
     public function scopeHeartbeatStale(Builder $query): Builder
     {
         return $query->whereNotNull('last_heartbeat_at')
-            ->whereRaw('TIMESTAMPDIFF(SECOND, last_heartbeat_at, ?) > COALESCE(stale_after_minutes, ?) * 60', [now()->toDateTimeString(), app(GeneralSettings::class)->terminal_stale_threshold_hours * 60]);
+            ->whereRaw('TIMESTAMPDIFF(SECOND, last_heartbeat_at, ?) > COALESCE(stale_after_minutes, ?) * 60', [now()->toDateTimeString(), app(GeneralSettings::class)->terminal_stale_threshold_minutes]);
     }
 
     /**
@@ -544,7 +544,7 @@ class Terminal extends Model implements AuthenticatableContract
     public function scopeHeartbeatFresh(Builder $query): Builder
     {
         return $query->whereNotNull('last_heartbeat_at')
-            ->whereRaw('TIMESTAMPDIFF(SECOND, last_heartbeat_at, ?) <= COALESCE(stale_after_minutes, ?) * 60', [now()->toDateTimeString(), app(GeneralSettings::class)->terminal_stale_threshold_hours * 60]);
+            ->whereRaw('TIMESTAMPDIFF(SECOND, last_heartbeat_at, ?) <= COALESCE(stale_after_minutes, ?) * 60', [now()->toDateTimeString(), app(GeneralSettings::class)->terminal_stale_threshold_minutes]);
     }
 
     /**

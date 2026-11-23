@@ -194,7 +194,7 @@ Se calcula con el último latido exitoso del terminal. Los estados se evalúan e
 | **Desconectado** | Pasó más tiempo que el umbral sin recibir un latido, dentro de su horario de vigilancia | Revisar que el dispositivo esté encendido, con internet y con la página del terminal abierta |
 | **Fuera de horario** | Pasó más tiempo que el umbral sin latido, pero **fuera** del horario de vigilancia del terminal (por ejemplo, de noche en un local que cierra) | Nada: no se avisa. Al abrir el horario, si sigue sin reportar, pasa a **Desconectado** |
 
-> El umbral de **Desconectado** es el del propio terminal si lo definió (ver **Monitoreo del terminal**) o, si no, el general de **Configuración → Configuración General → Terminales de Marcación → Umbral de desconexión** (por defecto 2 horas). Los estados *Sin vincular* y *Nunca conectado* no dependen de ese valor.
+> El umbral de **Desconectado** es el del propio terminal si lo definió (ver **Monitoreo del terminal**) o, si no, el general de **Configuración → Configuración General → Terminales de Marcación → Umbral de desconexión** (por defecto 120 minutos). Los estados *Sin vincular* y *Nunca conectado* no dependen de ese valor.
 
 ### Monitoreo del terminal
 

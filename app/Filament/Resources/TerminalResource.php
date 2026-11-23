@@ -960,7 +960,7 @@ class TerminalResource extends Resource
                 ->minValue(Terminal::MIN_STALE_MINUTES)
                 ->maxValue(10080)
                 ->suffix('minutos')
-                ->placeholder(fn () => 'Usa el umbral general ('.app(GeneralSettings::class)->terminal_stale_threshold_hours.' h)')
+                ->placeholder(fn () => 'Usa el umbral general ('.app(GeneralSettings::class)->terminal_stale_threshold_minutes.' min)')
                 ->helperText('Mínimo '.Terminal::MIN_STALE_MINUTES.' minutos. Vacío = umbral general.')
                 ->columnSpanFull(),
 
