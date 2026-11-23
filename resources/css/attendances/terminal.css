@@ -513,6 +513,13 @@ body {
 .privacy-modal-qr { width: 9rem; height: 9rem; background: #fff; border-radius: var(--r-lg); padding: var(--sp-2); }
 .privacy-modal-link { color: var(--c-muted); font-size: .8125rem; overflow-wrap: anywhere; }
 .privacy-modal-qr.hidden, .privacy-modal-link.hidden { display: none; }
+.admin-pin-input {
+    width: 100%; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--c-border, rgba(127,127,127,.4));
+    border-radius: var(--r-lg); background: transparent; color: inherit; font: inherit;
+    font-size: 1.5rem; letter-spacing: .4em; text-align: center;
+}
+.admin-pin-error { margin: 0; color: var(--c-danger, #dc2626); font-size: .875rem; text-align: center; }
+.admin-pin-error.hidden { display: none; }
 
 .idle-hint {
     position: absolute;

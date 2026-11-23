@@ -98,6 +98,8 @@ class Terminal extends Model implements AuthenticatableContract
         'watch_from',
         'watch_to',
         'watch_day_hours',
+        'admin_pin',
+        'clear_admin_pin',
         'device_report',
         'device_report_at',
         'queue_backlog_since',
@@ -106,6 +108,8 @@ class Terminal extends Model implements AuthenticatableContract
 
     protected $hidden = [
         'setup_token',
+        'admin_pin_salt',
+        'admin_pin_hash',
     ];
 
     protected $casts = [
@@ -149,6 +153,74 @@ class Terminal extends Model implements AuthenticatableContract
         static::saving(function (Terminal $terminal) {
             $terminal->watch_day_hours = static::normalizeDayHours($terminal->watch_day_hours);
         });
+
+        static::updated(function (Terminal $terminal) {
+            if ($terminal->wasChanged('admin_pin_hash')) {
+                $actor = auth()->user();
+                TerminalEvent::record($terminal, $terminal->hasAdminPin() ? 'admin_pin_changed' : 'admin_pin_removed', null, $actor instanceof User ? $actor->id : null);
+            }
+        });
+    }
+
+    // =========================================================================
+    // PIN DE ADMINISTRADOR
+    // =========================================================================
+
+    /** Iteraciones de PBKDF2 del PIN: el cliente deriva igual con WebCrypto (terminal/admin-pin.js). */
+    public const ADMIN_PIN_ITERATIONS = 100000;
+
+    /** Largo mínimo y máximo del PIN (solo dígitos). */
+    public const ADMIN_PIN_MIN_LENGTH = 4;
+
+    public const ADMIN_PIN_MAX_LENGTH = 8;
+
+    /**
+     * Deriva el PIN con PBKDF2-SHA256 (hex de 64 caracteres). Es lo único que se guarda y se manda al dispositivo.
+     */
+    public static function deriveAdminPin(string $pin, string $salt): string
+    {
+        return hash_pbkdf2('sha256', $pin, $salt, self::ADMIN_PIN_ITERATIONS, 64);
+    }
+
+    /** Define el PIN de administrador desde el formulario: vacío no cambia nada. Nunca se guarda en claro. */
+    public function setAdminPinAttribute(?string $pin): void
+    {
+        if (blank($pin)) {
+            return;
+        }
+
+        $salt = bin2hex(random_bytes(16));
+        $this->attributes['admin_pin_salt'] = $salt;
+        $this->attributes['admin_pin_hash'] = static::deriveAdminPin(trim($pin), $salt);
+    }
+
+    /** «Quitar el PIN» desde el formulario. */
+    public function setClearAdminPinAttribute(mixed $clear): void
+    {
+        if (filter_var($clear, FILTER_VALIDATE_BOOLEAN)) {
+            $this->attributes['admin_pin_salt'] = null;
+            $this->attributes['admin_pin_hash'] = null;
+        }
+    }
+
+    /** Si el terminal tiene un PIN de administrador definido. */
+    public function hasAdminPin(): bool
+    {
+        return filled($this->admin_pin_hash) && filled($this->admin_pin_salt);
+    }
+
+    /**
+     * Lo que el dispositivo guarda para verificar el PIN sin conexión, o null si no hay PIN.
+     *
+     * @return array{salt: string, hash: string, iterations: int}|null
+     */
+    public function adminPinConfig(): ?array
+    {
+        if (! $this->hasAdminPin()) {
+            return null;
+        }
+
+        return ['salt' => $this->admin_pin_salt, 'hash' => $this->admin_pin_hash, 'iterations' => self::ADMIN_PIN_ITERATIONS];
     }
 
     // =========================================================================

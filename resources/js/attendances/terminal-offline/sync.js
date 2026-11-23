@@ -245,6 +245,10 @@ export async function heartbeat() {
         if ('privacy' in data.config) {
             await setMeta('privacy_notice', data.config.privacy ?? null);
         }
+        if ('admin_pin' in data.config) {
+            // null = el terminal ya no tiene PIN: se olvida el guardado.
+            await setMeta('admin_pin', data.config.admin_pin ?? null);
+        }
         if (data.roster) {
             await setMeta('branch_roster', { ...data.roster, at: Date.now() });
         }

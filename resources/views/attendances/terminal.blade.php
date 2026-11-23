@@ -65,6 +65,7 @@
 
         <x-attendance.terminal-menu-sheet />
         <x-attendance.terminal-privacy />
+        <x-attendance.terminal-admin-pin />
 
         <div id="offlineBanner" class="offline-banner" role="alert" aria-live="assertive" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

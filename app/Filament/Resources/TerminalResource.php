@@ -19,6 +19,7 @@ use App\Models\Company;
 use App\Models\Terminal;
 use App\Settings\GeneralSettings;
 use App\Support\PhoneNormalizer;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
@@ -245,6 +246,31 @@ class TerminalResource extends Resource
                     ])
                     ->columns(2),
 
+                Section::make('PIN de administrador')
+                    ->description('Protege la acción de pasar el equipo a otro terminal. Es opcional: sin PIN todo sigue como hoy.')
+                    ->icon('heroicon-o-lock-closed')
+                    ->compact()
+                    ->collapsible()
+                    ->collapsed(fn (?Terminal $record): bool => ! $record?->hasAdminPin())
+                    ->schema([
+                        TextInput::make('admin_pin')
+                            ->label(fn (?Terminal $record): string => $record?->hasAdminPin() ? 'Cambiar el PIN' : 'PIN de administrador')
+                            ->password()
+                            ->revealable()
+                            ->autocomplete('new-password')
+                            ->placeholder(fn (?Terminal $record): ?string => $record?->hasAdminPin() ? 'PIN definido: escribir uno nuevo para cambiarlo' : null)
+                            ->regex('/^\d{'.Terminal::ADMIN_PIN_MIN_LENGTH.','.Terminal::ADMIN_PIN_MAX_LENGTH.'}$/')
+                            ->validationMessages(['regex' => 'El PIN debe tener entre '.Terminal::ADMIN_PIN_MIN_LENGTH.' y '.Terminal::ADMIN_PIN_MAX_LENGTH.' dígitos.'])
+                            ->helperText('Solo dígitos. El equipo lo recibe en la próxima sincronización.')
+                            ->dehydrated(fn (?string $state): bool => filled($state)),
+
+                        Checkbox::make('clear_admin_pin')
+                            ->label('Quitar el PIN')
+                            ->visible(fn (?Terminal $record): bool => (bool) $record?->hasAdminPin())
+                            ->dehydrated(fn (?bool $state): bool => (bool) $state),
+                    ])
+                    ->columns(2),
+
                 Section::make('Instalación')
                     ->icon('heroicon-o-wrench-screwdriver')
                     ->compact()
@@ -409,6 +435,17 @@ class TerminalResource extends Resource
                         ]),
                     ])
                     ->visible(fn (Terminal $record) => $record->responsible_name || $record->responsible_phone || $record->purchased_at || $record->warranty_until),
+
+                InfoSection::make('PIN de administrador')
+                    ->icon('heroicon-o-lock-closed')
+                    ->collapsible()
+                    ->schema([
+                        TextEntry::make('_admin_pin')
+                            ->label('PIN para pasar el equipo a otro terminal')
+                            ->getStateUsing(fn (Terminal $record): string => $record->hasAdminPin() ? 'Definido' : 'Sin PIN')
+                            ->badge()
+                            ->color(fn (string $state): string => $state === 'Definido' ? 'success' : 'gray'),
+                    ]),
 
                 InfoSection::make('Conectividad')
                     ->description('Marcación offline vía PWA — heartbeat y sincronización con la API de terminales')

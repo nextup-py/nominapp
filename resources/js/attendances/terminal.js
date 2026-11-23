@@ -16,6 +16,8 @@ import { createChargerNotice } from './terminal/charger-notice.js';
 import { createLowBatteryAlert } from './terminal/low-battery-alert.js';
 import { probeStorage, describeStorageNotice, hasLinkMarker } from './terminal/storage-probe.js';
 import { createPrivacyNotice } from './terminal/privacy-notice.js';
+import { createAdminPinGate } from './terminal/admin-pin.js';
+import { createAdminPinPrompt } from './terminal/admin-pin-prompt.js';
 import { getCameraPrefs, setCameraPrefs, listVideoInputs } from './terminal/camera-prefs.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
 import { captureInstallPrompt, triggerInstallPrompt, isDismissed, dismiss } from '../shared/install-prompt.js';
@@ -541,7 +543,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnUnlinkedReload')?.addEventListener('click', () => window.location.reload());
 
     // «Usar este equipo en este terminal»: cambio deliberado, con confirmación; borra el estado del terminal anterior.
+    // Si el terminal anterior tiene PIN de administrador (guardado en el equipo), se pide antes de confirmar.
+    const adminPinGate = createAdminPinGate({
+        getConfig: () => getMeta('admin_pin'),
+        ask: createAdminPinPrompt({
+            modal: document.getElementById('adminPinModal'),
+            input: document.getElementById('adminPinInput'),
+            error: document.getElementById('adminPinError'),
+            form: document.getElementById('adminPinForm'),
+            cancel: document.getElementById('btnAdminPinCancel'),
+        }),
+    });
+
     document.getElementById('btnSwitchTerminal')?.addEventListener('click', async () => {
+        const access = await adminPinGate.requireAccess();
+        if (!access.allowed) {
+            if (access.reason === 'locked') {
+                window.alert(`Demasiados intentos. Esperar ${access.retryInSeconds} segundos para volver a intentar.`);
+            }
+            return;
+        }
+
         const current = terminalData?.name ?? terminalData?.code ?? 'este terminal';
         const confirmed = window.confirm(
             `¿Usar este equipo como «${current}»? Deja de ser el otro terminal y se pierde su caché local `

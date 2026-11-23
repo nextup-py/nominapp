@@ -167,6 +167,8 @@ class TerminalHeartbeatController extends Controller
                 'face_min_confidence_gap' => (float) $settings->face_min_confidence_gap,
                 // null = la empresa no tiene aviso: el terminal borra el que tenía guardado.
                 'privacy' => $terminal->branch?->company?->privacyNoticePayload(),
+                // null = sin PIN: el terminal borra el que tenía guardado. Solo viaja el derivado (PBKDF2), nunca el PIN.
+                'admin_pin' => $terminal->adminPinConfig(),
             ],
         ]);
     }
