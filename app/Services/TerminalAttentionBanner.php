@@ -23,7 +23,7 @@ class TerminalAttentionBanner
      *
      * `pending` cuenta los códigos de vinculación que esperan aprobación (con el terminal sin vincular, es lo que lo destraba).
      *
-     * @return list<array{id: int, name: string, branch: ?string, status: string, pending: int}>
+     * @return list<array{id: int, name: string, branch: ?string, status: string, pending: int, responsible: ?string}>
      */
     public static function items(): array
     {
@@ -40,6 +40,7 @@ class TerminalAttentionBanner
                     'branch' => $terminal->branch?->name,
                     'status' => $terminal->isInactive() ? 'ok' : self::statusOf($terminal),
                     'pending' => (int) $terminal->pending_requests_count,
+                    'responsible' => $terminal->responsibleContact(),
                 ])
                 ->filter(fn (array $item): bool => $item['status'] !== 'ok')
                 ->values()
@@ -81,6 +82,29 @@ class TerminalAttentionBanner
             'unlinked' => $counts['unlinked'] ?? 0,
             'outside' => $counts['outside'] ?? 0,
         ]);
+    }
+
+    /**
+     * Agrupa los terminales por quien responde por el equipo, para saber a quién llamar (los sin responsable van al final).
+     *
+     * @param  list<array{responsible?: ?string}>  $items
+     * @return list<array{responsible: ?string, terminals: list<array<string, mixed>>}>
+     */
+    public static function groupedByResponsible(array $items): array
+    {
+        $groups = [];
+
+        foreach ($items as $item) {
+            $groups[$item['responsible'] ?? ''][] = $item;
+        }
+
+        uksort($groups, fn (string $a, string $b): int => ($a === '') <=> ($b === '') ?: strcasecmp($a, $b));
+
+        return array_map(
+            fn (string $responsible, array $terminals): array => ['responsible' => $responsible !== '' ? $responsible : null, 'terminals' => $terminals],
+            array_keys($groups),
+            array_values($groups),
+        );
     }
 
     /** Pantallas del panel donde se muestra el cartel (donde se actúa sobre terminales o asistencia). */
