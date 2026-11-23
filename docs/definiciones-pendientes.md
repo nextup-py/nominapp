@@ -116,8 +116,8 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 
 ## 3b. Salud del sistema y logs de Macro (verificado 21/11)
 - Programador y cola OK; hoy 0 errores en el log. Correo no configurado (solo campanita). Disco 89% usado con 716 GB libres.
-- `contracts:notify-expiring` falla todos los días (8 corridas): `Undefined property: stdClass::$data->contract_id`. El arreglo ya está en el repo (usa `$notification->data['contract_id']`); Macro corre una versión anterior. Mientras tanto no llegan avisos de contratos por vencer.
-- Un intento de correr `leaves:justify-absences` falló con «no commands defined in the leaves namespace»: ese comando todavía no está desplegado en Macro.
+- `contracts:notify-expiring` falló en 8 corridas (`Undefined property: stdClass::$data->contract_id`). Esos errores son anteriores al deploy del 14/11; desde el 16/11 no aparece ninguno, así que el arreglo (que usa `$notification->data['contract_id']`) ya está en la versión que corre Macro. Pendiente de confirmar por fecha en el log.
+- Un intento de correr `leaves:justify-absences` falló con «no commands defined in the leaves namespace»: probablemente anterior al deploy del 14/11. Pendiente de confirmar por fecha en el log.
 - Errores aislados: `Trait Laravel\Sanctum\HasApiTokens not found` (2, durante un deploy), `Specified key was too long` (1, migración con motor MyISAM; verificar migraciones pendientes), `SQLSTATE[HY000] [2002]` (4, conexión a MySQL caída un instante), `Cardinality violation` en una consulta de empleados (2) y un error de vista Filament con registro nulo (1).
 - Los errores aislados son del deploy del sábado 14/11 entre 06:29 y 08:15 (Sanctum, clave larga, vista, cardinalidad) y de una caída momentánea de MySQL el 16/11 a las 06:43. No hay migraciones pendientes. Desde el 16/11 no hay errores.
 - Las oleadas de terminales sin conexión del 21/11 no dejaron ningún error en el log de Laravel. El log de acceso del servidor web de ese día: 1131 respuestas 200, 88 304, 9 302 y 2 404; ningún 429 ni 5xx, y todos los latidos de terminales respondieron 200. El servidor no rechazó ni falló: la causa está del lado de los equipos o de su red (suspensión, app oculta, sin cargador).
@@ -159,4 +159,5 @@ No es una rotación semanal. Hay tres grupos estables entre los 59 activos:
 - Para pagar desde el sistema falta además: renovar los contratos vencidos, resolver extras, tardanzas y ausencias pendientes, corregir los horarios (sábados de Casa Central y salida de las 18:30) y decidir qué se hace con las 319 cuotas de mercadería vencidas (el calculador solo toma cuotas con vencimiento dentro del período).
 
 ## 4. Deploy a Macro
-- Está pendiente desplegar los últimos commits (columna «Marca con» y aviso semanal de empleados silenciosos). Decisión: después de cerrar estas definiciones.
+- Macro corre `4a13cd9` (PR #303, 20/11). Le faltan 4 commits de `main` (PR #304 y #305): el aviso semanal de empleados activos sin marcación en 7 días y la columna y filtro «Marca con» en Empleados. Sin migraciones nuevas ni cambios de JS o CSS: no hace falta compilar el frontend. Deploy de bajo riesgo: `artisan down`, `git pull origin main`, `composer install --no-dev`, caché de Filament y `artisan up`.
+- Los commits de documentación de la rama `claude/tender-clarke-uqjfcb` (incluida la guía de Android del capítulo de terminales) no están en `main`; si se quiere esa guía en el panel hay que abrir un PR y mergearlo antes del deploy.
