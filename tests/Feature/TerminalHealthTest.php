@@ -439,7 +439,7 @@ it('el latido le informa al terminal los minutos sin cargador configurados', fun
     $terminal = makeHealthTerminal();
     Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
 
-    $this->postJson('/api/v1/terminal/heartbeat', [])->assertOk()->assertJsonPath('config.no_charger_minutes', 30);
+    $this->postJson('/api/v1/terminal/heartbeat', [])->assertOk()->assertJsonPath('config.no_charger_minutes', 30)->assertJsonPath('config.low_battery_percent', 20);
 });
 
 it('fuera del horario de vigilancia no avisa; al abrir el horario, si sigue caído, avisa', function () {
@@ -560,6 +560,57 @@ it('avisa la batería baja sin cargador y aplica histéresis para dejar de estar
     expect(evaluateHealth($terminal))->toBe(['battery_low']); // vuelve a bajar: nuevo aviso
 
     Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 2);
+});
+
+it('recuerda una sola vez, a las 2 horas, que la batería sigue baja y sin cargador', function () {
+    $settings = app(GeneralSettings::class);
+    $settings->terminal_low_battery_percent = 20;
+    $settings->terminal_no_charger_minutes = 0; // aísla el recordatorio del aviso aparte de «sin cargador»
+    $settings->save();
+    $manager = healthManager();
+    $report = fn (int $level, bool $charging) => ['device_report' => ['battery_level' => $level, 'battery_charging' => $charging], 'device_report_at' => now(), 'last_heartbeat_at' => now()];
+
+    $terminal = makeHealthTerminal($report(60, false));
+    evaluateHealth($terminal); // línea de base
+
+    $terminal->update($report(18, false));
+    expect(evaluateHealth($terminal))->toBe(['battery_low']);
+
+    Carbon::setTestNow(now()->addHour());
+    $terminal->update($report(15, false));
+    expect(evaluateHealth($terminal))->toBe([]); // todavía no pasaron 2 horas
+
+    Carbon::setTestNow(now()->addHour()->addMinute());
+    $terminal->update($report(12, false));
+    expect(evaluateHealth($terminal))->toBe(['battery_low'])
+        ->and(evaluateHealth($terminal))->toBe([]); // una sola vez
+
+    Notification::assertSentToTimes($manager, TerminalHealthNotification::class, 2);
+    Notification::assertSentTo($manager, TerminalHealthNotification::class, fn (TerminalHealthNotification $n) => $n->reminder && $n->alert === 'battery_low');
+    expect($terminal->events()->where('type', 'health_battery_low_reminder')->count())->toBe(1);
+});
+
+it('no recuerda la batería baja si el equipo se enchufó antes de las 2 horas', function () {
+    $settings = app(GeneralSettings::class);
+    $settings->terminal_low_battery_percent = 20;
+    $settings->terminal_no_charger_minutes = 0; // aísla el recordatorio del aviso aparte de «sin cargador»
+    $settings->save();
+    healthManager();
+    $report = fn (int $level, bool $charging) => ['device_report' => ['battery_level' => $level, 'battery_charging' => $charging], 'device_report_at' => now(), 'last_heartbeat_at' => now()];
+
+    $terminal = makeHealthTerminal($report(60, false));
+    evaluateHealth($terminal);
+    $terminal->update($report(18, false));
+    evaluateHealth($terminal);
+
+    Carbon::setTestNow(now()->addMinutes(30));
+    $terminal->update($report(25, true));
+    evaluateHealth($terminal); // enchufado: deja de estar baja
+
+    Carbon::setTestNow(now()->addHours(3));
+    $terminal->update($report(80, true));
+    expect(evaluateHealth($terminal))->toBe([])
+        ->and($terminal->events()->where('type', 'health_battery_low_reminder')->count())->toBe(0);
 });
 
 it('con cargador conectado o sin dato de batería no hay aviso de batería baja', function () {

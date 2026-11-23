@@ -82,6 +82,22 @@ describe('createChargerNotice', () => {
         expect(elements.hidden()).toBe(false);
     });
 
+    it('no se muestra mientras otro cartel más urgente (batería baja) está a la vista', async () => {
+        let time = 0;
+        let suppressed = true;
+        const elements = dom();
+        const notice = createChargerNotice({ readBattery: async () => ({ charging: false, level: 40 }), getMinutes: async () => 30, now: () => time, isSuppressed: () => suppressed, elements });
+
+        await notice.check();
+        time = 31 * MIN;
+        await notice.check();
+        expect(elements.hidden()).toBe(true);
+
+        suppressed = false;
+        await notice.check();
+        expect(elements.hidden()).toBe(false);
+    });
+
     it('un navegador sin Battery API (la lectura falla) no muestra nada ni lanza', async () => {
         const elements = dom();
         const notice = createChargerNotice({ readBattery: async () => { throw new Error('sin API'); }, getMinutes: async () => 30, elements });

@@ -79,6 +79,12 @@
             <span>Sin conexión — las marcaciones no pueden registrarse</span>
         </div>
 
+        {{-- Cartel de batería baja sin cargador: en cualquier pantalla, no impide marcar (ver terminal/low-battery-alert.js) --}}
+        <div id="batteryAlert" class="battery-alert hidden" role="alert" aria-live="assertive">
+            <span id="batteryAlertText"></span>
+            <button type="button" id="btnBatteryAlertDismiss" class="idle-sync-btn" aria-label="Entendido, recordar en unos minutos">Entendido</button>
+        </div>
+
         <main id="main-content">
             <x-attendance.terminal-start-gate />
             <x-attendance.terminal-loading />
