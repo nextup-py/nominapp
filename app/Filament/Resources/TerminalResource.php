@@ -22,6 +22,7 @@ use App\Support\PhoneNormalizer;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -151,7 +152,8 @@ class TerminalResource extends Resource
                         && blank($record->stale_after_minutes)
                         && blank($record->watch_days)
                         && blank($record->watch_from)
-                        && blank($record->watch_to)))
+                        && blank($record->watch_to)
+                        && blank($record->watch_day_hours)))
                     ->schema([
                         static::confirmExitField()->columnSpanFull(),
 
@@ -1001,6 +1003,25 @@ class TerminalResource extends Resource
                 ->native(false)
                 ->requiredWith('watch_from')
                 ->helperText('Un rango que cruza la medianoche pertenece al día en que empieza.'),
+
+            Repeater::make('watch_day_hours')
+                ->label('Horas distintas en ciertos días')
+                ->helperText('Para un día con otro horario (por ejemplo, el sábado hasta el mediodía). Los demás días usan las horas de arriba.')
+                ->schema([
+                    Select::make('day')
+                        ->label('Día')
+                        ->options(Terminal::WATCH_DAY_OPTIONS)
+                        ->required()
+                        ->distinct()
+                        ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
+                    TimePicker::make('from')->label($forBranch ? 'Atiende desde' : 'Vigilar desde')->seconds(false)->native(false)->required(),
+                    TimePicker::make('to')->label($forBranch ? 'Atiende hasta' : 'Vigilar hasta')->seconds(false)->native(false)->required(),
+                ])
+                ->columns(3)
+                ->addActionLabel('Agregar un día con otro horario')
+                ->defaultItems(0)
+                ->reorderable(false)
+                ->columnSpanFull(),
         ];
     }
 

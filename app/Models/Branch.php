@@ -31,6 +31,7 @@ class Branch extends Model implements Auditable
         'watch_days',
         'watch_from',
         'watch_to',
+        'watch_day_hours',
         'mobile_marking_allowed',
         'location_control',
         'location_radius_m',
@@ -48,6 +49,7 @@ class Branch extends Model implements Auditable
         'watch_days',
         'watch_from',
         'watch_to',
+        'watch_day_hours',
         'mobile_marking_allowed',
         'location_control',
         'location_radius_m',
@@ -62,6 +64,7 @@ class Branch extends Model implements Auditable
         'coordinates' => 'array',
         'is_active' => 'boolean',
         'watch_days' => 'array',
+        'watch_day_hours' => 'array',
         'mobile_marking_allowed' => 'boolean',
         'location_control' => 'boolean',
     ];
@@ -80,6 +83,7 @@ class Branch extends Model implements Auditable
             $branch->watch_days = $days === [] ? null : $days;
             $branch->watch_from = filled($branch->watch_from) ? $branch->watch_from : null;
             $branch->watch_to = filled($branch->watch_to) ? $branch->watch_to : null;
+            $branch->watch_day_hours = Terminal::normalizeDayHours($branch->watch_day_hours);
         });
 
         static::updating(function (Branch $branch): void {
@@ -187,6 +191,7 @@ class Branch extends Model implements Auditable
             'watch_days' => 'Días de atención',
             'watch_from' => 'Atiende desde',
             'watch_to' => 'Atiende hasta',
+            'watch_day_hours' => 'Horas distintas por día',
         ];
 
         $html = '<ul class="space-y-0.5 text-sm">';
@@ -222,6 +227,14 @@ class Branch extends Model implements Auditable
             $days = is_string($value) ? json_decode($value, true) : $value;
 
             return collect($days)->map(fn ($d) => Terminal::WATCH_DAY_OPTIONS[(int) $d] ?? $d)->implode(', ');
+        }
+
+        if ($key === 'watch_day_hours') {
+            $rows = is_string($value) ? json_decode($value, true) : $value;
+
+            return collect(Terminal::normalizeDayHours(is_array($rows) ? $rows : null) ?? [])
+                ->map(fn (array $row) => (Terminal::WATCH_DAY_OPTIONS[$row['day']] ?? $row['day']).' '.$row['from'].'–'.$row['to'])
+                ->implode(', ');
         }
 
         if (in_array($key, ['watch_from', 'watch_to'], true)) {
@@ -369,7 +382,7 @@ class Branch extends Model implements Auditable
     /** Indica si la sucursal tiene días u horas de atención configurados. */
     public function hasWatchSchedule(): bool
     {
-        return ! empty($this->watch_days) || filled($this->watch_from) || filled($this->watch_to);
+        return ! empty($this->watch_days) || filled($this->watch_from) || filled($this->watch_to) || ! empty($this->watch_day_hours);
     }
 
     /**
@@ -379,7 +392,7 @@ class Branch extends Model implements Auditable
     public function watchScheduleLabel(): string
     {
         return $this->hasWatchSchedule()
-            ? Terminal::windowLabel($this->watch_days ?? [], $this->watch_from, $this->watch_to)
+            ? Terminal::windowLabel($this->watch_days ?? [], $this->watch_from, $this->watch_to, Terminal::dayHoursMap($this->watch_day_hours))
             : 'Sin horario definido';
     }
 
