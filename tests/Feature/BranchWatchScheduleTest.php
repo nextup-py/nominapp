@@ -262,7 +262,7 @@ it('guarda las horas por día normalizadas: sin repetir días ni filas incomplet
         ],
     ]);
 
-    expect($branch->fresh()->watch_day_hours)->toBe([
+    expect($branch->fresh()->watch_day_hours)->toEqual([
         ['day' => 2, 'from' => '08:00', 'to' => '12:00'],
         ['day' => 6, 'from' => '07:00', 'to' => '11:00'],
     ]);
@@ -295,7 +295,7 @@ it('la acción masiva Configurar monitoreo guarda las horas por día y las quita
         'watch_day_hours' => [['day' => 6, 'from' => '06:30', 'to' => '13:00']],
     ]);
 
-    expect($terminal->fresh()->watch_day_hours)->toBe([['day' => 6, 'from' => '06:30', 'to' => '13:00']])
+    expect($terminal->fresh()->watch_day_hours)->toEqual([['day' => 6, 'from' => '06:30', 'to' => '13:00']])
         ->and($terminal->fresh()->watchScheduleLabel())->toContain('Sáb 06:30–13:00');
 
     TerminalMonitoringActions::apply(collect([$terminal->fresh()]), ['reset' => true]);
@@ -313,5 +313,5 @@ it('el formulario de la sucursal guarda las horas distintas por día', function 
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($branch->fresh()->watch_day_hours)->toBe([['day' => 6, 'from' => '07:00', 'to' => '12:30']]);
+    expect($branch->fresh()->watch_day_hours)->toEqual([['day' => 6, 'from' => '07:00', 'to' => '12:30']]);
 });
