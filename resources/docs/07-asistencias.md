@@ -36,9 +36,11 @@ Ir a **Asistencias → Monitor en vivo** para ver, mientras ocurre, qué pasa ho
 
 | Zona | Contenido |
 |------|-----------|
-| **Tarjetas** | Presentes ahora, Con retraso, Sin marcar, Ausentes, Sin salida, En descanso, Aún no inician, Terminaron y De permiso. Un clic en una tarjeta filtra la lista por ese estado; otro clic lo quita |
-| **Empleados hoy** | Una fila por empleado activo con su estado, horario de hoy, última marcación y detalle (minutos de retraso, tiempo en descanso, cuánto falta para que entre). Lo que requiere atención aparece primero. El nombre abre la ficha mensual del empleado |
-| **Alertas del momento** | Quien debía entrar y no marcó, quien se fue sin marcar la salida, descansos de más de 60 minutos, marcaciones de hoy fuera de radio o sin ubicación que siguen sin revisar y terminales sin conexión |
+| **Aviso de terminales** | Franja roja arriba cuando algún terminal está **sin conexión o sin vincular**, con su nombre y sucursal. Un terminal caído no registra marcaciones, así que lo que figura como **Sin marcar** o **Ausente** en esa sucursal puede no ser real: revisar el equipo antes de dar la falta por cierta. Incluye un enlace a **Terminales** |
+| **Tarjetas** | Una sola fila con Presentes ahora, Con retraso, Sin marcar, Ausentes, Sin salida, En descanso, Aún no inician, Terminaron y De permiso. Los números de **Sin marcar**, **Ausentes** y los demás que piden acción se pintan de color cuando son mayores que cero. Un clic en una tarjeta filtra la lista por ese estado; otro clic lo quita |
+| **Empleados hoy** | Una fila por empleado activo con su estado, horario de hoy, última marcación y detalle (minutos de retraso, tiempo en descanso, cuánto falta para que entre). Lo que requiere atención aparece primero. El nombre abre la ficha mensual del empleado. Con los botones **Lista plana** y **Agrupar por sucursal** se elige cómo verla: agrupada, cada sucursal tiene su bloque con la cantidad de empleados |
+| **Por sucursal** | Una fila por sucursal con **Presentes** (sobre el total), **Sin marcar** y **Ausentes** (en rojo cuando hay), la hora de la última marcación de ese día y el estado de sus terminales (**En línea**, **Desconectado**, **Sin vincular**, **Nunca conectado** o **Fuera de horario**; al pasar el cursor se ve el nombre y el último latido). Las sucursales que piden acción aparecen primero |
+| **Alertas del momento** | Quien debía entrar y no marcó, quien se fue sin marcar la salida, descansos de más de 60 minutos y marcaciones de hoy fuera de radio o sin ubicación que siguen sin revisar |
 | **Últimas marcaciones** | Las 15 marcaciones más recientes de hoy |
 
 **Estados:**
@@ -57,7 +59,7 @@ Ir a **Asistencias → Monitor en vivo** para ver, mientras ocurre, qué pasa ho
 
 **Filtros:** empresa (solo si hay más de una), sucursal, departamento, búsqueda por nombre o CI y la casilla **Solo quienes tienen turno hoy** (activada por defecto).
 
-**Pantalla grande:** el botón **Pantalla grande** oculta el menú y agranda la letra; **Pantalla completa** pone el navegador a pantalla completa. Sirve para dejar la página fija en un monitor de RR.HH. La dirección conserva los filtros y el modo (`?pantalla=1`), así que se puede guardar como favorito.
+**Pantalla grande:** el botón **Pantalla grande** oculta el menú y los filtros, agranda la letra y deja las tarjetas, el aviso de terminales, la lista, el resumen por sucursal y las alertas; **Pantalla completa** pone el navegador a pantalla completa. Sirve para dejar la página fija en un monitor de RR.HH. La dirección conserva los filtros, la forma de la lista y el modo (`?pantalla=1`, `?agrupar=1`), así que se puede guardar como favorito.
 
 > El horario de cada empleado se consulta con una memoria corta (5 minutos): si se cambia un horario, el monitor lo refleja en unos minutos. Para resolver lo pendiente (tardanzas, ausencias, jornadas sin salida) usar **Por resolver**.
 

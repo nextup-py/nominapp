@@ -7,6 +7,7 @@ use App\Models\AttendanceEvent;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Terminal;
 use App\Models\User;
 use App\Services\LiveAttendanceMonitor;
 use Carbon\Carbon;
@@ -211,4 +212,99 @@ it('un turno que cruza la medianoche no pasa a «Sin salida» antes de que termi
     liveDay($night, [['check_in', '22:00:00']])->forceFill(['expected_check_in' => '22:00:00', 'expected_check_out' => '06:00:00'])->saveQuietly();
 
     expect(liveStates())->toMatchArray(['Noche Vivo' => 'working']);
+});
+
+/** Terminal activo y vinculado de la sucursal, con su último latido. */
+function liveTerminal(Branch $branch, string $name, ?Carbon $heartbeat): Terminal
+{
+    $terminal = Terminal::create(['name' => $name, 'branch_id' => $branch->id]);
+    $terminal->claimSanctumToken();
+    $terminal->forceFill(['last_heartbeat_at' => $heartbeat])->save();
+
+    return $terminal->fresh();
+}
+
+function liveSuperAdmin(): void
+{
+    test()->actingAs(tap(User::factory()->create(), fn (User $u) => $u->assignRole(Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']))));
+}
+
+it('resume cada sucursal con presentes, faltantes y ausentes y pone primero la que pide acción', function () {
+    $alfa = liveBranch('Alfa');
+    $beta = liveBranch('Beta');
+
+    liveDay(liveEmployee('Entro', $alfa), [['check_in', '07:00:00']]);
+    liveEmployee('Falta', $alfa);
+    liveDay(liveEmployee('Llego', $beta), [['check_in', '07:05:00']]);
+
+    $branches = collect(LiveAttendanceMonitor::snapshot()['branches'])->keyBy('branch');
+
+    expect($branches->keys()->all())->toBe(['Alfa', 'Beta'])
+        ->and($branches['Alfa'])->toMatchArray(['total' => 2, 'present' => 1, 'missing' => 1, 'absent' => 0, 'last_event_at' => '07:00'])
+        ->and($branches['Beta'])->toMatchArray(['total' => 1, 'present' => 1, 'missing' => 0, 'last_event_at' => '07:05']);
+});
+
+it('incluye los terminales de cada sucursal y cuenta los desconectados, respetando el filtro de sucursal', function () {
+    $alfa = liveBranch('Alfa');
+    $beta = liveBranch('Beta');
+    liveEmployee('Uno', $alfa);
+    liveEmployee('Dos', $beta);
+    liveTerminal($alfa, 'Terminal Alfa', now());
+    liveTerminal($beta, 'Terminal Beta', now()->subHours(5));
+
+    $snapshot = LiveAttendanceMonitor::snapshot();
+    $byBranch = collect($snapshot['branches'])->keyBy('branch');
+
+    expect($snapshot['terminals'])->toHaveCount(2)
+        ->and($snapshot['offline_terminals'])->toBe(1)
+        ->and($byBranch['Alfa']['terminals'][0]['status'])->toBe('online')
+        ->and($byBranch['Beta']['terminals'][0]['status'])->toBe('stale')
+        ->and($byBranch['Beta']['terminals'][0]['label'])->toBe('Desconectado');
+
+    $filtered = LiveAttendanceMonitor::snapshot(['branch_id' => $alfa->id]);
+
+    expect($filtered['terminals'])->toHaveCount(1)
+        ->and($filtered['offline_terminals'])->toBe(0);
+});
+
+it('avisa en la página de los terminales caídos y muestra el resumen por sucursal', function () {
+    liveSuperAdmin();
+    $alfa = liveBranch('Alfa');
+    $beta = liveBranch('Beta');
+    liveEmployee('Uno', $alfa);
+    liveEmployee('Dos', $beta);
+    liveTerminal($alfa, 'Terminal Alfa', now());
+
+    Livewire::test(AttendanceLiveMonitor::class)->assertSuccessful()
+        ->assertDontSee('sin conexión o sin vincular')
+        ->assertSee('Por sucursal');
+
+    liveTerminal($beta, 'Terminal Beta', now()->subHours(5));
+
+    Livewire::test(AttendanceLiveMonitor::class)
+        ->assertSee('terminal sin conexión o sin vincular')
+        ->assertSee('Terminal Beta (Beta)')
+        ->assertSee('Las faltas de esas sucursales pueden no ser reales');
+});
+
+it('muestra la lista plana por defecto y la agrupa por sucursal con el selector', function () {
+    liveSuperAdmin();
+    liveEmployee('Uno', liveBranch('Alfa'));
+
+    Livewire::test(AttendanceLiveMonitor::class)
+        ->assertSet('grouped', false)
+        ->assertDontSee('· 1 empleado')
+        ->set('grouped', true)
+        ->assertSee('· 1 empleado');
+});
+
+it('en pantalla grande oculta los filtros y deja la hora y el botón para salir', function () {
+    liveSuperAdmin();
+    liveEmployee('Uno');
+
+    Livewire::test(AttendanceLiveMonitor::class)
+        ->assertSee('Todas las sucursales')
+        ->set('kiosk', true)
+        ->assertDontSee('Todas las sucursales')
+        ->assertSee('Salir de pantalla grande');
 });
