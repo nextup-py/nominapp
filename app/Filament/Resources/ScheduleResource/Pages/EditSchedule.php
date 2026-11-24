@@ -37,6 +37,7 @@ class EditSchedule extends EditRecord
                 ->label('Eliminar')
                 ->icon('heroicon-o-trash')
                 ->color('danger')
+                ->visible(fn (): bool => $this->record->deletionBlockers() === [])
                 ->modalHeading('¿Eliminar horario?')
                 ->modalDescription(fn () => "¿Estás seguro de que deseas eliminar el horario \"{$this->record->name}\"? Esta acción no se puede deshacer.")
                 ->modalSubmitActionLabel('Sí, eliminar')

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\MobileMarkingService;
+use App\Support\BlockerSummary;
 use App\Support\PhoneNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -295,30 +296,24 @@ class Company extends Model implements Auditable
     public function deletionBlockers(): array
     {
         $counts = [
-            'sucursales' => $this->branches()->count(),
-            'departamentos' => $this->departments()->count(),
-            'cuentas bancarias' => $this->bankAccounts()->count(),
-            'períodos de nómina' => PayrollPeriod::where('company_id', $this->id)->count(),
-            'períodos de aguinaldo' => AguinaldoPeriod::where('company_id', $this->id)->count(),
-            'lotes de pago bancario' => DisbursementBatch::where('company_id', $this->id)->count(),
-            'plantillas de contrato' => ContractTemplate::where('company_id', $this->id)->count(),
-            'plantillas de turno' => ShiftTemplate::where('company_id', $this->id)->count(),
-            'patrones de rotación' => RotationPattern::where('company_id', $this->id)->count(),
+            'sucursal|sucursales' => $this->branches()->count(),
+            'departamento|departamentos' => $this->departments()->count(),
+            'cuenta bancaria|cuentas bancarias' => $this->bankAccounts()->count(),
+            'período de nómina|períodos de nómina' => PayrollPeriod::where('company_id', $this->id)->count(),
+            'período de aguinaldo|períodos de aguinaldo' => AguinaldoPeriod::where('company_id', $this->id)->count(),
+            'lote de pago bancario|lotes de pago bancario' => DisbursementBatch::where('company_id', $this->id)->count(),
+            'plantilla de contrato|plantillas de contrato' => ContractTemplate::where('company_id', $this->id)->count(),
+            'plantilla de turno|plantillas de turno' => ShiftTemplate::where('company_id', $this->id)->count(),
+            'patrón de rotación|patrones de rotación' => RotationPattern::where('company_id', $this->id)->count(),
         ];
 
         return array_filter($counts);
     }
 
-    /** Texto legible de {@see self::deletionBlockers()}, p. ej. "2 sucursales y 1 departamentos". */
+    /** Texto legible de {@see self::deletionBlockers()}, p. ej. "2 sucursales y 1 departamento". */
     public function deletionBlockersSummary(): string
     {
-        $parts = collect($this->deletionBlockers())
-            ->map(fn (int $count, string $label) => "{$count} {$label}")
-            ->values();
-
-        return $parts->count() > 1
-            ? $parts->slice(0, -1)->implode(', ').' y '.$parts->last()
-            : (string) $parts->first();
+        return BlockerSummary::format($this->deletionBlockers());
     }
 
     /**

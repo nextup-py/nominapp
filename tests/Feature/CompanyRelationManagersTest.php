@@ -202,10 +202,10 @@ it('no deja eliminar una sucursal con terminales, aunque no tenga empleados', fu
     Terminal::create(['name' => 'Terminal', 'branch_id' => $branch->id]);
 
     companyRm(BranchesRelationManager::class, $company)
-        ->callTableAction('delete', $branch);
+        ->assertTableActionHidden('delete', $branch);
 
     expect(Branch::find($branch->id))->not->toBeNull()
-        ->and($branch->fresh()->deletionBlockersSummary())->toBe('1 terminales');
+        ->and($branch->fresh()->deletionBlockersSummary())->toBe('1 terminal');
 });
 
 it('cuenta empleados, terminales y fallas de marcación como bloqueos de la sucursal', function () {
@@ -218,7 +218,7 @@ it('cuenta empleados, terminales y fallas de marcación como bloqueos de la sucu
         'failure_message' => 'x', 'occurred_at' => now(),
     ]);
 
-    expect($branch->deletionBlockers())->toBe(['empleados' => 1, 'terminales' => 1, 'fallas de marcación' => 1])
+    expect($branch->deletionBlockers())->toBe(['empleado|empleados' => 1, 'terminal|terminales' => 1, 'falla de marcación|fallas de marcación' => 1])
         ->and(fn () => $branch->delete())->toThrow(DomainException::class, 'No se puede eliminar la sucursal');
 });
 

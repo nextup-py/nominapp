@@ -97,7 +97,7 @@ it('no se puede eliminar un departamento con cargos o contratos, ni desde la acc
     $department = departmentInUse(Company::factory()->create(), withContract: true);
 
     Livewire::test(EditDepartment::class, ['record' => $department->getKey()])
-        ->callAction(DeleteAction::class);
+        ->assertActionHidden(DeleteAction::class);
 
     expect(Department::find($department->id))->not->toBeNull();
 

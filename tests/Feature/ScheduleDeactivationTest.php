@@ -146,3 +146,30 @@ it('los horarios inactivos no se ofrecen para asignar, salvo el ya asignado', fu
     expect(Schedule::query()->assignable()->pluck('id')->all())->toContain($active->id)->not->toContain($inactive->id)
         ->and(Schedule::query()->assignable($inactive->id)->pluck('id')->all())->toContain($inactive->id);
 });
+
+it('oculta Eliminar en un horario con historial y lo muestra en uno sin uso', function () {
+    $used = Schedule::create(['name' => 'Con historial', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    EmployeeScheduleAssignment::create([
+        'employee_id' => $employee->id,
+        'schedule_id' => $used->id,
+        'valid_from' => now()->subDays(10)->toDateString(),
+        'valid_until' => now()->subDays(5)->toDateString(),
+    ]);
+    $unused = Schedule::create(['name' => 'Sin uso', 'shift_type' => 'diurno']);
+
+    Livewire::test(EditSchedule::class, ['record' => $used->getKey()])->assertActionHidden('delete');
+    Livewire::test(EditSchedule::class, ['record' => $unused->getKey()])->assertActionVisible('delete');
+});
+
+it('el aviso de bloqueo de un horario concuerda en singular', function () {
+    $schedule = Schedule::create(['name' => 'Una asignación', 'shift_type' => 'diurno']);
+    EmployeeScheduleAssignment::create([
+        'employee_id' => deactivationScheduleEmployee()->id,
+        'schedule_id' => $schedule->id,
+        'valid_from' => now()->subDays(10)->toDateString(),
+        'valid_until' => now()->subDays(5)->toDateString(),
+    ]);
+
+    expect($schedule->deletionBlockersSummary())->toContain('1 asignación de empleado (vigente o finalizada)');
+});

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BlockerSummary;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -123,21 +124,15 @@ class Department extends Model
     public function deletionBlockers(): array
     {
         return array_filter([
-            'cargo' => $this->positions()->count(),
-            'contrato' => $this->contracts()->count(),
+            'cargo|cargos' => $this->positions()->count(),
+            'contrato|contratos' => $this->contracts()->count(),
         ]);
     }
 
     /** Texto legible de {@see self::deletionBlockers()}, p. ej. "3 cargos y 12 contratos". */
     public function deletionBlockersSummary(): string
     {
-        $parts = collect($this->deletionBlockers())
-            ->map(fn (int $count, string $label) => $count === 1 ? "1 {$label}" : "{$count} {$label}s")
-            ->values();
-
-        return $parts->count() > 1
-            ? $parts->slice(0, -1)->implode(', ').' y '.$parts->last()
-            : (string) $parts->first();
+        return BlockerSummary::format($this->deletionBlockers());
     }
 
     /**

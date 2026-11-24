@@ -197,6 +197,7 @@ class BranchesRelationManager extends RelationManager
                         ->label('Eliminar')
                         ->icon('heroicon-o-trash')
                         ->color('danger')
+                        ->visible(fn ($record): bool => $record->deletionBlockers() === [])
                         ->modalHeading('¿Eliminar sucursal?')
                         ->modalDescription(fn ($record) => $record->deletionBlockers() !== []
                             ? "La sucursal \"{$record->name}\" tiene {$record->deletionBlockersSummary()} y no se puede eliminar."

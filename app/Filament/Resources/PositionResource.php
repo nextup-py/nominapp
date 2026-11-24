@@ -460,6 +460,7 @@ class PositionResource extends Resource
             ->label('Eliminar')
             ->icon('heroicon-o-trash')
             ->color('danger')
+            ->visible(fn (Position $record): bool => $record->deletionBlockers() === [])
             ->modalHeading('¿Eliminar cargo?')
             ->modalDescription(fn (Position $record): string => ($summary = $record->deletionBlockersSummary()) !== ''
                 ? "El cargo \"{$record->name}\" tiene {$summary} y no se puede eliminar. Moverlos a otro cargo con Fusionar primero."
