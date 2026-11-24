@@ -34,6 +34,7 @@ class EditCompany extends EditRecord
                 ->label('Eliminar')
                 ->icon('heroicon-o-trash')
                 ->color('danger')
+                ->visible(fn (): bool => $this->record->deletionBlockers() === [])
                 ->modalHeading('¿Eliminar empresa?')
                 ->modalDescription(function (): string {
                     $summary = $this->record->deletionBlockersSummary();

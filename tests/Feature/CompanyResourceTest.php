@@ -153,11 +153,11 @@ it('bloquea la eliminación si tiene datos asociados y explica cuáles', functio
     Department::create(['company_id' => $company->id, 'name' => 'Ventas']);
     CompanyBankAccount::factory()->create(['company_id' => $company->id]);
 
-    expect($company->deletionBlockers())->toBe(['sucursales' => 1, 'departamentos' => 1, 'cuentas bancarias' => 1])
-        ->and($company->deletionBlockersSummary())->toBe('1 sucursales, 1 departamentos y 1 cuentas bancarias');
+    expect($company->deletionBlockers())->toBe(['sucursal|sucursales' => 1, 'departamento|departamentos' => 1, 'cuenta bancaria|cuentas bancarias' => 1])
+        ->and($company->deletionBlockersSummary())->toBe('1 sucursal, 1 departamento y 1 cuenta bancaria');
 
     Livewire::test(EditCompany::class, ['record' => $company->getKey()])
-        ->callAction('delete');
+        ->assertActionHidden('delete');
 
     expect(Company::find($company->id))->not->toBeNull();
 });
@@ -166,7 +166,7 @@ it('el modelo se niega a eliminar una empresa con datos aunque no pase por el pa
     $company = Company::factory()->create();
     Branch::create(['company_id' => $company->id, 'name' => 'Casa Central']);
 
-    expect(fn () => $company->delete())->toThrow(DomainException::class, 'sucursales');
+    expect(fn () => $company->delete())->toThrow(DomainException::class, '1 sucursal');
     expect(Company::find($company->id))->not->toBeNull();
 });
 

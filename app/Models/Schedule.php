@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Settings\PayrollSettings;
+use App\Support\BlockerSummary;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -150,8 +151,8 @@ class Schedule extends Model
     public function deletionBlockers(): array
     {
         return array_filter([
-            'asignaciones de empleados (vigentes o finalizadas)' => $this->assignments()->count(),
-            'empleados con este horario como horario fijo' => $this->employees()->count(),
+            'asignación de empleado (vigente o finalizada)|asignaciones de empleados (vigentes o finalizadas)' => $this->assignments()->count(),
+            'empleado con este horario como horario fijo|empleados con este horario como horario fijo' => $this->employees()->count(),
         ]);
     }
 
@@ -178,15 +179,15 @@ class Schedule extends Model
     public function deactivationBlockers(): array
     {
         return array_filter([
-            'asignaciones de empleados vigentes o futuras' => $this->currentAssignmentsCount(),
-            'empleados con este horario como horario fijo' => $this->employees()->count(),
+            'asignación de empleado vigente o futura|asignaciones de empleados vigentes o futuras' => $this->currentAssignmentsCount(),
+            'empleado con este horario como horario fijo|empleados con este horario como horario fijo' => $this->employees()->count(),
         ]);
     }
 
     /** Texto legible de {@see self::deactivationBlockers()}. */
     public function deactivationBlockersSummary(): string
     {
-        return 'tiene '.$this->joinBlockers($this->deactivationBlockers()).'. Asignar a esos empleados otro horario primero';
+        return 'tiene '.BlockerSummary::format($this->deactivationBlockers()).'. Asignar a esos empleados otro horario primero';
     }
 
     /**
@@ -195,21 +196,11 @@ class Schedule extends Model
      */
     public function deletionBlockersSummary(): string
     {
-        $text = 'tiene '.$this->joinBlockers($this->deletionBlockers());
+        $text = 'tiene '.BlockerSummary::format($this->deletionBlockers());
 
         return $this->deactivationBlockers() === []
             ? "{$text}. Eliminarlo borraría ese historial: para dejar de usarlo, desactivar el horario"
             : "{$text}. Asignar a esos empleados otro horario y, para dejar de usarlo, desactivarlo";
-    }
-
-    /** @param  array<string, int>  $blockers */
-    private function joinBlockers(array $blockers): string
-    {
-        $parts = collect($blockers)->map(fn (int $count, string $label) => "{$count} {$label}")->values();
-
-        return $parts->count() > 1
-            ? $parts->slice(0, -1)->implode(', ').' y '.$parts->last()
-            : (string) $parts->first();
     }
 
     /**

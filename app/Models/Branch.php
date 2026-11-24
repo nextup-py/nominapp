@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\MobileMarkingService;
+use App\Support\BlockerSummary;
 use App\Support\PhoneNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -148,22 +149,16 @@ class Branch extends Model implements Auditable
     public function deletionBlockers(): array
     {
         return array_filter([
-            'empleados' => $this->employees()->count(),
-            'terminales' => $this->terminals()->count(),
-            'fallas de marcación' => AttendanceMarkFailure::where('branch_id', $this->id)->count(),
+            'empleado|empleados' => $this->employees()->count(),
+            'terminal|terminales' => $this->terminals()->count(),
+            'falla de marcación|fallas de marcación' => AttendanceMarkFailure::where('branch_id', $this->id)->count(),
         ]);
     }
 
-    /** Texto legible de {@see self::deletionBlockers()}, p. ej. "3 empleados y 1 terminales". */
+    /** Texto legible de {@see self::deletionBlockers()}, p. ej. "3 empleados y 1 terminal". */
     public function deletionBlockersSummary(): string
     {
-        $parts = collect($this->deletionBlockers())
-            ->map(fn (int $count, string $label) => "{$count} {$label}")
-            ->values();
-
-        return $parts->count() > 1
-            ? $parts->slice(0, -1)->implode(', ').' y '.$parts->last()
-            : (string) $parts->first();
+        return BlockerSummary::format($this->deletionBlockers());
     }
 
     /**

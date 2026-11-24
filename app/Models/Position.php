@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\MobileMarkingService;
+use App\Support\BlockerSummary;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -270,15 +271,13 @@ class Position extends Model
      */
     public function deletionBlockers(): array
     {
-        return array_filter(['contrato' => $this->contracts()->count()]);
+        return array_filter(['contrato|contratos' => $this->contracts()->count()]);
     }
 
     /** Texto legible de {@see self::deletionBlockers()}, p. ej. "12 contratos". */
     public function deletionBlockersSummary(): string
     {
-        return collect($this->deletionBlockers())
-            ->map(fn (int $count, string $label) => $count === 1 ? "1 {$label}" : "{$count} {$label}s")
-            ->implode(' y ');
+        return BlockerSummary::format($this->deletionBlockers());
     }
 
     public function department()

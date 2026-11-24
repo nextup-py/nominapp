@@ -38,6 +38,7 @@ class EditBranch extends EditRecord
                 ->label('Eliminar')
                 ->icon('heroicon-o-trash')
                 ->color('danger')
+                ->visible(fn (): bool => $this->record->deletionBlockers() === [])
                 ->modalHeading('¿Eliminar sucursal?')
                 ->modalDescription(fn () => $this->record->deletionBlockers() !== []
                     ? "Esta sucursal tiene {$this->record->deletionBlockersSummary()}. No es posible eliminarla mientras tenga datos asociados."

@@ -64,7 +64,7 @@ La acción **Duplicar** (en el listado y en el detalle del horario) copia los d�
 
 ### Eliminar o desactivar un horario
 
-Un horario con asignaciones de empleados —vigentes **o finalizadas**— o usado como horario fijo de algún empleado **no se puede eliminar**: borrarlo perdería el historial con el que se calculan las jornadas pasadas. Quitar a un empleado de un horario (**Remover**) solo cierra su asignación con la fecha de hoy; la asignación finalizada sigue contando y por eso el horario no se puede eliminar aunque ya no tenga a nadie.
+Un horario con asignaciones de empleados —vigentes **o finalizadas**— o usado como horario fijo de algún empleado **no se puede eliminar** y el botón **Eliminar** ni aparece (solo **Desactivar**): borrarlo perdería el historial con el que se calculan las jornadas pasadas. Quitar a un empleado de un horario (**Remover**) solo cierra su asignación con la fecha de hoy; la asignación finalizada sigue contando y por eso el horario no se puede eliminar aunque ya no tenga a nadie.
 
 Para dejar de usar un horario sin perder el historial, **desactivarlo**:
 

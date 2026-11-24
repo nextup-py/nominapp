@@ -98,7 +98,7 @@ it('el departamento no se puede cambiar si el cargo tiene contratos', function (
 it('no se elimina un cargo con contratos, ni desde la edición ni desde el modelo', function () {
     $position = positionWithContract(positionDepartment(Company::factory()->create()));
 
-    Livewire::test(EditPosition::class, ['record' => $position->getKey()])->callAction(DeleteAction::class);
+    Livewire::test(EditPosition::class, ['record' => $position->getKey()])->assertActionHidden(DeleteAction::class);
 
     expect(Position::find($position->id))->not->toBeNull()
         ->and(fn () => $position->delete())->toThrow(DomainException::class)
@@ -109,13 +109,13 @@ it('la fila del listado y la pestaña del departamento tampoco eliminan cargos c
     $department = positionDepartment(Company::factory()->create());
     $used = positionWithContract($department);
 
-    Livewire::test(ListPositions::class)->callTableAction('delete', $used);
+    Livewire::test(ListPositions::class)->assertTableActionHidden('delete', $used);
 
     expect(Position::find($used->id))->not->toBeNull();
 
     Livewire::test(PositionsRelationManager::class, [
         'ownerRecord' => $department, 'pageClass' => EditDepartment::class,
-    ])->callTableAction('delete', $used);
+    ])->assertTableActionHidden('delete', $used);
 
     expect(Position::find($used->id))->not->toBeNull();
 });

@@ -34,6 +34,7 @@ class EditPosition extends EditRecord
                 ->label('Eliminar')
                 ->icon('heroicon-o-trash')
                 ->color('danger')
+                ->visible(fn (): bool => $this->record->deletionBlockers() === [])
                 ->modalHeading('¿Eliminar cargo?')
                 ->modalDescription(function (): string {
                     $summary = $this->record->deletionBlockersSummary();
