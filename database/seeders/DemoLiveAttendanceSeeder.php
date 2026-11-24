@@ -30,7 +30,7 @@ class DemoLiveAttendanceSeeder extends Seeder
     }
 
     /**
-     * Rehace el día de hoy y deja unas jornadas de ayer sin salida.
+     * Rehace el día de hoy y deja unas jornadas del último día laboral sin salida.
      *
      * @return array{marked: int, missing: int, open_yesterday: int}
      */
@@ -222,17 +222,26 @@ class DemoLiveAttendanceSeeder extends Seeder
     }
 
     /**
-     * Quita la salida de ayer a tres personas con jornada completa: quedan en «Sin salida» para resolver en «Por resolver».
+     * Quita la salida de la última jornada laboral anterior a hoy (ayer, o el viernes si hoy es lunes) a tres personas con
+     * jornada completa: quedan en «Sin salida» para resolver en «Por resolver». El fin de semana no tiene jornadas
+     * presentes, así que se busca el día más reciente que sí las tiene (hasta 7 días atrás).
      *
-     * @return int Cantidad de jornadas de ayer que quedaron abiertas.
+     * @return int Cantidad de jornadas de ese día que quedaron abiertas.
      */
     private function leaveYesterdayOpen(Carbon $today): int
     {
-        $yesterday = $today->copy()->subDay();
+        $latest = AttendanceDay::query()
+            ->where('date', '<', $today->toDateString())
+            ->where('date', '>=', $today->copy()->subDays(7)->toDateString())
+            ->where('status', 'present')
+            ->whereHas('events', fn ($q) => $q->where('event_type', 'check_in'))
+            ->max('date');
 
-        if ($yesterday->isSunday()) {
+        if ($latest === null) {
             return 0;
         }
+
+        $yesterday = Carbon::parse($latest);
 
         $openNow = AttendanceDay::query()
             ->where('date', $yesterday->toDateString())

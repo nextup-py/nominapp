@@ -28,7 +28,7 @@ class RefreshDemo extends Command
         $terminals->refresh();
         $result = $attendance->generate();
 
-        $this->info("Demo al día: {$result['marked']} con marcaciones, {$result['missing']} sin marcar, {$result['open_yesterday']} jornadas de ayer sin salida.");
+        $this->info("Demo al día: {$result['marked']} con marcaciones, {$result['missing']} sin marcar, {$result['open_yesterday']} jornadas del último día laboral sin salida.");
 
         return self::SUCCESS;
     }

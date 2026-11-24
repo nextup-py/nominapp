@@ -147,6 +147,33 @@ it('refrescar el día de hoy es idempotente: no duplica jornadas ni fallos de ma
         ->and(AttendanceMarkFailure::query()->count())->toBe($failures);
 });
 
+it('un lunes deja sin salida jornadas del viernes: el fin de semana no tiene jornadas presentes', function () {
+    Carbon::setTestNow(Carbon::parse('2026-11-23 11:30:00', config('app.timezone'))); // lunes
+    $friday = Carbon::parse('2026-11-20', config('app.timezone'));
+
+    foreach (Employee::query()->where('status', 'active')->orderBy('id')->take(6)->get() as $employee) {
+        $day = AttendanceDay::query()->create(['employee_id' => $employee->id, 'date' => $friday->toDateString(), 'status' => 'present']);
+
+        foreach (['check_in' => '07:00', 'check_out' => '16:00'] as $type => $time) {
+            $day->events()->create(['event_type' => $type, 'recorded_at' => $friday->copy()->setTimeFromTimeString($time), 'source' => 'terminal', 'employee_id' => $employee->id]);
+        }
+    }
+
+    $this->seed(DemoTerminalSeeder::class);
+    $result = app(DemoLiveAttendanceSeeder::class)->generate();
+
+    $open = AttendanceDay::query()
+        ->where('date', $friday->toDateString())
+        ->whereDoesntHave('events', fn ($q) => $q->where('event_type', 'check_out'))
+        ->count();
+
+    expect($result['open_yesterday'])->toBe(3)
+        ->and($open)->toBe(3);
+
+    // Idempotente: otra pasada no abre más jornadas.
+    expect(app(DemoLiveAttendanceSeeder::class)->generate()['open_yesterday'])->toBe(3);
+});
+
 it('demo:refresh no hace nada fuera de una instancia de demo', function () {
     config(['app.demo' => false]);
 
