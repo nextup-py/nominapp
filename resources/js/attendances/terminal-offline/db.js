@@ -33,6 +33,7 @@
 
 import { openDB } from 'idb';
 import * as genericDb from '../offline-shared/generic-db.js';
+import { MIRRORED_KEYS, mirrorSet, mirrorSnapshot, mirrorClear } from './session-mirror.js';
 
 const DB_NAME = 'nominapp-terminal';
 const DB_VERSION = 2;
@@ -67,14 +68,51 @@ export function getDb() {
     return dbPromise;
 }
 
-/** @param {string} key @returns {Promise<any>} */
+/**
+ * Lee un valor de `terminal_meta`. Si es una clave del vínculo (token e identidad) y la base no tiene token pero el
+ * respaldo de `localStorage` sí, restaura el vínculo desde el respaldo: IndexedDB se pierde en algunos celulares
+ * (ver `session-mirror.js`) y sin esto el terminal pedía un código nuevo cada vez.
+ * @param {string} key
+ * @returns {Promise<any>}
+ */
 export async function getMeta(key) {
-    return genericDb.getMeta(await getDb(), META_STORE, key);
+    const db = await getDb();
+    const value = await genericDb.getMeta(db, META_STORE, key);
+
+    if ((value !== undefined && value !== null) || !MIRRORED_KEYS.includes(key)) return value;
+
+    return (await restoreLinkFromMirror(db))?.[key] ?? value;
 }
 
-/** @param {string} key @param {any} value */
+/**
+ * Restaura token e identidad desde el respaldo cuando `terminal_meta` no tiene token. No pisa nada si la base ya tiene
+ * un vínculo (aunque le falte otra clave): solo cubre la pérdida de la base.
+ * @param {import('idb').IDBPDatabase} db
+ * @returns {Promise<Record<string, any>|null>} Lo restaurado, o null si no había nada que restaurar.
+ */
+async function restoreLinkFromMirror(db) {
+    if (await genericDb.getMeta(db, META_STORE, 'api_token')) return null;
+
+    const snapshot = mirrorSnapshot();
+    if (!snapshot) return null;
+
+    for (const [key, value] of Object.entries(snapshot)) {
+        await genericDb.setMeta(db, META_STORE, key, value);
+    }
+
+    console.warn('Vínculo del terminal restaurado desde el respaldo local: la base del navegador estaba vacía.');
+
+    return snapshot;
+}
+
+/**
+ * Guarda un valor en `terminal_meta` y, si es parte del vínculo, lo refleja en el respaldo de `localStorage`.
+ * @param {string} key
+ * @param {any} value
+ */
 export async function setMeta(key, value) {
-    return genericDb.setMeta(await getDb(), META_STORE, key, value);
+    await genericDb.setMeta(await getDb(), META_STORE, key, value);
+    mirrorSet(key, value);
 }
 
 /**
@@ -111,6 +149,7 @@ export async function migrateTokenFromLocalStorage() {
  * @returns {Promise<void>}
  */
 export async function clearTerminalState() {
+    mirrorClear();
     const db = await getDb();
     await Promise.all([
         db.clear('terminal_meta'),
