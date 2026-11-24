@@ -21,7 +21,7 @@ class ShiftPlannerPage extends Page
         return ScheduleResource::canViewAny();
     }
 
-    protected static ?string $navigationGroup = 'Asistencias';
+    protected static ?string $navigationGroup = 'Horarios y turnos';
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
 
@@ -31,7 +31,7 @@ class ShiftPlannerPage extends Page
 
     protected static ?string $slug = 'planificador';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 1;
 
     protected static string $view = 'filament.pages.shift-planner';
 

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Filament\Pages\ReportsIndex;
+use App\Filament\Resources\AttendanceEventResource;
 use App\Filament\Resources\EmployeeResource;
 use Filament\Facades\Filament;
 use Filament\GlobalSearch\Contracts\GlobalSearchProvider;
@@ -23,6 +24,13 @@ class PanelGlobalSearchProvider implements GlobalSearchProvider
 
     /** Máximo de pantallas que se muestran. */
     public const SCREEN_LIMIT = 6;
+
+    /**
+     * Recursos que no están en el menú pero se encuentran con la búsqueda (pantallas de uso poco frecuente).
+     *
+     * @var array<int, class-string>
+     */
+    public const HIDDEN_SEARCHABLE = [AttendanceEventResource::class];
 
     public function getResults(string $query): ?GlobalSearchResults
     {
@@ -90,7 +98,7 @@ class PanelGlobalSearchProvider implements GlobalSearchProvider
         $screens = collect();
 
         foreach (Filament::getResources() as $resource) {
-            if (! $resource::shouldRegisterNavigation() || ! $resource::hasPage('index') || ! $resource::canViewAny()) {
+            if ((! $resource::shouldRegisterNavigation() && ! in_array($resource, self::HIDDEN_SEARCHABLE, true)) || ! $resource::hasPage('index') || ! $resource::canViewAny()) {
                 continue;
             }
 

@@ -340,7 +340,7 @@ El radio sale, en este orden, del empleado, de la sucursal o de **Configuración
 **Qué pasa fuera del radio:** la marcación **se acepta igual** (así un GPS impreciso no bloquea a nadie) pero queda señalada. La comparación se hace en el servidor al sincronizar, por lo que funciona también si el celular marcó sin conexión.
 
 **Dónde se revisa:**
-- **Asistencias → Marcaciones**: columnas **Control de ubicación** (con la distancia en metros) y **Revisión de ubicación**, y el filtro **Control de ubicación**. Con permiso para editar marcaciones, la fila ofrece **Aprobar ubicación** o **Descartar ubicación**; queda registrado quién decidió y cuándo. Descartar no elimina la marcación: para corregirla usar **Corregir marcaciones** en la jornada. El detalle de la marcación (**Ver**) muestra el mapa, la distancia al punto de trabajo, el radio permitido, un enlace al punto y quién revisó la ubicación y cuándo (el punto y el radio son los vigentes hoy).
+- **Marcaciones** (buscar con **Ctrl+K**): columnas **Control de ubicación** (con la distancia en metros) y **Revisión de ubicación**, y el filtro **Control de ubicación**. Con permiso para editar marcaciones, la fila ofrece **Aprobar ubicación** o **Descartar ubicación**; queda registrado quién decidió y cuándo. Descartar no elimina la marcación: para corregirla usar **Corregir marcaciones** en la jornada. El detalle de la marcación (**Ver**) muestra el mapa, la distancia al punto de trabajo, el radio permitido, un enlace al punto y quién revisó la ubicación y cuándo (el punto y el radio son los vigentes hoy).
 - **Por resolver**: tarjeta **Marcaciones fuera de radio** con las que siguen sin revisar.
 
 > La ubicación es un dato personal: el aviso de privacidad que carga la empresa (**Empresas → Aviso de privacidad**) debe mencionarla. Se acepta al vincular el celular.
@@ -351,12 +351,12 @@ Si un empleado no puede marcar por problema técnico, olvido u otra razón, el a
 
 ### Crear una marcación desde el listado de marcaciones
 
-1. Ir a **Asistencias → Marcaciones**
+1. Abrir **Marcaciones** (no está en el menú: buscar «Marcaciones» con **Ctrl+K**)
 2. Clic en **Nueva marcación**
 3. Seleccionar **empleado**, **tipo de evento** (entrada, salida, etc.) y **fecha y hora**
 4. Guardar
 
-> **Ir a la jornada de una marcación:** en **Asistencias → Marcaciones**, el botón **Ver jornada** de cada fila abre el día de asistencia al que pertenece, donde se ven todas sus marcaciones juntas. Para corregir varias de una vez, usar **Corregir marcaciones** desde **Asistencias → Asistencias**. El botón solo aparece a quien puede ver las asistencias.
+> **Ir a la jornada de una marcación:** en **Marcaciones**, el botón **Ver jornada** de cada fila abre el día de asistencia al que pertenece, donde se ven todas sus marcaciones juntas. Para corregir varias de una vez, usar **Corregir marcaciones** desde **Asistencias → Asistencias**. El botón solo aparece a quien puede ver las asistencias.
 
 ### Crear una marcación desde el detalle del día
 

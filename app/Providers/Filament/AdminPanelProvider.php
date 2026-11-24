@@ -57,6 +57,9 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Asistencias')
                     ->icon('heroicon-o-clock'),
+                NavigationGroup::make('Horarios y turnos')
+                    ->icon('heroicon-o-calendar-days')
+                    ->collapsed(),
                 NavigationGroup::make('Terminales y dispositivos')
                     ->icon('heroicon-o-computer-desktop')
                     ->collapsed(),

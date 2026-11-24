@@ -50,6 +50,9 @@ class AttendanceEventResource extends Resource
 
     protected static ?string $navigationGroup = 'Asistencias';
 
+    /** Fuera del menú (se corrige desde la jornada); sigue en la búsqueda global: ver `PanelGlobalSearchProvider::HIDDEN_SEARCHABLE`. */
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?int $navigationSort = 5;
 
     /**
