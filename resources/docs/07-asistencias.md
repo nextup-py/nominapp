@@ -82,7 +82,7 @@ Quién aparece en tu equipo depende de tus permisos y de la ficha vinculada a tu
 
 ## Modos de marcación
 
-Ir a **Asistencias → Modos de Marcación** para ver los enlaces y códigos QR de cada modo.
+Ir a **Terminales y dispositivos → Modos de Marcación** para ver los enlaces y códigos QR de cada modo.
 
 ### Terminal compartida (kiosco)
 Un dispositivo fijo en la sucursal (tablet o PC). Todos los empleados marcan desde ese mismo equipo. No requiere que el empleado tenga cuenta en el sistema. El reconocimiento facial identifica automáticamente quién está marcando.
@@ -98,7 +98,7 @@ El empleado usa su propio dispositivo (celular o tablet). Puede marcar desde cua
 
 ## Gestión de Terminales
 
-Ir a **Asistencias → Terminales** para administrar los dispositivos físicos de marcación: crearlos, **vincularlos** al sistema (con un código que aprueba un administrador, o con un enlace de configuración), ver si están en línea, activarlos, desactivarlos o revocar su acceso.
+Ir a **Terminales y dispositivos → Terminales** para administrar los dispositivos físicos de marcación: crearlos, **vincularlos** al sistema (con un código que aprueba un administrador, o con un enlace de configuración), ver si están en línea, activarlos, desactivarlos o revocar su acceso.
 
 > El detalle completo —paso a paso de la vinculación, estados de conectividad, solicitudes de vinculación y solución de problemas— está en el capítulo **Terminales de Marcación**.
 
@@ -171,7 +171,7 @@ Cada empleado puede tener **un único dispositivo activo**. Si vincula uno nuevo
 
 ### Ver el historial de dispositivos
 
-Ir a **Asistencias → Dispositivos de Empleados** para ver todas las vinculaciones, pasadas y presentes, de todos los empleados. A diferencia de las Terminales, este historial es de **solo lectura por diseño**: los registros se crean automáticamente al vincularse, nunca a mano.
+Ir a **Terminales y dispositivos → Dispositivos de Empleados** para ver todas las vinculaciones, pasadas y presentes, de todos los empleados. A diferencia de las Terminales, este historial es de **solo lectura por diseño**: los registros se crean automáticamente al vincularse, nunca a mano.
 
 | Columna | Descripción |
 |---------|-------------|
@@ -188,7 +188,7 @@ Desde el detalle de un dispositivo se pueden completar a mano los datos que el n
 
 Si un empleado perdió su celular o cambió de dispositivo sin avisar, un administrador puede revocar el acceso manualmente:
 
-1. Ir a **Asistencias → Dispositivos de Empleados**
+1. Ir a **Terminales y dispositivos → Dispositivos de Empleados**
 2. Localizar el dispositivo activo del empleado
 3. Clic en **Revocar** (solo aparece con permiso para editar dispositivos de empleados)
 4. Confirmar
@@ -213,9 +213,9 @@ Para encontrar a quienes todavía no tienen rostro, ir a **Empleados** y filtrar
 
 **Opción B — Enlace de enrolamiento (el empleado captura):**
 
-1. Clic en **Generar enlace de enrolamiento** (o, en **Asistencias → Registro Facial**, el botón **Generar Enlace** con vigencia de 4, 24 o 72 horas). El enlace vence según el tiempo configurado en **Configuración General**
+1. Clic en **Generar enlace de enrolamiento** (o, en **Terminales y dispositivos → Registro Facial**, el botón **Generar Enlace** con vigencia de 4, 24 o 72 horas). El enlace vence según el tiempo configurado en **Configuración General**
 2. El empleado abre el enlace en su celular o PC con cámara y sigue la captura (el sistema toma varias muestras). Si su empresa cargó un aviso de privacidad, primero debe tildar **He leído y acepto el aviso de privacidad**: sin eso la cámara no arranca. El registro queda **Pendiente de aprobación**
-3. Ir a **Asistencias → Registro Facial**, buscar el registro, revisar la imagen y el score de calidad, y clic en **Aprobar** (o **Rechazar** si la calidad es insuficiente)
+3. Ir a **Terminales y dispositivos → Registro Facial**, buscar el registro, revisar la imagen y el score de calidad, y clic en **Aprobar** (o **Rechazar** si la calidad es insuficiente)
 4. Si el enlace venció o se perdió, usar **Ver Enlace** o **Regenerar Enlace** en esa misma lista
 
 Una vez aprobado, el terminal de la sucursal incorpora el rostro en su siguiente sincronización y el empleado puede marcar.

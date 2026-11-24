@@ -22,13 +22,13 @@ El **total de ingresos** es la suma, mes a mes, de todas las nóminas generadas 
 Borrador → En Proceso → Cerrado
 ```
 
-Todo el proceso se gestiona desde **Nóminas → Aguinaldo**.
+Todo el proceso se gestiona desde **Aguinaldo y liquidación → Aguinaldo**.
 
 ---
 
 ## Paso 1 — Crear el período de aguinaldo
 
-1. Ir a **Nóminas → Aguinaldo**
+1. Ir a **Aguinaldo y liquidación → Aguinaldo**
 2. Clic en **Nuevo Período**
 3. Seleccionar la **empresa** y el **año**
 4. Guardar

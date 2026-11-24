@@ -39,7 +39,7 @@ class LiquidacionResource extends Resource
 {
     protected static ?string $model = Liquidacion::class;
 
-    protected static ?string $navigationGroup = 'Nóminas';
+    protected static ?string $navigationGroup = 'Aguinaldo y liquidación';
 
     protected static ?string $navigationLabel = 'Liquidaciones';
 
@@ -51,7 +51,7 @@ class LiquidacionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-scale';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     public static function getNavigationBadge(): ?string
     {

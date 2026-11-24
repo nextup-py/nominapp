@@ -55,11 +55,11 @@ class EmployeeLeaveResource extends Resource
 
     protected static ?string $pluralModelLabel = 'licencias';
 
-    protected static ?string $navigationGroup = 'Empleados';
+    protected static ?string $navigationGroup = 'Licencias y vacaciones';
 
     protected static ?string $slug = 'licencias';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 1;
 
     /**
      * Define el formulario para crear y editar licencias.

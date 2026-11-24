@@ -35,9 +35,9 @@ class VacationBalances extends Page implements HasTable
 
     protected static ?string $navigationLabel = 'Balances de Vacaciones';
 
-    protected static ?string $navigationGroup = 'Empleados';
+    protected static ?string $navigationGroup = 'Licencias y vacaciones';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     protected static string $view = 'filament.pages.vacation-balances';
 

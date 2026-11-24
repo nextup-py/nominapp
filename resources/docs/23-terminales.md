@@ -24,7 +24,7 @@ Un **terminal** es el dispositivo fijo de una sucursal (tablet o PC) desde el qu
 
 ## Crear un terminal
 
-Ir a **Asistencias → Terminales**.
+Ir a **Terminales y dispositivos → Terminales**.
 
 ![Listado de terminales](/docs-images/23-terminales-listado.png)
 
@@ -75,7 +75,7 @@ No hace falta generar ni enviar enlaces: el propio dispositivo muestra un códig
 
 ### En el panel
 
-1. Ir a **Asistencias → Solicitudes de vinculación**. El menú muestra un contador con las pendientes y a los usuarios con permiso les llega una notificación en la campanita.
+1. Ir a **Terminales y dispositivos → Solicitudes de vinculación**. El menú muestra un contador con las pendientes y a los usuarios con permiso les llega una notificación en la campanita.
 2. Ubicar la solicitud del terminal (nombre, sucursal, modelo e IP del dispositivo) y hacer clic en **Aprobar**.
 3. Escribir el código **tal como se ve en la pantalla del dispositivo** y confirmar con **Sí, aprobar**.
 
@@ -101,7 +101,7 @@ Cuando el equipo que pide el código **ya funciona como otro terminal** (por eje
 
 ## Bandeja de solicitudes de vinculación
 
-Ir a **Asistencias → Solicitudes de vinculación** para ver todas las solicitudes de todos los terminales. La tabla se actualiza sola cada 15 segundos.
+Ir a **Terminales y dispositivos → Solicitudes de vinculación** para ver todas las solicitudes de todos los terminales. La tabla se actualiza sola cada 15 segundos.
 
 ![Solicitudes de vinculación](/docs-images/23-solicitudes-vinculacion.png)
 
@@ -490,7 +490,7 @@ Para una PC que se usa **solo como terminal**, lo más estable es abrirlo en **m
 
 1. Copiarlo a la PC del terminal (por ejemplo, al Escritorio).
 2. Clic derecho en el botón de Inicio y abrir **Windows PowerShell (Administrador)** (o **Terminal (Administrador)**). Sin permisos de administrador el script igual crea los accesos directos, pero no cambia la energía.
-3. Ejecutar el script con la **URL de acceso** del terminal (**Asistencias → Terminales**, detalle del terminal), por ejemplo:
+3. Ejecutar el script con la **URL de acceso** del terminal (**Terminales y dispositivos → Terminales**, detalle del terminal), por ejemplo:
    `powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Desktop\Configurar-Terminal.ps1" -Url https://su-dominio/terminal/CODIGO -Launch`
 4. Permitir la cámara la primera vez que se abra el terminal.
 5. Verificar en el panel: **Pantalla encendida: Activa**, **Modo** y el estado **En línea**.

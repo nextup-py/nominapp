@@ -65,8 +65,14 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsed(),
                 NavigationGroup::make('Empleados')
                     ->icon('heroicon-o-user-group'),
+                NavigationGroup::make('Licencias y vacaciones')
+                    ->icon('heroicon-o-calendar')
+                    ->collapsed(),
                 NavigationGroup::make('Nóminas')
                     ->icon('heroicon-o-banknotes')
+                    ->collapsed(),
+                NavigationGroup::make('Aguinaldo y liquidación')
+                    ->icon('heroicon-o-gift')
                     ->collapsed(),
                 NavigationGroup::make('Créditos')
                     ->icon('heroicon-o-credit-card')
@@ -79,6 +85,9 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsed(),
                 NavigationGroup::make('Configuración')
                     ->icon('heroicon-o-cog-6-tooth')
+                    ->collapsed(),
+                NavigationGroup::make('Sistema')
+                    ->icon('heroicon-o-wrench-screwdriver')
                     ->collapsed(),
                 NavigationGroup::make('Ayuda')
                     ->icon('heroicon-o-book-open')

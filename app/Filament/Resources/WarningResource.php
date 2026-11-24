@@ -63,7 +63,7 @@ class WarningResource extends Resource
 
     protected static ?string $navigationGroup = 'Empleados';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 3;
 
     /**
      * Define el formulario de creación/edición de amonestaciones.

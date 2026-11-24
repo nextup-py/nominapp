@@ -22,7 +22,7 @@ class AttendanceModes extends Page
 
     protected static ?string $navigationGroup = 'Terminales y dispositivos';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $title = 'Modos de Marcación';
 

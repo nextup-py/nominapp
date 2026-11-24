@@ -33,7 +33,7 @@ El sistema distingue dos modalidades que coexisten en el mismo módulo:
 
 ![Formulario de nueva licencia](/docs-images/10-licencia-nueva.png)
 
-1. Ir a **Empleados → Licencias**
+1. Ir a **Licencias y vacaciones → Licencias**
 2. Clic en **Nueva Licencia**
 3. Completar:
    - **Empleado** (solo aparecen los activos; se busca por nombre, apellido o CI) y **Tipo de licencia**
@@ -53,7 +53,7 @@ Si el empleado **ya tiene nómina generada** para esas fechas, la licencia se ap
 
 ## Registrar un permiso parcial por horas
 
-1. Ir a **Empleados → Licencias**
+1. Ir a **Licencias y vacaciones → Licencias**
 2. Clic en **Nueva Licencia**
 3. Completar los datos generales (empleado, tipo y fecha)
 4. Expandir la sección **Permiso por horas (opcional)**
@@ -94,7 +94,7 @@ El descuento se registra como una deducción **fechada el día del permiso** y s
 Los permisos se pueden gestionar desde tres lugares:
 
 **Desde el listado global:**
-1. Ir a **Empleados → Licencias**
+1. Ir a **Licencias y vacaciones → Licencias**
 2. En la fila del permiso → menú de acciones → **Aprobar** o **Rechazar**
 
 **Desde el detalle del permiso:**

@@ -126,5 +126,5 @@ También se puede crear el usuario de un empleado desde su ficha (**Empleados �
 
 ## Permisos especiales
 
-- **Ver Salud del sistema y logs** (grupo *Configuración*): abre **Configuración → Salud del sistema** y el visor de logs. Antes eran solo del Super Admin; ahora se puede dar a otros roles, como **Soporte TI**.
+- **Ver Salud del sistema y logs** (grupo *Configuración*): abre **Sistema → Salud del sistema** y el visor de logs. Antes eran solo del Super Admin; ahora se puede dar a otros roles, como **Soporte TI**.
 - **Anular** licencias (módulo *Permiso/Licencia*): permite anular una licencia aprobada deshaciendo sus efectos. RR.HH. lo trae.
