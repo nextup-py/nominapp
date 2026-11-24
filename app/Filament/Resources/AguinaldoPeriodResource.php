@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AguinaldoPeriodResource\Pages;
 use App\Filament\Resources\AguinaldoPeriodResource\RelationManagers\AguinaldosRelationManager;
 use App\Filament\Resources\AguinaldoPeriodResource\RelationManagers\AuditsRelationManager;
@@ -29,6 +30,7 @@ use Illuminate\Validation\Rule;
 class AguinaldoPeriodResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'aguinaldo_enabled';
 

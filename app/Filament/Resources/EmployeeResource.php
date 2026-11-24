@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\EmployeeResource\Pages;
 use App\Filament\Resources\EmployeeResource\RelationManagers;
 use App\Filament\Resources\EmployeeResource\Schemas\EmployeeForm;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EmployeeResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Employee::class;
 
     protected static ?string $navigationLabel = 'Empleados';

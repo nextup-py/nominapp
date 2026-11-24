@@ -196,6 +196,7 @@ Cada usuario abre su perfil desde el menú de la esquina superior del panel. Ah�
 
 - Cambiar su **foto de perfil** y su **contraseña** (con la misma política de 10 caracteres).
 - Ver su **nombre**, **correo**, **ficha de empleado** y **roles**, que son solo de lectura: los cambia el Super Admin desde **Configuración → Usuarios**.
+- Elegir el **Menú del panel** en la sección **Preferencias**: **Barra lateral** (menú vertical con grupos plegables, el formato de fábrica) o **Menú superior** (menú horizontal con menos grupos: Asistencias, Terminales, Personal, Nómina, Organización, Administración y Ayuda). Es una preferencia de cada usuario y se aplica al guardar.
 - Revisar **Mis permisos** agrupados por módulo.
 - Ver sus **Sesiones abiertas** y cerrar las de otros dispositivos con **Cerrar las demás sesiones**.
 - Ver sus **Últimos ingresos** (fecha e IP). Si la cuenta ingresa desde una IP que nunca había usado, llega un aviso por la campanita.

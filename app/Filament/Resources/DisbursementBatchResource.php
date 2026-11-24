@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\DisbursementBatchResource\Pages;
 use App\Filament\Resources\DisbursementBatchResource\RelationManagers;
 use App\Filament\Traits\HasModuleAccess;
@@ -32,6 +33,7 @@ use Illuminate\Database\Eloquent\Builder;
 class DisbursementBatchResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'disbursement_batches_enabled';
 

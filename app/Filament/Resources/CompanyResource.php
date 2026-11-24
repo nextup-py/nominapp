@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\CompanyStatusAction;
 use App\Filament\Actions\MobileMarkingFields;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\CompanyResource\Pages;
 use App\Filament\Resources\CompanyResource\RelationManagers;
 use App\Models\Company;
@@ -38,6 +39,8 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class CompanyResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Company::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';

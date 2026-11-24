@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\ContractTemplateResource\Pages;
 use App\Filament\Resources\ContractTemplateResource\RelationManagers;
 use App\Models\Company;
@@ -27,6 +28,8 @@ use Illuminate\Support\HtmlString;
 /** Recurso para gestionar las plantillas de cuerpo/cláusulas por tipo de contrato. */
 class ContractTemplateResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = ContractTemplate::class;
 
     protected static ?string $navigationGroup = 'Catálogos';

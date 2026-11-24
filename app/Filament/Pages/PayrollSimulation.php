@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\PayrollPeriodResource;
 use App\Models\Company;
 use App\Models\Employee;
@@ -23,6 +24,7 @@ use Filament\Pages\Page;
 class PayrollSimulation extends Page implements HasForms
 {
     use InteractsWithForms;
+    use UsesNavigationLayout;
 
     protected static ?string $navigationIcon = 'heroicon-o-beaker';
 

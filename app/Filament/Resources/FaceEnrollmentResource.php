@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\FaceEnrollmentResource\Pages;
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Employee;
@@ -29,6 +30,7 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 class FaceEnrollmentResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'biometric_attendance_enabled';
 

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AttendanceMarkFailureResource\Pages;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceMarkFailure;
@@ -41,6 +42,8 @@ use Illuminate\Support\Facades\Auth;
  */
 class AttendanceMarkFailureResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = AttendanceMarkFailure::class;
 
     protected static ?string $navigationLabel = 'Fallos de marcación';

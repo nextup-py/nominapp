@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\MerchandiseWithdrawalResource\Pages;
 use App\Filament\Resources\MerchandiseWithdrawalResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\MerchandiseWithdrawalResource\RelationManagers\InstallmentsRelationManager;
@@ -37,6 +38,7 @@ use Illuminate\Support\Facades\Auth;
 class MerchandiseWithdrawalResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'merchandise_withdrawals_enabled';
 

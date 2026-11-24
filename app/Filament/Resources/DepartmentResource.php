@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\OrgUnitStatusAction;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\DepartmentResource\Pages;
 use App\Filament\Resources\DepartmentResource\RelationManagers;
 use App\Models\Company;
@@ -28,6 +29,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class DepartmentResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Department::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-library';

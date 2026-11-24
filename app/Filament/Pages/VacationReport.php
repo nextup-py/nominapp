@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Exports\VacationReportExport;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\VacationResource;
 use App\Models\Branch;
 use App\Models\Company;
@@ -29,6 +30,8 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class VacationReport extends Page implements HasTable
 {
+    use UsesNavigationLayout;
+
     /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\DocumentTypeResource\Pages;
 use App\Models\Company;
 use App\Models\DocumentType;
@@ -21,6 +22,8 @@ use Illuminate\Validation\Rules\Unique;
 /** Catálogo de tipos de documento del legajo (cédula, carné de salud…), por empresa y con o sin vencimiento. */
 class DocumentTypeResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = DocumentType::class;
 
     protected static ?string $navigationGroup = 'Catálogos';

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\VacationResource;
 use App\Models\Branch;
 use App\Models\Company;
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\DB;
 /** Muestra el saldo de días de vacaciones por empleado, filtrable por año y sucursal. */
 class VacationBalances extends Page implements HasTable
 {
+    use UsesNavigationLayout;
+
     /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {

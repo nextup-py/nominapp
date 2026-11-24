@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\LiquidacionResource\Pages;
 use App\Filament\Resources\LiquidacionResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\LiquidacionResource\RelationManagers\ItemsRelationManager;
@@ -37,6 +38,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class LiquidacionResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Liquidacion::class;
 
     protected static ?string $navigationGroup = 'Aguinaldo y liquidación';

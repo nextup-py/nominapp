@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\RotationPatternResource\Pages;
 use App\Filament\Resources\RotationPatternResource\RelationManagers;
 use App\Models\Company;
@@ -26,6 +27,8 @@ use Filament\Tables\Table;
 /** Recurso Filament para gestionar los patrones de rotación de turnos. */
 class RotationPatternResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = RotationPattern::class;
 
     protected static ?string $navigationGroup = 'Horarios y turnos';

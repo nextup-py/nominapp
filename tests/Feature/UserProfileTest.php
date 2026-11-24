@@ -88,3 +88,23 @@ it('cierra las demás sesiones y conserva la actual', function () {
         ->and(UserSessionService::closeOthers($user, 'actual'))->toBe(2)
         ->and(DB::table('sessions')->where('user_id', $user->id)->pluck('id')->all())->toBe(['actual']);
 });
+
+it('el usuario elige el formato de menú en su perfil y por defecto es la barra lateral', function () {
+    $user = profileUser();
+
+    expect($user->fresh()->navigation_layout)->toBe('sidebar');
+
+    Livewire::actingAs($user)->test(EditProfile::class)
+        ->fillForm(['navigation_layout' => 'top'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($user->fresh()->navigation_layout)->toBe('top');
+});
+
+it('el perfil rechaza un formato de menú desconocido', function () {
+    Livewire::actingAs(profileUser())->test(EditProfile::class)
+        ->fillForm(['navigation_layout' => 'flotante'])
+        ->call('save')
+        ->assertHasFormErrors(['navigation_layout']);
+});

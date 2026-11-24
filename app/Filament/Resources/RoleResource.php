@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\RoleActions;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\RoleResource\Pages;
 use Database\Seeders\BusinessActionPermissionSeeder;
 use Database\Seeders\PermissionSeeder;
@@ -26,6 +27,8 @@ use Spatie\Permission\Models\Role;
 /** Gestiona el CRUD de roles con permisos agrupados por módulo. */
 class RoleResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Role::class;
 
     protected static ?string $navigationLabel = 'Roles';

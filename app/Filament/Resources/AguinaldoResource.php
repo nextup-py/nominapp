@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AguinaldoResource\Pages;
 use App\Filament\Resources\AguinaldoResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\AguinaldoResource\RelationManagers\ItemsRelationManager;
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Collection;
 class AguinaldoResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'aguinaldo_enabled';
 

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use AchyutN\FilamentLogViewer\Enums\LogLevel;
 use AchyutN\FilamentLogViewer\Model\Log;
+use App\Filament\Concerns\UsesNavigationLayout;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -26,6 +27,8 @@ use Livewire\Attributes\Url;
 /** Visor de logs de la aplicación con filtros, búsqueda y detalle de stack trace. */
 class LogViewer extends Page implements HasTable
 {
+    use UsesNavigationLayout;
+
     /** Acceso con el permiso `view_system_health` (el Super Admin lo tiene siempre; las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {

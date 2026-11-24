@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\PayrollPeriodResource\Pages;
 use App\Filament\Resources\PayrollPeriodResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\PayrollPeriodResource\RelationManagers\PayrollsRelationManager;
@@ -29,6 +30,8 @@ use Filament\Tables\Table;
 
 class PayrollPeriodResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = PayrollPeriod::class;
 
     protected static ?string $navigationGroup = 'Nóminas';

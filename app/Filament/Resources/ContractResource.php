@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\ContractRenewalForm;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource\RelationManagers;
 use App\Models\Company;
@@ -49,6 +50,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ContractResource extends Resource
 {
+    use UsesNavigationLayout;
+
     // Configuración general del recurso
     protected static ?string $model = Contract::class;
 

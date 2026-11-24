@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\AttendanceDayActions;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Pages\EmployeeMonthSheet;
 use App\Filament\Resources\AttendanceDayResource\Pages;
 use App\Filament\Resources\AttendanceDayResource\RelationManagers;
@@ -49,6 +50,8 @@ use Illuminate\Support\Carbon;
 
 class AttendanceDayResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = AttendanceDay::class;
 
     protected static ?string $navigationLabel = 'Asistencias';

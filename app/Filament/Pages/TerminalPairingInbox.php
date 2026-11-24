@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Actions\TerminalPairingActions;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\TerminalResource;
 use App\Models\TerminalPairingRequest;
 use Filament\Pages\Page;
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
 class TerminalPairingInbox extends Page implements HasTable
 {
     use InteractsWithTable;
+    use UsesNavigationLayout;
 
     protected static ?string $navigationLabel = 'Solicitudes de vinculación';
 

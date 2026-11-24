@@ -23,7 +23,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     protected $guard_name = 'web';
 
     /** @var array<string, mixed> Valores por defecto de un usuario recién creado en memoria. */
-    protected $attributes = ['is_active' => true];
+    protected $attributes = ['is_active' => true, 'navigation_layout' => 'sidebar'];
 
     /**
      * The attributes that are mass assignable.
@@ -37,6 +37,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'avatar_path',
         'employee_id',
         'is_active',
+        'navigation_layout',
     ];
 
     /**

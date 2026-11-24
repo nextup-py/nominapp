@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\ScheduleResource;
 use App\Models\Branch;
 use App\Models\Company;
@@ -15,6 +16,8 @@ use Filament\Pages\Page;
  */
 class ShiftPlannerPage extends Page
 {
+    use UsesNavigationLayout;
+
     /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {

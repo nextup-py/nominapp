@@ -6,6 +6,7 @@ use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\MyNotifications;
 use App\Http\Middleware\EnsureSetupIsComplete;
 use App\Services\TerminalAttentionBanner;
+use App\Support\NavigationLayout;
 use App\Support\PanelGlobalSearchProvider;
 use App\Support\ThemeResolver;
 use EightyNine\FilamentDocs\FilamentDocsPlugin;
@@ -36,6 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('')
+            ->topNavigation(fn (): bool => NavigationLayout::isTop())
             ->login()
             ->passwordReset()
             ->profile(EditProfile::class, isSimple: false)
@@ -63,11 +65,15 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Terminales y dispositivos')
                     ->icon('heroicon-o-computer-desktop')
                     ->collapsed(),
+                NavigationGroup::make('Terminales')
+                    ->icon('heroicon-o-computer-desktop'),
                 NavigationGroup::make('Empleados')
                     ->icon('heroicon-o-user-group'),
                 NavigationGroup::make('Licencias y vacaciones')
                     ->icon('heroicon-o-calendar')
                     ->collapsed(),
+                NavigationGroup::make('Personal')
+                    ->icon('heroicon-o-user-group'),
                 NavigationGroup::make('Nóminas')
                     ->icon('heroicon-o-banknotes')
                     ->collapsed(),
@@ -77,6 +83,8 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Créditos')
                     ->icon('heroicon-o-credit-card')
                     ->collapsed(),
+                NavigationGroup::make('Nómina')
+                    ->icon('heroicon-o-banknotes'),
                 NavigationGroup::make('Organización')
                     ->icon('heroicon-o-building-office')
                     ->collapsed(),
@@ -89,10 +97,13 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Sistema')
                     ->icon('heroicon-o-wrench-screwdriver')
                     ->collapsed(),
+                NavigationGroup::make('Administración')
+                    ->icon('heroicon-o-cog-6-tooth'),
                 NavigationGroup::make('Ayuda')
                     ->icon('heroicon-o-book-open')
                     ->collapsed(),
             ])
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => NavigationLayout::isTop() ? view('filament.hooks.top-navigation-styles')->render() : '')
             ->renderHook(PanelsRenderHook::BODY_END, fn (): string => view('filament.hooks.open-active-nav-group')->render())
             ->renderHook(PanelsRenderHook::PAGE_START, fn (): string => TerminalAttentionBanner::showsOnCurrentPage() ? view('filament.hooks.terminal-alert-banner')->render() : '')
             ->userMenuItems([

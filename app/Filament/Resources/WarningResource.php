@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\WarningResource\Pages;
 use App\Filament\Resources\WarningResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Traits\HasModuleAccess;
@@ -46,6 +47,7 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 class WarningResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'warnings_enabled';
 

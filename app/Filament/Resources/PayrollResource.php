@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\PayrollResource\Pages;
 use App\Filament\Resources\PayrollResource\RelationManagers;
 use App\Models\Payroll;
@@ -32,6 +33,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class PayrollResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Payroll::class;
 
     protected static ?string $navigationGroup = 'Nóminas';
