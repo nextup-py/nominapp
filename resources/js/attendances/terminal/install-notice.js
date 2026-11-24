@@ -37,9 +37,10 @@ export function describeInstallNotice({ displayMode, canInstall, dismissed }) {
  * @param {() => void} deps.dismiss
  * @param {() => Promise<'accepted'|'dismissed'|'unavailable'>} deps.triggerInstall
  * @param {{notice: HTMLElement|null, text: HTMLElement|null, installButtons: Array<HTMLElement|null>, dismissButton: HTMLElement|null}} deps.elements
+ * @param {(notice: {text: string, showInstall: boolean}|null) => void} [deps.onChange] - se llama en cada repintado con lo que corresponde mostrar (null si nada): lo usa el cartel único de estado del equipo.
  * @returns {{setCanInstall: (value: boolean) => void, render: () => void, install: () => Promise<string>, dismissNotice: () => void}}
  */
-export function createInstallNotice({ getDisplayMode, isDismissed, dismiss, triggerInstall, elements }) {
+export function createInstallNotice({ getDisplayMode, isDismissed, dismiss, triggerInstall, elements, onChange = () => {} }) {
     let canInstall = false;
 
     /** Repinta el aviso y muestra u oculta los botones de instalar. */
@@ -52,6 +53,7 @@ export function createInstallNotice({ getDisplayMode, isDismissed, dismiss, trig
 
         const offerInstall = canInstall && displayMode === 'browser';
         elements.installButtons.forEach((button) => button?.classList.toggle('hidden', !offerInstall || (button.dataset?.scope === 'notice' && !notice)));
+        onChange(notice);
     }
 
     /** Pide al navegador instalar la app; si se aceptó, el botón y el aviso ya no hacen falta. */

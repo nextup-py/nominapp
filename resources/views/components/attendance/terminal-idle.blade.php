@@ -30,24 +30,14 @@
                     Actualizar app
                 </button>
             </div>
-            {{-- Aviso cuando el navegador no conserva los datos del terminal (ver terminal/storage-probe.js) --}}
-            <div id="storageNotice" class="idle-install-notice hidden" role="alert">
-                <span data-storage-notice-text></span>
-            </div>
-            {{-- Aviso discreto cuando el equipo lleva un rato sin cargador (ver terminal/charger-notice.js) --}}
-            <div id="chargerNotice" class="idle-install-notice hidden" role="note">
-                <span id="chargerNoticeText"></span>
-                <span class="idle-install-notice-actions">
-                    <button type="button" id="btnChargerNoticeDismiss" class="idle-sync-btn" aria-label="Ocultar este aviso">Ocultar</button>
-                </span>
-            </div>
-            {{-- Aviso discreto cuando el terminal corre en una pestaña del navegador (ver terminal/install-notice.js) --}}
-            <div id="installNotice" class="idle-install-notice hidden" role="note">
-                <span id="installNoticeText"></span>
-                <span class="idle-install-notice-actions">
+            {{-- Cartel único «Cómo dejar el equipo»: junta conexión, instalación, cargador, pantalla, cámara, cola y almacenamiento (ver terminal/device-checklist.js). Solo aparece si algo falla. --}}
+            <div id="deviceChecklist" class="device-checklist hidden" role="note" aria-label="Cómo dejar el equipo">
+                <h2 class="device-checklist-title">Cómo dejar el equipo</h2>
+                <ul id="deviceChecklistList" class="device-checklist-list"></ul>
+                <div class="device-checklist-actions">
                     <button type="button" id="btnInstallNoticeInstall" data-scope="notice" class="idle-sync-btn hidden" aria-label="Instalar la app del terminal">Instalar app</button>
-                    <button type="button" id="btnInstallNoticeDismiss" class="idle-sync-btn" aria-label="Ocultar este aviso">Ocultar</button>
-                </span>
+                    <button type="button" id="btnDeviceChecklistDismiss" class="idle-sync-btn" aria-label="Ocultar este cartel por un rato">Ocultar</button>
+                </div>
             </div>
         </div>
         <div class="idle-hint">

@@ -97,3 +97,39 @@ describe('createInstallNotice', () => {
         expect(rejected.elements.installButtons[1].classList.contains('hidden')).toBe(false);
     });
 });
+
+describe('createInstallNotice: onChange (cartel único de estado del equipo)', () => {
+    it('informa lo que corresponde mostrar en cada repintado, también sin elementos propios', () => {
+        const onChange = vi.fn();
+        const controller = createInstallNotice({
+            getDisplayMode: () => 'browser',
+            isDismissed: () => false,
+            dismiss: vi.fn(),
+            triggerInstall: vi.fn(),
+            onChange,
+            elements: { notice: null, text: null, installButtons: [null], dismissButton: null },
+        });
+
+        controller.render();
+        expect(onChange).toHaveBeenLastCalledWith({ text: NOTICE_TEXTS.manual, showInstall: false });
+
+        controller.setCanInstall(true);
+        expect(onChange).toHaveBeenLastCalledWith({ text: NOTICE_TEXTS.installable, showInstall: true });
+    });
+
+    it('informa null cuando corre como app', () => {
+        const onChange = vi.fn();
+        const controller = createInstallNotice({
+            getDisplayMode: () => 'fullscreen',
+            isDismissed: () => false,
+            dismiss: vi.fn(),
+            triggerInstall: vi.fn(),
+            onChange,
+            elements: { notice: null, text: null, installButtons: [null], dismissButton: null },
+        });
+
+        controller.render();
+
+        expect(onChange).toHaveBeenLastCalledWith(null);
+    });
+});

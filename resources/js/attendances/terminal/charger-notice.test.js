@@ -106,3 +106,29 @@ describe('createChargerNotice', () => {
         expect(elements.hidden()).toBe(true);
     });
 });
+
+describe('createChargerNotice: onChange (cartel único de estado del equipo)', () => {
+    it('informa el texto y el estado de la batería en cada revisión, también sin elementos propios', async () => {
+        let time = 0;
+        let charging = false;
+        const onChange = vi.fn();
+        const notice = createChargerNotice({
+            readBattery: async () => ({ charging, level: 40 }),
+            getMinutes: async () => 30,
+            now: () => time,
+            onChange,
+            elements: { notice: null, text: null, dismissButton: null },
+        });
+
+        await notice.check();
+        expect(onChange).toHaveBeenLastCalledWith(null, { charging: false, level: 40 });
+
+        time = 31 * MIN;
+        await notice.check();
+        expect(onChange.mock.lastCall[0]).toContain('batería al 40%');
+
+        charging = true;
+        await notice.check();
+        expect(onChange).toHaveBeenLastCalledWith(null, { charging: true, level: 40 });
+    });
+});

@@ -8,12 +8,13 @@ import * as pairingFlow from './terminal/pairing-flow.js';
 import { createEmptyStateController, HR_NOTICE } from './terminal/empty-state.js';
 import { updateClock, updateIdleDate } from './terminal/ui-feedback.js';
 import { setOffline, updateIdleSyncStatus, setSyncRefreshHook } from './terminal/sync-status-ui.js';
-import { createSyncControl } from './terminal/sync-control.js';
+import { createSyncControl, isAppOutdated } from './terminal/sync-control.js';
 import { initManualSearch } from './terminal/manual-search.js';
 import { createCameraControl } from './terminal/camera-control.js';
 import { createInstallNotice } from './terminal/install-notice.js';
 import { createChargerNotice } from './terminal/charger-notice.js';
 import { createLowBatteryAlert } from './terminal/low-battery-alert.js';
+import { createDeviceChecklist } from './terminal/device-checklist.js';
 import { probeStorage, describeStorageNotice, hasLinkMarker } from './terminal/storage-probe.js';
 import { createPrivacyNotice } from './terminal/privacy-notice.js';
 import { createAdminPinGate } from './terminal/admin-pin.js';
@@ -689,25 +690,27 @@ document.addEventListener('DOMContentLoaded', () => {
     syncControl.refresh();
 
     // ============================================================================
-    // INSTALACIÓN — aviso en reposo si corre en una pestaña y botón «Instalar app» (ver terminal/install-notice.js)
+    // INSTALACIÓN — botón «Instalar app» y aviso de pestaña, que se muestra en el cartel único (ver terminal/install-notice.js)
     // ============================================================================
-    let installNoticeDismissed = false;
+    // Cartel único «Cómo dejar el equipo»: junta este aviso, el del cargador y otros (ver terminal/device-checklist.js)
+    let deviceChecklist = null;
+    let installText = null;
+    let chargerText = null;
+    let lastBattery = { charging: null, level: null };
     const installNotice = createInstallNotice({
         getDisplayMode: () => detectDisplayMode(window),
-        isDismissed: () => {
-            if (installNoticeDismissed) return true;
-            try { return isDismissed('terminal', window.sessionStorage); } catch { return false; }
-        },
-        dismiss: () => {
-            installNoticeDismissed = true;
-            try { dismiss('terminal', window.sessionStorage); } catch { /* sin storage: se oculta solo en esta carga */ }
-        },
+        isDismissed: () => false,
+        dismiss: () => {},
         triggerInstall: triggerInstallPrompt,
+        onChange: (notice) => {
+            installText = notice?.text ?? null;
+            deviceChecklist?.refresh();
+        },
         elements: {
-            notice: document.getElementById('installNotice'),
-            text: document.getElementById('installNoticeText'),
+            notice: null,
+            text: null,
             installButtons: [document.getElementById('btnInstallNoticeInstall'), document.getElementById('btnMenuInstallApp')],
-            dismissButton: document.getElementById('btnInstallNoticeDismiss'),
+            dismissButton: null,
         },
     });
     captureInstallPrompt(() => installNotice.setCanInstall(true));
@@ -738,13 +741,51 @@ document.addEventListener('DOMContentLoaded', () => {
         readBattery,
         getMinutes: async () => (await getMeta('no_charger_minutes')) ?? 0,
         isSuppressed: () => lowBatteryAlert.isShowing(),
-        elements: {
-            notice: document.getElementById('chargerNotice'),
-            text: document.getElementById('chargerNoticeText'),
-            dismissButton: document.getElementById('btnChargerNoticeDismiss'),
+        onChange: (text, battery) => {
+            chargerText = text;
+            lastBattery = battery;
+            deviceChecklist?.refresh();
         },
+        elements: { notice: null, text: null, dismissButton: null },
     }).start();
-    getStorageProbe().then(renderStorageNotice).catch(() => {});
+    let storageText = null;
+    getStorageProbe().then((probe) => {
+        storageText = describeStorageNotice(probe);
+        renderStorageNotice(probe);
+        deviceChecklist?.refresh();
+    }).catch(() => {});
+
+    // Cartel único de estado del equipo en reposo (ver terminal/device-checklist.js)
+    /** Permiso de la cámara según el navegador, o null si no lo informa. */
+    const readCameraPermission = async () => {
+        try {
+            return (await navigator.permissions.query({ name: 'camera' })).state;
+        } catch {
+            return null;
+        }
+    };
+    deviceChecklist = createDeviceChecklist({
+        collect: async () => ({
+            online: navigator.onLine,
+            displayMode: detectDisplayMode(window),
+            installText,
+            chargerText,
+            charging: lastBattery.charging,
+            wakeLock: idleDetection.getWakeLockReport(),
+            cameraPermission: await readCameraPermission(),
+            storageText,
+            pending: await countPendingEvents(),
+            outdated: isAppOutdated(window.terminalData?.app_version ?? null, await getMeta('server_app_version')),
+        }),
+        elements: {
+            card: document.getElementById('deviceChecklist'),
+            list: document.getElementById('deviceChecklistList'),
+            dismissButton: document.getElementById('btnDeviceChecklistDismiss'),
+        },
+    });
+    deviceChecklist.start();
+    window.addEventListener('online', () => deviceChecklist.refresh());
+    window.addEventListener('offline', () => deviceChecklist.refresh());
 
     // ============================================================================
     // TEMA CLARO / OSCURO
