@@ -23,9 +23,39 @@ class EmployeeScheduleAssignment extends Model
     protected $dateFormat = 'Y-m-d';
 
     protected $casts = [
-        'valid_from'  => 'date',
+        'valid_from' => 'date',
         'valid_until' => 'date',
     ];
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_UPCOMING = 'upcoming';
+
+    public const STATUS_ENDED = 'ended';
+
+    /** Etiquetas del estado de una asignación. @return array<string, string> */
+    public static function getStatusLabels(): array
+    {
+        return [self::STATUS_ACTIVE => 'Vigente', self::STATUS_UPCOMING => 'Futura', self::STATUS_ENDED => 'Finalizada'];
+    }
+
+    /** Colores del estado de una asignación. @return array<string, string> */
+    public static function getStatusColors(): array
+    {
+        return [self::STATUS_ACTIVE => 'success', self::STATUS_UPCOMING => 'info', self::STATUS_ENDED => 'gray'];
+    }
+
+    /** Estado respecto de hoy: `ended` si ya tiene fecha de fin pasada, `upcoming` si todavía no empezó, si no `active`. */
+    public function status(): string
+    {
+        $today = Carbon::today();
+
+        return match (true) {
+            $this->valid_until !== null && $this->valid_until->lt($today) => self::STATUS_ENDED,
+            $this->valid_from->gt($today) => self::STATUS_UPCOMING,
+            default => self::STATUS_ACTIVE,
+        };
+    }
 
     /** Empleado al que pertenece esta asignación. */
     public function employee(): BelongsTo
@@ -42,15 +72,11 @@ class EmployeeScheduleAssignment extends Model
     /** Usuario que creó la asignación. */
     public function createdBy(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**
      * Scope: asignaciones vigentes en una fecha dada (por defecto hoy).
-     *
-     * @param  Builder      $query
-     * @param  Carbon|null  $date
-     * @return Builder
      */
     public function scopeForDate(Builder $query, ?Carbon $date = null): Builder
     {
@@ -58,7 +84,7 @@ class EmployeeScheduleAssignment extends Model
 
         return $query
             ->where('valid_from', '<=', $date)
-            ->where(fn($q) => $q
+            ->where(fn ($q) => $q
                 ->whereNull('valid_until')
                 ->orWhere('valid_until', '>=', $date)
             );
@@ -66,9 +92,6 @@ class EmployeeScheduleAssignment extends Model
 
     /**
      * Scope: asignaciones activas hoy.
-     *
-     * @param  Builder  $query
-     * @return Builder
      */
     public function scopeActive(Builder $query): Builder
     {

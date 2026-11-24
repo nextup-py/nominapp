@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ScheduleResource\Pages;
 
+use App\Filament\Actions\ScheduleStatusAction;
 use App\Filament\Resources\ScheduleResource;
 use App\Models\Schedule;
 use App\Models\ScheduleDay;
@@ -28,6 +29,7 @@ class ViewSchedule extends ViewRecord
     {
         return [
             ScheduleResource::duplicateAction(Action::class),
+            ScheduleStatusAction::make(Action::class),
             EditAction::make()->label('Editar')->icon('heroicon-o-pencil-square')->color('primary'),
         ];
     }
@@ -51,11 +53,17 @@ class ViewSchedule extends ViewRecord
                             ->badge()
                             ->color(fn ($state) => Schedule::getShiftTypeColors()[$state] ?? 'gray'),
 
+                        TextEntry::make('is_active')
+                            ->label('Estado')
+                            ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                            ->badge()
+                            ->color(fn ($state) => $state ? 'success' : 'gray'),
+
                         TextEntry::make('description')
                             ->label('Descripción')
                             ->placeholder('Sin descripción'),
                     ])
-                    ->columns(3)
+                    ->columns(4)
                     ->collapsible(),
 
                 Section::make('Configuración de Días')

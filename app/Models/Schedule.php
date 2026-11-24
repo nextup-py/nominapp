@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Settings\PayrollSettings;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -21,6 +22,12 @@ class Schedule extends Model
 
     protected static function booted(): void
     {
+        static::updating(function (Schedule $schedule): void {
+            if ($schedule->isDirty('is_active') && ! $schedule->is_active && $schedule->deactivationBlockers() !== []) {
+                throw new \DomainException("No se puede desactivar el horario: {$schedule->deactivationBlockersSummary()}.");
+            }
+        });
+
         static::deleting(function (Schedule $schedule): void {
             if ($schedule->deletionBlockers() !== []) {
                 throw new \DomainException("No se puede eliminar el horario: {$schedule->deletionBlockersSummary()}.");
@@ -33,7 +40,35 @@ class Schedule extends Model
         'name',
         'description',
         'shift_type',
+        'is_active',
     ];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['is_active' => 'boolean'];
+    }
+
+    /** Valores por defecto de un horario nuevo. */
+    protected $attributes = ['is_active' => true];
+
+    /** Solo horarios activos. */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('schedules.is_active', true);
+    }
+
+    /** Activos, más el ya asignado (`$keepId`) para que un select de edición no quede vacío. */
+    public function scopeAssignable(Builder $query, ?int $keepId = null): Builder
+    {
+        return $query->where(function (Builder $query) use ($keepId): void {
+            $query->where('schedules.is_active', true);
+
+            if ($keepId !== null) {
+                $query->orWhere('schedules.id', $keepId);
+            }
+        });
+    }
 
     /**
      * Todos los días del horario (7 en total).
@@ -115,23 +150,66 @@ class Schedule extends Model
     public function deletionBlockers(): array
     {
         return array_filter([
-            'asignaciones de empleados (vigentes o históricas)' => $this->assignments()->count(),
+            'asignaciones de empleados (vigentes o finalizadas)' => $this->assignments()->count(),
             'empleados con este horario como horario fijo' => $this->employees()->count(),
         ]);
     }
 
-    /** Texto legible de {@see self::deletionBlockers()}, p. ej. "tiene 3 asignaciones de empleados". */
+    /** Asignaciones que todavía rigen o van a regir (sin fecha de fin o con fin hoy o posterior). */
+    public function currentAssignmentsCount(): int
+    {
+        return $this->assignments()
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', Carbon::today()->toDateString()))
+            ->count();
+    }
+
+    /** Asignaciones ya finalizadas (historial de quién tuvo este horario y hasta cuándo). */
+    public function endedAssignmentsCount(): int
+    {
+        return $this->assignments()->count() - $this->currentAssignmentsCount();
+    }
+
+    /**
+     * Motivos que impiden desactivar el horario: asignaciones vigentes o futuras, o empleados que lo tienen como
+     * horario fijo. El historial finalizado no impide desactivar.
+     *
+     * @return array<string, int>
+     */
+    public function deactivationBlockers(): array
+    {
+        return array_filter([
+            'asignaciones de empleados vigentes o futuras' => $this->currentAssignmentsCount(),
+            'empleados con este horario como horario fijo' => $this->employees()->count(),
+        ]);
+    }
+
+    /** Texto legible de {@see self::deactivationBlockers()}. */
+    public function deactivationBlockersSummary(): string
+    {
+        return 'tiene '.$this->joinBlockers($this->deactivationBlockers()).'. Asignar a esos empleados otro horario primero';
+    }
+
+    /**
+     * Texto legible de {@see self::deletionBlockers()}, p. ej. "tiene 3 asignaciones de empleados". Con solo
+     * historial finalizado, indica que el camino es desactivar el horario.
+     */
     public function deletionBlockersSummary(): string
     {
-        $parts = collect($this->deletionBlockers())
-            ->map(fn (int $count, string $label) => "{$count} {$label}")
-            ->values();
+        $text = 'tiene '.$this->joinBlockers($this->deletionBlockers());
 
-        $text = $parts->count() > 1
+        return $this->deactivationBlockers() === []
+            ? "{$text}. Eliminarlo borraría ese historial: para dejar de usarlo, desactivar el horario"
+            : "{$text}. Asignar a esos empleados otro horario y, para dejar de usarlo, desactivarlo";
+    }
+
+    /** @param  array<string, int>  $blockers */
+    private function joinBlockers(array $blockers): string
+    {
+        $parts = collect($blockers)->map(fn (int $count, string $label) => "{$count} {$label}")->values();
+
+        return $parts->count() > 1
             ? $parts->slice(0, -1)->implode(', ').' y '.$parts->last()
             : (string) $parts->first();
-
-        return "tiene {$text}. Reasigne a esos empleados a otro horario y vuelva a intentarlo";
     }
 
     /**

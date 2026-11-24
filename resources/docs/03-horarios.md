@@ -62,9 +62,18 @@ La acción **Duplicar** (en el listado y en el detalle del horario) copia los d�
 
 ![Ventana Duplicar horario con el nombre propuesto](/docs-images/03-horario-duplicar.png)
 
-### Eliminar un horario
+### Eliminar o desactivar un horario
 
-Un horario con empleados asignados —vigentes o históricos— o usado como horario fijo de algún empleado **no se puede eliminar**: borrarlo perdería el historial con el que se calculan las jornadas pasadas. Primero hay que reasignar a esos empleados a otro horario.
+Un horario con asignaciones de empleados —vigentes **o finalizadas**— o usado como horario fijo de algún empleado **no se puede eliminar**: borrarlo perdería el historial con el que se calculan las jornadas pasadas. Quitar a un empleado de un horario (**Remover**) solo cierra su asignación con la fecha de hoy; la asignación finalizada sigue contando y por eso el horario no se puede eliminar aunque ya no tenga a nadie.
+
+Para dejar de usar un horario sin perder el historial, **desactivarlo**:
+
+- **Desactivar** está en el listado, en el detalle y en el interruptor **Activo** del formulario de edición.
+- Un horario inactivo **no se ofrece** al asignar horarios a empleados, ni como horario inicial del alta, ni como horario sugerido de un cargo, ni en la sugerencia según marcaciones. Sigue valiendo para quienes ya lo tienen asignado y no se pierde ningún dato.
+- Solo se puede desactivar si **no tiene asignaciones vigentes ni futuras** ni empleados con ese horario fijo. Las asignaciones finalizadas no lo impiden. Si las tiene, primero hay que asignar a esos empleados otro horario.
+- El listado muestra por defecto solo los activos; el filtro **Estado** permite ver los inactivos y **Activar** vuelve a ofrecerlo.
+
+La pestaña **Historial de asignaciones** del horario lista todas sus asignaciones (empleado, desde, hasta, estado —Vigente, Futura o Finalizada— y quién la asignó), y permite ver qué impide eliminarlo. La pestaña **Empleados** muestra solo las asignaciones vigentes.
 
 ## Asignar un horario a un empleado
 
@@ -100,7 +109,7 @@ También se puede asignar sin abrir el horario. En **Empleados**, menú de la fi
 
 Para encontrar a quienes **no tienen horario fijo, rotación ni turnos planificados** (los turnos cargados en el Planificador en los últimos 14 días o a futuro cuentan como horario), use el filtro **Sin horario asignado** del listado de Empleados. El mismo aviso aparece (con un enlace al **Planificador de Turnos** para quienes se organizan por turnos) como tarjeta **Empleados sin horario** en **Asistencias → Por resolver** y como mensaje bajo el título de **Asistencias**, con enlace al listado ya filtrado.
 
-Para quitar la asignación de un empleado sin darle otro horario, usar **Remover** en la fila del empleado (o la acción masiva "Remover seleccionados") — esto cierra la asignación con fecha de hoy, sin eliminar el historial.
+Para quitar la asignación de un empleado sin darle otro horario, usar **Remover** en la fila del empleado (o la acción masiva "Remover seleccionados") — esto cierra la asignación con fecha de hoy, sin eliminar el historial (queda en la pestaña **Historial de asignaciones** del horario).
 
 > Un empleado puede tener historial de asignaciones. El sistema usa automáticamente la asignación vigente en la fecha de cada marcación para calcular la asistencia.
 

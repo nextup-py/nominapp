@@ -32,6 +32,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class PositionResource extends Resource
@@ -235,7 +236,7 @@ class PositionResource extends Resource
 
                         Select::make('default_schedule_id')
                             ->label('Horario sugerido')
-                            ->relationship('defaultSchedule', 'name')
+                            ->relationship('defaultSchedule', 'name', modifyQueryUsing: fn (Builder $query, ?Position $record) => $query->assignable($record?->default_schedule_id))
                             ->searchable()
                             ->preload()
                             ->native(false)

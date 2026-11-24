@@ -3,7 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\ScheduleAssignmentActions;
+use App\Filament\Actions\ScheduleStatusAction;
 use App\Filament\Resources\ScheduleResource\Pages;
+use App\Filament\Resources\ScheduleResource\RelationManagers\AssignmentsRelationManager;
 use App\Filament\Resources\ScheduleResource\RelationManagers\EmployeesRelationManager;
 use App\Models\Branch;
 use App\Models\Employee;
@@ -59,6 +61,16 @@ class ScheduleResource extends Resource
             ->schema([
                 Section::make('Información del Horario')
                     ->schema([
+                        Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true)
+                            ->disabled(fn (?Schedule $record): bool => $record !== null && $record->is_active && $record->deactivationBlockers() !== [])
+                            ->helperText(fn (?Schedule $record): string => $record !== null && $record->is_active && $record->deactivationBlockers() !== []
+                                ? 'No se puede desactivar: '.$record->deactivationBlockersSummary().'.'
+                                : 'Los horarios inactivos no se ofrecen al asignar y conservan su historial.')
+                            ->hiddenOn('create')
+                            ->columnSpanFull(),
+
                         TextInput::make('name')
                             ->label('Nombre')
                             ->placeholder('Ej: Horario Diurno')
@@ -197,6 +209,13 @@ class ScheduleResource extends Resource
                     ->icon('heroicon-o-clock')
                     ->iconColor('primary'),
 
+                TextColumn::make('is_active')
+                    ->label('Estado')
+                    ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'gray')
+                    ->sortable(),
+
                 TextColumn::make('shift_type')
                     ->label('Jornada')
                     ->badge()
@@ -233,6 +252,14 @@ class ScheduleResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                TernaryFilter::make('is_active')
+                    ->label('Estado')
+                    ->placeholder('Todos')
+                    ->trueLabel('Activos')
+                    ->falseLabel('Inactivos')
+                    ->default(true)
+                    ->native(false),
+
                 SelectFilter::make('shift_type')
                     ->label('Tipo de Jornada')
                     ->options(Schedule::getShiftTypeLabels())
@@ -253,6 +280,7 @@ class ScheduleResource extends Resource
             ])
             ->actions([
                 static::duplicateAction(Action::class),
+                ScheduleStatusAction::make(Action::class),
 
                 Action::make('assignToEmployees')
                     ->label('Asignar a Empleados')
@@ -416,6 +444,7 @@ class ScheduleResource extends Resource
     {
         return [
             EmployeesRelationManager::class,
+            AssignmentsRelationManager::class,
         ];
     }
 

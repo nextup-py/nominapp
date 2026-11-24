@@ -107,3 +107,15 @@ it('la acción Asignar horario llega con el horario sugerido preseleccionado', f
 
     expect((int) $data['schedule_id'])->toBe($office->id);
 });
+
+it('no sugiere un horario inactivo aunque coincida con las marcaciones', function () {
+    $employee = suggestEmployee();
+    $morning = suggestSchedule('Mañana inactiva', '07:00', '15:00');
+    suggestWorkedDays($employee, '07:02:00', '15:01:00');
+
+    expect(app(ScheduleSuggestionService::class)->suggestFor($employee)['schedule']->id)->toBe($morning->id);
+
+    $morning->update(['is_active' => false]);
+
+    expect(app(ScheduleSuggestionService::class)->suggestFor($employee))->toBeNull();
+});

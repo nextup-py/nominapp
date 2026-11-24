@@ -54,7 +54,7 @@ class ScheduleSuggestionService
 
         $best = null;
 
-        foreach (Schedule::query()->with('activeDays')->get() as $schedule) {
+        foreach (Schedule::query()->active()->with('activeDays')->get() as $schedule) {
             if ($schedule->activeDays->isEmpty()) {
                 continue;
             }

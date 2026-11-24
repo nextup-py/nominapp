@@ -464,7 +464,7 @@ final class EmployeeForm
     {
         return Select::make('initial_schedule_id')
             ->label('Horario Inicial')
-            ->options(fn () => Schedule::orderBy('name')->pluck('name', 'id'))
+            ->options(fn () => Schedule::query()->active()->orderBy('name')->pluck('name', 'id'))
             ->searchable()
             ->native(false)
             ->nullable()
