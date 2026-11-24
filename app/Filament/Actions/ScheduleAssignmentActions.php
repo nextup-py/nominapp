@@ -77,7 +77,7 @@ class ScheduleAssignmentActions
         return [
             Select::make('schedule_id')
                 ->label('Horario')
-                ->options(fn () => Schedule::query()->orderBy('name')->pluck('name', 'id'))
+                ->options(fn () => Schedule::query()->assignable()->orderBy('name')->pluck('name', 'id'))
                 ->searchable()
                 ->native(false)
                 ->required(),

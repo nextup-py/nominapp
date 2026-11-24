@@ -298,7 +298,7 @@ class EmployeesRelationManager extends RelationManager
             ])
             ->defaultSort('assignment_start_date', 'desc')
             ->emptyStateHeading('No hay empleados asignados')
-            ->emptyStateDescription('Comience asignando empleados a este horario.')
+            ->emptyStateDescription('Comience asignando empleados a este horario. Los empleados que se quitaron figuran en «Historial de asignaciones».')
             ->emptyStateIcon('heroicon-o-user-group');
     }
 }
