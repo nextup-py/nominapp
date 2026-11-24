@@ -387,7 +387,7 @@ Desde la sección **Marcaciones** del detalle del día, clic en el ícono de eli
 
 ## Revisión de fallos de marcación
 
-Cuando un intento de marcación (terminal o dispositivo personal) no puede completarse — rostro no reconocido, empleado no encontrado, o un **conflicto de sincronización** al subir eventos capturados offline — el sistema **nunca lo descarta en silencio**: queda registrado para revisión en **Asistencias → Fallos de Marcación**.
+Cuando un intento de marcación (terminal o dispositivo personal) no puede completarse — rostro no reconocido, empleado no encontrado, o un **conflicto de sincronización** al subir eventos capturados offline — el sistema **nunca lo descarta en silencio**: queda registrado para revisión en **Terminales y dispositivos → Fallos de Marcación**.
 
 ### Tipos de fallo más comunes
 
@@ -404,7 +404,7 @@ Cuando un intento de marcación (terminal o dispositivo personal) no puede compl
 
 ### Revisar un fallo
 
-1. Ir a **Asistencias → Fallos de Marcación**. La lista abre en la pestaña **Para revisar** (conflictos de sincronización, secuencias inválidas y otros fallos que RR.HH. puede resolver). **Rostros no reconocidos** reúne los intentos donde el terminal no identificó a nadie o el rostro fue ambiguo: no hay empleado ni marcación que aprobar, y el botón **Descartar rostros no reconocidos** (arriba a la derecha) los descarta todos de una vez, con confirmación y sin tocar los de *Para revisar*. **Todos**, **Terminal** y **Móvil** muestran el historial por modo. La columna **Qué hacer** resume el paso siguiente de cada fallo (por ejemplo, *Aprobar si el empleado sí estuvo, o descartar*, o *Sin datos para aprobar: ver diagnóstico*). **Modo**, **Sucursal**, **Mensaje** e **IP** están ocultas por defecto y se activan desde el selector de columnas. El resumen de empleados con fallos recurrentes está al pie de la página
+1. Ir a **Terminales y dispositivos → Fallos de Marcación**. La lista abre en la pestaña **Para revisar** (conflictos de sincronización, secuencias inválidas y otros fallos que RR.HH. puede resolver). **Rostros no reconocidos** reúne los intentos donde el terminal no identificó a nadie o el rostro fue ambiguo: no hay empleado ni marcación que aprobar, y el botón **Descartar rostros no reconocidos** (arriba a la derecha) los descarta todos de una vez, con confirmación y sin tocar los de *Para revisar*. **Todos**, **Terminal** y **Móvil** muestran el historial por modo. La columna **Qué hacer** resume el paso siguiente de cada fallo (por ejemplo, *Aprobar si el empleado sí estuvo, o descartar*, o *Sin datos para aprobar: ver diagnóstico*). **Modo**, **Sucursal**, **Mensaje** e **IP** están ocultas por defecto y se activan desde el selector de columnas. El resumen de empleados con fallos recurrentes está al pie de la página
 2. Clic en un registro para ver el detalle completo: empleado (si se pudo identificar), sucursal, mensaje de error, IP, coordenadas GPS y metadatos adicionales
 3. Usar el botón **Diagnóstico** para ver una explicación en lenguaje simple de qué pudo haber causado el fallo
 
