@@ -245,3 +245,57 @@ describe('employee_status_cache', () => {
         expect(typeof cached.cached_at).toBe('number');
     });
 });
+
+describe('respaldo del vínculo en localStorage', () => {
+    beforeEach(() => {
+        const store = {};
+        globalThis.localStorage = {
+            getItem: (key) => store[key] ?? null,
+            setItem: (key, value) => { store[key] = String(value); },
+            removeItem: (key) => { delete store[key]; },
+        };
+    });
+
+    afterEach(() => {
+        delete globalThis.localStorage;
+    });
+
+    it('restaura el token y la identidad si IndexedDB se pierde pero localStorage sobrevive', async () => {
+        await db.setMeta('api_token', 'tok-luque');
+        await db.setMeta('terminal_id', 7);
+        await db.setMeta('terminal_code', 'luque');
+        await db.setMeta('employees_synced_at', 999);
+
+        // Se pierde la base (apagado brusco) pero no localStorage.
+        const database = await db.getDb();
+        await database.clear('terminal_meta');
+
+        expect(await db.getMeta('api_token')).toBe('tok-luque');
+        expect(await db.getMeta('terminal_id')).toBe(7);
+        expect(await db.getMeta('terminal_code')).toBe('luque');
+        // Lo que no es del vínculo no se resucita.
+        expect(await db.getMeta('employees_synced_at')).toBeUndefined();
+    });
+
+    it('no pisa un vínculo que ya está en IndexedDB', async () => {
+        await db.setMeta('api_token', 'tok-viejo');
+        await db.setMeta('api_token', 'tok-nuevo');
+
+        expect(await db.getMeta('api_token')).toBe('tok-nuevo');
+        expect(await db.getMeta('terminal_code')).toBeUndefined();
+    });
+
+    it('clearTerminalState también borra el respaldo (el equipo cambió de terminal)', async () => {
+        await db.setMeta('api_token', 'tok-luque');
+        await db.setMeta('terminal_id', 7);
+
+        await db.clearTerminalState();
+
+        expect(await db.getMeta('api_token')).toBeUndefined();
+        expect(await db.getMeta('terminal_id')).toBeUndefined();
+    });
+
+    it('sin respaldo ni base devuelve undefined', async () => {
+        expect(await db.getMeta('api_token')).toBeUndefined();
+    });
+});
