@@ -61,9 +61,9 @@ it('los turnos viven en su propio grupo y Asistencias queda con lo de uso diario
         ->and($groups['Sistema'])->toEqualCanonicalizing(['Salud del sistema', 'Visor de Logs'])
         ->and($groups['Licencias y vacaciones'])->toEqualCanonicalizing(['Licencias', 'Vacaciones', 'Balances de Vacaciones'])
         ->and($groups['Empleados'])->toEqualCanonicalizing(['Empleados', 'Contratos', 'Amonestaciones'])
-        ->and($groups['Aguinaldo y liquidación'])->toEqualCanonicalizing(['Aguinaldo', 'Liquidaciones'])
+        ->and($groups['Nóminas'])->toContain('Aguinaldo', 'Liquidaciones')
         ->and($groups['Configuración'])->not->toContain('Salud del sistema')
-        ->and(collect($panel->getNavigationGroups())->map(fn ($g) => $g->getLabel())->all())->toContain('Horarios y turnos', 'Sistema', 'Licencias y vacaciones', 'Aguinaldo y liquidación');
+        ->and(collect($panel->getNavigationGroups())->map(fn ($g) => $g->getLabel())->all())->toContain('Horarios y turnos', 'Sistema', 'Licencias y vacaciones');
 });
 
 it('Marcaciones no está en el menú', function () {

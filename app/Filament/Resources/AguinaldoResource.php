@@ -35,7 +35,7 @@ class AguinaldoResource extends Resource
 
     protected static ?string $model = Aguinaldo::class;
 
-    protected static ?string $navigationGroup = 'Aguinaldo y liquidación';
+    protected static ?string $navigationGroup = 'Nóminas';
 
     protected static ?string $navigationLabel = 'Recibos Aguinaldo';
 
@@ -49,7 +49,7 @@ class AguinaldoResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 10;
 
     /**
      * Siempre oculto de la navegación: es un recurso "hijo" accesible solo
