@@ -243,6 +243,7 @@
             /**
              * Renderiza las filas de la tabla de empleados para las columnas seleccionadas.
              */
+            if (! function_exists('employeeRows')) {
             function employeeRows($rows, $showCol, $genderOptions, $statusOptions, $contractTypes, $paymentMethods) {
                 $contractTypesShort = [
                     'indefinido'       => 'Indefinido',
@@ -305,6 +306,7 @@
                     echo '</tr>';
                     $i++;
                 }
+            }
             }
         @endphp
 
