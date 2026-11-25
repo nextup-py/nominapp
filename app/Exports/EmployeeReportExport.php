@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Contract;
 use App\Models\Employee;
+use App\Support\EmployeeSeniority;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,7 @@ class EmployeeReportExport implements FromQuery, ShouldAutoSize, WithHeadings, W
         protected ?string $registeredUntil = null,
         protected ?string $endDateFrom = null,
         protected ?string $endDateUntil = null,
+        protected bool $originalSeniority = false,
     ) {
         if (empty($this->columns)) {
             $this->columns = array_keys(static::availableColumns());
@@ -118,14 +120,14 @@ class EmployeeReportExport implements FromQuery, ShouldAutoSize, WithHeadings, W
                 'employees.created_at',
                 'branches.name as branch_name',
                 'companies.name as company_name',
-                'contracts.start_date as hire_date',
+                DB::raw(EmployeeSeniority::hireDateSql($this->originalSeniority).' AS report_hire_date'),
                 'contracts.salary',
                 'contracts.salary_type',
                 'contracts.type as contract_type',
                 'contracts.payment_method',
                 'positions.name as position_name',
                 'departments.name as department_name',
-                DB::raw('TIMESTAMPDIFF(YEAR, contracts.start_date, CURDATE()) AS years_of_service'),
+                DB::raw('TIMESTAMPDIFF(YEAR, '.EmployeeSeniority::hireDateSql($this->originalSeniority).', CURDATE()) AS years_of_service'),
                 DB::raw('(SELECT MAX(c2.end_date) FROM contracts c2 WHERE c2.employee_id = employees.id) AS last_end_date'),
             ])
             ->join('branches', 'branches.id', '=', 'employees.branch_id')
@@ -190,12 +192,12 @@ class EmployeeReportExport implements FromQuery, ShouldAutoSize, WithHeadings, W
             'gender' => $genderOptions[$row->gender] ?? '',
             'age' => $row->birth_date ? $row->birth_date->age : '',
             'birthday' => $row->birth_date ? $row->birth_date->day.' de '.$row->birth_date->locale('es')->isoFormat('MMMM') : '',
-            'hire_date' => $row->hire_date ? Carbon::parse($row->hire_date)->format('d/m/Y') : '',
+            'hire_date' => $row->report_hire_date ? Carbon::parse($row->report_hire_date)->format('d/m/Y') : '',
             'years_of_service' => (function () use ($row): string {
-                if (! $row->hire_date || $row->status !== 'active') {
+                if (! $row->report_hire_date || $row->status !== 'active') {
                     return '';
                 }
-                $hire = Carbon::parse($row->hire_date);
+                $hire = Carbon::parse($row->report_hire_date);
                 $years = (int) $hire->diffInYears(now());
                 $totalMonths = (int) $hire->diffInMonths(now());
                 if ($years >= 1) {

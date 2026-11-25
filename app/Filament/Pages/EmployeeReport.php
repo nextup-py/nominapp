@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Contract;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Support\EmployeeSeniority;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
@@ -230,6 +231,7 @@ class EmployeeReport extends Page implements HasTable
                         'registeredUntil' => $registeredUntil,
                         'endDateFrom' => $endDateFrom,
                         'endDateUntil' => $endDateUntil,
+                        'originalSeniority' => $this->usesOriginalSeniority() ? 1 : null,
                     ], fn ($v) => $v !== null);
 
                     $params['columns'] = implode(',', EmployeeReportExport::visibleColumns($data['columns']));
@@ -272,7 +274,8 @@ class EmployeeReport extends Page implements HasTable
                             $companyId, $branchId, $gender, $birthMonth, $status,
                             $departmentId, $contractType, $paymentMethod,
                             EmployeeReportExport::visibleColumns($data['columns']),
-                            $registeredFrom, $registeredUntil, $endDateFrom, $endDateUntil
+                            $registeredFrom, $registeredUntil, $endDateFrom, $endDateUntil,
+                            $this->usesOriginalSeniority()
                         ),
                         'empleados_'.now()->format('Y_m_d_H_i').'.xlsx'
                     );
@@ -286,7 +289,7 @@ class EmployeeReport extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query($this->buildQuery())
+            ->query(fn () => $this->buildQuery())
             ->filters($this->buildFilters(), layout: FiltersLayout::AboveContent)
             ->filtersFormColumns(4)
             ->persistFiltersInSession()
@@ -339,17 +342,17 @@ class EmployeeReport extends Page implements HasTable
 
                 TextColumn::make('hire_date')
                     ->label('Fecha ingreso')
-                    ->getStateUsing(fn ($record) => $record->hire_date)
+                    ->getStateUsing(fn ($record) => $record->report_hire_date)
                     ->date('d/m/Y')
-                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('contracts.start_date', $direction)),
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('report_hire_date', $direction)),
 
                 TextColumn::make('years_of_service')
                     ->label('Antigüedad')
                     ->getStateUsing(function ($record) {
-                        if (! $record->hire_date || $record->status !== 'active') {
+                        if (! $record->report_hire_date || $record->status !== 'active') {
                             return '—';
                         }
-                        $hire = Carbon::parse($record->hire_date);
+                        $hire = Carbon::parse($record->report_hire_date);
                         $years = (int) $hire->diffInYears(now());
                         $totalMonths = (int) $hire->diffInMonths(now());
                         if ($years >= 1) {
@@ -376,7 +379,7 @@ class EmployeeReport extends Page implements HasTable
                         $record->years_of_service >= 1 => 'warning',
                         default => 'gray',
                     })
-                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('contracts.start_date', $direction === 'asc' ? 'desc' : 'asc')),
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('report_hire_date', $direction === 'asc' ? 'desc' : 'asc')),
 
                 TextColumn::make('salary')
                     ->label('Salario')
@@ -480,14 +483,14 @@ class EmployeeReport extends Page implements HasTable
                 'branches.name as branch_name',
                 'companies.id as company_id',
                 'companies.name as company_name',
-                'contracts.start_date as hire_date',
+                DB::raw(EmployeeSeniority::hireDateSql($this->usesOriginalSeniority()).' AS report_hire_date'),
                 'contracts.salary',
                 'contracts.salary_type',
                 'contracts.type as contract_type',
                 'contracts.payment_method',
                 'positions.name as position_name',
                 'departments.name as department_name',
-                DB::raw('TIMESTAMPDIFF(YEAR, contracts.start_date, CURDATE()) AS years_of_service'),
+                DB::raw('TIMESTAMPDIFF(YEAR, '.EmployeeSeniority::hireDateSql($this->usesOriginalSeniority()).', CURDATE()) AS years_of_service'),
                 DB::raw('MONTH(employees.birth_date) AS birth_month'),
                 DB::raw('(SELECT MAX(c2.end_date) FROM contracts c2 WHERE c2.employee_id = employees.id) AS last_end_date'),
             ])
@@ -662,7 +665,21 @@ class EmployeeReport extends Page implements HasTable
                     filled($data['value']) => $query->where('employees.status', $data['value']),
                     default => $query,
                 }),
+
+            Filter::make('original_seniority')
+                ->label('Antigüedad desde el ingreso original')
+                ->toggle()
+                ->query(fn (Builder $query) => $query),
         ]);
+    }
+
+    /**
+     * Si el filtro «Antigüedad desde el ingreso original» está activo: la fecha de ingreso y la antigüedad conservan el
+     * inicio de la relación laboral aunque el contrato vigente sea una renovación.
+     */
+    private function usesOriginalSeniority(): bool
+    {
+        return (bool) (($this->tableFilters ?? [])['original_seniority']['isActive'] ?? false);
     }
 
     /**

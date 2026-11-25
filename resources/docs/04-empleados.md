@@ -161,6 +161,8 @@ Empleado, CI, Género, Edad, Cumpleaños, Fecha de ingreso, Antigüedad, Salario
 
 **Empresa**, **Sucursal**, **Departamento** (en cascada), **Tipo de contrato**, **Método de pago**, **Género**, **Mes de cumpleaños** (útil para planificar saludos o beneficios por cumpleaños), **Rango de fecha de registro** **Aviso de privacidad** (si aceptaron la versión vigente, una anterior o ninguna; ver el capítulo de Asistencias) y **Sin horario asignado** (empleados sin horario fijo ni rotación vigente; desde ahí se les puede asignar uno con **Asignar horario**, ver el capítulo de Horarios). También **Contrato vencido sin renovar** (empleados con el contrato vencido y ningún otro vigente; ver el capítulo de Contratos).
 
+El filtro **Antigüedad desde el ingreso original** hace que **Fecha de ingreso** y **Antigüedad** conserven el inicio de la relación laboral aunque el contrato vigente sea una renovación: toma el primer contrato posterior a la última terminación del empleado (las renovaciones y los contratos que vencieron sin baja forman parte de la misma relación; una terminación la corta). Si el contrato tiene cargada una **antigüedad acumulada** (reingreso), prevalece esa fecha. Sin el filtro, el reporte muestra el inicio del contrato vigente. El filtro también se aplica a los archivos de **Exportar PDF** y **Exportar Excel**.
+
 ### Exportar
 
 - **Exportar PDF** — con selector de columnas y orientación de página (Vertical/Horizontal)
