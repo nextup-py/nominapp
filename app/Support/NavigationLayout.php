@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use Filament\Facades\Filament;
 
 /**
@@ -17,6 +18,11 @@ class NavigationLayout
 
     /** Máximo de grupos que entran en el menú superior a 1280 px junto a Escritorio, Reportes y Mi equipo. */
     public const MAX_TOP_GROUPS = 7;
+
+    /** Grupo del menú superior que no se convierte en enlace directo aunque tenga una sola pantalla. */
+    public const KEEP_GROUP = 'Ayuda';
+
+    private const COUNTS_BINDING = 'navigation.top-counts';
 
     /**
      * Grupo de la barra lateral → [grupo del menú superior, desplazamiento del orden]. El desplazamiento mantiene
@@ -66,7 +72,59 @@ class NavigationLayout
             return $sidebarGroup;
         }
 
-        return self::TOP_GROUPS[$sidebarGroup][0] ?? $sidebarGroup;
+        $topGroup = self::TOP_GROUPS[$sidebarGroup][0] ?? $sidebarGroup;
+
+        return self::isSingleItemGroup($topGroup) ? null : $topGroup;
+    }
+
+    /**
+     * Si un grupo del menú superior quedó con una sola pantalla visible (por módulos apagados o permisos), se muestra
+     * como enlace directo en vez de un desplegable de una opción. «Ayuda» conserva su grupo por convención.
+     */
+    private static function isSingleItemGroup(string $topGroup): bool
+    {
+        return $topGroup !== self::KEEP_GROUP && (self::visibleCountsByTopGroup()[$topGroup] ?? 0) === 1;
+    }
+
+    /**
+     * Cantidad de pantallas visibles por grupo del menú superior para el usuario actual. Se calcula una vez por
+     * petición (el contenedor se reinicia en cada petición y en cada test).
+     *
+     * @return array<string, int>
+     */
+    private static function visibleCountsByTopGroup(): array
+    {
+        if (app()->bound(self::COUNTS_BINDING)) {
+            return app(self::COUNTS_BINDING);
+        }
+
+        $panel = Filament::getCurrentPanel();
+        $counts = [];
+
+        foreach ($panel ? array_merge($panel->getResources(), $panel->getPages()) : [] as $class) {
+            if (! in_array(UsesNavigationLayout::class, class_uses_recursive($class), true)) {
+                continue;
+            }
+
+            $sidebarGroup = $class::sidebarNavigationGroup();
+
+            if ($sidebarGroup === null || ! $class::shouldRegisterNavigation() || ! $class::canAccess()) {
+                continue;
+            }
+
+            $top = self::TOP_GROUPS[$sidebarGroup][0] ?? $sidebarGroup;
+            $counts[$top] = ($counts[$top] ?? 0) + 1;
+        }
+
+        app()->instance(self::COUNTS_BINDING, $counts);
+
+        return $counts;
+    }
+
+    /** Descarta el conteo calculado (tras cambiar módulos o permisos dentro de la misma petición). */
+    public static function flush(): void
+    {
+        app()->forgetInstance(self::COUNTS_BINDING);
     }
 
     /** Orden de una pantalla según el formato elegido. */

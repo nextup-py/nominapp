@@ -10,6 +10,12 @@ use App\Support\NavigationLayout;
  */
 trait UsesNavigationLayout
 {
+    /** Grupo declarado para la barra lateral, sin traducir al formato elegido. */
+    public static function sidebarNavigationGroup(): ?string
+    {
+        return static::$navigationGroup;
+    }
+
     /** Grupo de menú según el formato elegido por el usuario. */
     public static function getNavigationGroup(): ?string
     {
