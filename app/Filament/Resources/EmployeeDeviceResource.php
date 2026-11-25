@@ -51,7 +51,7 @@ class EmployeeDeviceResource extends Resource
 
     protected static ?string $navigationGroup = 'Terminales y dispositivos';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     /**
      * Formulario de edición — solo los campos anotables a mano. Vinculación,

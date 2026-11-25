@@ -38,13 +38,13 @@ class LogViewer extends Page implements HasTable
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static ?string $navigationGroup = 'Sistema';
 
     protected static ?string $navigationLabel = 'Visor de Logs';
 
     protected static ?string $title = 'Visor de Logs';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 2;
 
     protected static string $view = 'filament.pages.log-viewer';
 

@@ -82,7 +82,7 @@ Quién aparece en tu equipo depende de tus permisos y de la ficha vinculada a tu
 
 ## Modos de marcación
 
-Ir a **Asistencias → Modos de Marcación** para ver los enlaces y códigos QR de cada modo.
+Ir a **Terminales y dispositivos → Modos de Marcación** para ver los enlaces y códigos QR de cada modo.
 
 ### Terminal compartida (kiosco)
 Un dispositivo fijo en la sucursal (tablet o PC). Todos los empleados marcan desde ese mismo equipo. No requiere que el empleado tenga cuenta en el sistema. El reconocimiento facial identifica automáticamente quién está marcando.
@@ -98,7 +98,7 @@ El empleado usa su propio dispositivo (celular o tablet). Puede marcar desde cua
 
 ## Gestión de Terminales
 
-Ir a **Asistencias → Terminales** para administrar los dispositivos físicos de marcación: crearlos, **vincularlos** al sistema (con un código que aprueba un administrador, o con un enlace de configuración), ver si están en línea, activarlos, desactivarlos o revocar su acceso.
+Ir a **Terminales y dispositivos → Terminales** para administrar los dispositivos físicos de marcación: crearlos, **vincularlos** al sistema (con un código que aprueba un administrador, o con un enlace de configuración), ver si están en línea, activarlos, desactivarlos o revocar su acceso.
 
 > El detalle completo —paso a paso de la vinculación, estados de conectividad, solicitudes de vinculación y solución de problemas— está en el capítulo **Terminales de Marcación**.
 
@@ -171,7 +171,7 @@ Cada empleado puede tener **un único dispositivo activo**. Si vincula uno nuevo
 
 ### Ver el historial de dispositivos
 
-Ir a **Asistencias → Dispositivos de Empleados** para ver todas las vinculaciones, pasadas y presentes, de todos los empleados. A diferencia de las Terminales, este historial es de **solo lectura por diseño**: los registros se crean automáticamente al vincularse, nunca a mano.
+Ir a **Terminales y dispositivos → Dispositivos de Empleados** para ver todas las vinculaciones, pasadas y presentes, de todos los empleados. A diferencia de las Terminales, este historial es de **solo lectura por diseño**: los registros se crean automáticamente al vincularse, nunca a mano.
 
 | Columna | Descripción |
 |---------|-------------|
@@ -188,7 +188,7 @@ Desde el detalle de un dispositivo se pueden completar a mano los datos que el n
 
 Si un empleado perdió su celular o cambió de dispositivo sin avisar, un administrador puede revocar el acceso manualmente:
 
-1. Ir a **Asistencias → Dispositivos de Empleados**
+1. Ir a **Terminales y dispositivos → Dispositivos de Empleados**
 2. Localizar el dispositivo activo del empleado
 3. Clic en **Revocar** (solo aparece con permiso para editar dispositivos de empleados)
 4. Confirmar
@@ -213,9 +213,9 @@ Para encontrar a quienes todavía no tienen rostro, ir a **Empleados** y filtrar
 
 **Opción B — Enlace de enrolamiento (el empleado captura):**
 
-1. Clic en **Generar enlace de enrolamiento** (o, en **Asistencias → Registro Facial**, el botón **Generar Enlace** con vigencia de 4, 24 o 72 horas). El enlace vence según el tiempo configurado en **Configuración General**
+1. Clic en **Generar enlace de enrolamiento** (o, en **Terminales y dispositivos → Registro Facial**, el botón **Generar Enlace** con vigencia de 4, 24 o 72 horas). El enlace vence según el tiempo configurado en **Configuración General**
 2. El empleado abre el enlace en su celular o PC con cámara y sigue la captura (el sistema toma varias muestras). Si su empresa cargó un aviso de privacidad, primero debe tildar **He leído y acepto el aviso de privacidad**: sin eso la cámara no arranca. El registro queda **Pendiente de aprobación**
-3. Ir a **Asistencias → Registro Facial**, buscar el registro, revisar la imagen y el score de calidad, y clic en **Aprobar** (o **Rechazar** si la calidad es insuficiente)
+3. Ir a **Terminales y dispositivos → Registro Facial**, buscar el registro, revisar la imagen y el score de calidad, y clic en **Aprobar** (o **Rechazar** si la calidad es insuficiente)
 4. Si el enlace venció o se perdió, usar **Ver Enlace** o **Regenerar Enlace** en esa misma lista
 
 Una vez aprobado, el terminal de la sucursal incorpora el rostro en su siguiente sincronización y el empleado puede marcar.
@@ -340,7 +340,7 @@ El radio sale, en este orden, del empleado, de la sucursal o de **Configuración
 **Qué pasa fuera del radio:** la marcación **se acepta igual** (así un GPS impreciso no bloquea a nadie) pero queda señalada. La comparación se hace en el servidor al sincronizar, por lo que funciona también si el celular marcó sin conexión.
 
 **Dónde se revisa:**
-- **Asistencias → Marcaciones**: columnas **Control de ubicación** (con la distancia en metros) y **Revisión de ubicación**, y el filtro **Control de ubicación**. Con permiso para editar marcaciones, la fila ofrece **Aprobar ubicación** o **Descartar ubicación**; queda registrado quién decidió y cuándo. Descartar no elimina la marcación: para corregirla usar **Corregir marcaciones** en la jornada. El detalle de la marcación (**Ver**) muestra el mapa, la distancia al punto de trabajo, el radio permitido, un enlace al punto y quién revisó la ubicación y cuándo (el punto y el radio son los vigentes hoy).
+- **Marcaciones** (buscar con **Ctrl+K**): columnas **Control de ubicación** (con la distancia en metros) y **Revisión de ubicación**, y el filtro **Control de ubicación**. Con permiso para editar marcaciones, la fila ofrece **Aprobar ubicación** o **Descartar ubicación**; queda registrado quién decidió y cuándo. Descartar no elimina la marcación: para corregirla usar **Corregir marcaciones** en la jornada. El detalle de la marcación (**Ver**) muestra el mapa, la distancia al punto de trabajo, el radio permitido, un enlace al punto y quién revisó la ubicación y cuándo (el punto y el radio son los vigentes hoy).
 - **Por resolver**: tarjeta **Marcaciones fuera de radio** con las que siguen sin revisar.
 
 > La ubicación es un dato personal: el aviso de privacidad que carga la empresa (**Empresas → Aviso de privacidad**) debe mencionarla. Se acepta al vincular el celular.
@@ -351,12 +351,12 @@ Si un empleado no puede marcar por problema técnico, olvido u otra razón, el a
 
 ### Crear una marcación desde el listado de marcaciones
 
-1. Ir a **Asistencias → Marcaciones**
+1. Abrir **Marcaciones** (no está en el menú: buscar «Marcaciones» con **Ctrl+K**)
 2. Clic en **Nueva marcación**
 3. Seleccionar **empleado**, **tipo de evento** (entrada, salida, etc.) y **fecha y hora**
 4. Guardar
 
-> **Ir a la jornada de una marcación:** en **Asistencias → Marcaciones**, el botón **Ver jornada** de cada fila abre el día de asistencia al que pertenece, donde se ven todas sus marcaciones juntas. Para corregir varias de una vez, usar **Corregir marcaciones** desde **Asistencias → Asistencias**. El botón solo aparece a quien puede ver las asistencias.
+> **Ir a la jornada de una marcación:** en **Marcaciones**, el botón **Ver jornada** de cada fila abre el día de asistencia al que pertenece, donde se ven todas sus marcaciones juntas. Para corregir varias de una vez, usar **Corregir marcaciones** desde **Asistencias → Asistencias**. El botón solo aparece a quien puede ver las asistencias.
 
 ### Crear una marcación desde el detalle del día
 
@@ -387,7 +387,7 @@ Desde la sección **Marcaciones** del detalle del día, clic en el ícono de eli
 
 ## Revisión de fallos de marcación
 
-Cuando un intento de marcación (terminal o dispositivo personal) no puede completarse — rostro no reconocido, empleado no encontrado, o un **conflicto de sincronización** al subir eventos capturados offline — el sistema **nunca lo descarta en silencio**: queda registrado para revisión en **Asistencias → Fallos de Marcación**.
+Cuando un intento de marcación (terminal o dispositivo personal) no puede completarse — rostro no reconocido, empleado no encontrado, o un **conflicto de sincronización** al subir eventos capturados offline — el sistema **nunca lo descarta en silencio**: queda registrado para revisión en **Terminales y dispositivos → Fallos de Marcación**.
 
 ### Tipos de fallo más comunes
 
@@ -404,7 +404,7 @@ Cuando un intento de marcación (terminal o dispositivo personal) no puede compl
 
 ### Revisar un fallo
 
-1. Ir a **Asistencias → Fallos de Marcación**. La lista abre en la pestaña **Para revisar** (conflictos de sincronización, secuencias inválidas y otros fallos que RR.HH. puede resolver). **Rostros no reconocidos** reúne los intentos donde el terminal no identificó a nadie o el rostro fue ambiguo: no hay empleado ni marcación que aprobar, y el botón **Descartar rostros no reconocidos** (arriba a la derecha) los descarta todos de una vez, con confirmación y sin tocar los de *Para revisar*. **Todos**, **Terminal** y **Móvil** muestran el historial por modo. La columna **Qué hacer** resume el paso siguiente de cada fallo (por ejemplo, *Aprobar si el empleado sí estuvo, o descartar*, o *Sin datos para aprobar: ver diagnóstico*). **Modo**, **Sucursal**, **Mensaje** e **IP** están ocultas por defecto y se activan desde el selector de columnas. El resumen de empleados con fallos recurrentes está al pie de la página
+1. Ir a **Terminales y dispositivos → Fallos de Marcación**. La lista abre en la pestaña **Para revisar** (conflictos de sincronización, secuencias inválidas y otros fallos que RR.HH. puede resolver). **Rostros no reconocidos** reúne los intentos donde el terminal no identificó a nadie o el rostro fue ambiguo: no hay empleado ni marcación que aprobar, y el botón **Descartar rostros no reconocidos** (arriba a la derecha) los descarta todos de una vez, con confirmación y sin tocar los de *Para revisar*. **Todos**, **Terminal** y **Móvil** muestran el historial por modo. La columna **Qué hacer** resume el paso siguiente de cada fallo (por ejemplo, *Aprobar si el empleado sí estuvo, o descartar*, o *Sin datos para aprobar: ver diagnóstico*). **Modo**, **Sucursal**, **Mensaje** e **IP** están ocultas por defecto y se activan desde el selector de columnas. El resumen de empleados con fallos recurrentes está al pie de la página
 2. Clic en un registro para ver el detalle completo: empleado (si se pudo identificar), sucursal, mensaje de error, IP, coordenadas GPS y metadatos adicionales
 3. Usar el botón **Diagnóstico** para ver una explicación en lenguaje simple de qué pudo haber causado el fallo
 

@@ -55,7 +55,7 @@ class AttendanceMarkFailureResource extends Resource
 
     protected static ?string $navigationGroup = 'Terminales y dispositivos';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 3;
 
     /** Sin formulario de creación/edición manual — los fallos solo se generan desde el flujo de marcación. */
     public static function form(Form $form): Form

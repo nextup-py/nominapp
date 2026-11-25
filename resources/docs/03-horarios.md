@@ -169,7 +169,7 @@ Para quitar la rotación de un empleado, usar **Remover** en la fila del emplead
 
 # Planificador de Turnos
 
-Ir a **Asistencias → Planificador de Turnos** para ver y ajustar, en una sola grilla visual, el turno de cada empleado día por día — sin necesidad de editar patrones de rotación uno por uno.
+Ir a **Horarios y turnos → Planificador de Turnos** para ver y ajustar, en una sola grilla visual, el turno de cada empleado día por día — sin necesidad de editar patrones de rotación uno por uno.
 
 ## Qué muestra la grilla
 

@@ -48,7 +48,7 @@ class VacationResource extends Resource
 
     protected static ?string $model = Vacation::class;
 
-    protected static ?string $navigationGroup = 'Empleados';
+    protected static ?string $navigationGroup = 'Licencias y vacaciones';
 
     protected static ?string $navigationLabel = 'Vacaciones';
 
@@ -60,7 +60,7 @@ class VacationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-sun';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     /**
      * Define el formulario para crear/editar solicitudes de vacaciones.

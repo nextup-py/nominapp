@@ -22,7 +22,7 @@ El módulo de Vacaciones gestiona el saldo anual de días de descanso remunerado
 Hay dos formas de consultar el saldo:
 
 - **Por empleado:** abrir el perfil del empleado en **Empleados**, pestaña **Vacaciones** — muestra el historial de solicitudes y permite gestionarlas desde ahí mismo (solicitar, aprobar, rechazar, registrar pago).
-- **Por año/sucursal (reporte agregado):** **Empleados → Vacaciones → Ver Balances** — tabla con el saldo de todos los empleados (con derecho, usados, pendientes, disponibles), filtrable por año, empresa y sucursal.
+- **Por año/sucursal (reporte agregado):** **Licencias y vacaciones → Vacaciones → Ver Balances** — tabla con el saldo de todos los empleados (con derecho, usados, pendientes, disponibles), filtrable por año, empresa y sucursal.
 
 > Los balances anuales no se generan automáticamente: hay que crearlos con el botón **Generar Balances** en la pantalla de Balances (elige el año; genera el saldo solo para los empleados activos que todavía no lo tengan ese año). Al cargar la primera solicitud de un empleado el sistema también genera su balance del año en curso si no existe.
 
@@ -46,7 +46,7 @@ Ir a **Reportes → Reporte de Vacaciones**.
 
 ![Nueva solicitud de vacaciones](/docs-images/08-vacacion-nueva.png)
 
-1. Ir a **Empleados → Vacaciones** (o a la pestaña **Vacaciones** del empleado)
+1. Ir a **Licencias y vacaciones → Vacaciones** (o a la pestaña **Vacaciones** del empleado)
 2. Clic en **Nueva Solicitud**
 3. Seleccionar el **empleado** — el formulario muestra de inmediato su antigüedad, el derecho anual y los días disponibles; si no tiene antigüedad suficiente o no le quedan días disponibles, la sección de fechas ni siquiera se muestra
 4. Elegir la **forma de pago**:

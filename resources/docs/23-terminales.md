@@ -24,7 +24,7 @@ Un **terminal** es el dispositivo fijo de una sucursal (tablet o PC) desde el qu
 
 ## Crear un terminal
 
-Ir a **Asistencias → Terminales**.
+Ir a **Terminales y dispositivos → Terminales**.
 
 ![Listado de terminales](/docs-images/23-terminales-listado.png)
 
@@ -75,7 +75,7 @@ No hace falta generar ni enviar enlaces: el propio dispositivo muestra un códig
 
 ### En el panel
 
-1. Ir a **Asistencias → Solicitudes de vinculación**. El menú muestra un contador con las pendientes y a los usuarios con permiso les llega una notificación en la campanita.
+1. Ir a **Terminales y dispositivos → Solicitudes de vinculación**. El menú muestra un contador con las pendientes y a los usuarios con permiso les llega una notificación en la campanita.
 2. Ubicar la solicitud del terminal (nombre, sucursal, modelo e IP del dispositivo) y hacer clic en **Aprobar**.
 3. Escribir el código **tal como se ve en la pantalla del dispositivo** y confirmar con **Sí, aprobar**.
 
@@ -101,7 +101,7 @@ Cuando el equipo que pide el código **ya funciona como otro terminal** (por eje
 
 ## Bandeja de solicitudes de vinculación
 
-Ir a **Asistencias → Solicitudes de vinculación** para ver todas las solicitudes de todos los terminales. La tabla se actualiza sola cada 15 segundos.
+Ir a **Terminales y dispositivos → Solicitudes de vinculación** para ver todas las solicitudes de todos los terminales. La tabla se actualiza sola cada 15 segundos.
 
 ![Solicitudes de vinculación](/docs-images/23-solicitudes-vinculacion.png)
 
@@ -221,7 +221,7 @@ Complementa a la conectividad: un terminal puede verse **En línea** y tener mar
 |--------|-------------|
 | **Sin pendientes** | Todas las marcaciones se enviaron |
 | **Con pendientes** | Hay marcaciones guardadas en el dispositivo esperando conexión |
-| **Con conflictos** | Alguna marcación hecha sin conexión fue rechazada al sincronizar por un motivo de formato o de empleado. Revisar en **Asistencias → Fallos de Marcación**. Las que el servidor rechaza porque la secuencia ya no es válida (por ejemplo, un segundo «Inicio descanso» guardado por otro equipo) **no** quedan contadas acá: el terminal las quita de su cola apenas el servidor las registra, y RR.HH. las resuelve en **Fallos de Marcación** |
+| **Con conflictos** | Alguna marcación hecha sin conexión fue rechazada al sincronizar por un motivo de formato o de empleado. Revisar en **Terminales y dispositivos → Fallos de Marcación**. Las que el servidor rechaza porque la secuencia ya no es válida (por ejemplo, un segundo «Inicio descanso» guardado por otro equipo) **no** quedan contadas acá: el terminal las quita de su cola apenas el servidor las registra, y RR.HH. las resuelve en **Fallos de Marcación** |
 
 ### Estado del dispositivo
 
@@ -490,7 +490,7 @@ Para una PC que se usa **solo como terminal**, lo más estable es abrirlo en **m
 
 1. Copiarlo a la PC del terminal (por ejemplo, al Escritorio).
 2. Clic derecho en el botón de Inicio y abrir **Windows PowerShell (Administrador)** (o **Terminal (Administrador)**). Sin permisos de administrador el script igual crea los accesos directos, pero no cambia la energía.
-3. Ejecutar el script con la **URL de acceso** del terminal (**Asistencias → Terminales**, detalle del terminal), por ejemplo:
+3. Ejecutar el script con la **URL de acceso** del terminal (**Terminales y dispositivos → Terminales**, detalle del terminal), por ejemplo:
    `powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Desktop\Configurar-Terminal.ps1" -Url https://su-dominio/terminal/CODIGO -Launch`
 4. Permitir la cámara la primera vez que se abra el terminal.
 5. Verificar en el panel: **Pantalla encendida: Activa**, **Modo** y el estado **En línea**.
@@ -544,7 +544,7 @@ En el detalle del terminal aparece la sección **Recomendaciones** cuando el úl
 | **Reposo** | Terminal listo; se activa al detectar a una persona o al tocar la pantalla |
 | **Identificación** | La cámara ocupa casi toda la pantalla (en tablet vertical, horizontal, celular y monitor) con el óvalo guía. Se ve la **imagen completa** de la cámara, sin recortar: en un monitor ancho y bajo pueden quedar franjas negras a los lados; el estado ("Posicione su rostro dentro del óvalo…", "Acérquese un poco más…") aparece superpuesto abajo y el borde cambia de color según el resultado |
 | **Selección de tipo** | Botones grandes de **Entrada**, **Inicio descanso**, **Fin descanso** y **Salida**, pensados para tocar con el dedo |
-| **¿Entrada o salida?** | Es la misma pantalla de selección, con solo **Entrada** y **Salida**. Aparece cuando el empleado todavía no tiene marcaciones ese día y la hora actual está más cerca del fin de su turno que de su inicio (por ejemplo, a las 16:59 con turno de 08:00 a 17:00): casi seguro olvidó marcar al llegar. Quien llega tarde de verdad elige **Entrada**. Si elige **Salida**, el terminal muestra una pantalla naranja *Salida enviada a revisión* con el aviso *Hoy no tiene una entrada registrada. Su salida quedó guardada y RR.HH. la revisará*, y la salida queda como fallo en **Asistencias → Fallos de Marcación** (se aprueba agregando la entrada del horario). Sin horario ese día no se pregunta y la entrada se registra sola, como siempre. Los botones de descanso aparecen aunque el empleado no tenga horario; con un turno sin descanso configurado no. **Cerca de la salida no se ofrece «Inicio descanso»:** desde 1 hora antes de la hora de salida del horario y hasta 4 horas después, quien está trabajando ve solo **Salida** (con su confirmación), porque a esa hora casi nadie se va a descansar y marcarlo por error dejaba la jornada sin salida. Sin horario ese día se ofrece lo de siempre. El **celular** (`/marcar`) hace lo mismo con la hora de salida del horario que le informa el servidor, también sin conexión |
+| **¿Entrada o salida?** | Es la misma pantalla de selección, con solo **Entrada** y **Salida**. Aparece cuando el empleado todavía no tiene marcaciones ese día y la hora actual está más cerca del fin de su turno que de su inicio (por ejemplo, a las 16:59 con turno de 08:00 a 17:00): casi seguro olvidó marcar al llegar. Quien llega tarde de verdad elige **Entrada**. Si elige **Salida**, el terminal muestra una pantalla naranja *Salida enviada a revisión* con el aviso *Hoy no tiene una entrada registrada. Su salida quedó guardada y RR.HH. la revisará*, y la salida queda como fallo en **Terminales y dispositivos → Fallos de Marcación** (se aprueba agregando la entrada del horario). Sin horario ese día no se pregunta y la entrada se registra sola, como siempre. Los botones de descanso aparecen aunque el empleado no tenga horario; con un turno sin descanso configurado no. **Cerca de la salida no se ofrece «Inicio descanso»:** desde 1 hora antes de la hora de salida del horario y hasta 4 horas después, quien está trabajando ve solo **Salida** (con su confirmación), porque a esa hora casi nadie se va a descansar y marcarlo por error dejaba la jornada sin salida. Sin horario ese día se ofrece lo de siempre. El **celular** (`/marcar`) hace lo mismo con la hora de salida del horario que le informa el servidor, también sin conexión |
 | **Marcación registrada** | Fondo verde con la foto, el nombre, el tipo y la hora en tamaño grande, para confirmar de un vistazo quién marcó. Un error se muestra con fondo rojo |
 | **Sin conexión** | Aviso en la parte superior. Se sigue marcando: las marcaciones se guardan y se envían al volver internet |
 

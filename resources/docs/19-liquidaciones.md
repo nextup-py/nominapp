@@ -38,7 +38,7 @@ El listado tiene pestañas para filtrar rápido: **Todas**, **Borradores**, **Ca
 
 ## Crear una liquidación
 
-1. Ir a **Nóminas → Liquidaciones**
+1. Ir a **Aguinaldo y liquidación → Liquidaciones**
 2. Clic en **Nueva Liquidación**
 3. Completar:
    - **Empleado** (solo empleados activos con contrato activo)

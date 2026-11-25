@@ -102,3 +102,11 @@ it('el panel tiene la búsqueda global con atajo de teclado', function () {
     expect($panel->getGlobalSearchProvider())->toBeInstanceOf(PanelGlobalSearchProvider::class)
         ->and($panel->getGlobalSearchKeyBindings())->toContain('ctrl+k', 'command+k');
 });
+
+it('Marcaciones no está en el menú pero la búsqueda la encuentra si el usuario puede verla', function () {
+    $this->actingAs(searchUser(['view_any_attendance_event']));
+    expect(searchTitles('marcaciones')['Pantallas'] ?? [])->toContain('Marcaciones');
+
+    $this->actingAs(searchUser(['view_any_loan']));
+    expect(searchTitles('marcaciones')['Pantallas'] ?? [])->not->toContain('Marcaciones');
+});

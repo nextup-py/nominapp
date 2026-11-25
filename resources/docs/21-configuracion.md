@@ -258,7 +258,7 @@ Si el año en curso (o, desde noviembre, el siguiente) tiene menos de 3 feriados
 
 ## Visor de Logs
 
-Acceder desde **Configuración → Visor de Logs**.
+Acceder desde **Sistema → Visor de Logs**.
 
 Herramienta técnica de diagnóstico: muestra los registros de error y advertencia (`storage/logs/laravel.log`) directamente desde el panel, con columnas de **Nivel**, **Entorno**, **Archivo**, **Mensaje** y **Fecha**.
 
@@ -266,7 +266,7 @@ Herramienta técnica de diagnóstico: muestra los registros de error y advertenc
 
 ## Salud del sistema
 
-Acceder desde **Configuración → Salud del sistema** (Super Admin y los roles con el permiso **Ver Salud del sistema y logs**, como Soporte TI). Resume en cinco tarjetas si el sistema está funcionando:
+Acceder desde **Sistema → Salud del sistema** (Super Admin y los roles con el permiso **Ver Salud del sistema y logs**, como Soporte TI). Resume en cinco tarjetas si el sistema está funcionando:
 
 | Tarjeta | Qué mira |
 |---------|----------|

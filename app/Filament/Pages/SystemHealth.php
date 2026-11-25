@@ -15,7 +15,7 @@ class SystemHealth extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-heart';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static ?string $navigationGroup = 'Sistema';
 
     protected static ?string $navigationLabel = 'Salud del sistema';
 
@@ -23,7 +23,7 @@ class SystemHealth extends Page
 
     protected static ?string $slug = 'salud-del-sistema';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 1;
 
     protected static string $view = 'filament.pages.system-health';
 

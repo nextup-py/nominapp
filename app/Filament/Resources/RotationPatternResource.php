@@ -28,7 +28,7 @@ class RotationPatternResource extends Resource
 {
     protected static ?string $model = RotationPattern::class;
 
-    protected static ?string $navigationGroup = 'Asistencias';
+    protected static ?string $navigationGroup = 'Horarios y turnos';
 
     protected static ?string $navigationLabel = 'Patrones de rotación';
 
@@ -40,7 +40,7 @@ class RotationPatternResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-path';
 
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $recordTitleAttribute = 'name';
 
