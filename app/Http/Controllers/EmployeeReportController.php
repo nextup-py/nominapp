@@ -6,6 +6,7 @@ use App\Exports\EmployeeReportExport;
 use App\Models\Company;
 use App\Models\Contract;
 use App\Models\Employee;
+use App\Support\EmployeeSeniority;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class EmployeeReportController extends Controller
         $registeredUntil = $request->query('registeredUntil') ?: null;
         $endDateFrom = $request->query('endDateFrom') ?: null;
         $endDateUntil = $request->query('endDateUntil') ?: null;
+        $originalSeniority = $request->boolean('originalSeniority');
 
         $columnsParam = $request->query('columns');
         $selectedColumns = EmployeeReportExport::visibleColumns($columnsParam
@@ -60,14 +62,14 @@ class EmployeeReportController extends Controller
                 'branches.name as branch_name',
                 'companies.id as company_id',
                 'companies.name as company_name',
-                'contracts.start_date as hire_date',
+                DB::raw(EmployeeSeniority::hireDateSql($originalSeniority).' AS report_hire_date'),
                 'contracts.salary',
                 'contracts.salary_type',
                 'contracts.type as contract_type',
                 'contracts.payment_method',
                 'positions.name as position_name',
                 'departments.name as department_name',
-                DB::raw('TIMESTAMPDIFF(YEAR, contracts.start_date, CURDATE()) AS years_of_service'),
+                DB::raw('TIMESTAMPDIFF(YEAR, '.EmployeeSeniority::hireDateSql($originalSeniority).', CURDATE()) AS years_of_service'),
                 DB::raw('(SELECT MAX(c2.end_date) FROM contracts c2 WHERE c2.employee_id = employees.id) AS last_end_date'),
             ])
             ->join('branches', 'branches.id', '=', 'employees.branch_id')

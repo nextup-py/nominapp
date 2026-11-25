@@ -260,7 +260,7 @@
                 foreach ($rows as $e) {
                     $even        = $i % 2 === 1 ? 'background:#fafafa;' : '';
                     $birthDate   = $e->birth_date ? \Carbon\Carbon::parse($e->birth_date) : null;
-                    $hireDate    = $e->hire_date  ? \Carbon\Carbon::parse($e->hire_date)  : null;
+                    $hireDate    = $e->report_hire_date ? \Carbon\Carbon::parse($e->report_hire_date)  : null;
                     $salaryFmt   = $e->salary ? number_format((float) $e->salary, 0, ',', '.') : '—';
 
                     if ($hireDate && $e->status === 'active') {
