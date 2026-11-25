@@ -77,9 +77,6 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Nóminas')
                     ->icon('heroicon-o-banknotes')
                     ->collapsed(),
-                NavigationGroup::make('Aguinaldo y liquidación')
-                    ->icon('heroicon-o-gift')
-                    ->collapsed(),
                 NavigationGroup::make('Créditos')
                     ->icon('heroicon-o-credit-card')
                     ->collapsed(),
