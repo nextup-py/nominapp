@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\ShiftTemplateResource\Pages;
 use App\Models\Company;
 use App\Models\ShiftTemplate;
@@ -26,6 +27,8 @@ use Filament\Tables\Table;
 /** Recurso Filament para gestionar los turnos de trabajo reutilizables. */
 class ShiftTemplateResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = ShiftTemplate::class;
 
     protected static ?string $navigationGroup = 'Horarios y turnos';

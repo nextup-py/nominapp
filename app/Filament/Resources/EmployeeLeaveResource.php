@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\EmployeeLeaveResource\Pages;
 use App\Filament\Resources\EmployeeLeaveResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Traits\HasModuleAccess;
@@ -42,6 +43,7 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 class EmployeeLeaveResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'employee_leaves_enabled';
 

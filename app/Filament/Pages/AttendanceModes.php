@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\TerminalResource;
 use App\Models\Terminal;
 use Filament\Pages\Page;
@@ -10,6 +11,8 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 /** Página informativa sobre los modos de marcación disponibles y sus URLs. */
 class AttendanceModes extends Page
 {
+    use UsesNavigationLayout;
+
     /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {

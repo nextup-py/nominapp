@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Exports\HolidayWorkExport;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AttendanceDayResource;
 use App\Filament\Resources\ContractResource;
 use App\Models\Branch;
@@ -20,6 +21,8 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class HolidayWorkReport extends Page
 {
+    use UsesNavigationLayout;
+
     protected static ?string $slug = 'reporte-trabajo-feriado';
 
     protected static ?string $title = 'Trabajo en feriado y domingo';

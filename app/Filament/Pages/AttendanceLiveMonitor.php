@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AttendanceDayResource;
 use App\Filament\Resources\TerminalResource;
 use App\Models\Branch;
@@ -19,6 +20,8 @@ use Livewire\Attributes\Url;
  */
 class AttendanceLiveMonitor extends Page
 {
+    use UsesNavigationLayout;
+
     protected static ?string $navigationLabel = 'Monitor en vivo';
 
     protected static ?string $navigationIcon = 'heroicon-o-signal';

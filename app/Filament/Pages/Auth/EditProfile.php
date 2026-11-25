@@ -6,10 +6,12 @@ use App\Filament\Resources\RoleResource;
 use App\Models\LoginHistory;
 use App\Models\User;
 use App\Services\UserSessionService;
+use App\Support\NavigationLayout;
 use App\Support\PasswordPolicy;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -83,6 +85,20 @@ class EditProfile extends BaseEditProfile
                                     ->label('Roles')
                                     ->content(fn (): string => $this->getUser()->roles->pluck('name')->implode(', ') ?: 'Sin roles'),
                             ]),
+                        Section::make('Preferencias')
+                            ->icon('heroicon-o-adjustments-horizontal')
+                            ->schema([
+                                Radio::make('navigation_layout')
+                                    ->label('Menú del panel')
+                                    ->options(NavigationLayout::options())
+                                    ->descriptions([
+                                        NavigationLayout::SIDEBAR => 'Menú vertical a la izquierda, con los grupos plegables.',
+                                        NavigationLayout::TOP => 'Menú horizontal arriba, con menos grupos y desplegables.',
+                                    ])
+                                    ->default(NavigationLayout::SIDEBAR)
+                                    ->in(array_keys(NavigationLayout::options()))
+                                    ->required(),
+                            ]),
                         Section::make('Contraseña')
                             ->icon('heroicon-o-key')
                             ->description('Dejá estos campos vacíos para conservar la actual.')
@@ -97,6 +113,12 @@ class EditProfile extends BaseEditProfile
                     ->inlineLabel(! static::isSimple()),
             ),
         ];
+    }
+
+    /** Recarga el perfil completo para que el menú se redibuje con el formato elegido. */
+    protected function getRedirectUrl(): ?string
+    {
+        return static::getUrl();
     }
 
     /** Resumen de la ficha de empleado vinculada, o aviso si no hay. */

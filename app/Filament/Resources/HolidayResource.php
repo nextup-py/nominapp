@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\HolidayResource\Pages;
 use App\Models\AttendanceDay;
 use App\Models\Holiday;
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class HolidayResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Holiday::class;
 
     protected static ?string $navigationGroup = 'Catálogos';

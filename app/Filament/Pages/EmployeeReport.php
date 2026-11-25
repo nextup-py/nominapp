@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Exports\EmployeeReportExport;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Branch;
 use App\Models\Company;
@@ -38,6 +39,8 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class EmployeeReport extends Page implements HasTable
 {
+    use UsesNavigationLayout;
+
     /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {

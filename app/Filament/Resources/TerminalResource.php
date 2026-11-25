@@ -7,6 +7,7 @@ use App\Filament\Actions\TerminalCommandActions;
 use App\Filament\Actions\TerminalLinkActions;
 use App\Filament\Actions\TerminalMonitoringActions;
 use App\Filament\Actions\TerminalPairingActions;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\TerminalResource\Pages;
 use App\Filament\Resources\TerminalResource\RelationManagers\AttendanceEventsRelationManager;
 use App\Filament\Resources\TerminalResource\RelationManagers\CommandsRelationManager;
@@ -57,6 +58,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class TerminalResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'biometric_attendance_enabled';
 

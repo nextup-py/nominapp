@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Services\AttendanceInboxService;
 use Filament\Pages\Page;
 
@@ -13,6 +14,8 @@ use Filament\Pages\Page;
  */
 class AttendanceInbox extends Page
 {
+    use UsesNavigationLayout;
+
     protected static ?string $navigationLabel = 'Por resolver';
 
     protected static ?string $navigationIcon = 'heroicon-o-inbox-stack';

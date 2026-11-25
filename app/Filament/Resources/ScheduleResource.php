@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Actions\ScheduleStatusAction;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\ScheduleResource\Pages;
 use App\Filament\Resources\ScheduleResource\RelationManagers\AssignmentsRelationManager;
 use App\Filament\Resources\ScheduleResource\RelationManagers\EmployeesRelationManager;
@@ -34,6 +35,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ScheduleResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Schedule::class;
 
     protected static ?string $navigationGroup = 'Horarios y turnos';

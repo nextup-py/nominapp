@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\AbsenceActions;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AbsenceResource\Pages;
 use App\Filament\Resources\AbsenceResource\RelationManagers\AuditsRelationManager;
 use App\Models\Absence;
@@ -40,6 +41,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class AbsenceResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Absence::class;
 
     protected static ?string $navigationLabel = 'Ausencias';

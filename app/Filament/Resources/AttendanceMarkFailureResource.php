@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AttendanceMarkFailureResource\Pages;
+use App\Filament\Traits\HasModuleAccess;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceMarkFailure;
 use Carbon\Carbon;
@@ -41,6 +43,11 @@ use Illuminate\Support\Facades\Auth;
  */
 class AttendanceMarkFailureResource extends Resource
 {
+    use HasModuleAccess;
+    use UsesNavigationLayout;
+
+    protected static string $moduleFlag = 'biometric_attendance_enabled';
+
     protected static ?string $model = AttendanceMarkFailure::class;
 
     protected static ?string $navigationLabel = 'Fallos de marcación';

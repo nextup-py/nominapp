@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AguinaldoPeriodResource\Pages;
 use App\Filament\Resources\AguinaldoPeriodResource\RelationManagers\AguinaldosRelationManager;
 use App\Filament\Resources\AguinaldoPeriodResource\RelationManagers\AuditsRelationManager;
@@ -29,12 +30,13 @@ use Illuminate\Validation\Rule;
 class AguinaldoPeriodResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'aguinaldo_enabled';
 
     protected static ?string $model = AguinaldoPeriod::class;
 
-    protected static ?string $navigationGroup = 'Aguinaldo y liquidación';
+    protected static ?string $navigationGroup = 'Nóminas';
 
     protected static ?string $navigationLabel = 'Aguinaldo';
 
@@ -46,7 +48,7 @@ class AguinaldoPeriodResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 4;
 
     /**
      * Define el formulario para crear o editar un período de aguinaldo, con campos para seleccionar la empresa, el año y agregar notas, incluyendo validaciones personalizadas.

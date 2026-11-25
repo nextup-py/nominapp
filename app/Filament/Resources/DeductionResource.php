@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\DeductionResource\Pages;
 use App\Models\Branch;
 use App\Models\Company;
@@ -32,6 +33,8 @@ use Illuminate\Support\Facades\DB;
 /** Gestiona el catálogo de deducciones salariales. */
 class DeductionResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Deduction::class;
 
     protected static ?string $navigationGroup = 'Catálogos';

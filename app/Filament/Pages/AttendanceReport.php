@@ -8,6 +8,7 @@ use App\Exports\AttendanceReportDetailExport;
 use App\Exports\AttendanceReportSummaryExport;
 use App\Exports\OvertimeReportDetailExport;
 use App\Exports\OvertimeReportSummaryExport;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AttendanceDayResource;
 use App\Models\Branch;
 use App\Models\Company;
@@ -42,6 +43,8 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class AttendanceReport extends Page implements HasTable
 {
+    use UsesNavigationLayout;
+
     /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {

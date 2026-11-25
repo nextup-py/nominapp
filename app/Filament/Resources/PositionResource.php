@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Actions\OrgUnitStatusAction;
 use App\Filament\Actions\PositionMergeAction;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\PositionResource\Pages;
 use App\Filament\Resources\PositionResource\RelationManagers;
 use App\Models\Company;
@@ -37,6 +38,8 @@ use Illuminate\Support\Collection;
 
 class PositionResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Position::class;
 
     protected static ?string $navigationGroup = 'Organización';

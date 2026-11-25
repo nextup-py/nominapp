@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\UserAccountActions;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use App\Support\PasswordPolicy;
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = User::class;
 
     protected static ?string $navigationLabel = 'Usuarios';

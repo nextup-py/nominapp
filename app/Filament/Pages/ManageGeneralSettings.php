@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Models\Terminal;
 use App\Services\LocationRadiusService;
 use App\Services\MailConfigurator;
@@ -21,6 +22,8 @@ use Throwable;
 
 class ManageGeneralSettings extends SettingsPage
 {
+    use UsesNavigationLayout;
+
     /** Acceso restringido por permiso (las páginas de Filament no consultan la policy por sí solas). */
     public static function canAccess(): bool
     {

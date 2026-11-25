@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AguinaldoResource\Pages;
 use App\Filament\Resources\AguinaldoResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\AguinaldoResource\RelationManagers\ItemsRelationManager;
@@ -30,12 +31,13 @@ use Illuminate\Database\Eloquent\Collection;
 class AguinaldoResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'aguinaldo_enabled';
 
     protected static ?string $model = Aguinaldo::class;
 
-    protected static ?string $navigationGroup = 'Aguinaldo y liquidación';
+    protected static ?string $navigationGroup = 'Nóminas';
 
     protected static ?string $navigationLabel = 'Recibos Aguinaldo';
 
@@ -49,7 +51,7 @@ class AguinaldoResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 10;
 
     /**
      * Siempre oculto de la navegación: es un recurso "hijo" accesible solo

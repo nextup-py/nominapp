@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Services\LogErrorAnalyzer;
 use App\Services\SystemHealthService;
 use Filament\Pages\Page;
@@ -13,6 +14,8 @@ use Illuminate\Support\Collection;
  */
 class SystemHealth extends Page
 {
+    use UsesNavigationLayout;
+
     protected static ?string $navigationIcon = 'heroicon-o-heart';
 
     protected static ?string $navigationGroup = 'Sistema';

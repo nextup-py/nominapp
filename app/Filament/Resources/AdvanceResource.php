@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AdvanceResource\Pages;
 use App\Filament\Traits\HasModuleAccess;
 use App\Models\Advance;
@@ -46,6 +47,7 @@ use Livewire\Component;
 class AdvanceResource extends Resource
 {
     use HasModuleAccess;
+    use UsesNavigationLayout;
 
     protected static string $moduleFlag = 'advances_enabled';
 

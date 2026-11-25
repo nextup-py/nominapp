@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\BranchStatusAction;
 use App\Filament\Actions\MobileMarkingFields;
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\BranchResource\Pages;
 use App\Filament\Resources\BranchResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\BranchResource\RelationManagers\EmployeesRelationManager;
@@ -43,6 +44,8 @@ use Illuminate\Validation\Rules\Unique;
 /** Recurso Filament para la gestión de sucursales. */
 class BranchResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = Branch::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-storefront';

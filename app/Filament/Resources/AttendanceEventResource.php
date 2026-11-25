@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\AttendanceEventResource\Pages;
 use App\Models\AttendanceEvent;
 use App\Services\AttendanceEventCorrectionService;
@@ -36,6 +37,8 @@ use Illuminate\Database\Eloquent\Model;
 /** Recurso Filament para gestionar marcaciones de asistencia. */
 class AttendanceEventResource extends Resource
 {
+    use UsesNavigationLayout;
+
     protected static ?string $model = AttendanceEvent::class;
 
     protected static ?string $navigationLabel = 'Marcaciones';
