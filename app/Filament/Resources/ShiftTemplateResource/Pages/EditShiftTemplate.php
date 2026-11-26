@@ -25,6 +25,7 @@ class EditShiftTemplate extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         $data['name'] = ShiftTemplate::capitalizeName($data['name']);
+        $data['shift_type'] = $data['shift_type'] ?? 'diurno';
 
         return $data;
     }
@@ -49,6 +50,11 @@ class EditShiftTemplate extends EditRecord
                 ->successNotificationTitle('Turno eliminado')
                 ->successRedirectUrl(ShiftTemplateResource::getUrl('index')),
         ];
+    }
+
+    public function getTitle(): string
+    {
+        return 'Editar: '.$this->record->name;
     }
 
     protected function getRedirectUrl(): string

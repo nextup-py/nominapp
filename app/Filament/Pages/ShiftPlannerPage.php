@@ -45,7 +45,7 @@ class ShiftPlannerPage extends Page
      */
     public function getViewData(): array
     {
-        $companies = Company::orderBy('name')->get(['id', 'name']);
+        $companies = Company::active()->orderBy('name')->get(['id', 'name']);
 
         $branches = Branch::orderBy('name')
             ->get(['id', 'name', 'company_id']);
@@ -55,6 +55,7 @@ class ShiftPlannerPage extends Page
                 'companies' => $companies,
                 'branches' => $branches,
                 'csrf' => csrf_token(),
+                'canEdit' => (bool) auth()->user()?->can('update_schedule'),
                 'routes' => [
                     'data' => route('shift-planner.data'),
                     'shifts' => route('shift-planner.shifts'),

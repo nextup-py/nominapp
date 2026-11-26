@@ -22,6 +22,7 @@ class CreateShiftTemplate extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['name'] = ShiftTemplate::capitalizeName($data['name']);
+        $data['shift_type'] = $data['shift_type'] ?? 'diurno';
         $data['company_id'] ??= Company::active()->value('id');
 
         return $data;

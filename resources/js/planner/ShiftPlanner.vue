@@ -71,6 +71,7 @@
                 <span class="sp-month-label" v-if="day.showMonth">{{ day.monthName }}</span>
               </div>
             </th>
+            <th class="sp-col-hours" title="Horas netas planificadas en el rango visible">Horas</th>
           </tr>
         </thead>
 
@@ -108,7 +109,7 @@
                 class="sp-shift-badge"
                 :class="{ 'sp-badge-override': getShift(emp.id, day.date).is_override, 'sp-badge-dayoff': getShift(emp.id, day.date).is_day_off }"
                 :style="{ backgroundColor: getShift(emp.id, day.date).color, color: contrastColor(getShift(emp.id, day.date).color) }"
-                draggable="true"
+                              :draggable="canEdit"
                 @dragstart.stop="onDragStart(emp, day)"
                 @click.stop="openModal(emp, day)"
               >
@@ -116,10 +117,13 @@
                 <span v-if="!getShift(emp.id, day.date).is_day_off" class="sp-badge-time">
                   {{ formatTime(getShift(emp.id, day.date).start) }}–{{ formatTime(getShift(emp.id, day.date).end) }}
                 </span>
-                <span v-if="getShift(emp.id, day.date).is_override" class="sp-override-dot" title="Override puntual">●</span>
+                <span v-if="getShift(emp.id, day.date).is_override" class="sp-override-dot" title="Turno puntual">●</span>
+                <span v-if="getShift(emp.id, day.date).is_active === false" class="sp-inactive-tag" title="Turno inactivo: sigue asignado, pero ya no se ofrece">inactivo</span>
               </div>
-              <div v-else class="sp-shift-empty" @click.stop="openModal(emp, day)">+</div>
+              <div v-else-if="canEdit" class="sp-shift-empty" @click.stop="openModal(emp, day)">+</div>
+              <div v-else class="sp-shift-empty sp-shift-empty-readonly">—</div>
             </td>
+            <td class="sp-hours-cell">{{ formatHours(employeeMinutes(emp.id)) }}</td>
           </tr>
         </tbody>
       </table>
@@ -156,15 +160,20 @@
               >
                 {{ modal.currentShift.name }}
               </span>
-              <span v-if="modal.currentShift.is_override" class="sp-modal-override-tag">override</span>
+              <span v-if="modal.currentShift.is_override" class="sp-modal-override-tag">turno puntual</span>
+              <span v-if="modal.currentShift.is_active === false" class="sp-modal-override-tag">inactivo</span>
             </div>
             <div class="sp-modal-current" v-else>
               <span class="sp-modal-current-label">Sin turno asignado</span>
             </div>
 
             <!-- Selector de turno -->
-            <div class="sp-modal-section-title">Asignar turno:</div>
-            <div class="sp-shift-options">
+            <div v-if="modal.error" class="sp-modal-error">{{ modal.error }}</div>
+
+            <div v-if="!canEdit" class="sp-modal-readonly">No tiene permiso para modificar los turnos.</div>
+
+            <div v-if="canEdit" class="sp-modal-section-title">Asignar turno:</div>
+            <div v-if="canEdit" class="sp-shift-options">
               <button
                 v-for="s in modalShifts"
                 :key="s.id"
@@ -181,7 +190,7 @@
             </div>
 
             <!-- Motivo y notas (solo si seleccionó un turno distinto al actual) -->
-            <template v-if="modal.selectedShift">
+            <template v-if="canEdit && modal.selectedShift">
               <div class="sp-modal-section-title">Motivo del cambio:</div>
               <select v-model="modal.reasonType" class="sp-select sp-select-full">
                 <option value="cambio_turno">Cambio de turno</option>
@@ -202,7 +211,7 @@
 
           <div class="sp-modal-footer">
             <button
-              v-if="modal.currentShift?.is_override"
+              v-if="canEdit && modal.currentShift?.is_override"
               class="sp-btn sp-btn-danger"
               @click="removeOverride"
               :disabled="modal.saving"
@@ -211,8 +220,9 @@
             </button>
 
             <div class="sp-modal-footer-right">
-              <button class="sp-btn" @click="closeModal" :disabled="modal.saving">Cancelar</button>
+              <button class="sp-btn" @click="closeModal" :disabled="modal.saving">{{ canEdit ? 'Cancelar' : 'Cerrar' }}</button>
               <button
+                v-if="canEdit"
                 class="sp-btn sp-btn-primary"
                 @click="saveOverride"
                 :disabled="!modal.selectedShift || modal.saving"
@@ -323,6 +333,7 @@ const DAY_NAMES   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 // ─── Estado ──────────────────────────────────────────────────────────────────
+const canEdit        = computed(() => props.initData.canEdit !== false);
 const loading        = ref(false);
 const helpOpen       = ref(false);
 const viewDays       = ref(14);
@@ -347,6 +358,7 @@ const modal = reactive({
   reasonType:    'cambio_turno',
   notes:         '',
   saving:        false,
+  error:         '',
 });
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
@@ -505,9 +517,52 @@ function contrastColor(hex) {
   return luminance > 0.5 ? '#1f2937' : '#ffffff';
 }
 
+/** Minutos netos planificados de un empleado en el rango visible. */
+function employeeMinutes(employeeId) {
+  return days.value.reduce((total, day) => total + (getShift(employeeId, day.date)?.net_minutes || 0), 0);
+}
+
+/** Formatea minutos como horas (p. ej. 2.790 → «46,5 h»); sin turnos muestra «—». */
+function formatHours(minutes) {
+  if (! minutes) return '—';
+  return `${(minutes / 60).toLocaleString('es-PY', { maximumFractionDigits: 1 })} h`;
+}
+
+/**
+ * Guarda un turno puntual. Devuelve { ok, data, message }: ante un error del servidor (permiso, validación)
+ * no se toca la grilla y se devuelve el mensaje para mostrarlo.
+ */
+async function postOverride(payload) {
+  const res = await fetch(props.initData.routes.overrideStore, {
+    method:  'POST',
+    headers: {
+      'Content-Type':     'application/json',
+      'Accept':           'application/json',
+      'X-CSRF-TOKEN':     props.initData.csrf,
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const body = await res.json().catch(() => ({}));
+
+  if (! res.ok) {
+    return {
+      ok: false,
+      message: res.status === 403
+        ? 'No tiene permiso para modificar los turnos.'
+        : (body.message || 'No se pudo guardar el turno.'),
+    };
+  }
+
+  return { ok: true, data: body };
+}
+
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
 function openModal(emp, day) {
+  if (! canEdit.value && ! getShift(emp.id, day.date)) return;
+
   modal.employee      = emp;
   modal.day           = day;
   modal.currentShift  = getShift(emp.id, day.date);
@@ -515,6 +570,7 @@ function openModal(emp, day) {
   modal.reasonType    = 'cambio_turno';
   modal.notes         = '';
   modal.saving        = false;
+  modal.error         = '';
   modal.open          = true;
 }
 
@@ -526,32 +582,29 @@ async function saveOverride() {
   if (! modal.selectedShift || modal.saving) return;
 
   modal.saving = true;
+  modal.error  = '';
   try {
-    const res = await fetch(props.initData.routes.overrideStore, {
-      method:  'POST',
-      headers: {
-        'Content-Type':     'application/json',
-        'X-CSRF-TOKEN':     props.initData.csrf,
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      body: JSON.stringify({
-        employee_id: modal.employee.id,
-        date:        modal.day.date,
-        shift_id:    modal.selectedShift.id,
-        reason_type: modal.reasonType,
-        notes:       modal.notes || null,
-      }),
+    const result = await postOverride({
+      employee_id: modal.employee.id,
+      date:        modal.day.date,
+      shift_id:    modal.selectedShift.id,
+      reason_type: modal.reasonType,
+      notes:       modal.notes || null,
     });
 
-    const shiftData = await res.json();
+    if (! result.ok) {
+      modal.error = result.message;
+      return;
+    }
 
     // Actualizar la celda en el estado local sin recargar todo
     if (! shifts.value[modal.employee.id]) shifts.value[modal.employee.id] = {};
-    shifts.value[modal.employee.id][modal.day.date] = shiftData;
+    shifts.value[modal.employee.id][modal.day.date] = result.data;
 
     closeModal();
   } catch (err) {
-    console.error('Error guardando override:', err);
+    console.error('Error guardando turno puntual:', err);
+    modal.error = 'No se pudo guardar el turno. Revisar la conexión e intentar de nuevo.';
   } finally {
     modal.saving = false;
   }
@@ -575,14 +628,18 @@ async function removeOverride() {
       }),
     });
 
-    await res.json();
+    if (! res.ok) {
+      modal.error = res.status === 403 ? 'No tiene permiso para modificar los turnos.' : 'No se pudo restaurar el ciclo.';
+      return;
+    }
 
     // Recargar el día para obtener el turno del ciclo
     await reloadEmployeeDay(modal.employee.id, modal.day.date);
 
     closeModal();
   } catch (err) {
-    console.error('Error eliminando override:', err);
+    console.error('Error restaurando el ciclo:', err);
+    modal.error = 'No se pudo restaurar el ciclo. Revisar la conexión e intentar de nuevo.';
   } finally {
     modal.saving = false;
   }
@@ -613,6 +670,7 @@ async function reloadEmployeeDay(employeeId, date) {
 // ─── Drag & Drop ──────────────────────────────────────────────────────────────
 
 function onDragStart(emp, day) {
+  if (! canEdit.value) return;
   dragSource.value = { employee: emp, day };
 }
 
@@ -632,29 +690,26 @@ async function onDrop(targetEmp, targetDay) {
   const sourceShift = getShift(dragSource.value.employee.id, dragSource.value.day.date);
   if (! sourceShift) { dragSource.value = null; dragTarget.value = null; return; }
 
-  // Mover el turno al empleado/día destino como override
+  // Mover el turno al empleado/día destino como turno puntual
   try {
-    const res = await fetch(props.initData.routes.overrideStore, {
-      method:  'POST',
-      headers: {
-        'Content-Type':     'application/json',
-        'X-CSRF-TOKEN':     props.initData.csrf,
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      body: JSON.stringify({
-        employee_id: targetEmp.id,
-        date:        targetDay.date,
-        shift_id:    sourceShift.id,
-        reason_type: 'cambio_turno',
-        notes:       `Movido desde ${dragSource.value.employee.name} (${dragSource.value.day.label})`,
-      }),
+    const result = await postOverride({
+      employee_id: targetEmp.id,
+      date:        targetDay.date,
+      shift_id:    sourceShift.id,
+      reason_type: 'cambio_turno',
+      notes:       `Movido desde ${dragSource.value.employee.name} (${dragSource.value.day.label})`,
     });
 
-    const shiftData = await res.json();
+    if (! result.ok) {
+      window.alert(result.message);
+      return;
+    }
+
     if (! shifts.value[targetEmp.id]) shifts.value[targetEmp.id] = {};
-    shifts.value[targetEmp.id][targetDay.date] = shiftData;
+    shifts.value[targetEmp.id][targetDay.date] = result.data;
   } catch (err) {
     console.error('Error en drag & drop:', err);
+    window.alert('No se pudo mover el turno. Revisar la conexión e intentar de nuevo.');
   } finally {
     dragSource.value = null;
     dragTarget.value = null;

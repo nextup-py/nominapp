@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ShiftTemplateResource\RelationManagers;
 
 use App\Models\ShiftOverride;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
@@ -29,7 +30,7 @@ class OverridesRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('override_date')
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('employee'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['employee', 'createdBy']))
             ->columns([
                 TextColumn::make('override_date')->label('Fecha')->date('d/m/Y')->sortable(),
                 TextColumn::make('employee.full_name')
@@ -44,6 +45,8 @@ class OverridesRelationManager extends RelationManager
                     ->formatStateUsing(fn ($state) => ShiftOverride::getReasonTypeLabels()[$state] ?? $state)
                     ->badge()
                     ->color('gray'),
+                TextColumn::make('createdBy.name')->label('Registrado por')->placeholder('Sin dato'),
+
                 TextColumn::make('notes')->label('Notas')->placeholder('Sin notas')->wrap(),
             ])
             ->filters([
@@ -51,7 +54,18 @@ class OverridesRelationManager extends RelationManager
                     ->label('Solo de hoy en adelante')
                     ->query(fn (Builder $query) => $query->where('override_date', '>=', today()->toDateString())),
             ])
-            ->actions([])
+            ->actions([
+                Action::make('history')
+                    ->label('Historial')
+                    ->icon('heroicon-o-clock')
+                    ->color('gray')
+                    ->modalHeading('Historial del turno puntual')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Cerrar')
+                    ->modalContent(fn (ShiftOverride $record) => view('filament.shift-overrides.history', [
+                        'audits' => $record->audits()->with('user')->latest()->get(),
+                    ])),
+            ])
             ->bulkActions([])
             ->defaultSort('override_date', 'desc')
             ->paginationPageOptions([10, 25, 50, 100])

@@ -194,6 +194,38 @@ class ShiftTemplate extends Model implements Auditable
             .' · '.Schedule::formatHours($this->netMinutes() / 60).' netas';
     }
 
+    /**
+     * Tipo de jornada sugerido para un horario (según las horas nocturnas de `payroll.shift_boundaries`), o null si
+     * faltan la entrada o la salida. Solo se muestra como ayuda: no se aplica solo.
+     */
+    public static function suggestShiftTypeFor(?string $start, ?string $end): ?string
+    {
+        return Schedule::suggestShiftType([['is_active' => true, 'start_time' => $start, 'end_time' => $end]]);
+    }
+
+    /**
+     * Uso de cada turno con dos consultas (patrones y turnos puntuales), para mostrarlo en el listado sin una
+     * consulta por fila.
+     *
+     * @return array<int, array{patterns: int, overrides: int}>
+     */
+    public static function usageMap(): array
+    {
+        $map = [];
+
+        foreach (RotationPattern::query()->get(['id', 'company_id', 'sequence']) as $pattern) {
+            foreach (array_unique(array_map('intval', $pattern->sequence ?? [])) as $shiftId) {
+                $map[$shiftId]['patterns'] = ($map[$shiftId]['patterns'] ?? 0) + 1;
+            }
+        }
+
+        foreach (ShiftOverride::query()->selectRaw('shift_id, COUNT(*) AS total')->groupBy('shift_id')->pluck('total', 'shift_id') as $shiftId => $total) {
+            $map[(int) $shiftId]['overrides'] = (int) $total;
+        }
+
+        return collect($map)->map(fn (array $row): array => ['patterns' => $row['patterns'] ?? 0, 'overrides' => $row['overrides'] ?? 0])->all();
+    }
+
     /** Copia el turno bajo un nombre nuevo. No copia el uso en patrones ni turnos puntuales. */
     public function duplicate(string $name): self
     {

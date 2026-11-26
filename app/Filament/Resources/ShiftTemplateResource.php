@@ -27,6 +27,7 @@ use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -134,10 +135,20 @@ class ShiftTemplateResource extends Resource
                             ->label('Tipo de jornada')
                             ->options(ShiftTemplate::getShiftTypeOptions())
                             ->native(false)
-                            ->required(),
+                            ->required(fn (Get $get): bool => ! $get('is_day_off'))
+                            ->live()
+                            ->placeholder(fn (Get $get): ?string => $get('is_day_off') ? 'No aplica a un franco' : null)
+                            ->hint(function (Get $get): ?string {
+                                $suggested = $get('is_day_off') ? null : ShiftTemplate::suggestShiftTypeFor($get('start_time'), $get('end_time'));
+
+                                return $suggested && $suggested !== $get('shift_type')
+                                    ? 'Según las horas: '.(ShiftTemplate::getShiftTypeLabels()[$suggested] ?? $suggested)
+                                    : null;
+                            })
+                            ->hintColor('info'),
 
                         ColorPicker::make('color')
-                            ->label('Color en el planner')
+                            ->label('Color en el Planificador')
                             ->default('#6B7280')
                             ->required(),
 
@@ -232,6 +243,8 @@ class ShiftTemplateResource extends Resource
                 TextColumn::make('shift_type')
                     ->label('Jornada')
                     ->badge()
+                    ->placeholder('—')
+                    ->getStateUsing(fn (ShiftTemplate $record): ?string => $record->is_day_off ? null : $record->shift_type)
                     ->formatStateUsing(fn ($state) => ShiftTemplate::getShiftTypeLabels()[$state] ?? $state)
                     ->color(fn ($state) => ShiftTemplate::getShiftTypeColors()[$state] ?? 'gray'),
 
@@ -242,6 +255,23 @@ class ShiftTemplateResource extends Resource
                     ->icon(fn (ShiftTemplate $record): string => $record->is_day_off ? 'heroicon-o-moon' : 'heroicon-o-sun')
                     ->iconColor(fn (ShiftTemplate $record): string => $record->is_day_off ? 'info' : 'success')
                     ->sortable(),
+
+                TextColumn::make('_usage')
+                    ->label('Usado en')
+                    ->getStateUsing(function (ShiftTemplate $record, $livewire): string {
+                        $usage = $livewire->usageMap()[$record->id] ?? ['patterns' => 0, 'overrides' => 0];
+
+                        if ($usage['patterns'] === 0 && $usage['overrides'] === 0) {
+                            return 'Sin uso';
+                        }
+
+                        return implode(' · ', array_filter([
+                            $usage['patterns'] ? $usage['patterns'].($usage['patterns'] === 1 ? ' patrón' : ' patrones') : null,
+                            $usage['overrides'] ? $usage['overrides'].($usage['overrides'] === 1 ? ' turno puntual' : ' turnos puntuales') : null,
+                        ]));
+                    })
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'Sin uso' ? 'gray' : 'info'),
 
                 TextColumn::make('break_minutes')
                     ->label('Descanso')
@@ -266,6 +296,11 @@ class ShiftTemplateResource extends Resource
                     ->label('Jornada')
                     ->options(ShiftTemplate::getShiftTypeOptions())
                     ->native(false),
+
+                Filter::make('unused')
+                    ->label('Sin uso')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->whereNotIn('shift_templates.id', array_keys(ShiftTemplate::usageMap()))),
 
                 TernaryFilter::make('is_day_off')
                     ->label('Tipo')

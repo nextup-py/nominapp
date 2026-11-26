@@ -17,6 +17,19 @@ class ListShiftTemplates extends ListRecords
     /** @var array{all: int, active: int, inactive: int}|null Conteos de las pestañas, calculados una sola vez por ciclo. */
     protected ?array $shiftCounts = null;
 
+    /** @var array<int, array{patterns: int, overrides: int}>|null Uso de cada turno, calculado una vez por ciclo. */
+    protected ?array $usageMap = null;
+
+    /**
+     * Uso de cada turno en patrones y turnos puntuales (lo lee la columna «Usado en»).
+     *
+     * @return array<int, array{patterns: int, overrides: int}>
+     */
+    public function usageMap(): array
+    {
+        return $this->usageMap ??= ShiftTemplate::usageMap();
+    }
+
     /**
      * Cuenta turnos por pestaña en una sola query.
      *

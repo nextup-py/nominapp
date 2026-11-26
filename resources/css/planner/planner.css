@@ -592,3 +592,11 @@
     color: var(--sp-text-muted);
     line-height: 1.5;
 }
+
+/* ── Horas por empleado, turnos inactivos y avisos del modal ── */
+.sp-col-hours { min-width: 4.5rem; text-align: center; font-weight: 600; }
+.sp-hours-cell { text-align: center; font-weight: 600; white-space: nowrap; padding: 0 .5rem; }
+.sp-inactive-tag { margin-left: .25rem; font-size: .625rem; text-transform: uppercase; opacity: .85; border: 1px solid currentColor; border-radius: .25rem; padding: 0 .2rem; }
+.sp-shift-empty-readonly { cursor: default; opacity: .4; }
+.sp-modal-error { margin: .5rem 0; padding: .5rem .75rem; border-radius: .5rem; background: rgba(239, 68, 68, .12); color: #b91c1c; font-size: .875rem; }
+.sp-modal-readonly { margin: .5rem 0; font-size: .875rem; opacity: .75; }

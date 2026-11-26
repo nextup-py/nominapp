@@ -219,3 +219,37 @@ it('la búsqueda global ofrece turnos con su horario', function () {
 
     expect(collect($results->getCategories())->has('Turnos'))->toBeTrue();
 });
+
+it('sugiere la jornada según las horas y deja el franco sin jornada', function () {
+    expect(ShiftTemplate::suggestShiftTypeFor('07:00', '15:00'))->toBe('diurno')
+        ->and(ShiftTemplate::suggestShiftTypeFor('22:00', '06:00'))->toBe('nocturno')
+        ->and(ShiftTemplate::suggestShiftTypeFor(null, '06:00'))->toBeNull();
+
+    $company = shiftCompany();
+
+    Livewire::test(CreateShiftTemplate::class)
+        ->fillForm(['name' => 'Franco semanal', 'is_day_off' => true, 'color' => '#112233'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $franco = ShiftTemplate::where('name', 'Franco semanal')->first();
+    expect($franco->company_id)->toBe($company->id)
+        ->and($franco->is_day_off)->toBeTrue();
+});
+
+it('el listado muestra el uso de cada turno y filtra los sin uso', function () {
+    $company = shiftCompany();
+    $used = makeShift($company, 'Usado');
+    $free = makeShift($company, 'Libre');
+    RotationPattern::create(['company_id' => $company->id, 'name' => 'P', 'sequence' => [$used->id, $used->id], 'is_active' => true]);
+
+    expect(ShiftTemplate::usageMap()[$used->id])->toBe(['patterns' => 1, 'overrides' => 0])
+        ->and(ShiftTemplate::usageMap())->not->toHaveKey($free->id);
+
+    Livewire::test(ListShiftTemplates::class)
+        ->assertTableColumnStateSet('_usage', '1 patrón', $used)
+        ->assertTableColumnStateSet('_usage', 'Sin uso', $free)
+        ->filterTable('unused')
+        ->assertCanSeeTableRecords([$free])
+        ->assertCanNotSeeTableRecords([$used]);
+});

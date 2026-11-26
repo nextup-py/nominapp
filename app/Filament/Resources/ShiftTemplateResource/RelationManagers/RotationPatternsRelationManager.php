@@ -28,7 +28,7 @@ class RotationPatternsRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('name')
-            ->recordUrl(fn (RotationPattern $record) => RotationPatternResource::getUrl('edit', ['record' => $record]))
+            ->recordUrl(fn (RotationPattern $record) => RotationPatternResource::getUrl('view', ['record' => $record]))
             ->columns([
                 TextColumn::make('name')->label('Patrón')->icon('heroicon-o-arrow-path')->searchable()->sortable()->weight('medium'),
                 TextColumn::make('_days_in_cycle')

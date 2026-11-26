@@ -28,9 +28,8 @@ class RotationService
      * Retorna el turno efectivo de un empleado para una fecha dada.
      * Respeta la jerarquía de prioridad completa.
      *
-     * @param  Employee     $employee
      * @param  Carbon|null  $date  Fecha de consulta (por defecto hoy).
-     * @return ShiftTemplate|null  Turno efectivo, o null si no hay asignación de rotación.
+     * @return ShiftTemplate|null Turno efectivo, o null si no hay asignación de rotación.
      */
     public static function getShiftForDate(Employee $employee, ?Carbon $date = null): ?ShiftTemplate
     {
@@ -72,13 +71,9 @@ class RotationService
      * Cierra automáticamente el assignment abierto anterior (si existe) y
      * previene solapamientos con asignaciones ya cerradas.
      *
-     * @param  Employee        $employee
-     * @param  RotationPattern $pattern
-     * @param  Carbon          $validFrom    Fecha de inicio de vigencia.
-     * @param  int             $startIndex   Posición inicial en la secuencia (0-based).
-     * @param  Carbon|null     $validUntil   Fecha de fin (null = indefinido).
-     * @param  string|null     $notes
-     * @return RotationAssignment
+     * @param  Carbon  $validFrom  Fecha de inicio de vigencia.
+     * @param  int  $startIndex  Posición inicial en la secuencia (0-based).
+     * @param  Carbon|null  $validUntil  Fecha de fin (null = indefinido).
      *
      * @throws ValidationException
      */
@@ -98,7 +93,7 @@ class RotationService
 
         if ($startIndex < 0 || $startIndex >= $pattern->cycle_length) {
             throw ValidationException::withMessages([
-                'start_index' => "El índice inicial debe estar entre 0 y " . ($pattern->cycle_length - 1) . '.',
+                'start_index' => 'El índice inicial debe estar entre 0 y '.($pattern->cycle_length - 1).'.',
             ]);
         }
 
@@ -112,7 +107,7 @@ class RotationService
             // Detectar solapamiento con asignaciones ya cerradas
             $overlap = RotationAssignment::where('employee_id', $employee->id)
                 ->where('valid_from', '<=', $validUntil ?? '9999-12-31')
-                ->where(fn($q) => $q
+                ->where(fn ($q) => $q
                     ->whereNull('valid_until')
                     ->orWhere('valid_until', '>=', $validFrom)
                 )
@@ -125,28 +120,28 @@ class RotationService
             }
 
             return RotationAssignment::create([
-                'employee_id'  => $employee->id,
-                'pattern_id'   => $pattern->id,
-                'start_index'  => $startIndex,
-                'valid_from'   => $validFrom,
-                'valid_until'  => $validUntil,
-                'notes'        => $notes,
+                'employee_id' => $employee->id,
+                'pattern_id' => $pattern->id,
+                'start_index' => $startIndex,
+                'valid_from' => $validFrom,
+                'valid_until' => $validUntil,
+                'notes' => $notes,
                 'created_by_id' => Auth::id(),
             ]);
         });
     }
 
     /**
-     * Cierra la asignación de rotación activa del empleado en una fecha dada.
+     * Cierra la asignación de rotación activa del empleado en una fecha dada: la abierta (sin fin) o la que tenía
+     * un fin posterior, que se adelanta. No hace nada si no tiene una asignación que siga rigiendo después de esa fecha.
      *
-     * @param  Employee  $employee
-     * @param  Carbon    $closedOn  Último día de vigencia (inclusive).
-     * @return int  Número de registros actualizados (0 o 1).
+     * @param  Carbon  $closedOn  Último día de vigencia (inclusive).
+     * @return int Número de registros actualizados (0 o 1).
      */
     public static function closeActive(Employee $employee, Carbon $closedOn): int
     {
         return RotationAssignment::where('employee_id', $employee->id)
-            ->whereNull('valid_until')
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>', $closedOn->toDateString()))
             ->where('valid_from', '<=', $closedOn)
             ->update(['valid_until' => $closedOn]);
     }
@@ -154,12 +149,7 @@ class RotationService
     /**
      * Crea o reemplaza un override puntual para un empleado en una fecha específica.
      *
-     * @param  Employee      $employee
-     * @param  Carbon        $date
-     * @param  ShiftTemplate $shift
-     * @param  string        $reasonType  Valor del enum reason_type.
-     * @param  string|null   $notes
-     * @return ShiftOverride
+     * @param  string  $reasonType  Valor del enum reason_type.
      */
     public static function override(
         Employee $employee,
@@ -170,13 +160,13 @@ class RotationService
     ): ShiftOverride {
         return ShiftOverride::updateOrCreate(
             [
-                'employee_id'   => $employee->id,
+                'employee_id' => $employee->id,
                 'override_date' => $date->toDateString(),
             ],
             [
-                'shift_id'      => $shift->id,
-                'reason_type'   => $reasonType,
-                'notes'         => $notes,
+                'shift_id' => $shift->id,
+                'reason_type' => $reasonType,
+                'notes' => $notes,
                 'created_by_id' => Auth::id(),
             ]
         );
@@ -185,15 +175,16 @@ class RotationService
     /**
      * Elimina el override de un empleado para una fecha específica,
      * restaurando el turno del patrón rotativo.
-     *
-     * @param  Employee  $employee
-     * @param  Carbon    $date
-     * @return bool
      */
     public static function removeOverride(Employee $employee, Carbon $date): bool
     {
-        return (bool) ShiftOverride::where('employee_id', $employee->id)
+        $overrides = ShiftOverride::where('employee_id', $employee->id)
             ->where('override_date', $date->toDateString())
-            ->delete();
+            ->get();
+
+        // Se elimina modelo por modelo para que quede registrado en el historial quién lo hizo.
+        $overrides->each->delete();
+
+        return $overrides->isNotEmpty();
     }
 }
