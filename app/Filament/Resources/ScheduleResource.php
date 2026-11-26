@@ -431,7 +431,7 @@ class ScheduleResource extends Resource
                 Notification::make()
                     ->success()
                     ->title('Horario duplicado')
-                    ->body("Se creó \"{$copy->name}\". Revisá las horas y asignalo a los empleados.")
+                    ->body("Se creó \"{$copy->name}\". Revisar las horas y asignarlo a los empleados.")
                     ->send();
 
                 return redirect(static::getUrl('edit', ['record' => $copy]));

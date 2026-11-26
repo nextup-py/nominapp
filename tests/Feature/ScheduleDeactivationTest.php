@@ -13,6 +13,7 @@ use App\Models\Schedule;
 use App\Models\User;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
+use Filament\Actions\ActionGroup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -245,4 +246,68 @@ it('Remover seleccionados cierra varias asignaciones con la fecha elegida', func
         ->assertCanNotSeeTableRecords([$a, $b]);
 
     expect($schedule->fresh()->currentAssignmentsCount())->toBe(0);
+});
+
+/** Horario de prueba con días activos (lunes a sábado 23:00–07:00 con un descanso) y el domingo libre. */
+function nightScheduleForView(): Schedule
+{
+    $schedule = Schedule::create(['name' => 'Madrugada vista', 'shift_type' => 'nocturno']);
+
+    foreach (range(1, 7) as $dow) {
+        $day = $schedule->days()->create(['day_of_week' => $dow, 'is_active' => $dow <= 6, 'start_time' => '23:00', 'end_time' => '07:00']);
+
+        if ($dow === 1) {
+            $day->breaks()->create(['name' => 'Cena', 'start_time' => '02:00', 'end_time' => '03:00']);
+        }
+    }
+
+    return $schedule->fresh();
+}
+
+it('el resumen semanal cuenta días con turno y horas netas', function () {
+    $schedule = nightScheduleForView()->load('days.breaks');
+
+    expect($schedule->weeklySummary())->toBe(['days' => 6, 'hours' => 47.0])
+        ->and($schedule->weeklySummaryLabel())->toBe('6 días · 47 h por semana')
+        ->and($schedule->crossesMidnight())->toBeTrue();
+
+    $diurno = Schedule::create(['name' => 'Diurno vista', 'shift_type' => 'diurno']);
+    $diurno->days()->create(['day_of_week' => 1, 'is_active' => true, 'start_time' => '08:00', 'end_time' => '12:00']);
+
+    expect($diurno->fresh()->load('days.breaks')->crossesMidnight())->toBeFalse()
+        ->and($diurno->fresh()->load('days.breaks')->weeklySummaryLabel())->toBe('1 día · 4 h por semana')
+        ->and(Schedule::create(['name' => 'Vacío', 'shift_type' => 'diurno'])->load('days.breaks')->weeklySummaryLabel())->toBe('Sin días con turno');
+});
+
+it('la vista del horario muestra el resumen, la tabla de días y el cruce de medianoche', function () {
+    $schedule = nightScheduleForView();
+    deactivationScheduleEmployee()->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subWeek()]);
+
+    Livewire::test(ViewSchedule::class, ['record' => $schedule->getKey()])
+        ->assertSee('6 días · 47 h por semana')
+        ->assertSee('1 empleado')
+        ->assertSee('Cruza medianoche')
+        ->assertSee('Cena 02:00–03:00')
+        ->assertSee('Libre')
+        ->assertSee('(día siguiente)');
+});
+
+it('un horario sin empleados lo dice en el resumen', function () {
+    $schedule = Schedule::create(['name' => 'Sin gente', 'shift_type' => 'diurno']);
+
+    Livewire::test(ViewSchedule::class, ['record' => $schedule->getKey()])
+        ->assertSee('Sin empleados asignados');
+});
+
+it('Duplicar y Desactivar van en «Más acciones» y Editar queda a la vista', function () {
+    $schedule = nightScheduleForView();
+
+    $component = Livewire::test(ViewSchedule::class, ['record' => $schedule->getKey()]);
+    $headerActions = $component->instance()->getCachedHeaderActions();
+
+    $group = collect($headerActions)->first(fn ($action) => $action instanceof ActionGroup);
+    expect($group)->not->toBeNull()
+        ->and($group->getLabel())->toBe('Más acciones')
+        ->and(collect($group->getFlatActions())->keys()->all())->toBe(['duplicate', 'toggle_status'])
+        ->and(collect($headerActions)->reject(fn ($action) => $action instanceof ActionGroup)->map->getName()->values()->all())->toBe(['edit']);
 });

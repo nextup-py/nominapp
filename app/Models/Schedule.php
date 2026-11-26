@@ -306,6 +306,44 @@ class Schedule extends Model
         return $day ? ! $day->is_active : true;
     }
 
+    /**
+     * Horas netas por semana (descansos descontados) y cantidad de días con turno. Usa `days` con sus descansos:
+     * precargarlos (`days.breaks`) para no consultar por día.
+     *
+     * @return array{days: int, hours: float}
+     */
+    public function weeklySummary(): array
+    {
+        $active = $this->days->where('is_active', true);
+
+        return [
+            'days' => $active->count(),
+            'hours' => round($active->sum(fn (ScheduleDay $day): float => $day->scheduled_hours), 2),
+        ];
+    }
+
+    /** Indica si algún día con turno termina al día siguiente (p. ej. 23:00 a 07:00). */
+    public function crossesMidnight(): bool
+    {
+        return $this->days->where('is_active', true)->contains(fn (ScheduleDay $day): bool => $day->crossesMidnight());
+    }
+
+    /**
+     * Texto del resumen semanal, p. ej. «6 días · 48 h por semana».
+     */
+    public function weeklySummaryLabel(): string
+    {
+        ['days' => $days, 'hours' => $hours] = $this->weeklySummary();
+
+        if ($days === 0) {
+            return 'Sin días con turno';
+        }
+
+        $hoursText = rtrim(rtrim(number_format($hours, 2, ',', '.'), '0'), ',');
+
+        return $days.' '.($days === 1 ? 'día' : 'días').' · '.$hoursText.' h por semana';
+    }
+
     public function getMonthlyHours(): float
     {
         $settings = app(PayrollSettings::class);

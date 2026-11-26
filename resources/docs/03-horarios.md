@@ -28,7 +28,13 @@ El tipo de jornada determina las horas mensuales de referencia y los multiplicad
 3. Ingresar el nombre (ej: "Administrativo 08:00–17:00"; no puede repetirse con el de otro horario) y seleccionar el tipo de jornada
 4. Guardar
 
-![Detalle de un horario con sus días configurados](/docs-images/03-horario-detalle.png)
+![Detalle de un horario con su resumen semanal y la tabla de días](/docs-images/03-horario-detalle.png)
+
+### Detalle del horario
+
+El detalle muestra, en **Información General**, el tipo de jornada, el estado y un resumen: la **jornada semanal** (días con turno y horas netas por semana, p. ej. «6 días · 47 h por semana», con los descansos ya descontados), los **empleados asignados** hoy (o «Sin empleados asignados») y, si algún día termina al día siguiente, la etiqueta **Cruza medianoche**. **Configuración de Días** es una tabla de una fila por día con entrada, salida (con «día siguiente» si cruza medianoche), descansos y horas netas; los días sin turno figuran como **Libre**.
+
+En el encabezado, **Editar** queda a la vista y el menú **Más acciones** agrupa **Duplicar** y, al final y en rojo, **Desactivar** (o **Activar** si está inactivo).
 
 ### Configurar los días del horario
 
@@ -58,7 +64,7 @@ El sistema descuenta automáticamente los minutos de descanso al calcular las ho
 
 ### Duplicar un horario
 
-La acción **Duplicar** (en el listado y en el detalle del horario) copia los días, horas y descansos con un nombre nuevo, para partir de un horario parecido en vez de armarlo desde cero. No copia los empleados asignados. Requiere permiso para crear horarios.
+La acción **Duplicar** (en el listado y, en el detalle del horario, dentro de **Más acciones**) copia los días, horas y descansos con un nombre nuevo, para partir de un horario parecido en vez de armarlo desde cero. No copia los empleados asignados. Requiere permiso para crear horarios.
 
 ![Ventana Duplicar horario con el nombre propuesto](/docs-images/03-horario-duplicar.png)
 
@@ -68,9 +74,9 @@ Un horario con asignaciones de empleados —vigentes **o finalizadas**— o usad
 
 Para dejar de usar un horario sin perder el historial, **desactivarlo**:
 
-- **Desactivar** está en el listado, en el detalle y en el interruptor **Activo** del formulario de edición.
+- **Desactivar** está en el listado, en el detalle (menú **Más acciones**) y en el interruptor **Activo** del formulario de edición.
 - Un horario inactivo **no se ofrece** al asignar horarios a empleados, ni como horario inicial del alta, ni como horario sugerido de un cargo, ni en la sugerencia según marcaciones. Sigue valiendo para quienes ya lo tienen asignado y no se pierde ningún dato.
-- Solo se puede desactivar si **no tiene asignaciones vigentes ni futuras** ni empleados con ese horario fijo. Las asignaciones finalizadas no lo impiden. Si las tiene, primero hay que asignar a esos empleados otro horario.
+- Solo se puede desactivar si **no tiene asignaciones vigentes ni futuras** ni empleados con ese horario fijo. Las asignaciones finalizadas no lo impiden, y tampoco una que termina hoy (lo que deja **Remover** con la fecha de hoy). Si las tiene, primero hay que asignar a esos empleados otro horario.
 - El listado muestra por defecto solo los activos; el filtro **Estado** permite ver los inactivos y **Activar** vuelve a ofrecerlo.
 
 La pestaña **Historial de asignaciones** del horario lista todas sus asignaciones (empleado, desde, hasta, estado —Vigente, Futura o Finalizada— y quién la asignó), y permite ver qué impide eliminarlo. La pestaña **Empleados** muestra solo las asignaciones vigentes.

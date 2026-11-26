@@ -53,8 +53,6 @@ class ScheduleDay extends Model
 
     /**
      * Accesor para obtener el nombre del día de la semana.
-     *
-     * @return string
      */
     public function getDayOfWeekNameAttribute(): string
     {
@@ -86,5 +84,18 @@ class ScheduleDay extends Model
         return $this->breaks->sum(function ($break) {
             return $break->duration_in_minutes;
         });
+    }
+
+    /**
+     * Indica si el turno de este día termina al día siguiente (la salida es igual o anterior a la entrada),
+     * por ejemplo 23:00 a 07:00.
+     */
+    public function crossesMidnight(): bool
+    {
+        if (blank($this->start_time) || blank($this->end_time)) {
+            return false;
+        }
+
+        return Carbon::parse($this->end_time)->lessThanOrEqualTo(Carbon::parse($this->start_time));
     }
 }
