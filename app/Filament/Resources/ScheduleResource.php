@@ -7,7 +7,9 @@ use App\Filament\Actions\ScheduleStatusAction;
 use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\ScheduleResource\Pages;
 use App\Filament\Resources\ScheduleResource\RelationManagers\AssignmentsRelationManager;
+use App\Filament\Resources\ScheduleResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\ScheduleResource\RelationManagers\EmployeesRelationManager;
+use App\Filament\Resources\ScheduleResource\RelationManagers\PositionsRelationManager;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\Schedule;
@@ -448,6 +450,8 @@ class ScheduleResource extends Resource
         return [
             EmployeesRelationManager::class,
             AssignmentsRelationManager::class,
+            PositionsRelationManager::class,
+            AuditsRelationManager::class,
         ];
     }
 

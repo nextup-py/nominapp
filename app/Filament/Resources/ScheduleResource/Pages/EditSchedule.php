@@ -59,6 +59,25 @@ class EditSchedule extends EditRecord
     }
 
     /**
+     * Resumen de días y descansos previo al guardado, para registrar en el historial solo lo que cambió.
+     *
+     * @var array<string, string>
+     */
+    protected array $daysBefore = [];
+
+    /** Toma el resumen de días antes de que el formulario reescriba días y descansos. */
+    protected function beforeSave(): void
+    {
+        $this->daysBefore = $this->record->daysSummary();
+    }
+
+    /** Registra en el historial el cambio de días, horas o descansos (los campos propios ya los audita el modelo). */
+    protected function afterSave(): void
+    {
+        $this->record->recordDaysAudit($this->daysBefore, $this->record->daysSummary());
+    }
+
+    /**
      * Capitaliza el nombre del horario antes de guardar.
      *
      * @param  array<string, mixed>  $data

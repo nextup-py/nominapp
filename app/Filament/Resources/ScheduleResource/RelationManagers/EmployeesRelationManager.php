@@ -6,7 +6,10 @@ use App\Exports\ScheduleEmployeesExport;
 use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Branch;
+use App\Models\Company;
+use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Position;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
 use Filament\Forms\Components\Component;
@@ -111,6 +114,7 @@ class EmployeesRelationManager extends RelationManager
                 ->addSelect([
                     'employees.*',
                     'employee_schedule_assignments.valid_from as assignment_start_date',
+                    'employee_schedule_assignments.valid_until as assignment_end_date',
                     'users.name as assignment_created_by',
                 ])
                 ->leftJoin('users', 'users.id', '=', 'employee_schedule_assignments.created_by')
@@ -136,28 +140,38 @@ class EmployeesRelationManager extends RelationManager
                 TextColumn::make('activeContract.position.name')
                     ->label('Cargo')
                     ->icon('heroicon-o-briefcase')
-                    ->default('-')
+                    ->placeholder('Sin cargo')
                     ->badge()
                     ->color('info'),
 
                 TextColumn::make('branch.name')
                     ->label('Sucursal')
                     ->icon('heroicon-o-building-storefront')
-                    ->default('-')
+                    ->placeholder('Sin sucursal')
                     ->badge()
                     ->color('success'),
 
                 TextColumn::make('branch.company.name')
                     ->label('Empresa')
                     ->icon('heroicon-o-building-office-2')
-                    ->default('-')
+                    ->placeholder('Sin empresa')
                     ->badge()
-                    ->color('primary'),
+                    ->color('primary')
+                    ->visible(fn () => Company::active()->count() > 1),
 
                 TextColumn::make('assignment_start_date')
                     ->label('Vigente desde')
                     ->description(fn ($record) => Carbon::parse($record->assignment_start_date)->diffForHumans())
                     ->date('d/m/Y')
+                    ->sortable()
+                    ->alignCenter(),
+
+                TextColumn::make('assignment_end_date')
+                    ->label('Hasta')
+                    ->date('d/m/Y')
+                    ->placeholder('Sin fecha de fin')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'warning' : 'gray')
                     ->sortable()
                     ->alignCenter(),
 
@@ -174,6 +188,26 @@ class EmployeesRelationManager extends RelationManager
                     ->searchable()
                     ->preload()
                     ->native(false),
+
+                SelectFilter::make('position_id')
+                    ->label('Cargo')
+                    ->options(fn () => Position::query()->with('department')->orderBy('name')->get()
+                        ->mapWithKeys(fn (Position $position) => [$position->id => $position->name.($position->department ? ' - '.$position->department->name : '')])
+                        ->all())
+                    ->searchable()
+                    ->native(false)
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->whereHas('activeContract', fn (Builder $contract) => $contract->where('position_id', (int) $data['value']))
+                        : $query),
+
+                SelectFilter::make('department_id')
+                    ->label('Departamento')
+                    ->options(fn () => Department::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->searchable()
+                    ->native(false)
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->whereHas('activeContract.position', fn (Builder $position) => $position->where('department_id', (int) $data['value']))
+                        : $query),
             ])
             ->headerActions([
                 Action::make('export')

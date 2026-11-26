@@ -68,6 +68,21 @@ La acción **Duplicar** (en el listado y, en el detalle del horario, dentro de *
 
 ![Ventana Duplicar horario con el nombre propuesto](/docs-images/03-horario-duplicar.png)
 
+### Pestañas del detalle
+
+Debajo de la tabla de días, el detalle del horario tiene cuatro pestañas:
+
+| Pestaña | Qué muestra |
+|---------|-------------|
+| **Empleados Asignados** | Quienes tienen el horario hoy, con **Vigente desde** y **Hasta** (la fecha de fin programada, o «Sin fecha de fin»). Filtros por sucursal, cargo y departamento. La columna **Empresa** solo aparece si hay más de una empresa activa. Acciones **Asignar**, **Remover** y **Exportar**. |
+| **Historial de asignaciones** | Todas las asignaciones del horario (vigentes, futuras y finalizadas), con las notas de cada una. Filtros por **Empleado**, por **Estado** y por **Tuvo el horario entre** (dos fechas: muestra quien lo tuvo en algún momento de ese período). **Exportar** descarga a Excel lo que muestra la lista, con los filtros aplicados. |
+| **Cargos con este horario** | Los cargos que lo tienen como horario sugerido (solo lectura; clic en un cargo abre su ficha). Sirve para saber qué cargos se ven afectados antes de cambiar o desactivar el horario. |
+| **Historial de cambios** | Quién modificó el nombre, la descripción, el tipo de jornada, el estado o los días, horas y descansos, y cuándo, con los valores anteriores y los nuevos. Los cambios de días muestran solo los días que cambiaron. |
+
+![Pestaña Historial de cambios de un horario](/docs-images/03-horario-historial.png)
+
+> El historial de cambios registra desde que se instaló esta versión: los cambios anteriores no figuran.
+
 ### Eliminar o desactivar un horario
 
 Un horario con asignaciones de empleados —vigentes **o finalizadas**— o usado como horario fijo de algún empleado **no se puede eliminar** y el botón **Eliminar** ni aparece (solo **Desactivar**): borrarlo perdería el historial con el que se calculan las jornadas pasadas. Quitar a un empleado de un horario (**Remover**) solo cierra su asignación (en la fecha que se elija, hoy por defecto); la asignación finalizada sigue contando y por eso el horario no se puede eliminar aunque ya no tenga a nadie.
@@ -79,7 +94,7 @@ Para dejar de usar un horario sin perder el historial, **desactivarlo**:
 - Solo se puede desactivar si **no tiene asignaciones vigentes ni futuras** ni empleados con ese horario fijo. Las asignaciones finalizadas no lo impiden, y tampoco una que termina hoy (lo que deja **Remover** con la fecha de hoy). Si las tiene, primero hay que asignar a esos empleados otro horario.
 - El listado muestra por defecto solo los activos; el filtro **Estado** permite ver los inactivos y **Activar** vuelve a ofrecerlo.
 
-La pestaña **Historial de asignaciones** del horario lista todas sus asignaciones (empleado, desde, hasta, estado —Vigente, Futura o Finalizada— y quién la asignó), y permite ver qué impide eliminarlo. La pestaña **Empleados** muestra solo las asignaciones vigentes.
+La pestaña **Historial de asignaciones** del horario lista todas sus asignaciones (empleado, desde, hasta, estado —Vigente, Futura o Finalizada— y quién la asignó), y permite ver qué impide eliminarlo. La pestaña **Empleados Asignados** muestra solo las asignaciones que siguen vigentes después de hoy.
 
 ## Asignar un horario a un empleado
 
