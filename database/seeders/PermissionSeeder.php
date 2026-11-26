@@ -68,7 +68,7 @@ class PermissionSeeder extends Seeder
         'position' => 'Cargo',
         'rotation_pattern' => 'Patrón de Rotación',
         'schedule' => 'Horario',
-        'shift_template' => 'Plantilla de Turno',
+        'shift_template' => 'Turno',
         'system_health' => 'Salud del sistema y logs',
         'team' => 'Mi Equipo',
         'terminal' => 'Terminal',
