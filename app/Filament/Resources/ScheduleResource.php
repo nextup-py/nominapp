@@ -29,6 +29,7 @@ use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -206,6 +207,7 @@ class ScheduleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('days.breaks'))
             ->columns([
                 TextColumn::make('name')
                     ->label('Nombre')
@@ -228,13 +230,10 @@ class ScheduleResource extends Resource
                     ->color(fn ($state) => Schedule::getShiftTypeColors()[$state] ?? 'success')
                     ->sortable(),
 
-                TextColumn::make('active_days_count')
-                    ->label('Días Activos')
-                    ->counts('activeDays')
-                    ->alignCenter()
-                    ->badge()
-                    ->color('info')
-                    ->sortable(),
+                TextColumn::make('weekly_summary')
+                    ->label('Resumen semanal')
+                    ->getStateUsing(fn (Schedule $record): string => $record->weeklySummaryLabel())
+                    ->description(fn (Schedule $record): ?string => $record->crossesMidnight() ? 'Cruza la medianoche' : null),
 
                 TextColumn::make('current_employees_count')
                     ->label('Empleados Asignados')
@@ -257,14 +256,6 @@ class ScheduleResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                TernaryFilter::make('is_active')
-                    ->label('Estado')
-                    ->placeholder('Todos')
-                    ->trueLabel('Activos')
-                    ->falseLabel('Inactivos')
-                    ->default(true)
-                    ->native(false),
-
                 SelectFilter::make('shift_type')
                     ->label('Tipo de Jornada')
                     ->options(Schedule::getShiftTypeLabels())
@@ -284,9 +275,6 @@ class ScheduleResource extends Resource
                     ->native(false),
             ])
             ->actions([
-                static::duplicateAction(Action::class),
-                ScheduleStatusAction::make(Action::class),
-
                 Action::make('assignToEmployees')
                     ->label('Asignar a Empleados')
                     ->icon('heroicon-o-user-plus')
@@ -297,7 +285,7 @@ class ScheduleResource extends Resource
 
                         Select::make('filter_branch')
                             ->label('Filtrar por Sucursal')
-                            ->options(fn () => Branch::pluck('name', 'id'))
+                            ->options(fn () => Branch::active()->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->preload()
                             ->native(false)
@@ -307,36 +295,8 @@ class ScheduleResource extends Resource
 
                         Select::make('employee_ids')
                             ->label('Empleados')
-                            ->options(function (callable $get) {
-                                $scheduleId = (int) $get('schedule_id');
-                                $today = Carbon::today();
-
-                                $query = Employee::query()->where('status', 'active');
-
-                                if ($get('filter_branch')) {
-                                    $query->where('branch_id', $get('filter_branch'));
-                                }
-
-                                return $query
-                                    ->orderBy('first_name')
-                                    ->orderBy('last_name')
-                                    ->get()
-                                    ->mapWithKeys(function (Employee $employee) use ($scheduleId, $today) {
-                                        $current = $employee->getScheduleForDate($today);
-
-                                        if ($current?->id === $scheduleId) {
-                                            return [];
-                                        }
-
-                                        $label = "{$employee->full_name} - CI: {$employee->ci}";
-                                        if ($current) {
-                                            $label .= " ⚠ (Horario actual: {$current->name})";
-                                        }
-
-                                        return [$employee->id => $label];
-                                    })
-                                    ->filter();
-                            })
+                            ->options(fn (Get $get): array => static::assignableEmployees((int) $get('schedule_id'), $get('filter_branch')))
+                            ->helperText(fn (Get $get): string => count(static::assignableEmployees((int) $get('schedule_id'), $get('filter_branch'))).' empleado(s) disponible(s) para asignar.')
                             ->multiple()
                             ->searchable()
                             ->required()
@@ -346,7 +306,7 @@ class ScheduleResource extends Resource
                         ...ScheduleAssignmentActions::periodFields(),
                     ])
                     ->modalHeading('Asignar Horario a Empleados')
-                    ->modalDescription('Selecciona los empleados a los que deseas asignar este horario. Solo se mostrarán empleados activos que no tengan este horario asignado actualmente.')
+                    ->modalDescription('Seleccionar los empleados a quienes asignar este horario. Solo se muestran empleados activos que no lo tienen asignado hoy; si ya tienen otro horario vigente, se indica junto al nombre.')
                     ->modalSubmitActionLabel('Asignar Horario')
                     ->modalWidth('2xl')
                     ->action(function (Schedule $record, array $data) {
@@ -395,11 +355,48 @@ class ScheduleResource extends Resource
                                 ->send();
                         }
                     }),
+
+                ActionGroup::make([
+                    static::duplicateAction(Action::class),
+                    ScheduleStatusAction::make(Action::class),
+                ])->tooltip('Más acciones'),
             ])
             ->defaultSort('name')
             ->emptyStateHeading('No hay horarios registrados')
-            ->emptyStateDescription('Comienza a crear horarios de trabajo para asignar a los empleados.')
+            ->emptyStateDescription('Crear horarios de trabajo para asignarlos a los empleados.')
             ->emptyStateIcon('heroicon-o-clock');
+    }
+
+    /**
+     * Empleados activos a quienes se puede asignar el horario (sin tenerlo ya vigente hoy), como `id => etiqueta`.
+     * La etiqueta indica el horario que tienen hoy. Se memoiza por petición porque lo usan las opciones y el texto de ayuda.
+     *
+     * @return array<int, string>
+     */
+    public static function assignableEmployees(int $scheduleId, mixed $branchId = null): array
+    {
+        static $memo = [];
+
+        $key = $scheduleId.'|'.($branchId ?: '');
+
+        return $memo[$key] ??= Employee::query()
+            ->where('status', 'active')
+            ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get()
+            ->mapWithKeys(function (Employee $employee) use ($scheduleId): array {
+                $current = $employee->getScheduleForDate(Carbon::today());
+
+                if ($current?->id === $scheduleId) {
+                    return [];
+                }
+
+                $label = "{$employee->full_name} - CI: {$employee->ci}";
+
+                return [$employee->id => $current ? $label." — hoy: {$current->name}" : $label];
+            })
+            ->all();
     }
 
     /**

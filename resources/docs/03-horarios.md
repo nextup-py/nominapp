@@ -62,6 +62,12 @@ El sistema descuenta automáticamente los minutos de descanso al calcular las ho
 
 ![Formulario de un horario con el tipo de jornada sugerido y el aviso de pocos días activos](/docs-images/03-horario-formulario.png)
 
+### Listado de horarios
+
+Cada fila muestra el nombre, el estado, el tipo de jornada, el **Resumen semanal** (p. ej. «6 días · 47 h por semana», con la marca «Cruza la medianoche» si algún día termina al día siguiente) y los empleados asignados hoy. Arriba hay pestañas **Activos** / **Inactivos** / **Todos** y filtros por tipo de jornada y por empleados asignados.
+
+En cada fila, **Asignar a Empleados** está a la vista; **Duplicar** y **Desactivar** están en el menú de tres puntos. En la ventana de asignación, el filtro de sucursal ofrece solo sucursales activas y un texto bajo **Empleados** indica cuántos quedan disponibles. **Exportar** descarga solo los horarios que muestra el listado (según pestaña, filtros y búsqueda).
+
 ### Duplicar un horario
 
 La acción **Duplicar** (en el listado y, en el detalle del horario, dentro de **Más acciones**) copia los días, horas y descansos con un nombre nuevo, para partir de un horario parecido en vez de armarlo desde cero. No copia los empleados asignados. Requiere permiso para crear horarios.
@@ -92,7 +98,7 @@ Para dejar de usar un horario sin perder el historial, **desactivarlo**:
 - **Desactivar** está en el listado, en el detalle (menú **Más acciones**) y en el interruptor **Activo** del formulario de edición.
 - Un horario inactivo **no se ofrece** al asignar horarios a empleados, ni como horario inicial del alta, ni como horario sugerido de un cargo, ni en la sugerencia según marcaciones. Sigue valiendo para quienes ya lo tienen asignado y no se pierde ningún dato.
 - Solo se puede desactivar si **no tiene asignaciones vigentes ni futuras** ni empleados con ese horario fijo. Las asignaciones finalizadas no lo impiden, y tampoco una que termina hoy (lo que deja **Remover** con la fecha de hoy). Si las tiene, primero hay que asignar a esos empleados otro horario.
-- El listado muestra por defecto solo los activos; el filtro **Estado** permite ver los inactivos y **Activar** vuelve a ofrecerlo.
+- El listado abre en la pestaña **Activos**; las pestañas **Inactivos** y **Todos** (con su cantidad) permiten ver el resto, y **Activar** vuelve a ofrecer el horario.
 
 La pestaña **Historial de asignaciones** del horario lista todas sus asignaciones (empleado, desde, hasta, estado —Vigente, Futura o Finalizada— y quién la asignó), y permite ver qué impide eliminarlo. La pestaña **Empleados Asignados** muestra solo las asignaciones que siguen vigentes después de hoy.
 
@@ -107,7 +113,7 @@ La asignación se hace **desde el horario, no desde el perfil del empleado**:
 
 En el mismo formulario se elige **Rige desde** (por defecto hoy), **Hasta** (opcional) y notas. Una fecha futura programa el cambio: el horario actual sigue vigente hasta el día anterior. Los días ya calculados no se recalculan solos: para que las jornadas ya registradas tomen el horario nuevo, active **Recalcular las jornadas ya registradas desde esa fecha** (solo con fecha de inicio de hoy o anterior).
 
-> Si alguno de los empleados seleccionados ya tiene un horario vigente, se muestra una advertencia (⚠) — al confirmar, ese horario anterior se cierra automáticamente (el día anterior a **Rige desde**) y el nuevo queda vigente desde esa fecha.
+> Si alguno de los empleados seleccionados ya tiene un horario vigente, se indica junto a su nombre (**— hoy: nombre del horario**) — al confirmar, ese horario anterior se cierra automáticamente (el día anterior a **Rige desde**) y el nuevo queda vigente desde esa fecha.
 
 ### Recalcular jornadas ya registradas
 

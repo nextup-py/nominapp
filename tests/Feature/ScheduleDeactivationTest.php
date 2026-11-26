@@ -1,5 +1,7 @@
 <?php
 
+use App\Exports\SchedulesExport;
+use App\Filament\Resources\ScheduleResource;
 use App\Filament\Resources\ScheduleResource\Pages\EditSchedule;
 use App\Filament\Resources\ScheduleResource\Pages\ListSchedules;
 use App\Filament\Resources\ScheduleResource\Pages\ViewSchedule;
@@ -89,7 +91,7 @@ it('el estado de una asignación sale de sus fechas', function () {
         ->and($make(now()->addDay(), null)->status())->toBe(EmployeeScheduleAssignment::STATUS_UPCOMING);
 });
 
-it('el listado oculta los inactivos por defecto y la acción Desactivar funciona', function () {
+it('el listado abre en Activos, la pestaña Inactivos los muestra y la acción Desactivar funciona', function () {
     $active = Schedule::create(['name' => 'Activo uno', 'shift_type' => 'diurno']);
     $inactive = Schedule::create(['name' => 'Inactivo uno', 'shift_type' => 'diurno', 'is_active' => false]);
 
@@ -101,7 +103,7 @@ it('el listado oculta los inactivos por defecto y la acción Desactivar funciona
     expect($active->fresh()->is_active)->toBeFalse();
 
     Livewire::test(ListSchedules::class)
-        ->removeTableFilter('is_active')
+        ->set('activeTab', 'all')
         ->assertCanSeeTableRecords([$active, $inactive])
         ->callTableAction('toggle_status', $inactive);
 
@@ -310,4 +312,49 @@ it('Duplicar y Desactivar van en «Más acciones» y Editar queda a la vista', f
         ->and($group->getLabel())->toBe('Más acciones')
         ->and(collect($group->getFlatActions())->keys()->all())->toBe(['duplicate', 'toggle_status'])
         ->and(collect($headerActions)->reject(fn ($action) => $action instanceof ActionGroup)->map->getName()->values()->all())->toBe(['edit']);
+});
+
+it('el listado muestra el resumen semanal y la marca de cruce de medianoche', function () {
+    $schedule = Schedule::create(['name' => 'Cena', 'shift_type' => 'nocturno']);
+    $schedule->days()->create(['day_of_week' => 1, 'is_active' => true, 'start_time' => '23:00', 'end_time' => '07:00']);
+
+    Livewire::test(ListSchedules::class)
+        ->assertCanSeeTableRecords([$schedule])
+        ->assertSee('1 día · 8 h por semana')
+        ->assertSee('Cruza la medianoche');
+});
+
+it('las pestañas del listado cuentan activos e inactivos', function () {
+    Schedule::create(['name' => 'Act A', 'shift_type' => 'diurno']);
+    Schedule::create(['name' => 'Inact A', 'shift_type' => 'diurno', 'is_active' => false]);
+    $inactive = Schedule::where('name', 'Inact A')->first();
+
+    Livewire::test(ListSchedules::class)
+        ->assertSet('activeTab', 'active')
+        ->set('activeTab', 'inactive')
+        ->assertCanSeeTableRecords([$inactive])
+        ->assertCanNotSeeTableRecords(Schedule::where('is_active', true)->get());
+});
+
+it('Exportar incluye solo los horarios del listado filtrado', function () {
+    $active = Schedule::create(['name' => 'Exp activo', 'shift_type' => 'diurno']);
+    $inactive = Schedule::create(['name' => 'Exp inactivo', 'shift_type' => 'diurno', 'is_active' => false]);
+
+    $rows = (new SchedulesExport([$active->id]))->query()->pluck('name')->all();
+
+    expect($rows)->toBe(['Exp activo'])
+        ->and((new SchedulesExport)->query()->pluck('name')->all())->toContain('Exp inactivo');
+});
+
+it('Asignar a Empleados ofrece empleados sin emoji y con el horario actual indicado', function () {
+    $schedule = Schedule::create(['name' => 'Nuevo', 'shift_type' => 'diurno']);
+    $other = Schedule::create(['name' => 'Actual', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    $employee->scheduleAssignments()->create(['schedule_id' => $other->id, 'valid_from' => now()->subMonth()]);
+
+    $options = ScheduleResource::assignableEmployees($schedule->id);
+
+    expect($options)->toHaveKey($employee->id)
+        ->and($options[$employee->id])->toContain('hoy: Actual')->not->toContain('⚠')
+        ->and(ScheduleResource::assignableEmployees($other->id))->not->toHaveKey($employee->id);
 });
