@@ -16,6 +16,8 @@ use App\Models\Schedule;
 use App\Models\ScheduleDay;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
+use Filament\Forms\Components\Actions\Action as FormAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
@@ -35,6 +37,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 
 class ScheduleResource extends Resource
 {
@@ -67,14 +71,10 @@ class ScheduleResource extends Resource
             ->schema([
                 Section::make('Información del Horario')
                     ->schema([
-                        Toggle::make('is_active')
-                            ->label('Activo')
-                            ->default(true)
-                            ->disabled(fn (?Schedule $record): bool => $record !== null && $record->is_active && $record->deactivationBlockers() !== [])
-                            ->helperText(fn (?Schedule $record): string => $record !== null && $record->is_active && $record->deactivationBlockers() !== []
-                                ? 'No se puede desactivar: '.$record->deactivationBlockersSummary().'.'
-                                : 'Los horarios inactivos no se ofrecen al asignar y conservan su historial.')
-                            ->hiddenOn('create')
+                        Placeholder::make('affected_employees')
+                            ->label('Empleados afectados')
+                            ->content(fn (?Schedule $record): string => ($count = $record?->currentAssignmentsCount() ?? 0).' '.($count === 1 ? 'empleado tiene' : 'empleados tienen').' asignado este horario: los cambios rigen desde hoy. Las jornadas ya calculadas no cambian hasta recalcularlas.')
+                            ->visible(fn (?Schedule $record): bool => ($record?->currentAssignmentsCount() ?? 0) > 0)
                             ->columnSpanFull(),
 
                         TextInput::make('name')
@@ -104,12 +104,35 @@ class ScheduleResource extends Resource
                             ->nullable()
                             ->maxLength(100)
                             ->columnSpanFull(),
+
+                        Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true)
+                            ->disabled(fn (?Schedule $record): bool => $record !== null && $record->is_active && $record->deactivationBlockers() !== [])
+                            ->helperText(fn (?Schedule $record): string => $record !== null && $record->is_active && $record->deactivationBlockers() !== []
+                                ? 'No se puede desactivar: '.$record->deactivationBlockersSummary().'.'
+                                : 'Los horarios inactivos no se ofrecen al asignar y conservan su historial.')
+                            ->hiddenOn('create')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
                 Section::make('Configuración de Días')
                     ->description('Activar los días laborales y cargar entrada y salida. En un turno nocturno la salida puede ser menor que la entrada.')
                     ->schema([
+                        Placeholder::make('weekly_total')
+                            ->label('Resumen semanal')
+                            ->content(function (Get $get): string {
+                                $hours = collect($get('days') ?? [])
+                                    ->filter(fn ($day): bool => (bool) ($day['is_active'] ?? false))
+                                    ->map(fn ($day): ?float => Schedule::netHoursFromState($day));
+                                $count = $hours->filter(fn ($value): bool => $value !== null)->count();
+
+                                return $count === 0
+                                    ? 'Sin días con turno cargado.'
+                                    : $count.' '.($count === 1 ? 'día' : 'días').' · '.Schedule::formatHours((float) $hours->sum()).' netas por semana (descansos descontados).';
+                            }),
+
                         Placeholder::make('few_days_notice')
                             ->label('Pocos días activos')
                             ->content(function (Get $get): string {
@@ -129,6 +152,7 @@ class ScheduleResource extends Resource
                             ->addable(false)
                             ->deletable(false)
                             ->reorderable(false)
+                            ->extraItemActions([static::copyDayAction()])
                             ->default(
                                 collect(range(1, 7))->map(fn ($day) => [
                                     'day_of_week' => $day,
@@ -163,6 +187,22 @@ class ScheduleResource extends Resource
                                     ->visible(fn (Get $get): bool => (bool) $get('is_active'))
                                     ->columnSpan(1),
 
+                                Placeholder::make('net_hours')
+                                    ->label(false)
+                                    ->content(function (Get $get): string {
+                                        $day = ['start_time' => $get('start_time'), 'end_time' => $get('end_time')];
+                                        $gross = Schedule::netHoursFromState($day);
+                                        $net = Schedule::netHoursFromState($day + ['breaks' => $get('breaks') ?? []]);
+
+                                        if ($net === null) {
+                                            return '';
+                                        }
+
+                                        return Schedule::formatHours($net).' netas'.($net !== $gross ? ' (descansos descontados)' : '');
+                                    })
+                                    ->visible(fn (Get $get): bool => (bool) $get('is_active') && filled($get('start_time')) && filled($get('end_time')))
+                                    ->columnSpanFull(),
+
                                 Repeater::make('breaks')
                                     ->relationship(modifyQueryUsing: fn ($query) => $query->orderBy('start_time'))
                                     ->label('Descansos')
@@ -177,12 +217,14 @@ class ScheduleResource extends Resource
                                             ->label('Inicio')
                                             ->native(false)
                                             ->seconds(false)
+                                            ->live(onBlur: true)
                                             ->required(),
 
                                         TimePicker::make('end_time')
                                             ->label('Fin')
                                             ->native(false)
                                             ->seconds(false)
+                                            ->live(onBlur: true)
                                             ->required()
                                             ->after('start_time'),
                                     ])
@@ -365,6 +407,69 @@ class ScheduleResource extends Resource
             ->emptyStateHeading('No hay horarios registrados')
             ->emptyStateDescription('Crear horarios de trabajo para asignarlos a los empleados.')
             ->emptyStateIcon('heroicon-o-clock');
+    }
+
+    /**
+     * Pone en mayúscula solo la primera letra del nombre (no la de cada palabra: «Turno de la mañana», no «Turno De La Mañana»).
+     */
+    public static function capitalizeName(string $name): string
+    {
+        $name = trim($name);
+
+        return mb_strtoupper(mb_substr($name, 0, 1, 'UTF-8'), 'UTF-8').mb_substr($name, 1, null, 'UTF-8');
+    }
+
+    /**
+     * Acción por día del formulario: copia la entrada, la salida y los descansos de un día a los días que se elijan
+     * (p. ej. cargar el lunes y copiarlo de martes a viernes). Solo modifica el estado del formulario; se guarda al
+     * guardar el horario.
+     */
+    public static function copyDayAction(): FormAction
+    {
+        return FormAction::make('copy_day')
+            ->icon('heroicon-m-document-duplicate')
+            ->tooltip('Copiar a otros días')
+            ->visible(fn (Repeater $component, array $arguments): bool => (bool) ($component->getState()[$arguments['item'] ?? '']['is_active'] ?? false))
+            ->modalHeading('Copiar a otros días')
+            ->modalDescription('Se copian la entrada, la salida y los descansos. Los días elegidos pasan a estar activos y reemplazan lo que tengan cargado.')
+            ->modalSubmitActionLabel('Copiar')
+            ->form(fn (Repeater $component, array $arguments): array => [
+                CheckboxList::make('targets')
+                    ->label('Copiar a')
+                    ->options(collect($component->getState())
+                        ->reject(fn (array $day, string $key): bool => $key === ($arguments['item'] ?? ''))
+                        ->mapWithKeys(fn (array $day): array => [(int) $day['day_of_week'] => ScheduleDay::getDayOptions()[(int) $day['day_of_week']] ?? 'Día'])
+                        ->sortKeys()
+                        ->all())
+                    ->columns(2)
+                    ->bulkToggleable()
+                    ->required(),
+            ])
+            ->action(function (array $data, array $arguments, Repeater $component): void {
+                $items = $component->getState();
+                $source = $items[$arguments['item'] ?? ''] ?? null;
+
+                if ($source === null) {
+                    return;
+                }
+
+                $breaks = fn (): array => collect($source['breaks'] ?? [])
+                    ->mapWithKeys(fn (array $break): array => [(string) Str::uuid() => Arr::only($break, ['name', 'start_time', 'end_time'])])
+                    ->all();
+
+                foreach ($items as $key => $item) {
+                    if (in_array((int) $item['day_of_week'], array_map('intval', $data['targets']), true)) {
+                        $items[$key] = array_merge($item, [
+                            'is_active' => true,
+                            'start_time' => $source['start_time'],
+                            'end_time' => $source['end_time'],
+                            'breaks' => $breaks(),
+                        ]);
+                    }
+                }
+
+                $component->state($items);
+            });
     }
 
     /**

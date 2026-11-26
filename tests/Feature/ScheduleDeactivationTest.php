@@ -358,3 +358,53 @@ it('Asignar a Empleados ofrece empleados sin emoji y con el horario actual indic
         ->and($options[$employee->id])->toContain('hoy: Actual')->not->toContain('⚠')
         ->and(ScheduleResource::assignableEmployees($other->id))->not->toHaveKey($employee->id);
 });
+
+it('calcula las horas netas de un día del formulario descontando descansos y cruce de medianoche', function () {
+    expect(Schedule::netHoursFromState(['start_time' => '08:00', 'end_time' => '17:00', 'breaks' => [['start_time' => '12:00:00', 'end_time' => '13:00:00']]]))->toBe(8.0)
+        ->and(Schedule::netHoursFromState(['start_time' => '23:00:00', 'end_time' => '07:00:00']))->toBe(8.0)
+        ->and(Schedule::netHoursFromState(['start_time' => '08:00', 'end_time' => null]))->toBeNull()
+        ->and(Schedule::formatHours(7.5))->toBe('7,5 h')
+        ->and(Schedule::formatHours(8.0))->toBe('8 h');
+});
+
+it('el nombre solo pone en mayúscula la primera letra', function () {
+    expect(ScheduleResource::capitalizeName('  turno de la mañana '))->toBe('Turno de la mañana')
+        ->and(ScheduleResource::capitalizeName('árbol'))->toBe('Árbol');
+});
+
+it('Copiar a otros días copia entrada, salida y descansos y activa los días elegidos', function () {
+    $schedule = Schedule::create(['name' => 'Base', 'shift_type' => 'diurno']);
+    foreach (range(1, 3) as $dow) {
+        $schedule->days()->create(['day_of_week' => $dow, 'is_active' => $dow === 1, 'start_time' => $dow === 1 ? '08:00' : null, 'end_time' => $dow === 1 ? '17:00' : null]);
+    }
+    $schedule->days()->where('day_of_week', 1)->first()->breaks()->create(['name' => 'Almuerzo', 'start_time' => '12:00', 'end_time' => '13:00']);
+
+    $component = Livewire::test(EditSchedule::class, ['record' => $schedule->id]);
+    $sourceKey = collect($component->get('data.days'))->search(fn ($day) => (int) $day['day_of_week'] === 1);
+
+    $component
+        ->callFormComponentAction('days', 'copy_day', data: ['targets' => [2]], arguments: ['item' => $sourceKey])
+        ->assertHasNoFormComponentActionErrors();
+
+    $days = collect($component->get('data.days'))->keyBy('day_of_week');
+
+    expect($days[2]['is_active'])->toBeTrue()
+        ->and(Carbon::parse($days[2]['start_time'])->format('H:i'))->toBe('08:00')
+        ->and(Carbon::parse($days[2]['end_time'])->format('H:i'))->toBe('17:00')
+        ->and(collect($days[2]['breaks'])->pluck('name')->values()->all())->toBe(['Almuerzo'])
+        ->and((bool) $days[3]['is_active'])->toBeFalse();
+
+    $component->call('save');
+
+    expect($schedule->days()->where('day_of_week', 2)->first()->breaks()->count())->toBe(1);
+});
+
+it('el formulario de edición avisa a cuántos empleados afecta', function () {
+    $schedule = Schedule::create(['name' => 'Afecta', 'shift_type' => 'diurno']);
+    $schedule->days()->create(['day_of_week' => 1, 'is_active' => true, 'start_time' => '08:00', 'end_time' => '16:00']);
+    deactivationScheduleEmployee()->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth()]);
+
+    Livewire::test(EditSchedule::class, ['record' => $schedule->id])
+        ->assertSee('1 empleado tiene asignado este horario')
+        ->assertSee('1 día · 8 h netas por semana');
+});

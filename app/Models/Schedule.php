@@ -459,6 +459,45 @@ class Schedule extends Model implements Auditable
         ];
     }
 
+    /**
+     * Horas netas de un día tal como las entrega el estado del formulario (`start_time`, `end_time` y `breaks`):
+     * la jornada (la salida pasa al día siguiente si es igual o anterior a la entrada) menos los descansos.
+     * Devuelve null si faltan la entrada o la salida.
+     *
+     * @param  array<string, mixed>  $day
+     */
+    public static function netHoursFromState(array $day): ?float
+    {
+        if (blank($day['start_time'] ?? null) || blank($day['end_time'] ?? null)) {
+            return null;
+        }
+
+        $toMinutes = function (string $time): int {
+            $parsed = Carbon::parse($time);
+
+            return $parsed->hour * 60 + $parsed->minute;
+        };
+        $span = fn (string $from, string $to): int => ($toMinutes($to) - $toMinutes($from) + 1440) % 1440 ?: 1440;
+
+        $minutes = $span($day['start_time'], $day['end_time']);
+
+        foreach ($day['breaks'] ?? [] as $break) {
+            if (filled($break['start_time'] ?? null) && filled($break['end_time'] ?? null)) {
+                $minutes -= $span($break['start_time'], $break['end_time']);
+            }
+        }
+
+        return round(max($minutes, 0) / 60, 2);
+    }
+
+    /**
+     * Texto de horas, p. ej. «8 h» o «7,5 h».
+     */
+    public static function formatHours(float $hours): string
+    {
+        return rtrim(rtrim(number_format($hours, 2, ',', '.'), '0'), ',').' h';
+    }
+
     /** Indica si algún día con turno termina al día siguiente (p. ej. 23:00 a 07:00). */
     public function crossesMidnight(): bool
     {

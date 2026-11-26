@@ -43,6 +43,9 @@ Dentro del horario creado, la pestaña **Días** muestra los 7 días de la seman
 - **Activar** el día si es laboral (los días desactivados se tratan como descanso semanal)
 - Ingresar la **hora de entrada** y la **hora de salida** esperadas
 
+- **Copiar a otros días:** el ícono de copiar de cada día activo abre una ventana para elegir los días de destino (p. ej. cargar el lunes y copiarlo de martes a viernes). Copia la entrada, la salida y los descansos, activa los días elegidos y reemplaza lo que tuvieran cargado. Los cambios se guardan al guardar el horario.
+- **Horas netas:** bajo cada día activo se muestran sus horas netas (con los descansos descontados) y, arriba de la lista, el resumen semanal («6 días · 47 h netas por semana»).
+
 > Las horas netas del día se calculan automáticamente restando la duración de los descansos configurados.
 
 ### Configurar descansos
@@ -56,6 +59,9 @@ Desde la pestaña **Descansos** (o dentro de cada día), puede agregar pausas:
 El sistema descuenta automáticamente los minutos de descanso al calcular las horas trabajadas del día.
 
 ### Avisos del formulario
+
+- **Empleados afectados:** al editar un horario que tiene empleados asignados, un aviso al inicio indica cuántos son. Los cambios rigen desde hoy y las jornadas ya calculadas no cambian hasta recalcularlas.
+- **Nombre:** se guarda con la primera letra en mayúscula; el resto se respeta como se escribió.
 
 - **Tipo de jornada sugerido:** debajo del campo se indica el tipo que corresponde según las horas cargadas (diurno si no pasa de las 20:00 ni empieza antes de las 06:00; nocturno si algún día tiene 3,5 horas o más en la franja 20:00–06:00; mixto en el resto). Es solo una sugerencia: el tipo se elige a mano.
 - **Pocos días activos:** si el horario tiene uno o dos días activos, aparece un aviso. Quien lo tenga asignado se considera libre los demás días, así que un turno que se reparte en varios horarios por día conviene cargarlo en uno solo con todos sus días.
