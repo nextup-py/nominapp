@@ -4,6 +4,7 @@ use App\Filament\Resources\ScheduleResource\Pages\EditSchedule;
 use App\Filament\Resources\ScheduleResource\Pages\ListSchedules;
 use App\Filament\Resources\ScheduleResource\Pages\ViewSchedule;
 use App\Filament\Resources\ScheduleResource\RelationManagers\AssignmentsRelationManager;
+use App\Filament\Resources\ScheduleResource\RelationManagers\EmployeesRelationManager;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -187,4 +188,61 @@ it('una asignación que termina hoy, como la que deja Remover, no impide desacti
     expect($schedule->fresh()->deactivationBlockers())->toBe([])
         ->and($schedule->fresh()->update(['is_active' => false]))->toBeTrue()
         ->and($schedule->fresh()->is_active)->toBeFalse();
+});
+
+it('Remover con hoy saca a la persona de Empleados Asignados y la deja en el historial', function () {
+    $schedule = Schedule::create(['name' => 'Madrugada', 'shift_type' => 'nocturno']);
+    $employee = deactivationScheduleEmployee();
+    $assignment = $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonths(2)]);
+    $rm = ['ownerRecord' => $schedule, 'pageClass' => ViewSchedule::class];
+
+    Livewire::test(EmployeesRelationManager::class, $rm)
+        ->assertCanSeeTableRecords([$employee])
+        ->callTableAction('remove', $employee, ['valid_until' => today()->toDateString()])
+        ->assertHasNoTableActionErrors()
+        ->assertCanNotSeeTableRecords([$employee]);
+
+    expect($assignment->fresh()->valid_until->toDateString())->toBe(today()->toDateString())
+        ->and($schedule->fresh()->deactivationBlockers())->toBe([]);
+
+    Livewire::test(AssignmentsRelationManager::class, $rm)->assertCanSeeTableRecords([$assignment]);
+});
+
+it('Remover con una fecha futura programa el cambio y la persona sigue en la lista', function () {
+    $schedule = Schedule::create(['name' => 'Programado', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    $assignment = $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth()]);
+    $until = today()->addDays(5)->toDateString();
+
+    Livewire::test(EmployeesRelationManager::class, ['ownerRecord' => $schedule, 'pageClass' => ViewSchedule::class])
+        ->callTableAction('remove', $employee, ['valid_until' => $until])
+        ->assertCanSeeTableRecords([$employee]);
+
+    expect($assignment->fresh()->valid_until->toDateString())->toBe($until);
+});
+
+it('closeActive adelanta una asignación con fin posterior pero no alarga una ya cerrada antes', function () {
+    $schedule = Schedule::create(['name' => 'Cierre', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    $later = $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth(), 'valid_until' => now()->addMonth()]);
+
+    expect(ScheduleAssignmentService::closeActive($employee, Carbon::today()))->toBe(1)
+        ->and($later->fresh()->valid_until->toDateString())->toBe(today()->toDateString())
+        ->and(ScheduleAssignmentService::closeActive($employee, Carbon::today()->addDays(3)))->toBe(0)
+        ->and($later->fresh()->valid_until->toDateString())->toBe(today()->toDateString());
+});
+
+it('Remover seleccionados cierra varias asignaciones con la fecha elegida', function () {
+    $schedule = Schedule::create(['name' => 'Masivo', 'shift_type' => 'diurno']);
+    $a = deactivationScheduleEmployee();
+    $b = deactivationScheduleEmployee();
+    foreach ([$a, $b] as $e) {
+        $e->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth()]);
+    }
+
+    Livewire::test(EmployeesRelationManager::class, ['ownerRecord' => $schedule, 'pageClass' => ViewSchedule::class])
+        ->callTableBulkAction('remove', [$a, $b], ['valid_until' => today()->toDateString()])
+        ->assertCanNotSeeTableRecords([$a, $b]);
+
+    expect($schedule->fresh()->currentAssignmentsCount())->toBe(0);
 });

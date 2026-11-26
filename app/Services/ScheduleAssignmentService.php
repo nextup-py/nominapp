@@ -86,8 +86,8 @@ class ScheduleAssignmentService
     }
 
     /**
-     * Cierra la asignación activa de un empleado en una fecha dada.
-     * No hace nada si el empleado no tiene asignación abierta.
+     * Cierra la asignación activa de un empleado en una fecha dada: la abierta (sin fin) o la que tenía un fin
+     * posterior, que se adelanta. No hace nada si no tiene una asignación que siga rigiendo después de esa fecha.
      *
      * @param  Carbon  $closedOn  Último día de vigencia (inclusive).
      * @return int Número de registros actualizados (0 o 1).
@@ -95,7 +95,7 @@ class ScheduleAssignmentService
     public static function closeActive(Employee $employee, Carbon $closedOn): int
     {
         return $employee->scheduleAssignments()
-            ->whereNull('valid_until')
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>', $closedOn->toDateString()))
             ->where('valid_from', '<=', $closedOn)
             ->update(['valid_until' => $closedOn]);
     }

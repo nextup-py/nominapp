@@ -113,7 +113,9 @@ class Schedule extends Model
     }
 
     /**
-     * Empleados con asignación activa a este horario hoy (nuevo sistema).
+     * Empleados que siguen asignados a este horario después de hoy (nuevo sistema): sin fecha de fin o con fin
+     * posterior a hoy. Quien ya tiene la asignación cerrada con fecha de hoy (lo que deja «Remover») no figura,
+     * aunque hoy todavía trabaje con este horario; queda en el historial de asignaciones.
      */
     public function currentEmployees(): HasManyThrough
     {
@@ -130,7 +132,7 @@ class Schedule extends Model
             ->where('employee_schedule_assignments.valid_from', '<=', $today)
             ->where(fn ($q) => $q
                 ->whereNull('employee_schedule_assignments.valid_until')
-                ->orWhere('employee_schedule_assignments.valid_until', '>=', $today)
+                ->orWhere('employee_schedule_assignments.valid_until', '>', $today)
             );
     }
 

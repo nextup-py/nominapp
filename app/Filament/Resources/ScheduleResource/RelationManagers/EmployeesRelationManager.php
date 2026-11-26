@@ -9,6 +9,8 @@ use App\Models\Branch;
 use App\Models\Employee;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
+use Filament\Forms\Components\Component;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -259,17 +261,20 @@ class EmployeesRelationManager extends RelationManager
                     ->label('Remover')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->requiresConfirmation()
                     ->modalHeading('Remover Empleado del Horario')
-                    ->modalDescription(fn ($record) => "¿Está seguro de que desea remover a {$record->full_name} de este horario?")
+                    ->modalDescription(fn ($record) => "{$record->full_name} dejará de tener este horario. La asignación queda en el historial.")
+                    ->form(self::removalFields())
                     ->modalSubmitActionLabel('Sí, remover')
-                    ->action(function (Employee $record) {
-                        ScheduleAssignmentService::closeActive($record, Carbon::today());
+                    ->action(function (Employee $record, array $data) {
+                        $until = Carbon::parse($data['valid_until']);
+                        $closed = ScheduleAssignmentService::closeActive($record, $until);
 
                         Notification::make()
-                            ->success()
-                            ->title('Empleado removido')
-                            ->body("Se cerró la asignación de {$record->full_name} con fecha de hoy.")
+                            ->{$closed > 0 ? 'success' : 'warning'}()
+                            ->title($closed > 0 ? 'Empleado removido' : 'No se pudo remover')
+                            ->body($closed > 0
+                                ? "{$record->full_name} tendrá este horario hasta el {$until->format('d/m/Y')} inclusive."
+                                : 'La fecha elegida es anterior al inicio de la asignación.')
                             ->send();
                     }),
             ])
@@ -278,21 +283,25 @@ class EmployeesRelationManager extends RelationManager
                     ->label('Remover seleccionados')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->requiresConfirmation()
                     ->modalHeading('Remover Empleados del Horario')
-                    ->modalDescription('¿Está seguro de que desea remover los empleados seleccionados de este horario?')
+                    ->modalDescription('Los empleados seleccionados dejarán de tener este horario. Las asignaciones quedan en el historial.')
+                    ->form(self::removalFields())
                     ->modalSubmitActionLabel('Sí, remover')
-                    ->action(function ($records) {
-                        $count = $records->count();
+                    ->action(function ($records, array $data) {
+                        $until = Carbon::parse($data['valid_until']);
+                        $closed = 0;
 
                         foreach ($records as $record) {
-                            ScheduleAssignmentService::closeActive($record, Carbon::today());
+                            $closed += ScheduleAssignmentService::closeActive($record, $until);
                         }
+
+                        $skipped = $records->count() - $closed;
 
                         Notification::make()
                             ->success()
                             ->title('Empleados removidos')
-                            ->body("Se cerró la asignación de {$count} empleado(s) con fecha de hoy.")
+                            ->body("Se cerró la asignación de {$closed} empleado(s); tendrán este horario hasta el {$until->format('d/m/Y')} inclusive."
+                                .($skipped > 0 ? " {$skipped} no se modificaron (la fecha es anterior al inicio de su asignación)." : ''))
                             ->send();
                     }),
             ])
@@ -300,5 +309,23 @@ class EmployeesRelationManager extends RelationManager
             ->emptyStateHeading('No hay empleados asignados')
             ->emptyStateDescription('Comience asignando empleados a este horario. Los empleados que se quitaron figuran en «Historial de asignaciones».')
             ->emptyStateIcon('heroicon-o-user-group');
+    }
+
+    /**
+     * Campo de las acciones de remover: último día en que la persona conserva este horario (inclusive).
+     * Por defecto hoy; una fecha futura programa el cambio.
+     *
+     * @return array<int, Component>
+     */
+    private static function removalFields(): array
+    {
+        return [
+            DatePicker::make('valid_until')
+                ->label('Tiene este horario hasta')
+                ->helperText('Último día, inclusive. Con hoy o una fecha pasada deja de figurar en esta lista; una fecha futura programa el cambio.')
+                ->default(Carbon::today())
+                ->native(false)
+                ->required(),
+        ];
     }
 }
