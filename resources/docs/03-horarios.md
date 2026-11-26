@@ -28,7 +28,13 @@ El tipo de jornada determina las horas mensuales de referencia y los multiplicad
 3. Ingresar el nombre (ej: "Administrativo 08:00–17:00"; no puede repetirse con el de otro horario) y seleccionar el tipo de jornada
 4. Guardar
 
-![Detalle de un horario con sus días configurados](/docs-images/03-horario-detalle.png)
+![Detalle de un horario con su resumen semanal y la tabla de días](/docs-images/03-horario-detalle.png)
+
+### Detalle del horario
+
+El detalle muestra, en **Información General**, el tipo de jornada, el estado y un resumen: la **jornada semanal** (días con turno y horas netas por semana, p. ej. «6 días · 47 h por semana», con los descansos ya descontados), los **empleados asignados** hoy (o «Sin empleados asignados») y, si algún día termina al día siguiente, la etiqueta **Cruza medianoche**. **Configuración de Días** es una tabla de una fila por día con entrada, salida (con «día siguiente» si cruza medianoche), descansos y horas netas; los días sin turno figuran como **Libre**.
+
+En el encabezado, **Editar** queda a la vista y el menú **Más acciones** agrupa **Duplicar** y, al final y en rojo, **Desactivar** (o **Activar** si está inactivo).
 
 ### Configurar los días del horario
 
@@ -36,6 +42,9 @@ Dentro del horario creado, la pestaña **Días** muestra los 7 días de la seman
 
 - **Activar** el día si es laboral (los días desactivados se tratan como descanso semanal)
 - Ingresar la **hora de entrada** y la **hora de salida** esperadas
+
+- **Copiar a otros días:** el ícono de copiar de cada día activo abre una ventana para elegir los días de destino (p. ej. cargar el lunes y copiarlo de martes a viernes). Copia la entrada, la salida y los descansos, activa los días elegidos y reemplaza lo que tuvieran cargado. Los cambios se guardan al guardar el horario.
+- **Horas netas:** bajo cada día activo se muestran sus horas netas (con los descansos descontados) y, arriba de la lista, el resumen semanal («6 días · 47 h netas por semana»).
 
 > Las horas netas del día se calculan automáticamente restando la duración de los descansos configurados.
 
@@ -51,29 +60,57 @@ El sistema descuenta automáticamente los minutos de descanso al calcular las ho
 
 ### Avisos del formulario
 
+- **Empleados afectados:** al editar un horario que tiene empleados asignados, un aviso al inicio indica cuántos son. Los cambios rigen desde hoy y las jornadas ya calculadas no cambian hasta recalcularlas.
+- **Nombre:** se guarda con la primera letra en mayúscula; el resto se respeta como se escribió.
+
 - **Tipo de jornada sugerido:** debajo del campo se indica el tipo que corresponde según las horas cargadas (diurno si no pasa de las 20:00 ni empieza antes de las 06:00; nocturno si algún día tiene 3,5 horas o más en la franja 20:00–06:00; mixto en el resto). Es solo una sugerencia: el tipo se elige a mano.
 - **Pocos días activos:** si el horario tiene uno o dos días activos, aparece un aviso. Quien lo tenga asignado se considera libre los demás días, así que un turno que se reparte en varios horarios por día conviene cargarlo en uno solo con todos sus días.
 
 ![Formulario de un horario con el tipo de jornada sugerido y el aviso de pocos días activos](/docs-images/03-horario-formulario.png)
 
+### Listado de horarios
+
+Cada fila muestra el nombre, el estado, el tipo de jornada, el **Resumen semanal** (p. ej. «6 días · 47 h por semana», con la marca «Cruza la medianoche» si algún día termina al día siguiente) y los empleados asignados hoy. Arriba hay pestañas **Activos** / **Inactivos** / **Todos** y filtros por tipo de jornada y por empleados asignados.
+
+En cada fila, **Asignar a Empleados** está a la vista; **Duplicar** y **Desactivar** están en el menú de tres puntos. En la ventana de asignación, el filtro de sucursal ofrece solo sucursales activas y un texto bajo **Empleados** indica cuántos quedan disponibles. **Exportar** descarga solo los horarios que muestra el listado (según pestaña, filtros y búsqueda).
+
+Para cambiar el estado de varios horarios a la vez, seleccionarlos y usar **Desactivar seleccionados** o **Activar seleccionados**. Al desactivar se omiten los que tienen asignaciones vigentes o futuras y los que ya estaban inactivos; la notificación informa cuántos se cambiaron y cuántos se omitieron.
+
+> **Permisos:** asignar y quitar empleados (en el listado y en las pestañas del detalle) requiere el permiso de edición de horarios; quien solo puede ver horarios no ve esos botones, pero sí puede exportar. La búsqueda global (**Ctrl+K**) encuentra horarios por nombre, incluidos los inactivos, y abre su detalle.
+
 ### Duplicar un horario
 
-La acción **Duplicar** (en el listado y en el detalle del horario) copia los días, horas y descansos con un nombre nuevo, para partir de un horario parecido en vez de armarlo desde cero. No copia los empleados asignados. Requiere permiso para crear horarios.
+La acción **Duplicar** (en el listado y, en el detalle del horario, dentro de **Más acciones**) copia los días, horas y descansos con un nombre nuevo, para partir de un horario parecido en vez de armarlo desde cero. No copia los empleados asignados. Requiere permiso para crear horarios.
 
 ![Ventana Duplicar horario con el nombre propuesto](/docs-images/03-horario-duplicar.png)
 
+### Pestañas del detalle
+
+Debajo de la tabla de días, el detalle del horario tiene cuatro pestañas:
+
+| Pestaña | Qué muestra |
+|---------|-------------|
+| **Empleados Asignados** | Quienes tienen el horario hoy, con **Vigente desde** y **Hasta** (la fecha de fin programada, o «Sin fecha de fin»). Filtros por sucursal, cargo y departamento. La columna **Empresa** solo aparece si hay más de una empresa activa. Acciones **Asignar**, **Remover** y **Exportar**. |
+| **Historial de asignaciones** | Todas las asignaciones del horario (vigentes, futuras y finalizadas), con las notas de cada una. Filtros por **Empleado**, por **Estado** y por **Tuvo el horario entre** (dos fechas: muestra quien lo tuvo en algún momento de ese período). **Exportar** descarga a Excel lo que muestra la lista, con los filtros aplicados. |
+| **Cargos con este horario** | Los cargos que lo tienen como horario sugerido (solo lectura; clic en un cargo abre su ficha). Sirve para saber qué cargos se ven afectados antes de cambiar o desactivar el horario. |
+| **Historial de cambios** | Quién modificó el nombre, la descripción, el tipo de jornada, el estado o los días, horas y descansos, y cuándo, con los valores anteriores y los nuevos. Los cambios de días muestran solo los días que cambiaron. |
+
+![Pestaña Historial de cambios de un horario](/docs-images/03-horario-historial.png)
+
+> El historial de cambios registra desde que se instaló esta versión: los cambios anteriores no figuran.
+
 ### Eliminar o desactivar un horario
 
-Un horario con asignaciones de empleados —vigentes **o finalizadas**— o usado como horario fijo de algún empleado **no se puede eliminar** y el botón **Eliminar** ni aparece (solo **Desactivar**): borrarlo perdería el historial con el que se calculan las jornadas pasadas. Quitar a un empleado de un horario (**Remover**) solo cierra su asignación con la fecha de hoy; la asignación finalizada sigue contando y por eso el horario no se puede eliminar aunque ya no tenga a nadie.
+Un horario con asignaciones de empleados —vigentes **o finalizadas**— o usado como horario fijo de algún empleado **no se puede eliminar** y el botón **Eliminar** ni aparece (solo **Desactivar**): borrarlo perdería el historial con el que se calculan las jornadas pasadas. Quitar a un empleado de un horario (**Remover**) solo cierra su asignación (en la fecha que se elija, hoy por defecto); la asignación finalizada sigue contando y por eso el horario no se puede eliminar aunque ya no tenga a nadie.
 
 Para dejar de usar un horario sin perder el historial, **desactivarlo**:
 
-- **Desactivar** está en el listado, en el detalle y en el interruptor **Activo** del formulario de edición.
+- **Desactivar** está en el listado, en el detalle (menú **Más acciones**) y en el interruptor **Activo** del formulario de edición.
 - Un horario inactivo **no se ofrece** al asignar horarios a empleados, ni como horario inicial del alta, ni como horario sugerido de un cargo, ni en la sugerencia según marcaciones. Sigue valiendo para quienes ya lo tienen asignado y no se pierde ningún dato.
-- Solo se puede desactivar si **no tiene asignaciones vigentes ni futuras** ni empleados con ese horario fijo. Las asignaciones finalizadas no lo impiden. Si las tiene, primero hay que asignar a esos empleados otro horario.
-- El listado muestra por defecto solo los activos; el filtro **Estado** permite ver los inactivos y **Activar** vuelve a ofrecerlo.
+- Solo se puede desactivar si **no tiene asignaciones vigentes ni futuras** ni empleados con ese horario fijo. Las asignaciones finalizadas no lo impiden, y tampoco una que termina hoy (lo que deja **Remover** con la fecha de hoy). Si las tiene, primero hay que asignar a esos empleados otro horario.
+- El listado abre en la pestaña **Activos**; las pestañas **Inactivos** y **Todos** (con su cantidad) permiten ver el resto, y **Activar** vuelve a ofrecer el horario.
 
-La pestaña **Historial de asignaciones** del horario lista todas sus asignaciones (empleado, desde, hasta, estado —Vigente, Futura o Finalizada— y quién la asignó), y permite ver qué impide eliminarlo. La pestaña **Empleados** muestra solo las asignaciones vigentes.
+La pestaña **Historial de asignaciones** del horario lista todas sus asignaciones (empleado, desde, hasta, estado —Vigente, Futura o Finalizada— y quién la asignó), y permite ver qué impide eliminarlo. La pestaña **Empleados Asignados** muestra solo las asignaciones que siguen vigentes después de hoy.
 
 ## Asignar un horario a un empleado
 
@@ -86,7 +123,7 @@ La asignación se hace **desde el horario, no desde el perfil del empleado**:
 
 En el mismo formulario se elige **Rige desde** (por defecto hoy), **Hasta** (opcional) y notas. Una fecha futura programa el cambio: el horario actual sigue vigente hasta el día anterior. Los días ya calculados no se recalculan solos: para que las jornadas ya registradas tomen el horario nuevo, active **Recalcular las jornadas ya registradas desde esa fecha** (solo con fecha de inicio de hoy o anterior).
 
-> Si alguno de los empleados seleccionados ya tiene un horario vigente, se muestra una advertencia (⚠) — al confirmar, ese horario anterior se cierra automáticamente (el día anterior a **Rige desde**) y el nuevo queda vigente desde esa fecha.
+> Si alguno de los empleados seleccionados ya tiene un horario vigente, se indica junto a su nombre (**— hoy: nombre del horario**) — al confirmar, ese horario anterior se cierra automáticamente (el día anterior a **Rige desde**) y el nuevo queda vigente desde esa fecha.
 
 ### Recalcular jornadas ya registradas
 
@@ -109,7 +146,7 @@ También se puede asignar sin abrir el horario. En **Empleados**, menú de la fi
 
 Para encontrar a quienes **no tienen horario fijo, rotación ni turnos planificados** (los turnos cargados en el Planificador en los últimos 14 días o a futuro cuentan como horario), use el filtro **Sin horario asignado** del listado de Empleados. El mismo aviso aparece (con un enlace al **Planificador de Turnos** para quienes se organizan por turnos) como tarjeta **Empleados sin horario** en **Asistencias → Por resolver** y como mensaje bajo el título de **Asistencias**, con enlace al listado ya filtrado.
 
-Para quitar la asignación de un empleado sin darle otro horario, usar **Remover** en la fila del empleado (o la acción masiva "Remover seleccionados") — esto cierra la asignación con fecha de hoy, sin eliminar el historial (queda en la pestaña **Historial de asignaciones** del horario).
+Para quitar la asignación de un empleado sin darle otro horario, usar **Remover** en la fila del empleado (o la acción masiva "Remover seleccionados") — pide hasta qué fecha conserva el horario (hoy por defecto, inclusive; una fecha futura programa el cambio) y cierra la asignación sin eliminar el historial. Con hoy o una fecha pasada la persona deja de figurar en **Empleados Asignados** y queda en la pestaña **Historial de asignaciones** del horario.
 
 > Un empleado puede tener historial de asignaciones. El sistema usa automáticamente la asignación vigente en la fecha de cada marcación para calcular la asistencia.
 

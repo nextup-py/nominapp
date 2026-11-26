@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Schedule;
+use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -11,16 +12,25 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /** Exporta el listado de horarios con sus días activos y empleados asignados. */
-class SchedulesExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class SchedulesExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMapping, WithStyles
 {
+    /**
+     * @param  array<int, int>|null  $ids  Horarios a exportar (los del listado filtrado); null = todos.
+     */
+    public function __construct(protected ?array $ids = null) {}
+
     /**
      * Query base con relaciones necesarias para el mapeo.
      *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public function query()
     {
-        return Schedule::withCount(['activeDays', 'currentEmployees'])->orderBy('name');
+        return Schedule::query()
+            ->with('days.breaks')
+            ->withCount('currentEmployees')
+            ->when($this->ids !== null, fn ($query) => $query->whereIn('schedules.id', $this->ids))
+            ->orderBy('name');
     }
 
     /**
@@ -33,7 +43,8 @@ class SchedulesExport implements FromQuery, WithHeadings, WithMapping, WithStyle
         return [
             'Nombre',
             'Tipo de Jornada',
-            'Días Activos',
+            'Estado',
+            'Resumen semanal',
             'Empleados Asignados',
             'Descripción',
             'Creado',
@@ -51,7 +62,8 @@ class SchedulesExport implements FromQuery, WithHeadings, WithMapping, WithStyle
         return [
             $schedule->name,
             Schedule::getShiftTypeLabels()[$schedule->shift_type] ?? $schedule->shift_type,
-            $schedule->active_days_count,
+            $schedule->is_active ? 'Activo' : 'Inactivo',
+            $schedule->weeklySummaryLabel(),
             $schedule->current_employees_count,
             $schedule->description ?? '—',
             $schedule->created_at->format('d/m/Y'),
@@ -61,7 +73,6 @@ class SchedulesExport implements FromQuery, WithHeadings, WithMapping, WithStyle
     /**
      * Aplica negrita a la fila de encabezados.
      *
-     * @param  Worksheet  $sheet
      * @return array<int, array<string, mixed>>
      */
     public function styles(Worksheet $sheet): array

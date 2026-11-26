@@ -1,17 +1,25 @@
 <?php
 
+use App\Exports\SchedulesExport;
+use App\Filament\Resources\ScheduleResource;
 use App\Filament\Resources\ScheduleResource\Pages\EditSchedule;
 use App\Filament\Resources\ScheduleResource\Pages\ListSchedules;
 use App\Filament\Resources\ScheduleResource\Pages\ViewSchedule;
 use App\Filament\Resources\ScheduleResource\RelationManagers\AssignmentsRelationManager;
+use App\Filament\Resources\ScheduleResource\RelationManagers\EmployeesRelationManager;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeScheduleAssignment;
 use App\Models\Schedule;
 use App\Models\User;
+use App\Services\ScheduleAssignmentService;
+use App\Support\PanelGlobalSearchProvider;
+use Carbon\Carbon;
+use Filament\Actions\ActionGroup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
@@ -64,7 +72,6 @@ it('no se puede desactivar con asignaciones vigentes o futuras', function (?stri
         ->and($schedule->fresh()->is_active)->toBeTrue();
 })->with([
     'vigente sin fin' => [null, null],
-    'vigente que termina hoy' => [null, 'today'],
     'futura' => ['tomorrow', null],
 ]);
 
@@ -86,7 +93,7 @@ it('el estado de una asignación sale de sus fechas', function () {
         ->and($make(now()->addDay(), null)->status())->toBe(EmployeeScheduleAssignment::STATUS_UPCOMING);
 });
 
-it('el listado oculta los inactivos por defecto y la acción Desactivar funciona', function () {
+it('el listado abre en Activos, la pestaña Inactivos los muestra y la acción Desactivar funciona', function () {
     $active = Schedule::create(['name' => 'Activo uno', 'shift_type' => 'diurno']);
     $inactive = Schedule::create(['name' => 'Inactivo uno', 'shift_type' => 'diurno', 'is_active' => false]);
 
@@ -98,7 +105,7 @@ it('el listado oculta los inactivos por defecto y la acción Desactivar funciona
     expect($active->fresh()->is_active)->toBeFalse();
 
     Livewire::test(ListSchedules::class)
-        ->removeTableFilter('is_active')
+        ->set('activeTab', 'all')
         ->assertCanSeeTableRecords([$active, $inactive])
         ->callTableAction('toggle_status', $inactive);
 
@@ -172,4 +179,303 @@ it('el aviso de bloqueo de un horario concuerda en singular', function () {
     ]);
 
     expect($schedule->deletionBlockersSummary())->toContain('1 asignación de empleado (vigente o finalizada)');
+});
+
+it('una asignación que termina hoy, como la que deja Remover, no impide desactivar', function () {
+    $schedule = Schedule::create(['name' => 'Madrugada', 'shift_type' => 'nocturno']);
+    $employee = deactivationScheduleEmployee();
+    $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonths(2), 'valid_until' => null]);
+
+    expect($schedule->deactivationBlockers())->not->toBe([]);
+
+    ScheduleAssignmentService::closeActive($employee, Carbon::today());
+
+    expect($schedule->fresh()->deactivationBlockers())->toBe([])
+        ->and($schedule->fresh()->update(['is_active' => false]))->toBeTrue()
+        ->and($schedule->fresh()->is_active)->toBeFalse();
+});
+
+it('Remover con hoy saca a la persona de Empleados Asignados y la deja en el historial', function () {
+    $schedule = Schedule::create(['name' => 'Madrugada', 'shift_type' => 'nocturno']);
+    $employee = deactivationScheduleEmployee();
+    $assignment = $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonths(2)]);
+    $rm = ['ownerRecord' => $schedule, 'pageClass' => ViewSchedule::class];
+
+    Livewire::test(EmployeesRelationManager::class, $rm)
+        ->assertCanSeeTableRecords([$employee])
+        ->callTableAction('remove', $employee, ['valid_until' => today()->toDateString()])
+        ->assertHasNoTableActionErrors()
+        ->assertCanNotSeeTableRecords([$employee]);
+
+    expect($assignment->fresh()->valid_until->toDateString())->toBe(today()->toDateString())
+        ->and($schedule->fresh()->deactivationBlockers())->toBe([]);
+
+    Livewire::test(AssignmentsRelationManager::class, $rm)->assertCanSeeTableRecords([$assignment]);
+});
+
+it('Remover con una fecha futura programa el cambio y la persona sigue en la lista', function () {
+    $schedule = Schedule::create(['name' => 'Programado', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    $assignment = $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth()]);
+    $until = today()->addDays(5)->toDateString();
+
+    Livewire::test(EmployeesRelationManager::class, ['ownerRecord' => $schedule, 'pageClass' => ViewSchedule::class])
+        ->callTableAction('remove', $employee, ['valid_until' => $until])
+        ->assertCanSeeTableRecords([$employee]);
+
+    expect($assignment->fresh()->valid_until->toDateString())->toBe($until);
+});
+
+it('closeActive adelanta una asignación con fin posterior pero no alarga una ya cerrada antes', function () {
+    $schedule = Schedule::create(['name' => 'Cierre', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    $later = $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth(), 'valid_until' => now()->addMonth()]);
+
+    expect(ScheduleAssignmentService::closeActive($employee, Carbon::today()))->toBe(1)
+        ->and($later->fresh()->valid_until->toDateString())->toBe(today()->toDateString())
+        ->and(ScheduleAssignmentService::closeActive($employee, Carbon::today()->addDays(3)))->toBe(0)
+        ->and($later->fresh()->valid_until->toDateString())->toBe(today()->toDateString());
+});
+
+it('Remover seleccionados cierra varias asignaciones con la fecha elegida', function () {
+    $schedule = Schedule::create(['name' => 'Masivo', 'shift_type' => 'diurno']);
+    $a = deactivationScheduleEmployee();
+    $b = deactivationScheduleEmployee();
+    foreach ([$a, $b] as $e) {
+        $e->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth()]);
+    }
+
+    Livewire::test(EmployeesRelationManager::class, ['ownerRecord' => $schedule, 'pageClass' => ViewSchedule::class])
+        ->callTableBulkAction('remove', [$a, $b], ['valid_until' => today()->toDateString()])
+        ->assertCanNotSeeTableRecords([$a, $b]);
+
+    expect($schedule->fresh()->currentAssignmentsCount())->toBe(0);
+});
+
+/** Horario de prueba con días activos (lunes a sábado 23:00–07:00 con un descanso) y el domingo libre. */
+function nightScheduleForView(): Schedule
+{
+    $schedule = Schedule::create(['name' => 'Madrugada vista', 'shift_type' => 'nocturno']);
+
+    foreach (range(1, 7) as $dow) {
+        $day = $schedule->days()->create(['day_of_week' => $dow, 'is_active' => $dow <= 6, 'start_time' => '23:00', 'end_time' => '07:00']);
+
+        if ($dow === 1) {
+            $day->breaks()->create(['name' => 'Cena', 'start_time' => '02:00', 'end_time' => '03:00']);
+        }
+    }
+
+    return $schedule->fresh();
+}
+
+it('el resumen semanal cuenta días con turno y horas netas', function () {
+    $schedule = nightScheduleForView()->load('days.breaks');
+
+    expect($schedule->weeklySummary())->toBe(['days' => 6, 'hours' => 47.0])
+        ->and($schedule->weeklySummaryLabel())->toBe('6 días · 47 h por semana')
+        ->and($schedule->crossesMidnight())->toBeTrue();
+
+    $diurno = Schedule::create(['name' => 'Diurno vista', 'shift_type' => 'diurno']);
+    $diurno->days()->create(['day_of_week' => 1, 'is_active' => true, 'start_time' => '08:00', 'end_time' => '12:00']);
+
+    expect($diurno->fresh()->load('days.breaks')->crossesMidnight())->toBeFalse()
+        ->and($diurno->fresh()->load('days.breaks')->weeklySummaryLabel())->toBe('1 día · 4 h por semana')
+        ->and(Schedule::create(['name' => 'Vacío', 'shift_type' => 'diurno'])->load('days.breaks')->weeklySummaryLabel())->toBe('Sin días con turno');
+});
+
+it('la vista del horario muestra el resumen, la tabla de días y el cruce de medianoche', function () {
+    $schedule = nightScheduleForView();
+    deactivationScheduleEmployee()->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subWeek()]);
+
+    Livewire::test(ViewSchedule::class, ['record' => $schedule->getKey()])
+        ->assertSee('6 días · 47 h por semana')
+        ->assertSee('1 empleado')
+        ->assertSee('Cruza medianoche')
+        ->assertSee('Cena 02:00–03:00')
+        ->assertSee('Libre')
+        ->assertSee('(día siguiente)');
+});
+
+it('un horario sin empleados lo dice en el resumen', function () {
+    $schedule = Schedule::create(['name' => 'Sin gente', 'shift_type' => 'diurno']);
+
+    Livewire::test(ViewSchedule::class, ['record' => $schedule->getKey()])
+        ->assertSee('Sin empleados asignados');
+});
+
+it('Duplicar y Desactivar van en «Más acciones» y Editar queda a la vista', function () {
+    $schedule = nightScheduleForView();
+
+    $component = Livewire::test(ViewSchedule::class, ['record' => $schedule->getKey()]);
+    $headerActions = $component->instance()->getCachedHeaderActions();
+
+    $group = collect($headerActions)->first(fn ($action) => $action instanceof ActionGroup);
+    expect($group)->not->toBeNull()
+        ->and($group->getLabel())->toBe('Más acciones')
+        ->and(collect($group->getFlatActions())->keys()->all())->toBe(['duplicate', 'toggle_status'])
+        ->and(collect($headerActions)->reject(fn ($action) => $action instanceof ActionGroup)->map->getName()->values()->all())->toBe(['edit']);
+});
+
+it('el listado muestra el resumen semanal y la marca de cruce de medianoche', function () {
+    $schedule = Schedule::create(['name' => 'Cena', 'shift_type' => 'nocturno']);
+    $schedule->days()->create(['day_of_week' => 1, 'is_active' => true, 'start_time' => '23:00', 'end_time' => '07:00']);
+
+    Livewire::test(ListSchedules::class)
+        ->assertCanSeeTableRecords([$schedule])
+        ->assertSee('1 día · 8 h por semana')
+        ->assertSee('Cruza la medianoche');
+});
+
+it('las pestañas del listado cuentan activos e inactivos', function () {
+    Schedule::create(['name' => 'Act A', 'shift_type' => 'diurno']);
+    Schedule::create(['name' => 'Inact A', 'shift_type' => 'diurno', 'is_active' => false]);
+    $inactive = Schedule::where('name', 'Inact A')->first();
+
+    Livewire::test(ListSchedules::class)
+        ->assertSet('activeTab', 'active')
+        ->set('activeTab', 'inactive')
+        ->assertCanSeeTableRecords([$inactive])
+        ->assertCanNotSeeTableRecords(Schedule::where('is_active', true)->get());
+});
+
+it('Exportar incluye solo los horarios del listado filtrado', function () {
+    $active = Schedule::create(['name' => 'Exp activo', 'shift_type' => 'diurno']);
+    $inactive = Schedule::create(['name' => 'Exp inactivo', 'shift_type' => 'diurno', 'is_active' => false]);
+
+    $rows = (new SchedulesExport([$active->id]))->query()->pluck('name')->all();
+
+    expect($rows)->toBe(['Exp activo'])
+        ->and((new SchedulesExport)->query()->pluck('name')->all())->toContain('Exp inactivo');
+});
+
+it('Asignar a Empleados ofrece empleados sin emoji y con el horario actual indicado', function () {
+    $schedule = Schedule::create(['name' => 'Nuevo', 'shift_type' => 'diurno']);
+    $other = Schedule::create(['name' => 'Actual', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    $employee->scheduleAssignments()->create(['schedule_id' => $other->id, 'valid_from' => now()->subMonth()]);
+
+    $options = ScheduleResource::assignableEmployees($schedule->id);
+
+    expect($options)->toHaveKey($employee->id)
+        ->and($options[$employee->id])->toContain('hoy: Actual')->not->toContain('⚠')
+        ->and(ScheduleResource::assignableEmployees($other->id))->not->toHaveKey($employee->id);
+});
+
+it('calcula las horas netas de un día del formulario descontando descansos y cruce de medianoche', function () {
+    expect(Schedule::netHoursFromState(['start_time' => '08:00', 'end_time' => '17:00', 'breaks' => [['start_time' => '12:00:00', 'end_time' => '13:00:00']]]))->toBe(8.0)
+        ->and(Schedule::netHoursFromState(['start_time' => '23:00:00', 'end_time' => '07:00:00']))->toBe(8.0)
+        ->and(Schedule::netHoursFromState(['start_time' => '08:00', 'end_time' => null]))->toBeNull()
+        ->and(Schedule::formatHours(7.5))->toBe('7,5 h')
+        ->and(Schedule::formatHours(8.0))->toBe('8 h');
+});
+
+it('el nombre solo pone en mayúscula la primera letra', function () {
+    expect(ScheduleResource::capitalizeName('  turno de la mañana '))->toBe('Turno de la mañana')
+        ->and(ScheduleResource::capitalizeName('árbol'))->toBe('Árbol');
+});
+
+it('Copiar a otros días copia entrada, salida y descansos y activa los días elegidos', function () {
+    $schedule = Schedule::create(['name' => 'Base', 'shift_type' => 'diurno']);
+    foreach (range(1, 3) as $dow) {
+        $schedule->days()->create(['day_of_week' => $dow, 'is_active' => $dow === 1, 'start_time' => $dow === 1 ? '08:00' : null, 'end_time' => $dow === 1 ? '17:00' : null]);
+    }
+    $schedule->days()->where('day_of_week', 1)->first()->breaks()->create(['name' => 'Almuerzo', 'start_time' => '12:00', 'end_time' => '13:00']);
+
+    $component = Livewire::test(EditSchedule::class, ['record' => $schedule->id]);
+    $sourceKey = collect($component->get('data.days'))->search(fn ($day) => (int) $day['day_of_week'] === 1);
+
+    $component
+        ->callFormComponentAction('days', 'copy_day', data: ['targets' => [2]], arguments: ['item' => $sourceKey])
+        ->assertHasNoFormComponentActionErrors();
+
+    $days = collect($component->get('data.days'))->keyBy('day_of_week');
+
+    expect($days[2]['is_active'])->toBeTrue()
+        ->and(Carbon::parse($days[2]['start_time'])->format('H:i'))->toBe('08:00')
+        ->and(Carbon::parse($days[2]['end_time'])->format('H:i'))->toBe('17:00')
+        ->and(collect($days[2]['breaks'])->pluck('name')->values()->all())->toBe(['Almuerzo'])
+        ->and((bool) $days[3]['is_active'])->toBeFalse();
+
+    $component->call('save');
+
+    expect($schedule->days()->where('day_of_week', 2)->first()->breaks()->count())->toBe(1);
+});
+
+it('el formulario de edición avisa a cuántos empleados afecta', function () {
+    $schedule = Schedule::create(['name' => 'Afecta', 'shift_type' => 'diurno']);
+    $schedule->days()->create(['day_of_week' => 1, 'is_active' => true, 'start_time' => '08:00', 'end_time' => '16:00']);
+    deactivationScheduleEmployee()->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth()]);
+
+    Livewire::test(EditSchedule::class, ['record' => $schedule->id])
+        ->assertSee('1 empleado tiene asignado este horario')
+        ->assertSee('1 día · 8 h netas por semana');
+});
+
+/** Usuario que solo puede ver horarios (sin update_schedule). */
+function readOnlyScheduleUser(): User
+{
+    foreach (['view_any_schedule', 'view_schedule'] as $name) {
+        Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+    }
+
+    $role = Role::firstOrCreate(['name' => 'Lector de horarios', 'guard_name' => 'web']);
+    $role->syncPermissions(['view_any_schedule', 'view_schedule']);
+
+    return tap(User::factory()->create(), fn (User $user) => $user->assignRole($role));
+}
+
+it('un usuario de solo lectura no ve las acciones de asignar ni remover', function () {
+    $schedule = Schedule::create(['name' => 'Solo lectura', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth()]);
+
+    $this->actingAs(readOnlyScheduleUser());
+
+    Livewire::test(ListSchedules::class)
+        ->assertTableActionHidden('assignToEmployees', $schedule)
+        ->assertTableBulkActionHidden('deactivate_bulk');
+
+    Livewire::test(EmployeesRelationManager::class, [
+        'ownerRecord' => $schedule,
+        'pageClass' => ViewSchedule::class,
+    ])
+        ->assertTableActionHidden('assign')
+        ->assertTableActionHidden('remove', $employee)
+        ->assertTableActionVisible('export');
+});
+
+it('la acción masiva Desactivar omite los horarios con asignaciones vigentes y los ya inactivos', function () {
+    $free = Schedule::create(['name' => 'Libre', 'shift_type' => 'diurno']);
+    $busy = Schedule::create(['name' => 'Ocupado bulk', 'shift_type' => 'diurno']);
+    $already = Schedule::create(['name' => 'Ya inactivo', 'shift_type' => 'diurno', 'is_active' => false]);
+    deactivationScheduleEmployee()->scheduleAssignments()->create(['schedule_id' => $busy->id, 'valid_from' => now()->subMonth()]);
+
+    Livewire::test(ListSchedules::class)
+        ->set('activeTab', 'all')
+        ->callTableBulkAction('deactivate_bulk', [$free, $busy, $already]);
+
+    expect($free->fresh()->is_active)->toBeFalse()
+        ->and($busy->fresh()->is_active)->toBeTrue()
+        ->and($already->fresh()->is_active)->toBeFalse();
+
+    Livewire::test(ListSchedules::class)
+        ->set('activeTab', 'all')
+        ->callTableBulkAction('activate_bulk', [$free, $already]);
+
+    expect($free->fresh()->is_active)->toBeTrue()
+        ->and($already->fresh()->is_active)->toBeTrue();
+});
+
+it('la búsqueda global encuentra horarios por nombre y respeta el permiso', function () {
+    Schedule::create(['name' => 'Turno cena', 'shift_type' => 'nocturno']);
+    Schedule::create(['name' => 'Turno cena viejo', 'shift_type' => 'nocturno', 'is_active' => false]);
+
+    $results = app(PanelGlobalSearchProvider::class)->getResults('cena');
+    $titles = collect($results->getCategories()['Horarios'] ?? [])->map(fn ($result) => $result->title)->all();
+
+    expect($titles)->toContain('Turno cena')->toContain('Turno cena viejo');
+
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Sin permisos', 'guard_name' => 'web']))));
+
+    expect(app(PanelGlobalSearchProvider::class)->getResults('cena')->getCategories())->not->toHaveKey('Horarios');
 });

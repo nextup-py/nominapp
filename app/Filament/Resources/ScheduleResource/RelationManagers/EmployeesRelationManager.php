@@ -5,10 +5,16 @@ namespace App\Filament\Resources\ScheduleResource\RelationManagers;
 use App\Exports\ScheduleEmployeesExport;
 use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Resources\EmployeeResource;
+use App\Filament\Resources\ScheduleResource;
 use App\Models\Branch;
+use App\Models\Company;
+use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Position;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
+use Filament\Forms\Components\Component;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -109,6 +115,7 @@ class EmployeesRelationManager extends RelationManager
                 ->addSelect([
                     'employees.*',
                     'employee_schedule_assignments.valid_from as assignment_start_date',
+                    'employee_schedule_assignments.valid_until as assignment_end_date',
                     'users.name as assignment_created_by',
                 ])
                 ->leftJoin('users', 'users.id', '=', 'employee_schedule_assignments.created_by')
@@ -134,28 +141,38 @@ class EmployeesRelationManager extends RelationManager
                 TextColumn::make('activeContract.position.name')
                     ->label('Cargo')
                     ->icon('heroicon-o-briefcase')
-                    ->default('-')
+                    ->placeholder('Sin cargo')
                     ->badge()
                     ->color('info'),
 
                 TextColumn::make('branch.name')
                     ->label('Sucursal')
                     ->icon('heroicon-o-building-storefront')
-                    ->default('-')
+                    ->placeholder('Sin sucursal')
                     ->badge()
                     ->color('success'),
 
                 TextColumn::make('branch.company.name')
                     ->label('Empresa')
                     ->icon('heroicon-o-building-office-2')
-                    ->default('-')
+                    ->placeholder('Sin empresa')
                     ->badge()
-                    ->color('primary'),
+                    ->color('primary')
+                    ->visible(fn () => Company::active()->count() > 1),
 
                 TextColumn::make('assignment_start_date')
                     ->label('Vigente desde')
                     ->description(fn ($record) => Carbon::parse($record->assignment_start_date)->diffForHumans())
                     ->date('d/m/Y')
+                    ->sortable()
+                    ->alignCenter(),
+
+                TextColumn::make('assignment_end_date')
+                    ->label('Hasta')
+                    ->date('d/m/Y')
+                    ->placeholder('Sin fecha de fin')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'warning' : 'gray')
                     ->sortable()
                     ->alignCenter(),
 
@@ -172,9 +189,30 @@ class EmployeesRelationManager extends RelationManager
                     ->searchable()
                     ->preload()
                     ->native(false),
+
+                SelectFilter::make('position_id')
+                    ->label('Cargo')
+                    ->options(fn () => Position::query()->with('department')->orderBy('name')->get()
+                        ->mapWithKeys(fn (Position $position) => [$position->id => $position->name.($position->department ? ' - '.$position->department->name : '')])
+                        ->all())
+                    ->searchable()
+                    ->native(false)
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->whereHas('activeContract', fn (Builder $contract) => $contract->where('position_id', (int) $data['value']))
+                        : $query),
+
+                SelectFilter::make('department_id')
+                    ->label('Departamento')
+                    ->options(fn () => Department::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->searchable()
+                    ->native(false)
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->whereHas('activeContract.position', fn (Builder $position) => $position->where('department_id', (int) $data['value']))
+                        : $query),
             ])
             ->headerActions([
                 Action::make('export')
+                    ->authorize(fn (): bool => (bool) auth()->user()?->can('view_any_schedule'))
                     ->label('Exportar')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
@@ -198,6 +236,7 @@ class EmployeesRelationManager extends RelationManager
                     }),
 
                 Action::make('assign')
+                    ->authorize(fn (): bool => ScheduleResource::canManageAssignments())
                     ->label('Asignar')
                     ->icon('heroicon-o-user-plus')
                     ->color('primary')
@@ -256,43 +295,52 @@ class EmployeesRelationManager extends RelationManager
             ])
             ->actions([
                 Action::make('remove')
+                    ->authorize(fn (): bool => ScheduleResource::canManageAssignments())
                     ->label('Remover')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->requiresConfirmation()
                     ->modalHeading('Remover Empleado del Horario')
-                    ->modalDescription(fn ($record) => "¿Está seguro de que desea remover a {$record->full_name} de este horario?")
+                    ->modalDescription(fn ($record) => "{$record->full_name} dejará de tener este horario. La asignación queda en el historial.")
+                    ->form(self::removalFields())
                     ->modalSubmitActionLabel('Sí, remover')
-                    ->action(function (Employee $record) {
-                        ScheduleAssignmentService::closeActive($record, Carbon::today());
+                    ->action(function (Employee $record, array $data) {
+                        $until = Carbon::parse($data['valid_until']);
+                        $closed = ScheduleAssignmentService::closeActive($record, $until);
 
                         Notification::make()
-                            ->success()
-                            ->title('Empleado removido')
-                            ->body("Se cerró la asignación de {$record->full_name} con fecha de hoy.")
+                            ->{$closed > 0 ? 'success' : 'warning'}()
+                            ->title($closed > 0 ? 'Empleado removido' : 'No se pudo remover')
+                            ->body($closed > 0
+                                ? "{$record->full_name} tendrá este horario hasta el {$until->format('d/m/Y')} inclusive."
+                                : 'La fecha elegida es anterior al inicio de la asignación.')
                             ->send();
                     }),
             ])
             ->bulkActions([
                 BulkAction::make('remove')
+                    ->authorize(fn (): bool => ScheduleResource::canManageAssignments())
                     ->label('Remover seleccionados')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->requiresConfirmation()
                     ->modalHeading('Remover Empleados del Horario')
-                    ->modalDescription('¿Está seguro de que desea remover los empleados seleccionados de este horario?')
+                    ->modalDescription('Los empleados seleccionados dejarán de tener este horario. Las asignaciones quedan en el historial.')
+                    ->form(self::removalFields())
                     ->modalSubmitActionLabel('Sí, remover')
-                    ->action(function ($records) {
-                        $count = $records->count();
+                    ->action(function ($records, array $data) {
+                        $until = Carbon::parse($data['valid_until']);
+                        $closed = 0;
 
                         foreach ($records as $record) {
-                            ScheduleAssignmentService::closeActive($record, Carbon::today());
+                            $closed += ScheduleAssignmentService::closeActive($record, $until);
                         }
+
+                        $skipped = $records->count() - $closed;
 
                         Notification::make()
                             ->success()
                             ->title('Empleados removidos')
-                            ->body("Se cerró la asignación de {$count} empleado(s) con fecha de hoy.")
+                            ->body("Se cerró la asignación de {$closed} empleado(s); tendrán este horario hasta el {$until->format('d/m/Y')} inclusive."
+                                .($skipped > 0 ? " {$skipped} no se modificaron (la fecha es anterior al inicio de su asignación)." : ''))
                             ->send();
                     }),
             ])
@@ -300,5 +348,23 @@ class EmployeesRelationManager extends RelationManager
             ->emptyStateHeading('No hay empleados asignados')
             ->emptyStateDescription('Comience asignando empleados a este horario. Los empleados que se quitaron figuran en «Historial de asignaciones».')
             ->emptyStateIcon('heroicon-o-user-group');
+    }
+
+    /**
+     * Campo de las acciones de remover: último día en que la persona conserva este horario (inclusive).
+     * Por defecto hoy; una fecha futura programa el cambio.
+     *
+     * @return array<int, Component>
+     */
+    private static function removalFields(): array
+    {
+        return [
+            DatePicker::make('valid_until')
+                ->label('Tiene este horario hasta')
+                ->helperText('Último día, inclusive. Con hoy o una fecha pasada deja de figurar en esta lista; una fecha futura programa el cambio.')
+                ->default(Carbon::today())
+                ->native(false)
+                ->required(),
+        ];
     }
 }

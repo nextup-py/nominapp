@@ -10,10 +10,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Events\AuditCustom;
 
-class Schedule extends Model
+class Schedule extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
+
     protected $table = 'schedules';
+
+    /**
+     * Campos propios del horario que se auditan. Los días y descansos se registran aparte, en un solo evento por
+     * guardado, con {@see self::recordDaysAudit()}.
+     *
+     * @var array<int, string>
+     */
+    protected array $auditInclude = ['name', 'description', 'shift_type', 'is_active'];
 
     /** Minutos nocturnos en un día a partir de los cuales la jornada se sugiere como nocturna (3,5 h). */
     public const NIGHT_SHIFT_THRESHOLD_MINUTES = 210;
@@ -72,6 +87,14 @@ class Schedule extends Model
     }
 
     /**
+     * Cargos que tienen este horario como sugerido (`positions.default_schedule_id`).
+     */
+    public function positions(): HasMany
+    {
+        return $this->hasMany(Position::class, 'default_schedule_id');
+    }
+
+    /**
      * Todos los días del horario (7 en total).
      */
     public function days(): HasMany
@@ -113,7 +136,9 @@ class Schedule extends Model
     }
 
     /**
-     * Empleados con asignación activa a este horario hoy (nuevo sistema).
+     * Empleados que siguen asignados a este horario después de hoy (nuevo sistema): sin fecha de fin o con fin
+     * posterior a hoy. Quien ya tiene la asignación cerrada con fecha de hoy (lo que deja «Remover») no figura,
+     * aunque hoy todavía trabaje con este horario; queda en el historial de asignaciones.
      */
     public function currentEmployees(): HasManyThrough
     {
@@ -130,7 +155,7 @@ class Schedule extends Model
             ->where('employee_schedule_assignments.valid_from', '<=', $today)
             ->where(fn ($q) => $q
                 ->whereNull('employee_schedule_assignments.valid_until')
-                ->orWhere('employee_schedule_assignments.valid_until', '>=', $today)
+                ->orWhere('employee_schedule_assignments.valid_until', '>', $today)
             );
     }
 
@@ -156,11 +181,14 @@ class Schedule extends Model
         ]);
     }
 
-    /** Asignaciones que todavía rigen o van a regir (sin fecha de fin o con fin hoy o posterior). */
+    /**
+     * Asignaciones que seguirán rigiendo después de hoy (sin fecha de fin o con fin posterior a hoy). Una que termina
+     * hoy —lo que deja «Remover»— ya está cerrada: no impide desactivar el horario.
+     */
     public function currentAssignmentsCount(): int
     {
         return $this->assignments()
-            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', Carbon::today()->toDateString()))
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>', Carbon::today()->toDateString()))
             ->count();
     }
 
@@ -201,6 +229,120 @@ class Schedule extends Model
         return $this->deactivationBlockers() === []
             ? "{$text}. Eliminarlo borraría ese historial: para dejar de usarlo, desactivar el horario"
             : "{$text}. Asignar a esos empleados otro horario y, para dejar de usarlo, desactivarlo";
+    }
+
+    /**
+     * Resume cada día del horario como texto legible, p. ej. `['Lunes' => '23:00–07:00 · Cena 02:00–02:30', 'Domingo' => 'Libre']`.
+     * Sirve para comparar el antes y el después de un guardado en el historial de cambios.
+     *
+     * @return array<string, string>
+     */
+    public function daysSummary(): array
+    {
+        $summary = [];
+
+        foreach ($this->days()->with('breaks')->orderBy('day_of_week')->get() as $day) {
+            $text = 'Libre';
+
+            if ($day->is_active) {
+                $text = Carbon::parse($day->start_time)->format('H:i').'–'.Carbon::parse($day->end_time)->format('H:i');
+
+                foreach ($day->breaks->sortBy('start_time') as $break) {
+                    $text .= ' · '.$break->name.' '.Carbon::parse($break->start_time)->format('H:i').'–'.Carbon::parse($break->end_time)->format('H:i');
+                }
+            }
+
+            $summary[$day->day_of_week_name] = $text;
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Registra en el historial un cambio de días, horas o descansos: un solo evento por guardado con **solo los días
+     * que cambiaron** (antes y después). No hace nada si no cambió ninguno.
+     *
+     * @param  array<string, string>  $before  Resumen previo, de {@see self::daysSummary()}.
+     * @param  array<string, string>  $after  Resumen posterior.
+     */
+    public function recordDaysAudit(array $before, array $after): void
+    {
+        $old = [];
+        $new = [];
+
+        foreach (array_unique(array_merge(array_keys($before), array_keys($after))) as $day) {
+            if (($before[$day] ?? null) !== ($after[$day] ?? null)) {
+                $old[$day] = $before[$day] ?? 'Sin dato';
+                $new[$day] = $after[$day] ?? 'Sin dato';
+            }
+        }
+
+        if ($old === []) {
+            return;
+        }
+
+        $this->auditEvent = 'updated';
+        $this->isCustomEvent = true;
+        $this->auditCustomOld = ['days' => $old];
+        $this->auditCustomNew = ['days' => $new];
+
+        Event::dispatch(new AuditCustom($this));
+
+        $this->isCustomEvent = false;
+        $this->auditCustomOld = null;
+        $this->auditCustomNew = null;
+    }
+
+    /**
+     * Presenta los valores de un registro de auditoría (`old_values`/`new_values`) con etiquetas en español.
+     *
+     * @param  string  $column  `old_values` o `new_values`.
+     * @param  mixed  $auditRecord  Registro de auditoría.
+     */
+    public function formatAuditFieldsForPresentation(string $column, mixed $auditRecord): HtmlString
+    {
+        $values = $auditRecord->{$column} ?? [];
+        if (empty($values)) {
+            return new HtmlString('<span class="text-gray-400 text-xs">—</span>');
+        }
+
+        $labels = [
+            'name' => 'Nombre',
+            'description' => 'Descripción',
+            'shift_type' => 'Tipo de jornada',
+            'is_active' => 'Estado',
+            'days' => 'Días',
+        ];
+
+        $html = '<ul class="space-y-0.5 text-sm">';
+        foreach ($values as $key => $value) {
+            $label = $labels[$key] ?? Str::headline($key);
+            $html .= "<li><span class=\"text-gray-500\">{$label}:</span> ".$this->formatAuditValue($key, $value).'</li>';
+        }
+
+        return new HtmlString($html.'</ul>');
+    }
+
+    /** Formatea un valor individual del historial a HTML seguro. */
+    private function formatAuditValue(string $key, mixed $value): string
+    {
+        if ($key === 'days' && is_array($value)) {
+            $html = '<ul class="ml-3 space-y-0.5">';
+            foreach ($value as $day => $text) {
+                $html .= '<li><span class="text-gray-500">'.e($day).':</span> <span class="font-medium">'.e($text).'</span></li>';
+            }
+
+            return $html.'</ul>';
+        }
+
+        $text = match (true) {
+            $value === null || $value === '' => '—',
+            $key === 'is_active' => (bool) $value ? 'Activo' : 'Inactivo',
+            $key === 'shift_type' => static::getShiftTypeLabels()[$value] ?? (string) $value,
+            default => (string) $value,
+        };
+
+        return '<span class="font-medium">'.e($text).'</span>';
     }
 
     /**
@@ -299,6 +441,83 @@ class Schedule extends Model
         $day = $this->days()->where('day_of_week', $dayOfWeek)->first();
 
         return $day ? ! $day->is_active : true;
+    }
+
+    /**
+     * Horas netas por semana (descansos descontados) y cantidad de días con turno. Usa `days` con sus descansos:
+     * precargarlos (`days.breaks`) para no consultar por día.
+     *
+     * @return array{days: int, hours: float}
+     */
+    public function weeklySummary(): array
+    {
+        $active = $this->days->where('is_active', true);
+
+        return [
+            'days' => $active->count(),
+            'hours' => round($active->sum(fn (ScheduleDay $day): float => $day->scheduled_hours), 2),
+        ];
+    }
+
+    /**
+     * Horas netas de un día tal como las entrega el estado del formulario (`start_time`, `end_time` y `breaks`):
+     * la jornada (la salida pasa al día siguiente si es igual o anterior a la entrada) menos los descansos.
+     * Devuelve null si faltan la entrada o la salida.
+     *
+     * @param  array<string, mixed>  $day
+     */
+    public static function netHoursFromState(array $day): ?float
+    {
+        if (blank($day['start_time'] ?? null) || blank($day['end_time'] ?? null)) {
+            return null;
+        }
+
+        $toMinutes = function (string $time): int {
+            $parsed = Carbon::parse($time);
+
+            return $parsed->hour * 60 + $parsed->minute;
+        };
+        $span = fn (string $from, string $to): int => ($toMinutes($to) - $toMinutes($from) + 1440) % 1440 ?: 1440;
+
+        $minutes = $span($day['start_time'], $day['end_time']);
+
+        foreach ($day['breaks'] ?? [] as $break) {
+            if (filled($break['start_time'] ?? null) && filled($break['end_time'] ?? null)) {
+                $minutes -= $span($break['start_time'], $break['end_time']);
+            }
+        }
+
+        return round(max($minutes, 0) / 60, 2);
+    }
+
+    /**
+     * Texto de horas, p. ej. «8 h» o «7,5 h».
+     */
+    public static function formatHours(float $hours): string
+    {
+        return rtrim(rtrim(number_format($hours, 2, ',', '.'), '0'), ',').' h';
+    }
+
+    /** Indica si algún día con turno termina al día siguiente (p. ej. 23:00 a 07:00). */
+    public function crossesMidnight(): bool
+    {
+        return $this->days->where('is_active', true)->contains(fn (ScheduleDay $day): bool => $day->crossesMidnight());
+    }
+
+    /**
+     * Texto del resumen semanal, p. ej. «6 días · 48 h por semana».
+     */
+    public function weeklySummaryLabel(): string
+    {
+        ['days' => $days, 'hours' => $hours] = $this->weeklySummary();
+
+        if ($days === 0) {
+            return 'Sin días con turno';
+        }
+
+        $hoursText = rtrim(rtrim(number_format($hours, 2, ',', '.'), '0'), ',');
+
+        return $days.' '.($days === 1 ? 'día' : 'días').' · '.$hoursText.' h por semana';
     }
 
     public function getMonthlyHours(): float

@@ -39,7 +39,7 @@ class EditSchedule extends EditRecord
                 ->color('danger')
                 ->visible(fn (): bool => $this->record->deletionBlockers() === [])
                 ->modalHeading('¿Eliminar horario?')
-                ->modalDescription(fn () => "¿Estás seguro de que deseas eliminar el horario \"{$this->record->name}\"? Esta acción no se puede deshacer.")
+                ->modalDescription(fn () => "Se eliminará el horario \"{$this->record->name}\" con sus días y descansos. Esta acción no se puede deshacer.")
                 ->modalSubmitActionLabel('Sí, eliminar')
                 ->before(function (DeleteAction $action): void {
                     if ($this->record->deletionBlockers() !== []) {
@@ -59,7 +59,26 @@ class EditSchedule extends EditRecord
     }
 
     /**
-     * Capitaliza el nombre del horario antes de guardar.
+     * Resumen de días y descansos previo al guardado, para registrar en el historial solo lo que cambió.
+     *
+     * @var array<string, string>
+     */
+    protected array $daysBefore = [];
+
+    /** Toma el resumen de días antes de que el formulario reescriba días y descansos. */
+    protected function beforeSave(): void
+    {
+        $this->daysBefore = $this->record->daysSummary();
+    }
+
+    /** Registra en el historial el cambio de días, horas o descansos (los campos propios ya los audita el modelo). */
+    protected function afterSave(): void
+    {
+        $this->record->recordDaysAudit($this->daysBefore, $this->record->daysSummary());
+    }
+
+    /**
+     * Pone en mayúscula la primera letra del nombre del horario antes de guardar.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -67,7 +86,7 @@ class EditSchedule extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         if (isset($data['name'])) {
-            $data['name'] = preg_replace_callback('/(?:^|\s)\S/u', fn ($m) => mb_strtoupper($m[0], 'UTF-8'), $data['name']);
+            $data['name'] = ScheduleResource::capitalizeName($data['name']);
         }
 
         return $data;

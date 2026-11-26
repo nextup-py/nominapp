@@ -2,14 +2,21 @@
 
 namespace App\Filament\Resources\ScheduleResource\RelationManagers;
 
+use App\Exports\ScheduleAssignmentsExport;
 use App\Filament\Resources\EmployeeResource;
+use App\Models\Employee;
 use App\Models\EmployeeScheduleAssignment;
+use Filament\Forms\Components\DatePicker;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Historial de solo lectura de las asignaciones del horario: quién lo tuvo, desde y hasta cuándo, y quién lo asignó.
@@ -62,9 +69,47 @@ class AssignmentsRelationManager extends RelationManager
 
                 TextColumn::make('createdBy.name')->label('Asignado por')->placeholder('Sin dato'),
 
-                TextColumn::make('notes')->label('Notas')->placeholder('Sin notas')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('notes')->label('Notas')->placeholder('Sin notas')->wrap()->toggleable(),
             ])
             ->filters([
+                SelectFilter::make('employee_id')
+                    ->label('Empleado')
+                    ->options(fn () => Employee::query()
+                        ->whereIn('id', $this->getOwnerRecord()->assignments()->select('employee_id'))
+                        ->orderBy('first_name')->orderBy('last_name')
+                        ->get()
+                        ->mapWithKeys(fn (Employee $employee) => [$employee->id => $employee->full_name.' (CI: '.$employee->ci.')'])
+                        ->all())
+                    ->searchable()
+                    ->native(false)
+                    ->placeholder('Todos'),
+
+                Filter::make('period')
+                    ->label('Tuvo el horario entre')
+                    ->form([
+                        DatePicker::make('from')->label('Desde')->native(false),
+                        DatePicker::make('until')->label('Hasta')->native(false),
+                    ])
+                    ->columns(2)
+                    ->query(fn (Builder $query, array $data): Builder => $query
+                        ->when($data['until'] ?? null, fn (Builder $q, $until) => $q->where('valid_from', '<=', $until))
+                        ->when($data['from'] ?? null, fn (Builder $q, $from) => $q->where(fn (Builder $range) => $range
+                            ->whereNull('valid_until')
+                            ->orWhere('valid_until', '>=', $from))))
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+
+                        if ($data['from'] ?? null) {
+                            $indicators[] = 'Desde el '.Carbon::parse($data['from'])->format('d/m/Y');
+                        }
+
+                        if ($data['until'] ?? null) {
+                            $indicators[] = 'Hasta el '.Carbon::parse($data['until'])->format('d/m/Y');
+                        }
+
+                        return $indicators;
+                    }),
+
                 SelectFilter::make('status')
                     ->label('Estado')
                     ->options(EmployeeScheduleAssignment::getStatusLabels())
@@ -80,6 +125,32 @@ class AssignmentsRelationManager extends RelationManager
                                 ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today)),
                             default => $query,
                         };
+                    }),
+            ])
+            ->headerActions([
+                Action::make('export')
+                    ->authorize(fn (): bool => (bool) auth()->user()?->can('view_any_schedule'))
+                    ->label('Exportar')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('¿Exportar el historial de asignaciones?')
+                    ->modalDescription('Se exportan las asignaciones que muestra la lista, con los filtros y la búsqueda aplicados.')
+                    ->modalSubmitActionLabel('Sí, exportar')
+                    ->action(function () {
+                        $schedule = $this->getOwnerRecord();
+                        $ids = $this->getFilteredTableQuery()->pluck('employee_schedule_assignments.id')->all();
+
+                        Notification::make()
+                            ->success()
+                            ->title('Exportación lista')
+                            ->body('El historial de asignaciones se está descargando.')
+                            ->send();
+
+                        return Excel::download(
+                            new ScheduleAssignmentsExport($schedule->id, $ids),
+                            'asignaciones_'.str($schedule->name)->slug().'_'.now()->format('Y_m_d').'.xlsx'
+                        );
                     }),
             ])
             ->actions([])

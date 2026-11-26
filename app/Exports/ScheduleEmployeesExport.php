@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Employee;
 use App\Models\Schedule;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -13,7 +14,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /** Exporta el listado de empleados con asignación vigente a un horario específico. */
-class ScheduleEmployeesExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class ScheduleEmployeesExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMapping, WithStyles
 {
     /**
      * @param  int  $scheduleId  ID del horario a exportar
@@ -23,7 +24,7 @@ class ScheduleEmployeesExport implements FromQuery, WithHeadings, WithMapping, W
     /**
      * Query de empleados con asignación vigente hoy para el horario dado.
      *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public function query()
     {
@@ -34,6 +35,7 @@ class ScheduleEmployeesExport implements FromQuery, WithHeadings, WithMapping, W
             ->addSelect([
                 'employees.*',
                 'employee_schedule_assignments.valid_from as assignment_start_date',
+                'employee_schedule_assignments.valid_until as assignment_end_date',
             ])
             ->orderBy('employees.last_name')
             ->orderBy('employees.first_name');
@@ -56,6 +58,7 @@ class ScheduleEmployeesExport implements FromQuery, WithHeadings, WithMapping, W
             'Empresa',
             'Estado',
             'Asignado desde',
+            'Asignado hasta',
         ];
     }
 
@@ -79,13 +82,15 @@ class ScheduleEmployeesExport implements FromQuery, WithHeadings, WithMapping, W
             $employee->assignment_start_date
                 ? Carbon::parse($employee->assignment_start_date)->format('d/m/Y')
                 : '—',
+            $employee->assignment_end_date
+                ? Carbon::parse($employee->assignment_end_date)->format('d/m/Y')
+                : 'Sin fecha de fin',
         ];
     }
 
     /**
      * Aplica negrita a la fila de encabezados.
      *
-     * @param  Worksheet  $sheet
      * @return array<int, array<string, mixed>>
      */
     public function styles(Worksheet $sheet): array

@@ -7,13 +7,17 @@ use App\Filament\Actions\ScheduleStatusAction;
 use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\ScheduleResource\Pages;
 use App\Filament\Resources\ScheduleResource\RelationManagers\AssignmentsRelationManager;
+use App\Filament\Resources\ScheduleResource\RelationManagers\AuditsRelationManager;
 use App\Filament\Resources\ScheduleResource\RelationManagers\EmployeesRelationManager;
+use App\Filament\Resources\ScheduleResource\RelationManagers\PositionsRelationManager;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\Schedule;
 use App\Models\ScheduleDay;
 use App\Services\ScheduleAssignmentService;
 use Carbon\Carbon;
+use Filament\Forms\Components\Actions\Action as FormAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
@@ -27,11 +31,18 @@ use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\BulkAction;
+use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class ScheduleResource extends Resource
 {
@@ -55,6 +66,29 @@ class ScheduleResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static int $globalSearchResultsLimit = 8;
+
+    /**
+     * Quien puede asignar y quitar empleados de un horario (las acciones personalizadas de Filament no consultan la policy).
+     */
+    public static function canManageAssignments(): bool
+    {
+        return (bool) auth()->user()?->can('update_schedule');
+    }
+
+    /**
+     * Detalle de cada horario en la búsqueda global: tipo de jornada y, si corresponde, que está inactivo.
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return array_filter([
+            'Jornada' => Schedule::getShiftTypeLabels()[$record->shift_type] ?? null,
+            'Estado' => $record->is_active ? null : 'Inactivo',
+        ]);
+    }
+
     /**
      * Define el formulario para crear y editar horarios, incluyendo la información general del horario y la configuración detallada de los días laborales con sus respectivos descansos.
      */
@@ -64,14 +98,10 @@ class ScheduleResource extends Resource
             ->schema([
                 Section::make('Información del Horario')
                     ->schema([
-                        Toggle::make('is_active')
-                            ->label('Activo')
-                            ->default(true)
-                            ->disabled(fn (?Schedule $record): bool => $record !== null && $record->is_active && $record->deactivationBlockers() !== [])
-                            ->helperText(fn (?Schedule $record): string => $record !== null && $record->is_active && $record->deactivationBlockers() !== []
-                                ? 'No se puede desactivar: '.$record->deactivationBlockersSummary().'.'
-                                : 'Los horarios inactivos no se ofrecen al asignar y conservan su historial.')
-                            ->hiddenOn('create')
+                        Placeholder::make('affected_employees')
+                            ->label('Empleados afectados')
+                            ->content(fn (?Schedule $record): string => ($count = $record?->currentAssignmentsCount() ?? 0).' '.($count === 1 ? 'empleado tiene' : 'empleados tienen').' asignado este horario: los cambios rigen desde hoy. Las jornadas ya calculadas no cambian hasta recalcularlas.')
+                            ->visible(fn (?Schedule $record): bool => ($record?->currentAssignmentsCount() ?? 0) > 0)
                             ->columnSpanFull(),
 
                         TextInput::make('name')
@@ -101,12 +131,35 @@ class ScheduleResource extends Resource
                             ->nullable()
                             ->maxLength(100)
                             ->columnSpanFull(),
+
+                        Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true)
+                            ->disabled(fn (?Schedule $record): bool => $record !== null && $record->is_active && $record->deactivationBlockers() !== [])
+                            ->helperText(fn (?Schedule $record): string => $record !== null && $record->is_active && $record->deactivationBlockers() !== []
+                                ? 'No se puede desactivar: '.$record->deactivationBlockersSummary().'.'
+                                : 'Los horarios inactivos no se ofrecen al asignar y conservan su historial.')
+                            ->hiddenOn('create')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
                 Section::make('Configuración de Días')
                     ->description('Activar los días laborales y cargar entrada y salida. En un turno nocturno la salida puede ser menor que la entrada.')
                     ->schema([
+                        Placeholder::make('weekly_total')
+                            ->label('Resumen semanal')
+                            ->content(function (Get $get): string {
+                                $hours = collect($get('days') ?? [])
+                                    ->filter(fn ($day): bool => (bool) ($day['is_active'] ?? false))
+                                    ->map(fn ($day): ?float => Schedule::netHoursFromState($day));
+                                $count = $hours->filter(fn ($value): bool => $value !== null)->count();
+
+                                return $count === 0
+                                    ? 'Sin días con turno cargado.'
+                                    : $count.' '.($count === 1 ? 'día' : 'días').' · '.Schedule::formatHours((float) $hours->sum()).' netas por semana (descansos descontados).';
+                            }),
+
                         Placeholder::make('few_days_notice')
                             ->label('Pocos días activos')
                             ->content(function (Get $get): string {
@@ -126,6 +179,7 @@ class ScheduleResource extends Resource
                             ->addable(false)
                             ->deletable(false)
                             ->reorderable(false)
+                            ->extraItemActions([static::copyDayAction()])
                             ->default(
                                 collect(range(1, 7))->map(fn ($day) => [
                                     'day_of_week' => $day,
@@ -160,6 +214,22 @@ class ScheduleResource extends Resource
                                     ->visible(fn (Get $get): bool => (bool) $get('is_active'))
                                     ->columnSpan(1),
 
+                                Placeholder::make('net_hours')
+                                    ->label(false)
+                                    ->content(function (Get $get): string {
+                                        $day = ['start_time' => $get('start_time'), 'end_time' => $get('end_time')];
+                                        $gross = Schedule::netHoursFromState($day);
+                                        $net = Schedule::netHoursFromState($day + ['breaks' => $get('breaks') ?? []]);
+
+                                        if ($net === null) {
+                                            return '';
+                                        }
+
+                                        return Schedule::formatHours($net).' netas'.($net !== $gross ? ' (descansos descontados)' : '');
+                                    })
+                                    ->visible(fn (Get $get): bool => (bool) $get('is_active') && filled($get('start_time')) && filled($get('end_time')))
+                                    ->columnSpanFull(),
+
                                 Repeater::make('breaks')
                                     ->relationship(modifyQueryUsing: fn ($query) => $query->orderBy('start_time'))
                                     ->label('Descansos')
@@ -174,12 +244,14 @@ class ScheduleResource extends Resource
                                             ->label('Inicio')
                                             ->native(false)
                                             ->seconds(false)
+                                            ->live(onBlur: true)
                                             ->required(),
 
                                         TimePicker::make('end_time')
                                             ->label('Fin')
                                             ->native(false)
                                             ->seconds(false)
+                                            ->live(onBlur: true)
                                             ->required()
                                             ->after('start_time'),
                                     ])
@@ -204,6 +276,7 @@ class ScheduleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('days.breaks'))
             ->columns([
                 TextColumn::make('name')
                     ->label('Nombre')
@@ -226,13 +299,10 @@ class ScheduleResource extends Resource
                     ->color(fn ($state) => Schedule::getShiftTypeColors()[$state] ?? 'success')
                     ->sortable(),
 
-                TextColumn::make('active_days_count')
-                    ->label('Días Activos')
-                    ->counts('activeDays')
-                    ->alignCenter()
-                    ->badge()
-                    ->color('info')
-                    ->sortable(),
+                TextColumn::make('weekly_summary')
+                    ->label('Resumen semanal')
+                    ->getStateUsing(fn (Schedule $record): string => $record->weeklySummaryLabel())
+                    ->description(fn (Schedule $record): ?string => $record->crossesMidnight() ? 'Cruza la medianoche' : null),
 
                 TextColumn::make('current_employees_count')
                     ->label('Empleados Asignados')
@@ -255,14 +325,6 @@ class ScheduleResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                TernaryFilter::make('is_active')
-                    ->label('Estado')
-                    ->placeholder('Todos')
-                    ->trueLabel('Activos')
-                    ->falseLabel('Inactivos')
-                    ->default(true)
-                    ->native(false),
-
                 SelectFilter::make('shift_type')
                     ->label('Tipo de Jornada')
                     ->options(Schedule::getShiftTypeLabels())
@@ -282,10 +344,8 @@ class ScheduleResource extends Resource
                     ->native(false),
             ])
             ->actions([
-                static::duplicateAction(Action::class),
-                ScheduleStatusAction::make(Action::class),
-
                 Action::make('assignToEmployees')
+                    ->authorize(fn (): bool => static::canManageAssignments())
                     ->label('Asignar a Empleados')
                     ->icon('heroicon-o-user-plus')
                     ->color('success')
@@ -295,7 +355,7 @@ class ScheduleResource extends Resource
 
                         Select::make('filter_branch')
                             ->label('Filtrar por Sucursal')
-                            ->options(fn () => Branch::pluck('name', 'id'))
+                            ->options(fn () => Branch::active()->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->preload()
                             ->native(false)
@@ -305,36 +365,8 @@ class ScheduleResource extends Resource
 
                         Select::make('employee_ids')
                             ->label('Empleados')
-                            ->options(function (callable $get) {
-                                $scheduleId = (int) $get('schedule_id');
-                                $today = Carbon::today();
-
-                                $query = Employee::query()->where('status', 'active');
-
-                                if ($get('filter_branch')) {
-                                    $query->where('branch_id', $get('filter_branch'));
-                                }
-
-                                return $query
-                                    ->orderBy('first_name')
-                                    ->orderBy('last_name')
-                                    ->get()
-                                    ->mapWithKeys(function (Employee $employee) use ($scheduleId, $today) {
-                                        $current = $employee->getScheduleForDate($today);
-
-                                        if ($current?->id === $scheduleId) {
-                                            return [];
-                                        }
-
-                                        $label = "{$employee->full_name} - CI: {$employee->ci}";
-                                        if ($current) {
-                                            $label .= " ⚠ (Horario actual: {$current->name})";
-                                        }
-
-                                        return [$employee->id => $label];
-                                    })
-                                    ->filter();
-                            })
+                            ->options(fn (Get $get): array => static::assignableEmployees((int) $get('schedule_id'), $get('filter_branch')))
+                            ->helperText(fn (Get $get): string => count(static::assignableEmployees((int) $get('schedule_id'), $get('filter_branch'))).' empleado(s) disponible(s) para asignar.')
                             ->multiple()
                             ->searchable()
                             ->required()
@@ -344,7 +376,7 @@ class ScheduleResource extends Resource
                         ...ScheduleAssignmentActions::periodFields(),
                     ])
                     ->modalHeading('Asignar Horario a Empleados')
-                    ->modalDescription('Selecciona los empleados a los que deseas asignar este horario. Solo se mostrarán empleados activos que no tengan este horario asignado actualmente.')
+                    ->modalDescription('Seleccionar los empleados a quienes asignar este horario. Solo se muestran empleados activos que no lo tienen asignado hoy; si ya tienen otro horario vigente, se indica junto al nombre.')
                     ->modalSubmitActionLabel('Asignar Horario')
                     ->modalWidth('2xl')
                     ->action(function (Schedule $record, array $data) {
@@ -393,11 +425,185 @@ class ScheduleResource extends Resource
                                 ->send();
                         }
                     }),
+
+                ActionGroup::make([
+                    static::duplicateAction(Action::class),
+                    ScheduleStatusAction::make(Action::class),
+                ])->tooltip('Más acciones'),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    BulkAction::make('deactivate_bulk')
+                        ->label('Desactivar seleccionados')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
+                        ->authorize(fn (): bool => (bool) auth()->user()?->can('update_schedule'))
+                        ->requiresConfirmation()
+                        ->modalHeading('¿Desactivar los horarios seleccionados?')
+                        ->modalDescription('Dejan de ofrecerse al asignar horarios y conservan su historial. Se omiten los que tienen asignaciones vigentes o futuras.')
+                        ->modalSubmitActionLabel('Sí, desactivar')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(fn (Collection $records) => static::changeStatusBulk($records, false)),
+
+                    BulkAction::make('activate_bulk')
+                        ->label('Activar seleccionados')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->authorize(fn (): bool => (bool) auth()->user()?->can('update_schedule'))
+                        ->requiresConfirmation()
+                        ->modalHeading('¿Activar los horarios seleccionados?')
+                        ->modalDescription('Vuelven a ofrecerse al asignar horarios.')
+                        ->modalSubmitActionLabel('Sí, activar')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(fn (Collection $records) => static::changeStatusBulk($records, true)),
+                ]),
             ])
             ->defaultSort('name')
             ->emptyStateHeading('No hay horarios registrados')
-            ->emptyStateDescription('Comienza a crear horarios de trabajo para asignar a los empleados.')
+            ->emptyStateDescription('Crear horarios de trabajo para asignarlos a los empleados.')
             ->emptyStateIcon('heroicon-o-clock');
+    }
+
+    /**
+     * Activa o desactiva varios horarios a la vez: omite los que ya tienen ese estado y, al desactivar, los que tienen
+     * asignaciones vigentes o futuras (`deactivationBlockers()`), e informa los conteos.
+     *
+     * @param  Collection<int, Schedule>  $records
+     */
+    public static function changeStatusBulk(Collection $records, bool $active): void
+    {
+        $changed = 0;
+        $unchanged = 0;
+        $blocked = 0;
+
+        foreach ($records as $schedule) {
+            if ($schedule->is_active === $active) {
+                $unchanged++;
+
+                continue;
+            }
+
+            if (! $active && $schedule->deactivationBlockers() !== []) {
+                $blocked++;
+
+                continue;
+            }
+
+            $schedule->update(['is_active' => $active]);
+            $changed++;
+        }
+
+        $verb = $active ? 'activaron' : 'desactivaron';
+        $parts = [];
+
+        if ($blocked > 0) {
+            $parts[] = "{$blocked} con asignaciones vigentes o futuras";
+        }
+
+        if ($unchanged > 0) {
+            $parts[] = "{$unchanged} ya estaban ".($active ? 'activos' : 'inactivos');
+        }
+
+        $notification = Notification::make()
+            ->title($changed > 0 ? "Se {$verb} {$changed} horario(s)" : 'No se cambió ningún horario')
+            ->body($parts === [] ? null : 'Omitidos: '.implode('; ', $parts).'.');
+
+        ($changed > 0 ? $notification->success() : $notification->warning())->send();
+    }
+
+    /**
+     * Pone en mayúscula solo la primera letra del nombre (no la de cada palabra: «Turno de la mañana», no «Turno De La Mañana»).
+     */
+    public static function capitalizeName(string $name): string
+    {
+        $name = trim($name);
+
+        return mb_strtoupper(mb_substr($name, 0, 1, 'UTF-8'), 'UTF-8').mb_substr($name, 1, null, 'UTF-8');
+    }
+
+    /**
+     * Acción por día del formulario: copia la entrada, la salida y los descansos de un día a los días que se elijan
+     * (p. ej. cargar el lunes y copiarlo de martes a viernes). Solo modifica el estado del formulario; se guarda al
+     * guardar el horario.
+     */
+    public static function copyDayAction(): FormAction
+    {
+        return FormAction::make('copy_day')
+            ->icon('heroicon-m-document-duplicate')
+            ->tooltip('Copiar a otros días')
+            ->visible(fn (Repeater $component, array $arguments): bool => (bool) ($component->getState()[$arguments['item'] ?? '']['is_active'] ?? false))
+            ->modalHeading('Copiar a otros días')
+            ->modalDescription('Se copian la entrada, la salida y los descansos. Los días elegidos pasan a estar activos y reemplazan lo que tengan cargado.')
+            ->modalSubmitActionLabel('Copiar')
+            ->form(fn (Repeater $component, array $arguments): array => [
+                CheckboxList::make('targets')
+                    ->label('Copiar a')
+                    ->options(collect($component->getState())
+                        ->reject(fn (array $day, string $key): bool => $key === ($arguments['item'] ?? ''))
+                        ->mapWithKeys(fn (array $day): array => [(int) $day['day_of_week'] => ScheduleDay::getDayOptions()[(int) $day['day_of_week']] ?? 'Día'])
+                        ->sortKeys()
+                        ->all())
+                    ->columns(2)
+                    ->bulkToggleable()
+                    ->required(),
+            ])
+            ->action(function (array $data, array $arguments, Repeater $component): void {
+                $items = $component->getState();
+                $source = $items[$arguments['item'] ?? ''] ?? null;
+
+                if ($source === null) {
+                    return;
+                }
+
+                $breaks = fn (): array => collect($source['breaks'] ?? [])
+                    ->mapWithKeys(fn (array $break): array => [(string) Str::uuid() => Arr::only($break, ['name', 'start_time', 'end_time'])])
+                    ->all();
+
+                foreach ($items as $key => $item) {
+                    if (in_array((int) $item['day_of_week'], array_map('intval', $data['targets']), true)) {
+                        $items[$key] = array_merge($item, [
+                            'is_active' => true,
+                            'start_time' => $source['start_time'],
+                            'end_time' => $source['end_time'],
+                            'breaks' => $breaks(),
+                        ]);
+                    }
+                }
+
+                $component->state($items);
+            });
+    }
+
+    /**
+     * Empleados activos a quienes se puede asignar el horario (sin tenerlo ya vigente hoy), como `id => etiqueta`.
+     * La etiqueta indica el horario que tienen hoy. Se memoiza por petición porque lo usan las opciones y el texto de ayuda.
+     *
+     * @return array<int, string>
+     */
+    public static function assignableEmployees(int $scheduleId, mixed $branchId = null): array
+    {
+        static $memo = [];
+
+        $key = $scheduleId.'|'.($branchId ?: '');
+
+        return $memo[$key] ??= Employee::query()
+            ->where('status', 'active')
+            ->when($branchId, fn (Builder $query) => $query->where('branch_id', $branchId))
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get()
+            ->mapWithKeys(function (Employee $employee) use ($scheduleId): array {
+                $current = $employee->getScheduleForDate(Carbon::today());
+
+                if ($current?->id === $scheduleId) {
+                    return [];
+                }
+
+                $label = "{$employee->full_name} - CI: {$employee->ci}";
+
+                return [$employee->id => $current ? $label." — hoy: {$current->name}" : $label];
+            })
+            ->all();
     }
 
     /**
@@ -431,7 +637,7 @@ class ScheduleResource extends Resource
                 Notification::make()
                     ->success()
                     ->title('Horario duplicado')
-                    ->body("Se creó \"{$copy->name}\". Revisá las horas y asignalo a los empleados.")
+                    ->body("Se creó \"{$copy->name}\". Revisar las horas y asignarlo a los empleados.")
                     ->send();
 
                 return redirect(static::getUrl('edit', ['record' => $copy]));
@@ -448,6 +654,8 @@ class ScheduleResource extends Resource
         return [
             EmployeesRelationManager::class,
             AssignmentsRelationManager::class,
+            PositionsRelationManager::class,
+            AuditsRelationManager::class,
         ];
     }
 
