@@ -14,10 +14,12 @@ use App\Models\EmployeeScheduleAssignment;
 use App\Models\Schedule;
 use App\Models\User;
 use App\Services\ScheduleAssignmentService;
+use App\Support\PanelGlobalSearchProvider;
 use Carbon\Carbon;
 use Filament\Actions\ActionGroup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
@@ -407,4 +409,73 @@ it('el formulario de edición avisa a cuántos empleados afecta', function () {
     Livewire::test(EditSchedule::class, ['record' => $schedule->id])
         ->assertSee('1 empleado tiene asignado este horario')
         ->assertSee('1 día · 8 h netas por semana');
+});
+
+/** Usuario que solo puede ver horarios (sin update_schedule). */
+function readOnlyScheduleUser(): User
+{
+    foreach (['view_any_schedule', 'view_schedule'] as $name) {
+        Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+    }
+
+    $role = Role::firstOrCreate(['name' => 'Lector de horarios', 'guard_name' => 'web']);
+    $role->syncPermissions(['view_any_schedule', 'view_schedule']);
+
+    return tap(User::factory()->create(), fn (User $user) => $user->assignRole($role));
+}
+
+it('un usuario de solo lectura no ve las acciones de asignar ni remover', function () {
+    $schedule = Schedule::create(['name' => 'Solo lectura', 'shift_type' => 'diurno']);
+    $employee = deactivationScheduleEmployee();
+    $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonth()]);
+
+    $this->actingAs(readOnlyScheduleUser());
+
+    Livewire::test(ListSchedules::class)
+        ->assertTableActionHidden('assignToEmployees', $schedule)
+        ->assertTableBulkActionHidden('deactivate_bulk');
+
+    Livewire::test(EmployeesRelationManager::class, [
+        'ownerRecord' => $schedule,
+        'pageClass' => ViewSchedule::class,
+    ])
+        ->assertTableActionHidden('assign')
+        ->assertTableActionHidden('remove', $employee)
+        ->assertTableActionVisible('export');
+});
+
+it('la acción masiva Desactivar omite los horarios con asignaciones vigentes y los ya inactivos', function () {
+    $free = Schedule::create(['name' => 'Libre', 'shift_type' => 'diurno']);
+    $busy = Schedule::create(['name' => 'Ocupado bulk', 'shift_type' => 'diurno']);
+    $already = Schedule::create(['name' => 'Ya inactivo', 'shift_type' => 'diurno', 'is_active' => false]);
+    deactivationScheduleEmployee()->scheduleAssignments()->create(['schedule_id' => $busy->id, 'valid_from' => now()->subMonth()]);
+
+    Livewire::test(ListSchedules::class)
+        ->set('activeTab', 'all')
+        ->callTableBulkAction('deactivate_bulk', [$free, $busy, $already]);
+
+    expect($free->fresh()->is_active)->toBeFalse()
+        ->and($busy->fresh()->is_active)->toBeTrue()
+        ->and($already->fresh()->is_active)->toBeFalse();
+
+    Livewire::test(ListSchedules::class)
+        ->set('activeTab', 'all')
+        ->callTableBulkAction('activate_bulk', [$free, $already]);
+
+    expect($free->fresh()->is_active)->toBeTrue()
+        ->and($already->fresh()->is_active)->toBeTrue();
+});
+
+it('la búsqueda global encuentra horarios por nombre y respeta el permiso', function () {
+    Schedule::create(['name' => 'Turno cena', 'shift_type' => 'nocturno']);
+    Schedule::create(['name' => 'Turno cena viejo', 'shift_type' => 'nocturno', 'is_active' => false]);
+
+    $results = app(PanelGlobalSearchProvider::class)->getResults('cena');
+    $titles = collect($results->getCategories()['Horarios'] ?? [])->map(fn ($result) => $result->title)->all();
+
+    expect($titles)->toContain('Turno cena')->toContain('Turno cena viejo');
+
+    $this->actingAs(tap(User::factory()->create(), fn (User $user) => $user->assignRole(Role::firstOrCreate(['name' => 'Sin permisos', 'guard_name' => 'web']))));
+
+    expect(app(PanelGlobalSearchProvider::class)->getResults('cena')->getCategories())->not->toHaveKey('Horarios');
 });

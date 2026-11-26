@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ScheduleResource\RelationManagers;
 use App\Exports\ScheduleEmployeesExport;
 use App\Filament\Actions\ScheduleAssignmentActions;
 use App\Filament\Resources\EmployeeResource;
+use App\Filament\Resources\ScheduleResource;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Department;
@@ -211,6 +212,7 @@ class EmployeesRelationManager extends RelationManager
             ])
             ->headerActions([
                 Action::make('export')
+                    ->authorize(fn (): bool => (bool) auth()->user()?->can('view_any_schedule'))
                     ->label('Exportar')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
@@ -234,6 +236,7 @@ class EmployeesRelationManager extends RelationManager
                     }),
 
                 Action::make('assign')
+                    ->authorize(fn (): bool => ScheduleResource::canManageAssignments())
                     ->label('Asignar')
                     ->icon('heroicon-o-user-plus')
                     ->color('primary')
@@ -292,6 +295,7 @@ class EmployeesRelationManager extends RelationManager
             ])
             ->actions([
                 Action::make('remove')
+                    ->authorize(fn (): bool => ScheduleResource::canManageAssignments())
                     ->label('Remover')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -314,6 +318,7 @@ class EmployeesRelationManager extends RelationManager
             ])
             ->bulkActions([
                 BulkAction::make('remove')
+                    ->authorize(fn (): bool => ScheduleResource::canManageAssignments())
                     ->label('Remover seleccionados')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')

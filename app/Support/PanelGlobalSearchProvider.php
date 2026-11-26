@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Filament\Pages\ReportsIndex;
 use App\Filament\Resources\AttendanceEventResource;
 use App\Filament\Resources\EmployeeResource;
+use App\Filament\Resources\ScheduleResource;
 use Filament\Facades\Filament;
 use Filament\GlobalSearch\Contracts\GlobalSearchProvider;
 use Filament\GlobalSearch\GlobalSearchResult;
@@ -52,6 +53,14 @@ class PanelGlobalSearchProvider implements GlobalSearchProvider
 
             if ($employees->isNotEmpty()) {
                 $builder->category('Empleados', $employees);
+            }
+        }
+
+        if (mb_strlen($query) >= self::MIN_EMPLOYEE_LENGTH && ScheduleResource::canGloballySearch()) {
+            $schedules = ScheduleResource::getGlobalSearchResults($query);
+
+            if ($schedules->isNotEmpty()) {
+                $builder->category('Horarios', $schedules);
             }
         }
 

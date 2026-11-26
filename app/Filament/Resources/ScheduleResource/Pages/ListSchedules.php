@@ -90,6 +90,7 @@ class ListSchedules extends ListRecords
     {
         return [
             Action::make('export_excel')
+                ->authorize(fn (): bool => (bool) auth()->user()?->can('view_any_schedule'))
                 ->label('Exportar')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')

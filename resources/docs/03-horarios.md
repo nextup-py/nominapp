@@ -74,6 +74,10 @@ Cada fila muestra el nombre, el estado, el tipo de jornada, el **Resumen semanal
 
 En cada fila, **Asignar a Empleados** está a la vista; **Duplicar** y **Desactivar** están en el menú de tres puntos. En la ventana de asignación, el filtro de sucursal ofrece solo sucursales activas y un texto bajo **Empleados** indica cuántos quedan disponibles. **Exportar** descarga solo los horarios que muestra el listado (según pestaña, filtros y búsqueda).
 
+Para cambiar el estado de varios horarios a la vez, seleccionarlos y usar **Desactivar seleccionados** o **Activar seleccionados**. Al desactivar se omiten los que tienen asignaciones vigentes o futuras y los que ya estaban inactivos; la notificación informa cuántos se cambiaron y cuántos se omitieron.
+
+> **Permisos:** asignar y quitar empleados (en el listado y en las pestañas del detalle) requiere el permiso de edición de horarios; quien solo puede ver horarios no ve esos botones, pero sí puede exportar. La búsqueda global (**Ctrl+K**) encuentra horarios por nombre, incluidos los inactivos, y abre su detalle.
+
 ### Duplicar un horario
 
 La acción **Duplicar** (en el listado y, en el detalle del horario, dentro de **Más acciones**) copia los días, horas y descansos con un nombre nuevo, para partir de un horario parecido en vez de armarlo desde cero. No copia los empleados asignados. Requiere permiso para crear horarios.

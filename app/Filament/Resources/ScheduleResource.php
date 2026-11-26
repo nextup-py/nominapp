@@ -32,12 +32,16 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\BulkAction;
+use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class ScheduleResource extends Resource
@@ -61,6 +65,29 @@ class ScheduleResource extends Resource
     protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    protected static int $globalSearchResultsLimit = 8;
+
+    /**
+     * Quien puede asignar y quitar empleados de un horario (las acciones personalizadas de Filament no consultan la policy).
+     */
+    public static function canManageAssignments(): bool
+    {
+        return (bool) auth()->user()?->can('update_schedule');
+    }
+
+    /**
+     * Detalle de cada horario en la búsqueda global: tipo de jornada y, si corresponde, que está inactivo.
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return array_filter([
+            'Jornada' => Schedule::getShiftTypeLabels()[$record->shift_type] ?? null,
+            'Estado' => $record->is_active ? null : 'Inactivo',
+        ]);
+    }
 
     /**
      * Define el formulario para crear y editar horarios, incluyendo la información general del horario y la configuración detallada de los días laborales con sus respectivos descansos.
@@ -318,6 +345,7 @@ class ScheduleResource extends Resource
             ])
             ->actions([
                 Action::make('assignToEmployees')
+                    ->authorize(fn (): bool => static::canManageAssignments())
                     ->label('Asignar a Empleados')
                     ->icon('heroicon-o-user-plus')
                     ->color('success')
@@ -403,10 +431,84 @@ class ScheduleResource extends Resource
                     ScheduleStatusAction::make(Action::class),
                 ])->tooltip('Más acciones'),
             ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    BulkAction::make('deactivate_bulk')
+                        ->label('Desactivar seleccionados')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
+                        ->authorize(fn (): bool => (bool) auth()->user()?->can('update_schedule'))
+                        ->requiresConfirmation()
+                        ->modalHeading('¿Desactivar los horarios seleccionados?')
+                        ->modalDescription('Dejan de ofrecerse al asignar horarios y conservan su historial. Se omiten los que tienen asignaciones vigentes o futuras.')
+                        ->modalSubmitActionLabel('Sí, desactivar')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(fn (Collection $records) => static::changeStatusBulk($records, false)),
+
+                    BulkAction::make('activate_bulk')
+                        ->label('Activar seleccionados')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->authorize(fn (): bool => (bool) auth()->user()?->can('update_schedule'))
+                        ->requiresConfirmation()
+                        ->modalHeading('¿Activar los horarios seleccionados?')
+                        ->modalDescription('Vuelven a ofrecerse al asignar horarios.')
+                        ->modalSubmitActionLabel('Sí, activar')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(fn (Collection $records) => static::changeStatusBulk($records, true)),
+                ]),
+            ])
             ->defaultSort('name')
             ->emptyStateHeading('No hay horarios registrados')
             ->emptyStateDescription('Crear horarios de trabajo para asignarlos a los empleados.')
             ->emptyStateIcon('heroicon-o-clock');
+    }
+
+    /**
+     * Activa o desactiva varios horarios a la vez: omite los que ya tienen ese estado y, al desactivar, los que tienen
+     * asignaciones vigentes o futuras (`deactivationBlockers()`), e informa los conteos.
+     *
+     * @param  Collection<int, Schedule>  $records
+     */
+    public static function changeStatusBulk(Collection $records, bool $active): void
+    {
+        $changed = 0;
+        $unchanged = 0;
+        $blocked = 0;
+
+        foreach ($records as $schedule) {
+            if ($schedule->is_active === $active) {
+                $unchanged++;
+
+                continue;
+            }
+
+            if (! $active && $schedule->deactivationBlockers() !== []) {
+                $blocked++;
+
+                continue;
+            }
+
+            $schedule->update(['is_active' => $active]);
+            $changed++;
+        }
+
+        $verb = $active ? 'activaron' : 'desactivaron';
+        $parts = [];
+
+        if ($blocked > 0) {
+            $parts[] = "{$blocked} con asignaciones vigentes o futuras";
+        }
+
+        if ($unchanged > 0) {
+            $parts[] = "{$unchanged} ya estaban ".($active ? 'activos' : 'inactivos');
+        }
+
+        $notification = Notification::make()
+            ->title($changed > 0 ? "Se {$verb} {$changed} horario(s)" : 'No se cambió ningún horario')
+            ->body($parts === [] ? null : 'Omitidos: '.implode('; ', $parts).'.');
+
+        ($changed > 0 ? $notification->success() : $notification->warning())->send();
     }
 
     /**
