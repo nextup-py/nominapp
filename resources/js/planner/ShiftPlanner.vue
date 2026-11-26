@@ -14,6 +14,22 @@
           <option v-for="b in filteredBranches" :key="b.id" :value="b.id">{{ b.name }}</option>
         </select>
 
+        <select v-model="filters.pattern_id" class="sp-select">
+          <option :value="null">Todos los patrones</option>
+          <option v-for="p in filteredPatterns" :key="p.id" :value="p.id">{{ p.name }}</option>
+        </select>
+
+        <select v-model="filters.position_id" class="sp-select">
+          <option :value="null">Todos los cargos</option>
+          <option v-for="p in initData.positions" :key="p.id" :value="p.id">{{ p.name }}</option>
+        </select>
+
+        <select v-model="filters.scope" class="sp-select">
+          <option value="all">Con y sin patrón</option>
+          <option value="with_pattern">Solo con patrón</option>
+          <option value="without_pattern">Solo sin patrón</option>
+        </select>
+
         <button class="sp-btn sp-btn-primary" @click="loadData" :disabled="loading">
           <span v-if="loading">Cargando…</span>
           <span v-else>Aplicar</span>
@@ -22,6 +38,8 @@
 
       <div class="sp-nav">
         <button class="sp-btn sp-btn-help" @click="helpOpen = true" title="Ayuda">?</button>
+        <a class="sp-btn" :href="exportUrl" title="Descargar la grilla visible como Excel">Exportar</a>
+        <button v-if="canEdit" class="sp-btn" @click="openCopyWeek" title="Copiar los turnos puntuales de esta semana a otra">Copiar semana</button>
         <button class="sp-btn" @click="navigate(-1)" :disabled="loading">‹ Anterior</button>
 
         <div class="sp-nav-label">
@@ -84,7 +102,8 @@
                 <div v-else class="sp-avatar-initials">{{ emp.initials }}</div>
                 <div class="sp-employee-text">
                   <div class="sp-employee-name">{{ emp.name }}</div>
-                  <div class="sp-employee-branch">{{ emp.branch }}</div>
+                  <div class="sp-employee-branch">{{ emp.branch }}<template v-if="emp.position"> · {{ emp.position }}</template></div>
+                  <div class="sp-employee-pattern" :class="{ 'sp-no-pattern': !emp.pattern }">{{ emp.pattern || 'Sin patrón' }}</div>
                 </div>
               </div>
             </td>
@@ -98,6 +117,7 @@
                 'sp-today-col': day.isToday,
                 'sp-weekend-col': day.isWeekend,
                 'sp-drag-over': dragTarget?.employeeId === emp.id && dragTarget?.date === day.date,
+                'sp-conflict-cell': getConflict(emp.id, day.date),
               }"
               @click="openModal(emp, day)"
               @dragover.prevent="onDragOver(emp.id, day.date)"
@@ -120,18 +140,30 @@
                 <span v-if="getShift(emp.id, day.date).is_override" class="sp-override-dot" title="Turno puntual">●</span>
                 <span v-if="getShift(emp.id, day.date).is_active === false" class="sp-inactive-tag" title="Turno inactivo: sigue asignado, pero ya no se ofrece">inactivo</span>
               </div>
-              <div v-else-if="canEdit" class="sp-shift-empty" @click.stop="openModal(emp, day)">+</div>
-              <div v-else class="sp-shift-empty sp-shift-empty-readonly">—</div>
+              <div v-else-if="canEdit && !getConflict(emp.id, day.date)" class="sp-shift-empty" @click.stop="openModal(emp, day)">+</div>
+              <div v-else-if="!getConflict(emp.id, day.date)" class="sp-shift-empty sp-shift-empty-readonly">—</div>
+              <div v-if="getConflict(emp.id, day.date)" class="sp-conflict-tag" :title="getConflict(emp.id, day.date).label + ' aprobadas: revisar antes de asignar un turno'">
+                {{ getConflict(emp.id, day.date).label }}
+              </div>
             </td>
             <td class="sp-hours-cell">{{ formatHours(employeeMinutes(emp.id)) }}</td>
           </tr>
         </tbody>
+        <tfoot>
+          <tr class="sp-coverage-row" v-for="row in coverageRows" :key="row.key">
+            <td class="sp-coverage-label">{{ row.label }}</td>
+            <td v-for="day in days" :key="day.date" class="sp-coverage-cell" :class="'sp-coverage-' + row.key">
+              {{ coverage[day.date]?.[row.key] ?? 0 }}
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
 
     <!-- Sin datos -->
     <div class="sp-empty" v-if="!loading && !employees.length">
-      <p>No hay empleados con rotación para los filtros seleccionados.</p>
+      <p>No hay empleados para los filtros seleccionados.</p>
     </div>
 
     <!-- Loading -->
@@ -165,6 +197,17 @@
             </div>
             <div class="sp-modal-current" v-else>
               <span class="sp-modal-current-label">Sin turno asignado</span>
+            </div>
+
+            <div v-if="modalConflict" class="sp-modal-warning">
+              Tiene {{ modalConflict.label.toLowerCase() }} aprobadas este día. Se puede asignar un turno, pero conviene revisarlo.
+            </div>
+
+            <div v-if="modal.currentShift?.is_override" class="sp-modal-meta">
+              <div v-if="modal.currentShift.created_by || modal.currentShift.updated_at">
+                Cargado por {{ modal.currentShift.created_by || 'sin dato' }}<template v-if="modal.currentShift.updated_at"> el {{ modal.currentShift.updated_at }}</template>.
+              </div>
+              <div v-if="modal.currentShift.notes">Nota: {{ modal.currentShift.notes }}</div>
             </div>
 
             <!-- Selector de turno -->
@@ -230,6 +273,41 @@
                 <span v-if="modal.saving">Guardando…</span>
                 <span v-else>Guardar</span>
               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </teleport>
+
+    <!-- ══════════════ MODAL COPIAR SEMANA ══════════════ -->
+    <teleport to="body">
+      <div v-if="copy.open" class="sp-modal-overlay" @click.self="copy.open = false">
+        <div class="sp-modal">
+          <div class="sp-modal-header">
+            <h3>Copiar semana</h3>
+            <p class="sp-modal-date">Turnos puntuales de la semana del {{ copy.fromLabel }}</p>
+            <button class="sp-modal-close" @click="copy.open = false">✕</button>
+          </div>
+
+          <div class="sp-modal-body">
+            <div class="sp-modal-section-title">Copiar a la semana que empieza el:</div>
+            <input type="date" v-model="copy.to" class="sp-input" @change="copy.result = null">
+            <p class="sp-modal-meta">Se copian solo los turnos puntuales (no el ciclo del patrón) de los empleados que muestran los filtros actuales. No se copia a fechas pasadas ni turnos inactivos.</p>
+
+            <div v-if="copy.error" class="sp-modal-error">{{ copy.error }}</div>
+
+            <div v-if="copy.result" class="sp-modal-meta">
+              <div><strong>{{ copy.result.create }}</strong> turnos nuevos y <strong>{{ copy.result.overwrite }}</strong> que reemplazan uno ya cargado.</div>
+              <div v-for="(count, reason) in skippedReasons" :key="reason">{{ count }} omitidos: {{ reason }}.</div>
+              <div v-if="copy.applied" class="sp-copy-done">Listo: los turnos se copiaron.</div>
+            </div>
+          </div>
+
+          <div class="sp-modal-footer">
+            <div class="sp-modal-footer-right">
+              <button class="sp-btn" @click="copy.open = false" :disabled="copy.saving">Cerrar</button>
+              <button class="sp-btn" @click="runCopy(true)" :disabled="!copy.to || copy.saving">Ver qué se copia</button>
+              <button class="sp-btn sp-btn-primary" @click="runCopy(false)" :disabled="!copy.to || !copy.result || copy.saving || copy.applied">Copiar</button>
             </div>
           </div>
         </div>
@@ -344,9 +422,31 @@ const availableShifts = ref([]);
 const dragSource     = ref(null);                     // { employee, day }
 const dragTarget     = ref(null);                     // { employeeId, date }
 
+const conflicts      = ref({});                       // { emp_id: { 'YYYY-MM-DD': { type, label } } }
+const coverage       = ref({});                       // { 'YYYY-MM-DD': { working, off, away } }
+
 const filters = reactive({
   company_id: null,
   branch_id:  null,
+  pattern_id: null,
+  position_id: null,
+  scope:      'all',
+});
+
+const coverageRows = [
+  { key: 'working', label: 'Trabajan' },
+  { key: 'off',     label: 'De franco' },
+  { key: 'away',    label: 'Vacaciones / licencia' },
+];
+
+const copy = reactive({
+  open:      false,
+  to:        '',
+  fromLabel: '',
+  result:    null,
+  error:     '',
+  saving:    false,
+  applied:   false,
 });
 
 const modal = reactive({
@@ -409,6 +509,50 @@ const navLabel = computed(() => {
   return `${first.dayNum} ${first.monthName} – ${last.dayNum} ${last.monthName} ${startDate.value.getFullYear()}`;
 });
 
+/** Patrones filtrados por la empresa seleccionada. */
+const filteredPatterns = computed(() =>
+  filters.company_id
+    ? props.initData.patterns.filter(p => p.company_id === filters.company_id)
+    : props.initData.patterns
+);
+
+/** Parámetros de filtro compartidos por la grilla, el Excel y «copiar semana». */
+function filterParams() {
+  const params = new URLSearchParams();
+  if (filters.company_id)  params.set('company_id',  filters.company_id);
+  if (filters.branch_id)   params.set('branch_id',   filters.branch_id);
+  if (filters.pattern_id)  params.set('pattern_id',  filters.pattern_id);
+  if (filters.position_id) params.set('position_id', filters.position_id);
+  if (filters.scope !== 'all') params.set('scope', filters.scope);
+  return params;
+}
+
+/** Enlace de descarga del Excel con el rango y los filtros visibles. */
+const exportUrl = computed(() => {
+  const params = filterParams();
+  params.set('start', formatDate(startDate.value));
+  params.set('end', formatDate(addDays(startDate.value, viewDays.value - 1)));
+  return `${props.initData.routes.export}?${params}`;
+});
+
+/** Conflicto (vacaciones o licencia aprobadas) de la celda abierta en el modal. */
+const modalConflict = computed(() => modal.employee && modal.day ? getConflict(modal.employee.id, modal.day.date) : null);
+
+/** Motivos de omisión de «copiar semana» con cantidad, en texto. */
+const skippedReasons = computed(() => {
+  const labels = {
+    past:              'fecha pasada',
+    inactive_shift:    'turno inactivo',
+    other_company:     'turno de otra empresa',
+    inactive_employee: 'empleado inactivo',
+  };
+  const out = {};
+  Object.entries(copy.result?.skipped ?? {}).forEach(([key, count]) => {
+    if (count > 0) out[labels[key] ?? key] = count;
+  });
+  return out;
+});
+
 /** Turnos disponibles filtrados por empresa del modal. */
 const modalShifts = computed(() => {
   if (! filters.company_id) return availableShifts.value;
@@ -466,14 +610,15 @@ async function loadData() {
       start: formatDate(startDate.value),
       end:   formatDate(end),
     });
-    if (filters.company_id) params.set('company_id', filters.company_id);
-    if (filters.branch_id)  params.set('branch_id',  filters.branch_id);
+    filterParams().forEach((value, key) => params.set(key, value));
 
     const res  = await fetch(`${props.initData.routes.data}?${params}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
     const data = await res.json();
 
     employees.value = data.employees;
     shifts.value    = data.shifts;
+    conflicts.value = data.conflicts ?? {};
+    coverage.value  = data.coverage ?? {};
   } catch (err) {
     console.error('Error cargando planificación:', err);
   } finally {
@@ -495,6 +640,7 @@ async function loadAvailableShifts() {
 
 function onCompanyChange() {
   filters.branch_id = null;
+  filters.pattern_id = null;
   loadAvailableShifts();
 }
 
@@ -502,6 +648,11 @@ function onCompanyChange() {
 
 function getShift(employeeId, date) {
   return shifts.value[employeeId]?.[date] ?? null;
+}
+
+/** Vacaciones o licencia aprobadas de un empleado en una fecha, o null. */
+function getConflict(employeeId, date) {
+  return conflicts.value[employeeId]?.[date] ?? null;
 }
 
 /**
@@ -664,6 +815,63 @@ async function reloadEmployeeDay(employeeId, date) {
     shifts.value[employeeId][date] = dayShift;
   } else {
     delete shifts.value[employeeId][date];
+  }
+}
+
+// ─── Copiar semana ────────────────────────────────────────────────────────────
+
+function openCopyWeek() {
+  copy.fromLabel = formatDate(startDate.value).split('-').reverse().join('/');
+  copy.to        = formatDate(addDays(startDate.value, 7));
+  copy.result    = null;
+  copy.error     = '';
+  copy.applied   = false;
+  copy.open      = true;
+}
+
+/** Pide al servidor qué copiaría (`preview`) o lo copia, y recarga la grilla al terminar. */
+async function runCopy(preview) {
+  if (copy.saving || ! copy.to) return;
+
+  copy.saving = true;
+  copy.error  = '';
+  try {
+    const res = await fetch(props.initData.routes.copyWeek, {
+      method:  'POST',
+      headers: {
+        'Content-Type':     'application/json',
+        'Accept':           'application/json',
+        'X-CSRF-TOKEN':     props.initData.csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({
+        from_start:  formatDate(startDate.value),
+        to_start:    copy.to,
+        preview,
+        company_id:  filters.company_id,
+        branch_id:   filters.branch_id,
+        pattern_id:  filters.pattern_id,
+        position_id: filters.position_id,
+        scope:       filters.scope,
+      }),
+    });
+
+    const body = await res.json().catch(() => ({}));
+
+    if (! res.ok) {
+      copy.error = res.status === 403 ? 'No tiene permiso para modificar los turnos.' : (body.message || 'No se pudo copiar la semana.');
+      return;
+    }
+
+    copy.result  = body;
+    copy.applied = ! preview;
+
+    if (! preview) await loadData();
+  } catch (err) {
+    console.error('Error copiando la semana:', err);
+    copy.error = 'No se pudo copiar la semana. Revisar la conexión e intentar de nuevo.';
+  } finally {
+    copy.saving = false;
   }
 }
 

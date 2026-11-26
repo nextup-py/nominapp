@@ -35,6 +35,7 @@ class ViewRotationPattern extends ViewRecord
     {
         return [
             ActionGroup::make([
+                RotationPatternResource::duplicateAction(Action::class),
                 RotationPatternStatusAction::make(Action::class),
             ])
                 ->label('Más acciones')

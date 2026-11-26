@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\RotationAssignmentsExport;
 use App\Filament\Resources\RotationPatternResource;
 use App\Filament\Resources\RotationPatternResource\Pages\CreateRotationPattern;
 use App\Filament\Resources\RotationPatternResource\Pages\EditRotationPattern;
@@ -202,4 +203,58 @@ it('la búsqueda global ofrece patrones con su ciclo', function () {
     $results = (new PanelGlobalSearchProvider)->getResults('Rotativo nocturno');
 
     expect(collect($results->getCategories())->has('Patrones de rotación'))->toBeTrue();
+});
+
+it('asignar con «Rige desde» futuro cierra la rotación actual el día anterior y respeta «Hasta»', function () {
+    $company = patternCompany();
+    $current = makePattern($company, 'Actual');
+    $next = makePattern($company, 'Siguiente');
+    $employee = patternEmployee($company);
+    RotationService::assign($employee, $current, Carbon::today()->subDays(3));
+
+    Livewire::test(EmployeesRelationManager::class, ['ownerRecord' => $next, 'pageClass' => ViewRotationPattern::class])
+        ->callTableAction('assign', data: [
+            'employee_ids' => [$employee->id],
+            'valid_from' => today()->addDays(5)->toDateString(),
+            'valid_until' => today()->addDays(20)->toDateString(),
+            'start_index' => 0,
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $new = RotationAssignment::where('pattern_id', $next->id)->first();
+
+    expect($current->assignments()->first()->valid_until->toDateString())->toBe(today()->addDays(4)->toDateString())
+        ->and($new->valid_from->toDateString())->toBe(today()->addDays(5)->toDateString())
+        ->and($new->valid_until->toDateString())->toBe(today()->addDays(20)->toDateString())
+        ->and($next->currentAssignmentsCount())->toBe(1);
+});
+
+it('duplicar copia el ciclo sin las asignaciones', function () {
+    $company = patternCompany();
+    $pattern = makePattern($company);
+    RotationService::assign(patternEmployee($company), $pattern, Carbon::today());
+
+    $copy = $pattern->duplicate('Seis por uno (copia)');
+
+    expect($copy->id)->not->toBe($pattern->id)
+        ->and($copy->sequence)->toBe($pattern->sequence)
+        ->and($copy->assignments()->count())->toBe(0);
+
+    Livewire::test(ViewRotationPattern::class, ['record' => $pattern->id])
+        ->callAction('duplicate', data: ['name' => 'otra copia']);
+
+    expect(RotationPattern::where('name', 'Otra copia')->exists())->toBeTrue();
+});
+
+it('exporta el historial de asignaciones del patrón', function () {
+    $company = patternCompany();
+    $pattern = makePattern($company);
+    $employee = patternEmployee($company);
+    RotationService::assign($employee, $pattern, Carbon::today()->subDays(2), 1);
+    $export = new RotationAssignmentsExport($pattern->id);
+    $rows = $export->query()->get()->map(fn ($a) => $export->map($a));
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows->first()[3])->toBe('Vigente')
+        ->and($rows->first()[6])->toBe('Día 2');
 });

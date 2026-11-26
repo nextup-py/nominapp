@@ -2,12 +2,16 @@
 
 namespace App\Filament\Resources\ShiftTemplateResource\Pages;
 
+use App\Exports\ShiftTemplatesExport;
 use App\Filament\Resources\ShiftTemplateResource;
 use App\Models\ShiftTemplate;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
+use Maatwebsite\Excel\Facades\Excel;
 
 /** Página de listado de turnos con pestañas por estado. */
 class ListShiftTemplates extends ListRecords
@@ -93,6 +97,23 @@ class ListShiftTemplates extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('export_excel')
+                ->authorize(fn (): bool => (bool) auth()->user()?->can('view_any_shift_template'))
+                ->label('Exportar')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalHeading('¿Exportar Turnos a Excel?')
+                ->modalDescription(fn () => 'Se exportarán los '.$this->getFilteredTableQuery()->count().' turnos del listado actual (según pestaña, filtros y búsqueda).')
+                ->modalSubmitActionLabel('Sí, exportar')
+                ->action(function () {
+                    $ids = $this->getFilteredTableQuery()->reorder()->select('shift_templates.id')->pluck('id')->all();
+
+                    Notification::make()->success()->title('Exportación lista')->body('El listado de turnos se está descargando.')->send();
+
+                    return Excel::download(new ShiftTemplatesExport($ids), 'turnos_'.now()->format('Y_m_d_H_i_s').'.xlsx');
+                }),
+
             CreateAction::make()->label('Nuevo Turno')->icon('heroicon-o-plus'),
         ];
     }

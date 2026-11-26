@@ -264,6 +264,7 @@ class RotationPatternResource extends Resource
                         ->color('primary')
                         ->authorize(fn (RotationPattern $record): bool => (bool) auth()->user()?->can('update', $record))
                         ->url(fn (RotationPattern $record): string => static::getUrl('edit', ['record' => $record])),
+                    static::duplicateAction(TableAction::class),
                     RotationPatternStatusAction::make(TableAction::class),
                 ]),
             ])
@@ -297,6 +298,43 @@ class RotationPatternResource extends Resource
             ->emptyStateHeading('Sin patrones de rotación')
             ->emptyStateDescription('Crear un patrón (por ejemplo, 6 días de mañana y 1 franco) para asignarlo a los empleados que rotan.')
             ->emptyStateIcon('heroicon-o-arrow-path');
+    }
+
+    /**
+     * Acción «Duplicar» (fila o página): copia el ciclo bajo otro nombre; no copia las asignaciones.
+     *
+     * @param  class-string  $class  `Filament\Tables\Actions\Action` o `Filament\Actions\Action`.
+     */
+    public static function duplicateAction(string $class): mixed
+    {
+        return $class::make('duplicate')
+            ->label('Duplicar')
+            ->icon('heroicon-o-document-duplicate')
+            ->color('gray')
+            ->visible(fn (): bool => (bool) auth()->user()?->can('create_rotation_pattern'))
+            ->modalHeading('Duplicar patrón')
+            ->modalDescription('Se copian el ciclo y la descripción. Los empleados asignados no se copian.')
+            ->modalSubmitActionLabel('Duplicar')
+            ->fillForm(fn (RotationPattern $record): array => ['name' => "{$record->name} (copia)"])
+            ->form(fn (RotationPattern $record): array => [
+                TextInput::make('name')
+                    ->label('Nombre del nuevo patrón')
+                    ->required()
+                    ->maxLength(60)
+                    ->unique(RotationPattern::class, 'name', modifyRuleUsing: fn (Unique $rule) => $rule->where('company_id', $record->company_id))
+                    ->validationMessages(['unique' => 'Ya existe un patrón con ese nombre en esta empresa.']),
+            ])
+            ->action(function (RotationPattern $record, array $data) {
+                $copy = $record->duplicate(RotationPattern::capitalizeName($data['name']));
+
+                Notification::make()
+                    ->success()
+                    ->title('Patrón duplicado')
+                    ->body("Se creó \"{$copy->name}\". Revisar el ciclo y asignarlo a los empleados.")
+                    ->send();
+
+                return redirect(static::getUrl('edit', ['record' => $copy]));
+            });
     }
 
     /**

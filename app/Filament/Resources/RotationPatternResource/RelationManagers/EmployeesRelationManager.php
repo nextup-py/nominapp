@@ -23,6 +23,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Muestra y gestiona los empleados con asignación activa al patrón de
@@ -110,6 +111,21 @@ class EmployeesRelationManager extends RelationManager
                     ->helperText('Quienes ya tienen otra rotación hoy pasan a este patrón.')
                     ->columnSpanFull(),
 
+                DatePicker::make('valid_from')
+                    ->label('Rige desde')
+                    ->default(Carbon::today())
+                    ->required()
+                    ->native(false)
+                    ->displayFormat('d/m/Y')
+                    ->helperText('Puede ser una fecha futura para programar el cambio: la rotación actual sigue hasta el día anterior.'),
+
+                DatePicker::make('valid_until')
+                    ->label('Hasta (opcional)')
+                    ->native(false)
+                    ->displayFormat('d/m/Y')
+                    ->afterOrEqual('valid_from')
+                    ->helperText('Vacío = sin fecha de fin.'),
+
                 Select::make('start_index')
                     ->label('Empieza en')
                     ->options(function () use ($pattern) {
@@ -130,7 +146,7 @@ class EmployeesRelationManager extends RelationManager
                     ->default(0)
                     ->native(false)
                     ->required()
-                    ->helperText('El mismo día de inicio se aplica a todos los empleados seleccionados. Para desfasar a alguien, asignarlo aparte.')
+                    ->helperText('Día del ciclo que corresponde a la fecha «Rige desde». Se aplica igual a todos los empleados seleccionados; para desfasar a alguien, asignarlo aparte.')
                     ->columnSpanFull(),
             ]);
     }
@@ -248,12 +264,13 @@ class EmployeesRelationManager extends RelationManager
                                 RotationService::assign(
                                     employee: $employee,
                                     pattern: $pattern,
-                                    validFrom: Carbon::today(),
+                                    validFrom: Carbon::parse($data['valid_from']),
                                     startIndex: (int) $data['start_index'],
+                                    validUntil: filled($data['valid_until'] ?? null) ? Carbon::parse($data['valid_until']) : null,
                                 );
                                 $assigned++;
-                            } catch (\Exception) {
-                                $errors[] = $employee->full_name;
+                            } catch (\Exception $e) {
+                                $errors[] = $employee->full_name.($e instanceof ValidationException ? ' ('.collect($e->errors())->flatten()->first().')' : '');
                             }
                         }
 
@@ -261,7 +278,7 @@ class EmployeesRelationManager extends RelationManager
                             Notification::make()
                                 ->success()
                                 ->title('Empleados asignados')
-                                ->body("Se asignó \"{$pattern->name}\" a {$assigned} empleado(s) a partir de hoy.")
+                                ->body("Se asignó \"{$pattern->name}\" a {$assigned} empleado(s) desde el ".Carbon::parse($data['valid_from'])->format('d/m/Y').(filled($data['valid_until'] ?? null) ? ' hasta el '.Carbon::parse($data['valid_until'])->format('d/m/Y') : '').'.')
                                 ->send();
                         }
 

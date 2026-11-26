@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\ShiftTemplatesExport;
 use App\Filament\Resources\ShiftTemplateResource;
 use App\Filament\Resources\ShiftTemplateResource\Pages\CreateShiftTemplate;
 use App\Filament\Resources\ShiftTemplateResource\Pages\EditShiftTemplate;
@@ -252,4 +253,30 @@ it('el listado muestra el uso de cada turno y filtra los sin uso', function () {
         ->filterTable('unused')
         ->assertCanSeeTableRecords([$free])
         ->assertCanNotSeeTableRecords([$used]);
+});
+
+it('exporta los turnos del listado con su uso', function () {
+    $company = shiftCompany();
+    $used = makeShift($company, 'Exportado');
+    RotationPattern::create(['company_id' => $company->id, 'name' => 'P', 'sequence' => [$used->id], 'is_active' => true]);
+    makeShift($company, 'Fuera del filtro');
+
+    $export = new ShiftTemplatesExport([$used->id]);
+    $rows = $export->query()->get()->map(fn ($shift) => $export->map($shift));
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows->first()[0])->toBe('Exportado')
+        ->and($rows->first()[3])->toBe('07:00–15:00 · 7 h netas')
+        ->and($rows->first()[6])->toBe(1);
+});
+
+it('la vista previa usa el color elegido con texto legible y el formulario ofrece la paleta sugerida', function () {
+    expect((string) ShiftTemplateResource::colorPreview('Mañana', '#FFFF00'))->toContain('background:#FFFF00')->toContain('color:#1f2937')
+        ->and((string) ShiftTemplateResource::colorPreview(null, 'no-es-color'))->toContain('#6B7280')->toContain('Turno');
+
+    expect(ShiftTemplate::SUGGESTED_COLORS)->each->toMatch('/^#[0-9A-F]{6}$/');
+
+    shiftCompany();
+
+    Livewire::test(CreateShiftTemplate::class)->assertSee('Vista previa')->assertSee('Verde');
 });

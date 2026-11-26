@@ -2,15 +2,19 @@
 
 namespace App\Filament\Resources\RotationPatternResource\RelationManagers;
 
+use App\Exports\RotationAssignmentsExport;
 use App\Filament\Resources\EmployeeResource;
 use App\Models\Employee;
 use App\Models\RotationAssignment;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Historial de solo lectura de las asignaciones del patrón: quién lo tuvo, desde y hasta cuándo, y quién lo asignó.
@@ -97,6 +101,28 @@ class AssignmentsRelationManager extends RelationManager
                                 ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today)),
                             default => $query,
                         };
+                    }),
+            ])
+            ->headerActions([
+                Action::make('export')
+                    ->authorize(fn (): bool => (bool) auth()->user()?->can('view_any_rotation_pattern'))
+                    ->label('Exportar')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('¿Exportar el historial de asignaciones?')
+                    ->modalDescription('Se exportan las asignaciones que muestra la lista, con los filtros y la búsqueda aplicados.')
+                    ->modalSubmitActionLabel('Sí, exportar')
+                    ->action(function () {
+                        $pattern = $this->getOwnerRecord();
+                        $ids = $this->getFilteredTableQuery()->pluck('rotation_assignments.id')->all();
+
+                        Notification::make()->success()->title('Exportación lista')->body('El historial de asignaciones se está descargando.')->send();
+
+                        return Excel::download(
+                            new RotationAssignmentsExport($pattern->id, $ids),
+                            'asignaciones_'.str($pattern->name)->slug().'_'.now()->format('Y_m_d').'.xlsx'
+                        );
                     }),
             ])
             ->actions([])

@@ -27,6 +27,20 @@ class ShiftTemplate extends Model implements Auditable
         'start_time', 'end_time', 'break_minutes', 'notes', 'is_active',
     ];
 
+    /**
+     * Colores sugeridos para el Planificador (nombre → hex), con contraste suficiente para el texto de la etiqueta.
+     *
+     * @var array<string, string>
+     */
+    public const SUGGESTED_COLORS = [
+        'Verde' => '#16A34A',
+        'Azul' => '#2563EB',
+        'Naranja' => '#EA580C',
+        'Violeta' => '#7C3AED',
+        'Rojo' => '#DC2626',
+        'Gris' => '#6B7280',
+    ];
+
     /** Valores por defecto de un turno nuevo. */
     protected $attributes = ['is_active' => true];
 

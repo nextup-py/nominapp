@@ -208,6 +208,17 @@ class RotationPattern extends Model implements Auditable
         })->all();
     }
 
+    /** Copia el patrón (ciclo y descripción) bajo un nombre nuevo. No copia las asignaciones. */
+    public function duplicate(string $name): self
+    {
+        $copy = $this->replicate(['created_at', 'updated_at']);
+        $copy->name = $name;
+        $copy->is_active = true;
+        $copy->save();
+
+        return $copy;
+    }
+
     /** Pone en mayúscula solo la primera letra del nombre. */
     public static function capitalizeName(string $name): string
     {

@@ -205,6 +205,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/shift-planner')->name('shift-planner.')->middleware('can:viewAny,App\\Models\\Schedule')->group(function () {
         Route::get('/data', [ShiftPlannerController::class, 'data'])->name('data');
         Route::get('/shifts', [ShiftPlannerController::class, 'shifts'])->name('shifts');
+        Route::get('/export', [ShiftPlannerController::class, 'export'])->name('export');
+        Route::post('/copy-week', [ShiftPlannerController::class, 'copyWeek'])->middleware('can:update_schedule')->name('copy-week');
         Route::post('/override', [ShiftPlannerController::class, 'storeOverride'])->middleware('can:update_schedule')->name('override.store');
         Route::delete('/override', [ShiftPlannerController::class, 'destroyOverride'])->middleware('can:update_schedule')->name('override.destroy');
     });

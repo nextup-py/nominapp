@@ -172,12 +172,14 @@ Un **turno** es una franja de trabajo reutilizable (Mañana, Tarde, Noche, Franc
 - Cada fila muestra el color, el nombre, la jornada, el **horario con las horas netas** (ej. `07:00–15:00 · 7 h netas`, con la marca «Cruza la medianoche» si corresponde) y el estado. Los francos muestran «Franco».
 - La columna y el filtro de **Empresa** aparecen solo cuando hay más de una empresa activa.
 - Un clic en la fila abre el detalle. El menú de la fila ofrece **Duplicar**, **Editar** y **Desactivar / Activar**.
+- La columna **Usado en** indica en cuántos patrones y turnos puntuales se usa cada turno; el filtro **Sin uso** muestra los que se pueden eliminar.
+- **Exportar** descarga el listado en Excel (respeta pestaña, filtros y búsqueda).
 - Acciones masivas **Desactivar seleccionados** y **Activar seleccionados**: omiten los que ya están en ese estado y, al desactivar, los que están en uso.
 
 ## Crear o editar un turno
 
 1. Clic en **Nuevo Turno**.
-2. Completar el **nombre** (único dentro de la empresa; solo se pone en mayúscula la primera letra), el **tipo de jornada** y el **color** con que se verá en el Planificador. La **empresa** se pide solo si hay más de una activa; con una sola se asigna sola.
+2. Completar el **nombre** (único dentro de la empresa; solo se pone en mayúscula la primera letra), el **tipo de jornada** y el **color** con que se verá en el Planificador.  Debajo del color hay una **vista previa** del turno y colores sugeridos para elegir con un clic. La **empresa** se pide solo si hay más de una activa; con una sola se asigna sola.
 3. En **Horario**, indicar entrada, salida y minutos de descanso, o activar **Es día libre (Franco)**. El formulario calcula las **horas netas** y avisa si el turno cruza la medianoche (salida menor que la entrada).
 4. Guardar.
 
@@ -222,7 +224,7 @@ Para empleados cuyo turno cambia según un ciclo (ej: 6 días de mañana, 1 fran
 
 - Pestañas **Activos** (la que abre por defecto), **Inactivos** y **Todos**, con el conteo de cada una.
 - Cada fila muestra el nombre, el **resumen del ciclo** (ej. `5 Mañana, 2 Franco · 7 días`), los **empleados vigentes** y el estado. La columna y el filtro de **Empresa** aparecen solo con más de una empresa activa.
-- Un clic en la fila abre el detalle. El menú de la fila ofrece **Editar** y **Desactivar / Activar**.
+- Un clic en la fila abre el detalle. El menú de la fila ofrece **Duplicar**, **Editar** y **Desactivar / Activar**. **Duplicar** copia el ciclo con otro nombre, sin los empleados.
 - Acciones masivas **Desactivar seleccionados** y **Activar seleccionados**: omiten los que ya están en ese estado y, al desactivar, los que tienen empleados asignados vigentes o futuros.
 
 ## Crear un patrón de rotación
@@ -241,7 +243,7 @@ Muestra el estado, el resumen del ciclo, los empleados vigentes y la tabla **Cic
 | Pestaña | Contenido |
 |---------|-----------|
 | **Empleados Asignados** | Quién tiene hoy el patrón, desde cuándo, **hasta cuándo** (si ya se programó su salida) y su día de inicio |
-| **Historial de asignaciones** | Todas las asignaciones, vigentes, futuras y finalizadas, con filtros por empleado y estado |
+| **Historial de asignaciones** | Todas las asignaciones, vigentes, futuras y finalizadas, con filtros por empleado y estado; **Exportar** las descarga en Excel |
 | **Historial de cambios** | Quién modificó el nombre, el ciclo o el estado, y cuándo |
 
 En el encabezado, **Editar** queda a la vista y **Más acciones** agrupa **Desactivar / Activar**.
@@ -252,7 +254,8 @@ En el encabezado, **Editar** queda a la vista y **Más acciones** agrupa **Desac
 2. En la pestaña **Empleados Asignados**, clic en **Asignar**
 3. Seleccionar uno o varios empleados (opcionalmente filtrando por sucursal)
 4. Elegir el **día de inicio** — a qué día del ciclo corresponde el día de hoy para estos empleados (ej: "Día 1: Mañana" si arrancan desde el principio del ciclo)
-5. Confirmar
+5. Indicar **Rige desde** (hoy por defecto) y, si se conoce, **Hasta**. Con una fecha futura, la rotación anterior se cierra el día previo y la nueva empieza ese día
+6. Confirmar
 
 > El día de inicio elegido se aplica igual a todos los empleados seleccionados en el mismo lote. Para que un empleado arranque en un día distinto del ciclo, asignarlo por separado.
 
@@ -284,7 +287,9 @@ Ir a **Horarios y turnos → Planificador de Turnos** para ver y ajustar, en una
 
 ## Qué muestra la grilla
 
-Una tabla de **empleados × días** (filtrable por empresa y sucursal) donde cada celda muestra el turno que le corresponde a ese empleado ese día según su patrón de rotación. Las celdas con un punto (●) indican un **turno puntual** — un cambio manual que reemplaza, solo para ese día, lo que el patrón asignaría normalmente. La última columna, **Horas**, suma las horas netas planificadas de cada empleado en el rango visible.
+Una tabla de **empleados × días** (filtrable por empresa, sucursal, patrón de rotación, cargo y por quienes tienen o no patrón; los que no tienen se marcan **Sin patrón**) donde cada celda muestra el turno que le corresponde a ese empleado ese día según su patrón de rotación. Las celdas con un punto (●) indican un **turno puntual** — un cambio manual que reemplaza, solo para ese día, lo que el patrón asignaría normalmente. La última columna, **Horas**, suma las horas netas planificadas de cada empleado en el rango visible.
+
+Al pie de la grilla, la **cobertura por día** cuenta cuántas personas trabajan, descansan o están ausentes. Las celdas rayadas con una etiqueta (ej. «Vacaciones», «Reposo Médico») avisan que el empleado tiene vacaciones o una licencia aprobada ese día; el aviso no impide cargar el turno.
 
 Un turno que se desactivó después de asignarse sigue mostrándose donde ya estaba, con la marca **inactivo**.
 
@@ -302,13 +307,21 @@ Solo se ofrecen turnos **activos de la misma empresa** del empleado, y solo se p
 
 Se puede arrastrar la celda de un empleado/día hacia la celda de otro empleado/día: el turno se **copia** al destino como turno puntual con el motivo "Cambio de turno" y la nota "Movido desde [empleado] ([día])"; la celda de origen no cambia (si hay que quitárselo a quien lo cedió, asignarle otro turno o restaurar su ciclo).
 
+## Copiar una semana
+
+**Copiar semana** repite los turnos de una semana en otra para los empleados filtrados. **Ver qué se copia** muestra cuántos turnos se crean y cuántos reemplazan uno ya cargado; no se copian días pasados, turnos inactivos, de otra empresa ni a empleados inactivos. Los turnos copiados quedan como turnos puntuales con la nota «Copiado de la semana del …».
+
+## Exportar la grilla
+
+**Exportar** descarga en Excel la grilla del rango visible (máximo 62 días): una fila por empleado con su turno de cada día, las horas netas y las filas de cobertura. Un asterisco marca los turnos puntuales.
+
 ## Restaurar el ciclo
 
 Si una celda ya tiene un turno puntual, el modal muestra el botón **Restaurar ciclo**: lo elimina y la celda vuelve al turno del patrón.
 
 ## Quién cambió un turno puntual
 
-Cada alta, cambio y restauración queda registrada con el usuario y la fecha. Se consulta en **Horarios y turnos → Turnos → (turno) → Turnos puntuales**, con **Historial** en cada fila, que muestra qué turno tenía antes y cuál tiene ahora; la columna **Registrado por** indica quién lo cargó.
+El modal de una celda con turno puntual muestra quién lo cargó, cuándo y la nota. Cada alta, cambio y restauración queda registrada con el usuario y la fecha. Se consulta en **Horarios y turnos → Turnos → (turno) → Turnos puntuales**, con **Historial** en cada fila, que muestra qué turno tenía antes y cuál tiene ahora; la columna **Registrado por** indica quién lo cargó.
 
 ## Permisos
 

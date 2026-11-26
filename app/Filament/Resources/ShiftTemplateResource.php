@@ -10,6 +10,7 @@ use App\Models\Schedule;
 use App\Models\ShiftTemplate;
 use App\Support\BlockerSummary;
 use Carbon\Carbon;
+use Filament\Forms\Components\Actions\Action as FormAction;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
@@ -19,6 +20,7 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action as TableAction;
@@ -34,6 +36,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 
 /** Recurso Filament para gestionar los turnos de trabajo reutilizables. */
@@ -78,6 +82,20 @@ class ShiftTemplateResource extends Resource
             'Horario' => $record->scheduleSummary(),
             'Estado' => $record->is_active ? null : 'Inactivo',
         ]);
+    }
+
+    /**
+     * Etiqueta de ejemplo con el color elegido, tal como se ve en la grilla del Planificador.
+     */
+    public static function colorPreview(?string $name, ?string $hex): HtmlString
+    {
+        $hex = preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $hex) ? $hex : '#6B7280';
+        $r = hexdec(substr($hex, 1, 2));
+        $g = hexdec(substr($hex, 3, 2));
+        $b = hexdec(substr($hex, 5, 2));
+        $text = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255 > 0.5 ? '#1f2937' : '#ffffff';
+
+        return new HtmlString('<span style="display:inline-block;padding:.25rem .75rem;border-radius:.375rem;font-size:.8rem;font-weight:600;background:'.$hex.';color:'.$text.'">'.e(filled($name) ? $name : 'Turno').'</span>');
     }
 
     /** Quien puede crear, editar y cambiar el estado de turnos (las acciones personalizadas no consultan la policy). */
@@ -125,6 +143,7 @@ class ShiftTemplateResource extends Resource
                             ->placeholder('Ej: Turno Mañana')
                             ->required()
                             ->maxLength(60)
+                            ->live(onBlur: true)
                             ->unique(
                                 ignoreRecord: true,
                                 modifyRuleUsing: fn (Unique $rule, Get $get) => $rule->where('company_id', $get('company_id') ?: Company::active()->value('id')),
@@ -150,7 +169,23 @@ class ShiftTemplateResource extends Resource
                         ColorPicker::make('color')
                             ->label('Color en el Planificador')
                             ->default('#6B7280')
-                            ->required(),
+                            ->required()
+                            ->live(),
+
+                        Placeholder::make('color_preview')
+                            ->key('color_preview')
+                            ->label('Vista previa')
+                            ->content(fn (Get $get): HtmlString => static::colorPreview($get('name'), $get('color')))
+                            ->hintActions(array_map(
+                                fn (string $label, string $hex) => FormAction::make('color_'.Str::slug($label))
+                                    ->label($label)
+                                    ->icon('heroicon-m-swatch')
+                                    ->color('gray')
+                                    ->size('xs')
+                                    ->action(fn (Set $set) => $set('color', $hex)),
+                                array_keys(ShiftTemplate::SUGGESTED_COLORS),
+                                array_values(ShiftTemplate::SUGGESTED_COLORS),
+                            )),
 
                         TextInput::make('notes')
                             ->label('Notas')
