@@ -6,6 +6,8 @@ use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\ScheduleResource;
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\Position;
+use App\Models\RotationPattern;
 use Filament\Pages\Page;
 
 /**
@@ -45,7 +47,7 @@ class ShiftPlannerPage extends Page
      */
     public function getViewData(): array
     {
-        $companies = Company::orderBy('name')->get(['id', 'name']);
+        $companies = Company::active()->orderBy('name')->get(['id', 'name']);
 
         $branches = Branch::orderBy('name')
             ->get(['id', 'name', 'company_id']);
@@ -54,12 +56,17 @@ class ShiftPlannerPage extends Page
             'initData' => [
                 'companies' => $companies,
                 'branches' => $branches,
+                'patterns' => RotationPattern::active()->orderBy('name')->get(['id', 'name', 'company_id']),
+                'positions' => Position::active()->orderBy('name')->get(['id', 'name']),
                 'csrf' => csrf_token(),
+                'canEdit' => (bool) auth()->user()?->can('update_schedule'),
                 'routes' => [
                     'data' => route('shift-planner.data'),
                     'shifts' => route('shift-planner.shifts'),
                     'overrideStore' => route('shift-planner.override.store'),
                     'overrideDestroy' => route('shift-planner.override.destroy'),
+                    'export' => route('shift-planner.export'),
+                    'copyWeek' => route('shift-planner.copy-week'),
                 ],
             ],
         ];

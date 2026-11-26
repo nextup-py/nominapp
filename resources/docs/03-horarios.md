@@ -162,45 +162,122 @@ No elimine la asignación anterior. En cambio, use **Asignar** en el horario nue
 
 ---
 
+# Turnos
+
+Un **turno** es una franja de trabajo reutilizable (Mañana, Tarde, Noche, Franco) que se usa para armar **patrones de rotación** y para asignar **turnos puntuales** en el Planificador. Se gestionan en **Horarios y turnos → Turnos**.
+
+## Listado
+
+- Pestañas **Activos** (la que abre por defecto), **Inactivos** y **Todos**, con el conteo de cada una.
+- Cada fila muestra el color, el nombre, la jornada, el **horario con las horas netas** (ej. `07:00–15:00 · 7 h netas`, con la marca «Cruza la medianoche» si corresponde) y el estado. Los francos muestran «Franco».
+- La columna y el filtro de **Empresa** aparecen solo cuando hay más de una empresa activa.
+- Un clic en la fila abre el detalle. El menú de la fila ofrece **Duplicar**, **Editar** y **Desactivar / Activar**.
+- La columna **Usado en** indica en cuántos patrones y turnos puntuales se usa cada turno; el filtro **Sin uso** muestra los que se pueden eliminar.
+- **Exportar** descarga el listado en Excel (respeta pestaña, filtros y búsqueda).
+- Acciones masivas **Desactivar seleccionados** y **Activar seleccionados**: omiten los que ya están en ese estado y, al desactivar, los que están en uso.
+
+## Crear o editar un turno
+
+1. Clic en **Nuevo Turno**.
+2. Completar el **nombre** (único dentro de la empresa; solo se pone en mayúscula la primera letra), el **tipo de jornada** y el **color** con que se verá en el Planificador.  Debajo del color hay una **vista previa** del turno y colores sugeridos para elegir con un clic. La **empresa** se pide solo si hay más de una activa; con una sola se asigna sola.
+3. En **Horario**, indicar entrada, salida y minutos de descanso, o activar **Es día libre (Franco)**. El formulario calcula las **horas netas** y avisa si el turno cruza la medianoche (salida menor que la entrada).
+4. Guardar.
+
+> Con el turno ya en uso, el formulario lo avisa: los cambios de horario rigen desde ya para esos patrones, pero las jornadas ya calculadas no cambian hasta recalcularlas. La empresa no se puede cambiar mientras el turno esté en uso.
+
+## Detalle del turno
+
+Muestra el horario, el descanso, el color, el estado y la empresa. Debajo hay tres pestañas de solo lectura:
+
+| Pestaña | Contenido |
+|---------|-----------|
+| **Patrones de rotación** | Patrones cuyo ciclo incluye el turno y cuántos días del ciclo lo usan |
+| **Turnos puntuales** | Empleados y fechas del Planificador que usan el turno (con filtro «Solo de hoy en adelante») |
+| **Historial de cambios** | Quién modificó nombre, jornada, horario, color o estado, y cuándo |
+
+En el encabezado, **Editar** queda a la vista y **Más acciones** agrupa **Duplicar** y **Desactivar / Activar**.
+
+## Desactivar, activar y eliminar
+
+- **Desactivar:** el turno deja de ofrecerse al armar patrones y en el Planificador, pero se conserva el historial. Se bloquea mientras esté en un **patrón de rotación activo** o en un **turno puntual de hoy en adelante**; el aviso indica cuántos son. Patrones inactivos y turnos puntuales pasados no lo impiden.
+- **Activar:** vuelve a ofrecerlo.
+- **Eliminar:** solo aparece (en **Editar**) si el turno **nunca se usó** en un patrón ni en el Planificador. Si alguna vez se usó, el camino es desactivarlo.
+- **Duplicar:** crea una copia con otro nombre (mismo horario, color y notas); no copia el uso.
+
+## Permisos
+
+Crear, editar, duplicar y activar o desactivar requieren permisos de edición sobre turnos; con un rol de solo lectura esas acciones no se muestran. Los turnos también se encuentran con la búsqueda global (**Ctrl+K**).
+
+---
+
 # Patrones de Rotación
 
-Para empleados cuyo turno cambia según un ciclo (ej: 6 días de mañana, 1 franco, repetir), en lugar de un horario fijo se usa un **patrón de rotación**.
+Para empleados cuyo turno cambia según un ciclo (ej: 6 días de mañana, 1 franco, repetir), en lugar de un horario fijo se usa un **patrón de rotación**. Se gestionan en **Horarios y turnos → Patrones de rotación**.
 
 ## Conceptos clave
 
 - **Patrón de rotación:** ciclo ordenado de turnos (ej: Día 1 = Turno Mañana, Día 2 = Turno Mañana, ..., Día 7 = Franco). El ciclo se repite automáticamente una vez completado.
-- **Turno del ciclo:** cada día del patrón apunta a un turno ya creado en **Organización → Plantillas de turno** (`ShiftTemplate`) — incluyendo días de franco, que también se definen como un "turno" marcado como día de descanso.
+- **Turno del ciclo:** cada día del patrón apunta a un turno ya creado en **Horarios y turnos → Turnos** — incluyendo días de franco, que también se definen como un "turno" marcado como día de descanso.
 - **Asignación de rotación:** vínculo entre un empleado y un patrón, con fecha de inicio de vigencia y un **día de inicio del ciclo** (para que dos empleados con el mismo patrón puedan estar en días distintos del ciclo, ej. uno arranca en el Día 1 y otro en el Día 4).
+
+## Listado
+
+- Pestañas **Activos** (la que abre por defecto), **Inactivos** y **Todos**, con el conteo de cada una.
+- Cada fila muestra el nombre, el **resumen del ciclo** (ej. `5 Mañana, 2 Franco · 7 días`), los **empleados vigentes** y el estado. La columna y el filtro de **Empresa** aparecen solo con más de una empresa activa.
+- Un clic en la fila abre el detalle. El menú de la fila ofrece **Duplicar**, **Editar** y **Desactivar / Activar**. **Duplicar** copia el ciclo con otro nombre, sin los empleados.
+- Acciones masivas **Desactivar seleccionados** y **Activar seleccionados**: omiten los que ya están en ese estado y, al desactivar, los que tienen empleados asignados vigentes o futuros.
 
 ## Crear un patrón de rotación
 
-1. Ir a **Organización → Patrones de rotación**
-2. Clic en **Nuevo Patrón**
-3. Seleccionar la **empresa** y darle un nombre (ej: "3 Turnos Rotativos 21 días")
-4. En **Secuencia del ciclo**, agregar un ítem por cada día del ciclo y elegir el turno correspondiente — el orden de los ítems define el orden del ciclo (ítem 1 = Día 1, ítem 2 = Día 2, etc.). Se puede arrastrar para reordenar
-5. Guardar
+1. Clic en **Nuevo Patrón**
+2. Darle un nombre, único dentro de la empresa (ej: "3 Turnos Rotativos 21 días"); solo se pone en mayúscula la primera letra. La **empresa** se pide solo si hay más de una activa
+3. En **Secuencia del ciclo**, agregar un ítem por cada día del ciclo y elegir el turno correspondiente — el orden de los ítems define el orden del ciclo (ítem 1 = Día 1, ítem 2 = Día 2, etc.). Se puede arrastrar para reordenar
+4. Guardar
 
-> Los turnos deben existir previamente en **Organización → Plantillas de turno**, filtrados por la misma empresa del patrón.
+> Los turnos deben existir previamente en **Horarios y turnos → Turnos**, y solo se ofrecen los de la misma empresa que estén activos. Con empleados asignados, el formulario avisa que los cambios del ciclo rigen desde hoy y que las jornadas ya calculadas no cambian hasta recalcularlas; la empresa no se puede cambiar.
+
+## Detalle del patrón
+
+Muestra el estado, el resumen del ciclo, los empleados vigentes y la tabla **Ciclo día por día** (turno y horario de cada día). Debajo hay tres pestañas:
+
+| Pestaña | Contenido |
+|---------|-----------|
+| **Empleados Asignados** | Quién tiene hoy el patrón, desde cuándo, **hasta cuándo** (si ya se programó su salida) y su día de inicio |
+| **Historial de asignaciones** | Todas las asignaciones, vigentes, futuras y finalizadas, con filtros por empleado y estado; **Exportar** las descarga en Excel |
+| **Historial de cambios** | Quién modificó el nombre, el ciclo o el estado, y cuándo |
+
+En el encabezado, **Editar** queda a la vista y **Más acciones** agrupa **Desactivar / Activar**.
 
 ## Asignar un patrón de rotación a un empleado
 
-1. Ir a **Organización → Patrones de rotación**
-2. Abrir el patrón a asignar
-3. En la pestaña **Empleados Asignados**, clic en **Asignar**
-4. Seleccionar uno o varios empleados (opcionalmente filtrando por sucursal)
-5. Elegir el **día de inicio** — a qué día del ciclo corresponde el día de hoy para estos empleados (ej: "Día 1: Turno Mañana" si arrancan desde el principio del ciclo)
+1. Abrir el patrón a asignar
+2. En la pestaña **Empleados Asignados**, clic en **Asignar**
+3. Seleccionar uno o varios empleados (opcionalmente filtrando por sucursal)
+4. Elegir el **día de inicio** — a qué día del ciclo corresponde el día de hoy para estos empleados (ej: "Día 1: Mañana" si arrancan desde el principio del ciclo)
+5. Indicar **Rige desde** (hoy por defecto) y, si se conoce, **Hasta**. Con una fecha futura, la rotación anterior se cierra el día previo y la nueva empieza ese día
 6. Confirmar
 
 > El día de inicio elegido se aplica igual a todos los empleados seleccionados en el mismo lote. Para que un empleado arranque en un día distinto del ciclo, asignarlo por separado.
 
-Igual que con los horarios: si un empleado ya tenía una rotación activa, se muestra una advertencia (⚠) y al confirmar la anterior se cierra automáticamente (fecha de fin = hoy).
+Si un empleado ya tenía otra rotación, el selector lo indica entre paréntesis y al confirmar la anterior se cierra automáticamente.
 
-Para quitar la rotación de un empleado, usar **Remover** en la fila del empleado (o la acción masiva) — cierra la asignación con fecha de hoy sin eliminar el historial.
+## Quitar a un empleado del patrón
+
+**Remover** (en la fila o como acción masiva) pregunta **«Tiene este patrón hasta»**: el último día, inclusive, en que la persona conserva el patrón. Por defecto es hoy; una fecha futura programa el cambio. Con hoy o una fecha pasada el empleado deja de figurar en la lista y en el contador, pero la asignación queda en el **Historial de asignaciones**.
+
+## Desactivar y eliminar
+
+- **Desactivar:** el patrón deja de ofrecerse al asignar, pero se conserva el historial. Se bloquea mientras tenga **asignaciones vigentes o futuras**; el aviso indica cuántas. Las finalizadas no lo impiden.
+- **Activar:** vuelve a ofrecerlo.
+- **Eliminar:** solo aparece (en **Editar**) si el patrón **nunca tuvo asignaciones**. Si alguna vez se usó, el camino es desactivarlo.
+
+## Permisos
+
+Crear, editar, asignar, remover y activar o desactivar requieren permisos de edición sobre patrones de rotación; con un rol de solo lectura esas acciones no se muestran. Los patrones también se encuentran con la búsqueda global (**Ctrl+K**).
 
 ## Notas importantes
 
 - Un patrón de rotación tiene prioridad sobre el horario fijo: si un empleado tiene ambos (no debería ser el caso normal, pero el sistema no lo impide), se usa la rotación.
-- Desactivar un patrón (**Desactivar** en el listado) no elimina las asignaciones existentes, pero los empleados con ese patrón dejan de tener turno calculado — usar con cuidado.
 
 ---
 
@@ -210,24 +287,44 @@ Ir a **Horarios y turnos → Planificador de Turnos** para ver y ajustar, en una
 
 ## Qué muestra la grilla
 
-Una tabla de **empleados × días** (filtrable por empresa y sucursal) donde cada celda muestra el turno que le corresponde a ese empleado ese día, ya sea por horario fijo o por su patrón de rotación resuelto para esa fecha. Las celdas con un punto (●) indican un **override puntual** — un cambio manual que reemplaza, solo para ese día, lo que el patrón o el horario asignarían normalmente.
+Una tabla de **empleados × días** (filtrable por empresa, sucursal, patrón de rotación, cargo y por quienes tienen o no patrón; los que no tienen se marcan **Sin patrón**) donde cada celda muestra el turno que le corresponde a ese empleado ese día según su patrón de rotación. Las celdas con un punto (●) indican un **turno puntual** — un cambio manual que reemplaza, solo para ese día, lo que el patrón asignaría normalmente. La última columna, **Horas**, suma las horas netas planificadas de cada empleado en el rango visible.
 
-![Planificador de Turnos con overrides puntuales](/docs-images/03-planificador-turnos.png)
+Al pie de la grilla, la **cobertura por día** cuenta cuántas personas trabajan, descansan o están ausentes. Las celdas rayadas con una etiqueta (ej. «Vacaciones», «Reposo Médico») avisan que el empleado tiene vacaciones o una licencia aprobada ese día; el aviso no impide cargar el turno.
 
-## Asignar un turno puntual (override)
+Un turno que se desactivó después de asignarse sigue mostrándose donde ya estaba, con la marca **inactivo**.
+
+![Planificador de Turnos con turnos puntuales](/docs-images/03-planificador-turnos.png)
+
+## Asignar un turno puntual
 
 1. Clic en la celda del empleado y día a modificar
-2. En el modal, elegir el nuevo turno para ese día puntual y, opcionalmente, un motivo/nota (ej: "Cambio solicitado por el empleado")
+2. En el modal, elegir el nuevo turno para ese día y, opcionalmente, un motivo/nota (ej: "Cubre a García")
 3. Guardar
 
-La celda queda marcada como override (borde punteado). El patrón de rotación del empleado **no se modifica** — el cambio aplica únicamente a esa fecha.
+Solo se ofrecen turnos **activos de la misma empresa** del empleado, y solo se puede asignar a empleados activos; si algo no corresponde, el modal muestra el motivo. La celda queda marcada como turno puntual. El patrón de rotación del empleado **no se modifica** — el cambio aplica únicamente a esa fecha.
 
 ## Mover un turno arrastrando (drag & drop)
 
-Se puede arrastrar la celda de un empleado/día hacia la celda de otro empleado/día para intercambiar el turno entre ambos. Al soltar, el sistema crea automáticamente un override con el motivo "Cambio de turno" (o "Movido desde [empleado] ([día])" cuando corresponde) — sin necesidad de abrir el modal manualmente.
+Se puede arrastrar la celda de un empleado/día hacia la celda de otro empleado/día: el turno se **copia** al destino como turno puntual con el motivo "Cambio de turno" y la nota "Movido desde [empleado] ([día])"; la celda de origen no cambia (si hay que quitárselo a quien lo cedió, asignarle otro turno o restaurar su ciclo).
 
-## Restaurar un override
+## Copiar una semana
 
-Si una celda ya tiene un override aplicado, el modal de esa celda muestra el botón **Restaurar ciclo** — elimina el override puntual y la celda vuelve a mostrar el turno que le corresponde según el patrón de rotación o el horario fijo del empleado.
+**Copiar semana** repite los turnos de una semana en otra para los empleados filtrados. **Ver qué se copia** muestra cuántos turnos se crean y cuántos reemplazan uno ya cargado; no se copian días pasados, turnos inactivos, de otra empresa ni a empleados inactivos. Los turnos copiados quedan como turnos puntuales con la nota «Copiado de la semana del …».
 
-> El planificador es una herramienta de ajuste visual sobre las asignaciones ya existentes (horarios y rotaciones) — no reemplaza la creación de patrones ni las asignaciones masivas descritas más arriba en este capítulo. Úsalo para excepciones puntuales, no para reorganizar turnos de forma permanente.
+## Exportar la grilla
+
+**Exportar** descarga en Excel la grilla del rango visible (máximo 62 días): una fila por empleado con su turno de cada día, las horas netas y las filas de cobertura. Un asterisco marca los turnos puntuales.
+
+## Restaurar el ciclo
+
+Si una celda ya tiene un turno puntual, el modal muestra el botón **Restaurar ciclo**: lo elimina y la celda vuelve al turno del patrón.
+
+## Quién cambió un turno puntual
+
+El modal de una celda con turno puntual muestra quién lo cargó, cuándo y la nota. Cada alta, cambio y restauración queda registrada con el usuario y la fecha. Se consulta en **Horarios y turnos → Turnos → (turno) → Turnos puntuales**, con **Historial** en cada fila, que muestra qué turno tenía antes y cuál tiene ahora; la columna **Registrado por** indica quién lo cargó.
+
+## Permisos
+
+Ver la grilla requiere acceso de lectura a horarios; modificar turnos requiere permiso de edición de horarios. Con solo lectura, la grilla se muestra sin el botón «+», sin arrastrar y con el modal en modo consulta.
+
+> El planificador es una herramienta de ajuste visual sobre las asignaciones ya existentes (rotaciones) — no reemplaza la creación de patrones ni las asignaciones masivas descritas más arriba en este capítulo. Úsalo para excepciones puntuales, no para reorganizar turnos de forma permanente.

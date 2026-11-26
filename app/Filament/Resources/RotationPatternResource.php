@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\RotationPatternStatusAction;
 use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\RotationPatternResource\Pages;
 use App\Filament\Resources\RotationPatternResource\RelationManagers;
 use App\Models\Company;
 use App\Models\RotationPattern;
 use App\Models\ShiftTemplate;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -15,14 +17,19 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Actions\Action as TableAction;
+use Filament\Tables\Actions\ActionGroup as TableActionGroup;
+use Filament\Tables\Actions\BulkAction;
+use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rules\Unique;
 
 /** Recurso Filament para gestionar los patrones de rotación de turnos. */
 class RotationPatternResource extends Resource
@@ -47,6 +54,33 @@ class RotationPatternResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static int $globalSearchResultsLimit = 8;
+
+    /** Hay más de una empresa activa: solo entonces se muestra y se pide la empresa del patrón. */
+    public static function multipleCompanies(): bool
+    {
+        return Company::active()->count() > 1;
+    }
+
+    /** Quien puede crear, editar, asignar y quitar (las acciones personalizadas no consultan la policy). */
+    public static function canManage(): bool
+    {
+        return (bool) auth()->user()?->can('update_rotation_pattern');
+    }
+
+    /**
+     * Detalle de cada patrón en la búsqueda global: largo del ciclo y, si corresponde, que está inactivo.
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return array_filter([
+            'Ciclo' => $record->cycle_length.' '.($record->cycle_length === 1 ? 'día' : 'días'),
+            'Estado' => $record->is_active ? null : 'Inactivo',
+        ]);
+    }
+
     /**
      * Define el formulario de creación y edición de un patrón de rotación.
      */
@@ -58,20 +92,39 @@ class RotationPatternResource extends Resource
                     ->icon('heroicon-o-tag')
                     ->columns(2)
                     ->schema([
+                        Placeholder::make('affected_employees')
+                            ->label('Empleados afectados')
+                            ->content(fn (?RotationPattern $record): string => ($count = $record?->currentAssignmentsCount() ?? 0).' '.($count === 1 ? 'empleado tiene' : 'empleados tienen').' asignado este patrón: los cambios del ciclo rigen desde hoy. Las jornadas ya calculadas no cambian hasta recalcularlas.')
+                            ->visible(fn (?RotationPattern $record): bool => ($record?->currentAssignmentsCount() ?? 0) > 0)
+                            ->columnSpanFull(),
+
                         Select::make('company_id')
                             ->label('Empresa')
-                            ->options(Company::orderBy('name')->pluck('name', 'id'))
+                            ->options(fn (?RotationPattern $record) => Company::query()
+                                ->where(fn (Builder $query) => $query->where('is_active', true)->when($record?->company_id, fn (Builder $q, $id) => $q->orWhere('id', $id)))
+                                ->orderBy('name')
+                                ->pluck('name', 'id'))
+                            ->default(fn () => Company::active()->count() === 1 ? Company::active()->value('id') : null)
                             ->searchable()
                             ->preload()
                             ->native(false)
                             ->required()
-                            ->live(),
+                            ->live()
+                            ->disabled(fn (?RotationPattern $record): bool => $record !== null && $record->deletionBlockers() !== [])
+                            ->dehydrated()
+                            ->helperText(fn (?RotationPattern $record): ?string => $record !== null && $record->deletionBlockers() !== [] ? 'No se puede cambiar mientras el patrón tenga asignaciones.' : null)
+                            ->visible(fn (): bool => static::multipleCompanies() || ! Company::active()->exists()),
 
                         TextInput::make('name')
                             ->label('Nombre del patrón')
                             ->placeholder('Ej: 3 Turnos Rotativos 21 días')
                             ->required()
-                            ->maxLength(60),
+                            ->maxLength(60)
+                            ->unique(
+                                ignoreRecord: true,
+                                modifyRuleUsing: fn (Unique $rule, Get $get) => $rule->where('company_id', $get('company_id') ?: Company::active()->value('id')),
+                            )
+                            ->validationMessages(['unique' => 'Ya existe un patrón con ese nombre en esta empresa. Usar uno distinto para no confundirlos.']),
 
                         Textarea::make('description')
                             ->label('Descripción')
@@ -83,26 +136,24 @@ class RotationPatternResource extends Resource
 
                 Section::make('Secuencia del ciclo')
                     ->icon('heroicon-o-queue-list')
-                    ->description('Definí el orden de los turnos día a día. El ciclo se repite automáticamente.')
+                    ->description('El orden de los turnos día a día. El ciclo se repite automáticamente.')
                     ->schema([
                         Repeater::make('sequence')
                             ->label('')
-                            ->helperText('Cada ítem representa un día del ciclo en orden: ítem 1 = Día 1, ítem 2 = Día 2, etc. Arrastrá para reordenar.')
+                            ->helperText('Cada ítem es un día del ciclo en orden: ítem 1 = Día 1, ítem 2 = Día 2, etc. Se pueden reordenar arrastrando.')
                             ->schema([
                                 Select::make('shift_template_id')
                                     ->label('Turno')
-                                    ->options(function (Get $get) {
-                                        $companyId = $get('../../company_id');
+                                    ->options(function (Get $get, $state) {
+                                        $companyId = $get('../../company_id') ?: Company::active()->value('id');
 
                                         return ShiftTemplate::query()
                                             ->when($companyId, fn ($q) => $q->where('company_id', $companyId))
-                                            ->where('is_active', true)
+                                            ->where(fn ($q) => $q->where('is_active', true)->when($state, fn ($q2) => $q2->orWhere('id', $state)))
                                             ->orderByRaw('is_day_off ASC, name ASC')
                                             ->get()
-                                            ->mapWithKeys(fn ($s) => [
-                                                $s->id => $s->is_day_off
-                                                    ? $s->name
-                                                    : "{$s->name} ({$s->start_time} – {$s->end_time})",
+                                            ->mapWithKeys(fn (ShiftTemplate $s) => [
+                                                $s->id => $s->name.($s->is_day_off ? '' : " ({$s->scheduleSummary()})").($s->is_active ? '' : ' - inactivo'),
                                             ]);
                                     })
                                     ->native(false)
@@ -159,64 +210,180 @@ class RotationPatternResource extends Resource
                     ->label('Patrón')
                     ->searchable()
                     ->sortable()
+                    ->icon('heroicon-o-arrow-path')
+                    ->iconColor('primary')
                     ->weight('medium'),
 
                 TextColumn::make('company.name')
                     ->label('Empresa')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn (): bool => static::multipleCompanies()),
 
-                TextColumn::make('cycle_length')
-                    ->label('Días en ciclo')
-                    ->state(fn (RotationPattern $record) => $record->cycle_length)
-                    ->suffix(' días')
-                    ->badge()
-                    ->color('info'),
+                TextColumn::make('cycle_summary')
+                    ->label('Ciclo')
+                    ->getStateUsing(fn (RotationPattern $record, $livewire): string => $record->cycleSummary($livewire->shiftMap()))
+                    ->wrap(),
 
                 TextColumn::make('assignments_count')
-                    ->label('Empleados activos')
+                    ->label('Empleados vigentes')
                     ->counts([
-                        'assignments' => fn ($q) => $q->whereNull('valid_until')
-                            ->orWhere('valid_until', '>=', today()),
+                        'assignments' => fn ($q) => $q->where(fn ($q2) => $q2->whereNull('valid_until')->orWhere('valid_until', '>', today()->toDateString())),
                     ])
                     ->badge()
-                    ->color('success'),
+                    ->color(fn ($state): string => (int) $state > 0 ? 'success' : 'gray'),
 
-                IconColumn::make('is_active')
-                    ->label('Activo')
-                    ->boolean(),
+                TextColumn::make('is_active')
+                    ->label('Estado')
+                    ->formatStateUsing(fn ($state) => $state ? 'Activo' : 'Inactivo')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'gray'),
 
                 TextColumn::make('description')
                     ->label('Descripción')
-                    ->placeholder('—')
+                    ->placeholder('Sin descripción')
                     ->limit(50)
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('company_id')
                     ->label('Empresa')
-                    ->options(Company::orderBy('name')->pluck('name', 'id'))
-                    ->native(false),
-
-                TernaryFilter::make('is_active')
-                    ->label('Estado')
-                    ->trueLabel('Activos')
-                    ->falseLabel('Inactivos')
-                    ->default(true),
+                    ->options(fn () => Company::orderBy('name')->pluck('name', 'id'))
+                    ->native(false)
+                    ->visible(fn (): bool => static::multipleCompanies()),
             ])
             ->actions([
-                EditAction::make()
-                    ->label('Editar')
-                    ->icon('heroicon-o-pencil-square')
-                    ->color('primary'),
-                DeleteAction::make()
-                    ->label('Desactivar')
-                    ->modalHeading('Desactivar patrón')
-                    ->modalDescription('Los empleados con este patrón activo dejarán de tener turno calculado. ¿Continuar?')
-                    ->modalSubmitActionLabel('Sí, desactivar')
-                    ->action(fn (RotationPattern $record) => $record->update(['is_active' => false]))
-                    ->successNotificationTitle('Patrón desactivado'),
+                TableAction::make('view_detail')
+                    ->label('Ver')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->url(fn (RotationPattern $record): string => static::getUrl('view', ['record' => $record])),
+                TableActionGroup::make([
+                    TableAction::make('edit_pattern')
+                        ->label('Editar')
+                        ->icon('heroicon-o-pencil-square')
+                        ->color('primary')
+                        ->authorize(fn (RotationPattern $record): bool => (bool) auth()->user()?->can('update', $record))
+                        ->url(fn (RotationPattern $record): string => static::getUrl('edit', ['record' => $record])),
+                    static::duplicateAction(TableAction::class),
+                    RotationPatternStatusAction::make(TableAction::class),
+                ]),
             ])
-            ->defaultSort('name');
+            ->bulkActions([
+                BulkActionGroup::make([
+                    BulkAction::make('deactivate_bulk')
+                        ->label('Desactivar seleccionados')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
+                        ->authorize(fn (): bool => static::canManage())
+                        ->requiresConfirmation()
+                        ->modalHeading('Desactivar patrones')
+                        ->modalDescription('Se omiten los que tienen empleados asignados vigentes o futuros.')
+                        ->modalSubmitActionLabel('Sí, desactivar')
+                        ->action(fn (Collection $records) => static::changeStatusBulk($records, false))
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('activate_bulk')
+                        ->label('Activar seleccionados')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->authorize(fn (): bool => static::canManage())
+                        ->requiresConfirmation()
+                        ->modalSubmitActionLabel('Sí, activar')
+                        ->action(fn (Collection $records) => static::changeStatusBulk($records, true))
+                        ->deselectRecordsAfterCompletion(),
+                ]),
+            ])
+            ->recordUrl(fn (RotationPattern $record): string => static::getUrl('view', ['record' => $record]))
+            ->defaultSort('name')
+            ->paginationPageOptions([10, 25, 50, 100])
+            ->emptyStateHeading('Sin patrones de rotación')
+            ->emptyStateDescription('Crear un patrón (por ejemplo, 6 días de mañana y 1 franco) para asignarlo a los empleados que rotan.')
+            ->emptyStateIcon('heroicon-o-arrow-path');
+    }
+
+    /**
+     * Acción «Duplicar» (fila o página): copia el ciclo bajo otro nombre; no copia las asignaciones.
+     *
+     * @param  class-string  $class  `Filament\Tables\Actions\Action` o `Filament\Actions\Action`.
+     */
+    public static function duplicateAction(string $class): mixed
+    {
+        return $class::make('duplicate')
+            ->label('Duplicar')
+            ->icon('heroicon-o-document-duplicate')
+            ->color('gray')
+            ->visible(fn (): bool => (bool) auth()->user()?->can('create_rotation_pattern'))
+            ->modalHeading('Duplicar patrón')
+            ->modalDescription('Se copian el ciclo y la descripción. Los empleados asignados no se copian.')
+            ->modalSubmitActionLabel('Duplicar')
+            ->fillForm(fn (RotationPattern $record): array => ['name' => "{$record->name} (copia)"])
+            ->form(fn (RotationPattern $record): array => [
+                TextInput::make('name')
+                    ->label('Nombre del nuevo patrón')
+                    ->required()
+                    ->maxLength(60)
+                    ->unique(RotationPattern::class, 'name', modifyRuleUsing: fn (Unique $rule) => $rule->where('company_id', $record->company_id))
+                    ->validationMessages(['unique' => 'Ya existe un patrón con ese nombre en esta empresa.']),
+            ])
+            ->action(function (RotationPattern $record, array $data) {
+                $copy = $record->duplicate(RotationPattern::capitalizeName($data['name']));
+
+                Notification::make()
+                    ->success()
+                    ->title('Patrón duplicado')
+                    ->body("Se creó \"{$copy->name}\". Revisar el ciclo y asignarlo a los empleados.")
+                    ->send();
+
+                return redirect(static::getUrl('edit', ['record' => $copy]));
+            });
+    }
+
+    /**
+     * Activa o desactiva en bloque, omitiendo los que ya están en ese estado y, al desactivar, los que tienen
+     * asignaciones vigentes o futuras.
+     *
+     * @param  Collection<int, RotationPattern>  $records
+     */
+    public static function changeStatusBulk(Collection $records, bool $active): void
+    {
+        $changed = 0;
+        $unchanged = 0;
+        $blocked = 0;
+
+        foreach ($records as $pattern) {
+            if ($pattern->is_active === $active) {
+                $unchanged++;
+
+                continue;
+            }
+
+            if (! $active && $pattern->deactivationBlockers() !== []) {
+                $blocked++;
+
+                continue;
+            }
+
+            $pattern->update(['is_active' => $active]);
+            $changed++;
+        }
+
+        $parts = [];
+        if ($blocked > 0) {
+            $parts[] = "{$blocked} con asignaciones vigentes o futuras";
+        }
+        if ($unchanged > 0) {
+            $parts[] = "{$unchanged} ya estaban ".($active ? 'activos' : 'inactivos');
+        }
+
+        $notification = Notification::make()
+            ->title($changed.' '.($changed === 1 ? 'patrón' : 'patrones').' '.($active ? ($changed === 1 ? 'activado' : 'activados') : ($changed === 1 ? 'desactivado' : 'desactivados')));
+
+        $changed > 0 ? $notification->success() : $notification->warning();
+
+        if ($parts !== []) {
+            $notification->body('Omitidos: '.implode('; ', $parts).'.');
+        }
+
+        $notification->send();
     }
 
     /**
@@ -226,6 +393,8 @@ class RotationPatternResource extends Resource
     {
         return [
             RelationManagers\EmployeesRelationManager::class,
+            RelationManagers\AssignmentsRelationManager::class,
+            RelationManagers\AuditsRelationManager::class,
         ];
     }
 
@@ -237,6 +406,7 @@ class RotationPatternResource extends Resource
         return [
             'index' => Pages\ListRotationPatterns::route('/'),
             'create' => Pages\CreateRotationPattern::route('/create'),
+            'view' => Pages\ViewRotationPattern::route('/{record}'),
             'edit' => Pages\EditRotationPattern::route('/{record}/edit'),
         ];
     }

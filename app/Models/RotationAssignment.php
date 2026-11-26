@@ -22,9 +22,39 @@ class RotationAssignment extends Model
 
     protected $casts = [
         'start_index' => 'integer',
-        'valid_from'  => 'date',
+        'valid_from' => 'date',
         'valid_until' => 'date',
     ];
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_UPCOMING = 'upcoming';
+
+    public const STATUS_ENDED = 'ended';
+
+    /** @return array<string, string> */
+    public static function getStatusLabels(): array
+    {
+        return [self::STATUS_ACTIVE => 'Vigente', self::STATUS_UPCOMING => 'Futura', self::STATUS_ENDED => 'Finalizada'];
+    }
+
+    /** @return array<string, string> */
+    public static function getStatusColors(): array
+    {
+        return [self::STATUS_ACTIVE => 'success', self::STATUS_UPCOMING => 'info', self::STATUS_ENDED => 'gray'];
+    }
+
+    /** Estado de la asignación según hoy: vigente, futura o finalizada. */
+    public function status(): string
+    {
+        $today = Carbon::today();
+
+        return match (true) {
+            $this->valid_until !== null && $this->valid_until->lt($today) => self::STATUS_ENDED,
+            $this->valid_from->gt($today) => self::STATUS_UPCOMING,
+            default => self::STATUS_ACTIVE,
+        };
+    }
 
     /** Empleado al que pertenece esta asignación. */
     public function employee(): BelongsTo
@@ -46,10 +76,6 @@ class RotationAssignment extends Model
 
     /**
      * Scope: asignaciones vigentes en una fecha dada.
-     *
-     * @param  Builder      $query
-     * @param  Carbon|null  $date
-     * @return Builder
      */
     public function scopeForDate(Builder $query, ?Carbon $date = null): Builder
     {
@@ -57,7 +83,7 @@ class RotationAssignment extends Model
 
         return $query
             ->where('valid_from', '<=', $date)
-            ->where(fn($q) => $q
+            ->where(fn ($q) => $q
                 ->whereNull('valid_until')
                 ->orWhere('valid_until', '>=', $date)
             );
@@ -65,9 +91,6 @@ class RotationAssignment extends Model
 
     /**
      * Scope: asignaciones activas hoy.
-     *
-     * @param  Builder  $query
-     * @return Builder
      */
     public function scopeActive(Builder $query): Builder
     {
@@ -77,9 +100,6 @@ class RotationAssignment extends Model
     /**
      * Calcula el turno correspondiente a una fecha dada, considerando start_index.
      * Retorna el ShiftTemplate ID, o null si el patrón no tiene secuencia.
-     *
-     * @param  Carbon  $date
-     * @return int|null
      */
     public function shiftIdForDate(Carbon $date): ?int
     {
@@ -89,7 +109,7 @@ class RotationAssignment extends Model
             return null;
         }
 
-        $diff   = $this->valid_from->diffInDays($date); // date - valid_from, siempre positivo
+        $diff = $this->valid_from->diffInDays($date); // date - valid_from, siempre positivo
         $offset = ($diff + $this->start_index) % $pattern->cycle_length;
 
         return $pattern->sequence[$offset] ?? null;

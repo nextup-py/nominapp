@@ -5,7 +5,9 @@ namespace App\Support;
 use App\Filament\Pages\ReportsIndex;
 use App\Filament\Resources\AttendanceEventResource;
 use App\Filament\Resources\EmployeeResource;
+use App\Filament\Resources\RotationPatternResource;
 use App\Filament\Resources\ScheduleResource;
+use App\Filament\Resources\ShiftTemplateResource;
 use Filament\Facades\Filament;
 use Filament\GlobalSearch\Contracts\GlobalSearchProvider;
 use Filament\GlobalSearch\GlobalSearchResult;
@@ -61,6 +63,22 @@ class PanelGlobalSearchProvider implements GlobalSearchProvider
 
             if ($schedules->isNotEmpty()) {
                 $builder->category('Horarios', $schedules);
+            }
+        }
+
+        if (mb_strlen($query) >= self::MIN_EMPLOYEE_LENGTH && ShiftTemplateResource::canGloballySearch()) {
+            $shifts = ShiftTemplateResource::getGlobalSearchResults($query);
+
+            if ($shifts->isNotEmpty()) {
+                $builder->category('Turnos', $shifts);
+            }
+        }
+
+        if (mb_strlen($query) >= self::MIN_EMPLOYEE_LENGTH && RotationPatternResource::canGloballySearch()) {
+            $patterns = RotationPatternResource::getGlobalSearchResults($query);
+
+            if ($patterns->isNotEmpty()) {
+                $builder->category('Patrones de rotación', $patterns);
             }
         }
 
