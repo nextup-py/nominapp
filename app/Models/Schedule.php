@@ -156,11 +156,14 @@ class Schedule extends Model
         ]);
     }
 
-    /** Asignaciones que todavía rigen o van a regir (sin fecha de fin o con fin hoy o posterior). */
+    /**
+     * Asignaciones que seguirán rigiendo después de hoy (sin fecha de fin o con fin posterior a hoy). Una que termina
+     * hoy —lo que deja «Remover»— ya está cerrada: no impide desactivar el horario.
+     */
     public function currentAssignmentsCount(): int
     {
         return $this->assignments()
-            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', Carbon::today()->toDateString()))
+            ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>', Carbon::today()->toDateString()))
             ->count();
     }
 

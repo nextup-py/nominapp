@@ -10,6 +10,8 @@ use App\Models\Employee;
 use App\Models\EmployeeScheduleAssignment;
 use App\Models\Schedule;
 use App\Models\User;
+use App\Services\ScheduleAssignmentService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -64,7 +66,6 @@ it('no se puede desactivar con asignaciones vigentes o futuras', function (?stri
         ->and($schedule->fresh()->is_active)->toBeTrue();
 })->with([
     'vigente sin fin' => [null, null],
-    'vigente que termina hoy' => [null, 'today'],
     'futura' => ['tomorrow', null],
 ]);
 
@@ -172,4 +173,18 @@ it('el aviso de bloqueo de un horario concuerda en singular', function () {
     ]);
 
     expect($schedule->deletionBlockersSummary())->toContain('1 asignación de empleado (vigente o finalizada)');
+});
+
+it('una asignación que termina hoy, como la que deja Remover, no impide desactivar', function () {
+    $schedule = Schedule::create(['name' => 'Madrugada', 'shift_type' => 'nocturno']);
+    $employee = deactivationScheduleEmployee();
+    $employee->scheduleAssignments()->create(['schedule_id' => $schedule->id, 'valid_from' => now()->subMonths(2), 'valid_until' => null]);
+
+    expect($schedule->deactivationBlockers())->not->toBe([]);
+
+    ScheduleAssignmentService::closeActive($employee, Carbon::today());
+
+    expect($schedule->fresh()->deactivationBlockers())->toBe([])
+        ->and($schedule->fresh()->update(['is_active' => false]))->toBeTrue()
+        ->and($schedule->fresh()->is_active)->toBeFalse();
 });
