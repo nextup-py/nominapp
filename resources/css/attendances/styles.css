@@ -1202,6 +1202,17 @@ select#eventType { display: none; }
 .my-events-status { font-size: .875rem; color: var(--c-muted); margin-bottom: var(--sp-6); }
 
 .modal-actions { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+/* Motivo de las horas extra: un botón por motivo, apilados */
+.overtime-reason-list { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.overtime-reason-btn {
+    font-family: inherit; font-size: 1rem; font-weight: 600;
+    color: var(--c-text); background: var(--c-surface);
+    border: 1px solid var(--c-border); border-radius: var(--r-lg, 12px);
+    padding: var(--sp-3) var(--sp-4);
+    cursor: pointer;
+}
+.overtime-reason-btn:hover, .overtime-reason-btn:active { border-color: var(--c-primary); }
 .btn-modal-retry   { background: var(--c-primary); color: #fff; }
 .btn-modal-retry:hover { background: var(--c-primary-h); }
 .btn-modal-dismiss {

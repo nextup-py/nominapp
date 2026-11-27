@@ -63,6 +63,12 @@ export async function heartbeat() {
         await setOwnEmployee(data.employee);
         await setMeta('face_threshold', data.config.face_threshold);
         await setMeta('face_min_confidence_gap', data.config.face_min_confidence_gap);
+        if (data.config.overtime_reasons && typeof data.config.overtime_reasons === 'object') {
+            await setMeta('overtime_reasons', data.config.overtime_reasons);
+        }
+        if (Number.isFinite(data.config.overtime_tolerance_minutes)) {
+            await setMeta('overtime_tolerance_minutes', data.config.overtime_tolerance_minutes);
+        }
         await setMeta('server_clock_offset_ms', new Date(data.server_time).getTime() - Date.now());
         await setMeta('last_heartbeat_at', Date.now());
 

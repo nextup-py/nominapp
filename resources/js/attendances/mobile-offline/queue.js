@@ -30,6 +30,7 @@ import {
 import { isClosedStateFromAnotherDay } from '../offline-shared/stale-state.js';
 import { submitEvents, fetchStatus, MobileAuthError } from './sync.js';
 import { submitInChunks } from '../offline-shared/submit-in-chunks.js';
+import { normalizeOvertimeReasons } from '../offline-shared/overtime-reason.js';
 
 /**
  * Máquina de estados de marcación diaria — mismo criterio que
@@ -187,9 +188,10 @@ export async function getOwnStatus() {
  * previo el offset es 0 (no hay corrección posible).
  * @param {string} eventType
  * @param {{lat: number, lng: number}|null} [location] - GPS real del dispositivo (a diferencia del terminal, que solo tiene fallback a coordenadas de sucursal).
+ * @param {{overtimeReason?: string|null}} [options] - Motivo de las horas extra elegido al marcar la salida.
  * @returns {Promise<{client_event_id: string, recorded_at: string}>}
  */
-export async function enqueueMark(eventType, location = null) {
+export async function enqueueMark(eventType, location = null, { overtimeReason = null } = {}) {
     const employeeId = await getMeta('employee_id');
     const clientEventId = crypto.randomUUID();
     const recordedAt = await correctedNow();
@@ -201,6 +203,7 @@ export async function enqueueMark(eventType, location = null) {
         recorded_at: recordedAt.toISOString(),
         date: localDateString(recordedAt),
         location,
+        ...(overtimeReason ? { overtime_reason: overtimeReason } : {}),
     });
 
     // Refresca el caché de estado de inmediato — sin esto, una vez que este
@@ -219,6 +222,17 @@ export async function enqueueMark(eventType, location = null) {
     }
 
     return { client_event_id: clientEventId, recorded_at: recordedAt.toISOString() };
+}
+
+/**
+ * Motivos de horas extra y tolerancia que trajo el último latido, para decidir si se pide el motivo al marcar la
+ * salida (ver offline-shared/overtime-reason.js). Sin latido previo, la lista queda vacía y no se pregunta.
+ * @returns {Promise<{reasons: Array<{key: string, label: string}>, toleranceMinutes: number|null}>}
+ */
+export async function getOvertimeConfig() {
+    const [stored, toleranceMinutes] = await Promise.all([getMeta('overtime_reasons'), getMeta('overtime_tolerance_minutes')]);
+
+    return { reasons: normalizeOvertimeReasons(stored), toleranceMinutes: toleranceMinutes ?? null };
 }
 
 /**
@@ -281,11 +295,12 @@ export async function flushQueue() {
         try {
             const { synced, conflicts, results } = await submitInChunks(
                 pending,
-                (batch) => submitEvents(batch.map(({ client_event_id, event_type, recorded_at, location }) => ({
+                (batch) => submitEvents(batch.map(({ client_event_id, event_type, recorded_at, location, overtime_reason }) => ({
                     client_event_id,
                     event_type,
                     recorded_at,
                     location: location ?? undefined,
+                    ...(overtime_reason ? { overtime_reason } : {}),
                 }))),
                 { onSynced: removeQueuedEvent, onConflict: onQueuedEventConflict },
                 MAX_BATCH_SIZE,

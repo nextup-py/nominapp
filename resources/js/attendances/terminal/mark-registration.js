@@ -17,11 +17,15 @@
  */
 
 import { showScreen } from './screen-state.js';
-import { enqueueMark, flushQueue, getExpectedCheckOut } from '../terminal-offline/queue.js';
+import { enqueueMark, flushQueue, getExpectedCheckOut, getOvertimeContext } from '../terminal-offline/queue.js';
+import { shouldAskOvertimeReason } from '../offline-shared/overtime-reason.js';
 import { ENTRY_OR_EXIT_OPTIONS } from './missing-entry.js';
 import { refreshIdleSyncStatus } from './sync-status-ui.js';
 
 const eventTypeNames = { check_in: 'Entrada', break_start: 'Inicio descanso', break_end: 'Fin descanso', check_out: 'Salida' };
+
+/** @type {((reasons: Array<{key: string, label: string}>) => Promise<string|null>)|null} Pide el motivo de las horas extra (lo registra terminal.js). */
+let overtimeReasonAsker = null;
 
 let pendingEmployee = null;
 /** La pantalla de selección es la pregunta «¿Entrada o salida?» (día vacío cerca del fin del turno), no el menú normal. */
@@ -72,6 +76,37 @@ export function showTypeSelectionForEmployee(screens, dom, employee, allowedEven
     showScreen(screens, 'typeSelection');
 }
 
+/**
+ * Registra la función que muestra el selector de motivo de las horas extra (ver overtime-reason-prompt.js).
+ * @param {((reasons: Array<{key: string, label: string}>) => Promise<string|null>)|null} asker
+ */
+export function setOvertimeReasonAsker(asker) {
+    overtimeReasonAsker = asker;
+}
+
+/**
+ * Pide el motivo de las horas extra si esta salida ya las deja (según la salida del horario y la tolerancia). Nunca
+ * lanza ni bloquea: sin datos, sin selector o ante cualquier error devuelve null y la salida se registra igual.
+ * @param {{id: number}} employee
+ * @param {string} eventType
+ * @returns {Promise<string|null>}
+ */
+async function askOvertimeReason(employee, eventType) {
+    if (eventType !== 'check_out' || !overtimeReasonAsker) return null;
+
+    try {
+        const { reasons, toleranceMinutes, expectedCheckOut } = await getOvertimeContext(employee.id);
+
+        return shouldAskOvertimeReason({ eventType, expectedCheckOut, toleranceMinutes, reasons })
+            ? await overtimeReasonAsker(reasons)
+            : null;
+    } catch (error) {
+        console.error('No se pudo pedir el motivo de las horas extra:', error);
+
+        return null;
+    }
+}
+
 /** @returns {object|null} el empleado en espera de selección de tipo, o null. */
 export function getPendingEmployee() {
     return pendingEmployee;
@@ -101,10 +136,11 @@ export function clearPendingEmployee() {
  */
 export async function registerMark(employee, eventType, { onStatusUpdate, onSuccess, onError }, nav = navigator) {
     const eventName = eventTypeNames[eventType] || eventType;
+    const overtimeReason = await askOvertimeReason(employee, eventType);
     onStatusUpdate(`Registrando: ${eventName}...`);
     await new Promise((r) => setTimeout(r, 700));
 
-    const { client_event_id: clientEventId, recorded_at: recordedAt } = await enqueueMark(employee.id, eventType);
+    const { client_event_id: clientEventId, recorded_at: recordedAt } = await enqueueMark(employee.id, eventType, { overtimeReason });
 
     // Recordatorio de salida: solo al entrar y solo si el servidor informó el fin del turno.
     const expectedCheckOut = eventType === 'check_in' ? await getExpectedCheckOut(employee.id) : null;

@@ -13,6 +13,38 @@ class AttendanceEvent extends Model
     /** Segundos dentro de los cuales una marcación del mismo tipo se toma como repetición de la anterior. */
     public const REPEAT_WINDOW_SECONDS = 60;
 
+    /**
+     * Motivos que el empleado elige al marcar una salida con horas extra (terminal y celular). Es la única definición:
+     * viaja a los clientes en el latido y el servidor solo acepta estas claves.
+     *
+     * @var array<string, string>
+     */
+    public const OVERTIME_REASONS = [
+        'cash_close' => 'Cierre de caja',
+        'cover_coworker' => 'Cubrir a un compañero',
+        'boss_request' => 'Pedido del jefe',
+        'pending_work' => 'Trabajo pendiente',
+        'other' => 'Otro',
+    ];
+
+    /** @return array<string, string> Clave → etiqueta de los motivos de horas extra. */
+    public static function getOvertimeReasonOptions(): array
+    {
+        return self::OVERTIME_REASONS;
+    }
+
+    /** Devuelve la clave del motivo si es válida y, si no (vacío o desconocida), null: un motivo inválido nunca descarta la marcación. */
+    public static function sanitizeOvertimeReason(mixed $reason): ?string
+    {
+        return is_string($reason) && array_key_exists($reason, self::OVERTIME_REASONS) ? $reason : null;
+    }
+
+    /** Etiqueta del motivo, o «Sin motivo» cuando no se eligió ninguno. */
+    public static function overtimeReasonLabel(?string $reason): string
+    {
+        return $reason === null || $reason === '' ? 'Sin motivo' : (self::OVERTIME_REASONS[$reason] ?? $reason);
+    }
+
     /** @use HasFactory<AttendanceFactory> */
     use HasFactory;
 
@@ -36,6 +68,7 @@ class AttendanceEvent extends Model
         'location_review',
         'location_reviewed_by_id',
         'location_reviewed_at',
+        'overtime_reason',
     ];
 
     protected $casts = [

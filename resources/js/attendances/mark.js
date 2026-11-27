@@ -1,10 +1,13 @@
 import { captureFaceSamples } from '../shared/face-capture-core.js';
 import { migrateTokenFromLocalStorage, getMeta, getOwnEmployee, resetDb } from './mobile-offline/db.js';
 import { withoutBreakStartNearShiftEnd, expectedCheckOutFor } from './offline-shared/end-of-shift.js';
+import { shouldAskOvertimeReason } from './offline-shared/overtime-reason.js';
+import { createOvertimeReasonPrompt } from './offline-shared/overtime-reason-prompt.js';
 import { identifyEmployee as matchDescriptor } from './offline-shared/matcher.js';
 import { heartbeat, getFaceConfig, unlinkDevice, MobileAuthError } from './mobile-offline/sync.js';
 import {
     getOwnStatus,
+    getOvertimeConfig,
     enqueueMark,
     flushQueue,
     countPendingEvents,
@@ -244,7 +247,39 @@ document.addEventListener("DOMContentLoaded", () => {
         employee: null,
         allowed: [],
         location: null,
+        /** Salida del horario de hoy ("HH:MM") para decidir si la salida deja horas extra. */
+        expectedCheckOut: null,
     };
+
+    // Motivo de las horas extra: se pide al confirmar una salida pasada la hora del horario (ver offline-shared/overtime-reason.js).
+    const overtimeReasonModal = document.getElementById("overtimeReasonModal");
+    const overtimeReasonPrompt = createOvertimeReasonPrompt({
+        list: document.getElementById("overtimeReasonList"),
+        countdown: document.getElementById("overtimeReasonCountdown"),
+        show: () => overtimeReasonModal?.classList.remove("hidden"),
+    });
+
+    /**
+     * Pide el motivo de las horas extra si esta salida ya las deja. Nunca lanza ni bloquea: sin datos o ante un error
+     * devuelve null y la salida se registra igual sin motivo.
+     * @param {string} eventType
+     * @returns {Promise<string|null>}
+     */
+    async function askOvertimeReason(eventType) {
+        if (eventType !== "check_out") return null;
+
+        try {
+            const { reasons, toleranceMinutes } = await getOvertimeConfig();
+            if (!shouldAskOvertimeReason({ eventType, expectedCheckOut: state.expectedCheckOut, toleranceMinutes, reasons })) return null;
+
+            return await overtimeReasonPrompt.ask(reasons);
+        } catch (error) {
+            logWarn("No se pudo pedir el motivo de las horas extra:", error.message);
+            return null;
+        } finally {
+            overtimeReasonModal?.classList.add("hidden");
+        }
+    }
 
     /** @type {boolean} Indica si hay una identificación en curso (evita re-entradas) */
     let isIdentifying = false;
@@ -1294,8 +1329,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const status = await getOwnStatus();
 
             state.employee = employee;
+            state.expectedCheckOut = expectedCheckOutFor(status, await getOwnEmployee());
             // Cerca de la hora de salida del horario no se ofrece «Inicio descanso» (quien se iba solía tocarlo en vez de «Salida»).
-            state.allowed  = withoutBreakStartNearShiftEnd(status.allowed_events || [], expectedCheckOutFor(status, await getOwnEmployee()));
+            state.allowed  = withoutBreakStartNearShiftEnd(status.allowed_events || [], state.expectedCheckOut);
 
             await finishCaptureProgress("success");
 
@@ -1834,6 +1870,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
+                const overtimeReason = await askOvertimeReason(eventTypeEl.value);
+
                 logStatus("Registrando marcación...");
                 btnMark.classList.add("btn-loading");
                 btnMark.innerHTML = `${SPINNER_SVG} Registrando...`;
@@ -1843,6 +1881,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const { client_event_id: clientEventId, recorded_at: recordedAt } = await enqueueMark(
                     eventTypeEl.value,
                     { lat: state.location.lat, lng: state.location.lng },
+                    { overtimeReason },
                 );
 
                 let queued = true;

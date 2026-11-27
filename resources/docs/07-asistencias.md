@@ -490,6 +490,7 @@ El listado abre en **Requieren atención**: lo que RR.HH. tiene que resolver. Ca
 | **Tardanza** | Minutos de retraso respecto al horario esperado |
 | **Horas trabajadas** | Total de horas marcadas en el día |
 | **Hrs Extra** | Horas extras calculadas (en amarillo si hay) |
+| **Motivo de horas extra** | Por qué se quedó, según lo que eligió al marcar la salida; **Sin motivo** si no eligió. Oculta por defecto; se activa desde el selector de columnas |
 | **Pendiente** | Qué falta resolver en el día: **Sin salida**, **Tardanza por aprobar** y/o **Extras por aprobar**. Si no falta nada muestra **Al día** |
 
 Las columnas de tardanza, horas extra y pendiente se muestran por defecto. **Sucursal** y **Horas trabajadas** quedan ocultas para que los botones de cada fila entren en pantalla; se activan desde el selector de columnas de la tabla.
@@ -550,6 +551,7 @@ Desde el encabezado del listado de asistencias están disponibles:
 
 - **Empleado** — buscar por nombre, apellido o CI; selección múltiple. El buscador de la tabla también encuentra por nombre completo (por ejemplo, «Gissela Piris») y por cédula
 - **Sucursal** — selección múltiple
+- **Motivo de horas extra** — jornadas con horas extra por motivo, o **Sin motivo**
 - **Rango de fechas** — acceso rápido (hoy, esta semana, quincena, mes) o fechas manuales
 
 ---
@@ -593,7 +595,7 @@ Clic en cualquier fila de la tabla para abrir el detalle completo del día. Desd
 - **Empleado** — nombre, CI, empresa, sucursal, cargo y departamento
 - **Estado** — del día y del cálculo (calculado / pendiente)
 - **Tiempos** — entrada y salida esperada vs. marcada, minutos de tardanza y salida anticipada
-- **Horas** — esperadas, trabajadas, netas (sin descanso) y extras (diurnas y nocturnas)
+- **Horas** — esperadas, trabajadas, netas (sin descanso) y extras (diurnas y nocturnas), con el motivo de las horas extra
 - **Marcaciones** — tabla con todos los eventos del día (hora, tipo, origen)
 
 ### Acciones disponibles desde el detalle
@@ -701,6 +703,24 @@ Las horas extra de quien **no está autorizado** se **registran igual** (la marc
 
 > El permiso rige para las jornadas que se calculen desde que se define; las ya calculadas conservan su estado hasta recalcularlas (**Recalcular**).
 
+## Motivo de las horas extra
+
+Cuando alguien marca una **salida** y ya pasó la hora de salida de su horario más la **tolerancia de horas extra** (**Configuración → Configuración General → Configuración Laboral**), el **terminal** y el **celular** piden el motivo antes de registrar la salida. Quien sale a su hora no ve nada nuevo.
+
+| Motivo | Cuándo se usa |
+|--------|---------------|
+| **Cierre de caja** | Se quedó por el cierre o arqueo |
+| **Cubrir a un compañero** | Reemplazó a alguien que faltó o salió |
+| **Pedido del jefe** | Se lo pidió su superior |
+| **Trabajo pendiente** | Terminaba una tarea |
+| **Otro** | Cualquier otro caso |
+
+- **No bloquea la salida.** Si la persona no elige en unos segundos (hay una cuenta regresiva), la salida se registra igual **sin motivo** y RR.HH. la ve como **Sin motivo**.
+- Funciona **sin conexión**: la lista y la tolerancia llegan con el último latido del dispositivo, y la hora de salida esperada es la que ya se consultó ese día. Sin alguna de ellas no se pregunta.
+- El motivo queda en la marcación de salida y en la jornada. Se ve en el modal de **Aprobar** horas extra, en el detalle del día (**Motivo de las Horas Extra**), en la columna **Motivo de horas extra** de la tabla de Asistencias (oculta por defecto, se activa desde el selector de columnas), y en el Excel y el PDF del reporte **Horas Extras y Tardanzas** (**Motivo HE**).
+- En **Asistencias** el filtro **Motivo de horas extra** permite ver, por ejemplo, todas las jornadas por **Pedido del jefe** o las que quedaron **Sin motivo**.
+- No cambia la aprobación ni el pago: es información para decidir. La lista de motivos es fija del sistema.
+
 ## Aprobación de horas extras
 
 Las horas extras deben ser aprobadas para incluirse en el cálculo de la nómina. Las horas registradas pero no aprobadas no generan percepción adicional.
@@ -710,6 +730,7 @@ Las horas extras deben ser aprobadas para incluirse en el cálculo de la nómina
 En la tabla **Asistencias → Asistencias**, cuando un registro tiene horas extras calculadas, aparece el botón **Aprobar** en la fila. Hacer clic muestra un modal con:
 
 - Total de horas extras y desglose (diurnas / nocturnas) con el porcentaje correspondiente
+- El **motivo** que eligió el empleado al marcar la salida (o *sin motivo*)
 - Total acumulado de la semana vs. el límite legal semanal
 - Aviso si se excede el límite diario (Art. 202 CLT)
 

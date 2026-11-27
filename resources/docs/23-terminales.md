@@ -575,6 +575,10 @@ Al reconocer a un empleado, la **entrada** se registra sola, pero la **salida** 
 - Se configura en **Configuración → General → Terminales de Marcación**: **Confirmar la salida y los descansos en el terminal** (activado por defecto; apagado = la salida se registra sola como antes) y **Espera de la pantalla de selección** (15 segundos por defecto; **0** = sin límite). El cambio llega a los terminales con su siguiente sincronización.
 - **Por terminal:** el formulario del terminal (sección **Marcación**) y la acción masiva **Confirmar salida y descansos** del listado permiten fijar este valor en un terminal o en varios: **Heredar** (usa lo de Configuración General, el valor por defecto), **Sí, pedir confirmación** o **No, registrar directamente**. Sirve para probar sin confirmación en una sucursal sin cambiar las demás. El detalle del terminal indica el valor vigente y si viene de Configuración General. Con **No**, una salida o un descanso se registra apenas se reconoce a la persona: es más rápido, pero permite marcarlos por error.
 
+### Motivo de las horas extra
+
+Si la salida se marca pasada la hora de salida del horario más la tolerancia de horas extra, antes de registrarla el terminal muestra la pantalla **Motivo de las horas extra** con un botón por motivo y una cuenta regresiva (*Se registrará sin motivo en N s*). Elegir uno lo guarda con la salida; si vence la espera, la salida se registra igual sin motivo. Con el último latido el terminal ya tiene la lista y la tolerancia, así que funciona sin conexión. Ver **Motivo de las horas extra** en el capítulo de Asistencias.
+
 ### Controles de la cámara
 
 El mismo menú **⋮** tiene tres controles de la cámara. Son del dispositivo: se recuerdan en ese navegador y no cambian lo que ven otros terminales.

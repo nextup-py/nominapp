@@ -254,11 +254,15 @@ class AttendanceEventSyncService
             && $employee->branch_id
             && ! $employee->canMarkAtBranch($terminal->branch_id);
 
+        $overtimeReason = $eventData['event_type'] === 'check_out' ? AttendanceEvent::sanitizeOvertimeReason($eventData['overtime_reason'] ?? null) : null;
+        $day->rememberOvertimeReason($overtimeReason);
+
         $event = $day->events()->create([
             'client_event_id' => $clientEventId,
             'event_type' => $eventData['event_type'],
             'recorded_at' => $recordedAt,
             'synced_at' => now(),
+            'overtime_reason' => $overtimeReason,
             'source' => 'terminal',
             'location' => $eventData['location'] ?? $this->resolveFallbackLocation($terminal, $employee),
             'terminal_id' => $terminal->id,

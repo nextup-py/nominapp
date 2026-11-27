@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttendanceEvent;
 use App\Models\Terminal;
 use App\Services\TerminalReliabilityService;
 use App\Settings\GeneralSettings;
@@ -157,6 +158,9 @@ class TerminalHeartbeatController extends Controller
             ],
             'config' => [
                 'overnight_max_hours' => (int) $settings->attendance_overnight_max_hours,
+                // Motivos y tolerancia para pedir el motivo al marcar una salida con horas extra (ver terminal/overtime-reason.js).
+                'overtime_reasons' => AttendanceEvent::getOvertimeReasonOptions(),
+                'overtime_tolerance_minutes' => (int) $settings->attendance_overtime_tolerance_minutes,
                 'camera_resume_minutes' => (int) $settings->terminal_camera_resume_minutes,
                 'no_charger_minutes' => (int) $settings->terminal_no_charger_minutes,
                 'low_battery_percent' => (int) $settings->terminal_low_battery_percent,

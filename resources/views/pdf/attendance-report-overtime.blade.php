@@ -148,6 +148,7 @@
                 <th class="num">HE Total (h)</th>
                 <th class="num">HE Diurnas (h)</th>
                 <th class="num">HE Nocturnas (h)</th>
+                <th>Motivo HE</th>
                 <th class="center">HE Aprobada</th>
                 <th class="center">Límite exc.</th>
                 <th class="center">Extraordinario</th>
@@ -177,6 +178,7 @@
                 <td class="num">{{ number_format((float)($day->extra_hours ?? 0), 2) }}</td>
                 <td class="num">{{ number_format((float)($day->extra_hours_diurnas ?? 0), 2) }}</td>
                 <td class="num">{{ number_format((float)($day->extra_hours_nocturnas ?? 0), 2) }}</td>
+                <td>{{ (float) ($day->extra_hours ?? 0) > 0 ? \App\Models\AttendanceEvent::overtimeReasonLabel($day->overtime_reason) : '—' }}</td>
                 <td class="center">
                     @if($day->overtime_approved)
                         <span class="badge-ok">Sí</span>

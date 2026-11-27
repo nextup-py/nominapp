@@ -4,6 +4,7 @@ namespace App\Filament\Actions;
 
 use App\Filament\Resources\AttendanceDayResource;
 use App\Models\AttendanceDay;
+use App\Models\AttendanceEvent;
 use App\Services\AttendanceCalculator;
 use App\Services\OpenShiftCloser;
 use App\Settings\PayrollSettings;
@@ -372,6 +373,10 @@ class AttendanceDayActions
 
         $action = $record->overtime_approved ? 'Se revocara la aprobacion de' : 'Se aprobaran';
         $desc = "{$action} {$record->extra_hours} hrs extra para {$record->employee->full_name} del {$record->date->format('d/m/Y')}.";
+
+        if ((float) $record->extra_hours > 0) {
+            $desc .= ' Motivo: '.mb_strtolower(AttendanceEvent::overtimeReasonLabel($record->overtime_reason)).'.';
+        }
 
         if ($record->overtime_unauthorized && ! $record->overtime_approved) {
             $desc .= ' ATENCION: este empleado no está autorizado a hacer horas extra ('.mb_strtolower($record->employee->overtimeAllowedLabel()).'); aprobarlas las autoriza solo para esta jornada.';

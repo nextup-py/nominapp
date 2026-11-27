@@ -236,6 +236,12 @@ export async function heartbeat() {
         if (Number.isFinite(data.config.low_battery_percent)) {
             await setMeta('low_battery_percent', data.config.low_battery_percent);
         }
+        if (data.config.overtime_reasons && typeof data.config.overtime_reasons === 'object') {
+            await setMeta('overtime_reasons', data.config.overtime_reasons);
+        }
+        if (Number.isFinite(data.config.overtime_tolerance_minutes)) {
+            await setMeta('overtime_tolerance_minutes', data.config.overtime_tolerance_minutes);
+        }
         if (typeof data.config.confirm_exit === 'boolean') {
             await setMeta('terminal_confirm_exit', data.config.confirm_exit);
         }

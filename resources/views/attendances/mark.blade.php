@@ -161,6 +161,19 @@
         </div>
     </div>
 
+    {{-- Motivo de las horas extra: se abre al confirmar una salida pasada la hora del horario. Los botones se dibujan
+         desde offline-shared/overtime-reason-prompt.js; si nadie elige, la salida se registra igual sin motivo. --}}
+    <div id="overtimeReasonModal" class="modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="overtimeReasonModalTitle">
+        <div class="modal-content modal-info">
+            <h2 id="overtimeReasonModalTitle">Motivo de las horas extra</h2>
+            <p class="my-events-status">Seleccione por qué se quedó después de su horario.</p>
+
+            <div id="overtimeReasonList" class="overtime-reason-list"></div>
+            <p id="overtimeReasonCountdown" class="my-events-status" aria-live="polite"></p>
+        </div>
+    </div>
+
     <div id="errorModal" class="modal hidden" role="dialog" aria-modal="true"
         aria-labelledby="errorModalTitle" aria-describedby="errorModalDesc">
         <div class="modal-content modal-error">

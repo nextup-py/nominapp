@@ -3,6 +3,9 @@
 namespace App\Exports;
 
 use App\Models\AttendanceDay;
+use App\Models\AttendanceEvent;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -55,6 +58,7 @@ class OvertimeReportDetailExport implements FromQuery, ShouldAutoSize, WithHeadi
             'extra_hours' => 'HE Total (h)',
             'extra_diurnas' => 'HE Diurnas (h)',
             'extra_nocturnas' => 'HE Nocturnas (h)',
+            'overtime_reason' => 'Motivo HE',
             'overtime_approved' => 'HE Aprobada',
             'limit_exceeded' => 'Límite Excedido',
             'extraordinary_work' => 'Trabajo Extraordinario',
@@ -71,7 +75,7 @@ class OvertimeReportDetailExport implements FromQuery, ShouldAutoSize, WithHeadi
     /**
      * Query base: días con horas extras o tardanza, con relaciones eager-loaded.
      *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public function query()
     {
@@ -138,12 +142,13 @@ class OvertimeReportDetailExport implements FromQuery, ShouldAutoSize, WithHeadi
             'branch_name' => $employee?->branch?->name ?? '—',
             'date' => $day->date?->format('d/m/Y') ?? '',
             'day_name' => $day->date ? ($dayNames[$day->date->format('l')] ?? $day->date->format('l')) : '',
-            'expected_check_in' => $day->expected_check_in ? \Carbon\Carbon::parse($day->expected_check_in)->format('H:i') : '',
-            'check_in' => $day->check_in_time ? \Carbon\Carbon::parse($day->check_in_time)->format('H:i') : '',
+            'expected_check_in' => $day->expected_check_in ? Carbon::parse($day->expected_check_in)->format('H:i') : '',
+            'check_in' => $day->check_in_time ? Carbon::parse($day->check_in_time)->format('H:i') : '',
             'late_minutes' => (int) ($day->late_minutes ?? 0),
             'extra_hours' => (float) ($day->extra_hours ?? 0),
             'extra_diurnas' => (float) ($day->extra_hours_diurnas ?? 0),
             'extra_nocturnas' => (float) ($day->extra_hours_nocturnas ?? 0),
+            'overtime_reason' => (float) $day->extra_hours > 0 ? AttendanceEvent::overtimeReasonLabel($day->overtime_reason) : '',
             'overtime_approved' => AttendanceDay::formatBoolean((bool) $day->overtime_approved),
             'limit_exceeded' => AttendanceDay::formatBoolean((bool) $day->overtime_limit_exceeded),
             'extraordinary_work' => AttendanceDay::formatBoolean((bool) $day->is_extraordinary_work),

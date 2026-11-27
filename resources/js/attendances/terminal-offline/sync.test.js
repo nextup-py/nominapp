@@ -111,6 +111,25 @@ describe('heartbeat', () => {
     });
 });
 
+describe('heartbeat — motivos de horas extra', () => {
+    it('guarda la lista de motivos y la tolerancia que informa el servidor', async () => {
+        getMeta.mockResolvedValue('tok');
+        fetch.mockResolvedValue({
+            status: 200,
+            json: () => Promise.resolve({
+                ok: true,
+                config: { face_threshold: 0.5, face_min_confidence_gap: 0.1, overtime_reasons: { cash_close: 'Cierre de caja' }, overtime_tolerance_minutes: 15 },
+                server_time: '2026-01-01T00:00:00Z',
+            }),
+        });
+
+        await heartbeat();
+
+        expect(setMeta).toHaveBeenCalledWith('overtime_reasons', { cash_close: 'Cierre de caja' });
+        expect(setMeta).toHaveBeenCalledWith('overtime_tolerance_minutes', 15);
+    });
+});
+
 describe('heartbeat — comandos remotos', () => {
     const okBody = (extra = {}) => ({
         ok: true, config: { face_threshold: 0.5, face_min_confidence_gap: 0.1 }, server_time: '2026-01-01T00:00:00Z', ...extra,

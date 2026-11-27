@@ -196,11 +196,15 @@ class MobileEventSyncService
             $day->update(['status' => 'present']);
         }
 
+        $overtimeReason = $eventData['event_type'] === 'check_out' ? AttendanceEvent::sanitizeOvertimeReason($eventData['overtime_reason'] ?? null) : null;
+        $day->rememberOvertimeReason($overtimeReason);
+
         $event = $day->events()->create([
             'client_event_id' => $clientEventId,
             'event_type' => $eventData['event_type'],
             'recorded_at' => $recordedAt,
             'synced_at' => now(),
+            'overtime_reason' => $overtimeReason,
             'source' => 'mobile',
             'location' => $eventData['location'] ?? null,
             ...LocationRadiusService::evaluate($employee, $eventData['location'] ?? null),

@@ -22,6 +22,7 @@ class AttendanceDay extends Model implements Auditable
         'status',
         'overtime_approved',
         'overtime_unauthorized',
+        'overtime_reason',
         'second_shift_regular',
         'excluded_from_calculation',
         'exclusion_reason',
@@ -59,6 +60,7 @@ class AttendanceDay extends Model implements Auditable
         'is_holiday',
         'manual_adjustment',
         'overtime_approved',
+        'overtime_reason',
         'second_shift_regular',
         'excluded_from_calculation',
         'exclusion_reason',
@@ -311,6 +313,19 @@ class AttendanceDay extends Model implements Auditable
                 ->orWhereRaw(self::PENDING_TARDINESS_SQL)
                 ->orWhereRaw(self::PENDING_OVERTIME_SQL)
                 ->orWhereRaw(self::NO_EXPECTED_SHIFT_SQL));
+    }
+
+    /**
+     * Guarda en la jornada el motivo que el empleado eligió al marcar una salida. Solo pisa un motivo anterior con otro
+     * válido (una salida sin motivo —se venció la espera— no borra el que ya había) y no dispara observers.
+     */
+    public function rememberOvertimeReason(?string $reason): void
+    {
+        if ($reason === null || $this->overtime_reason === $reason) {
+            return;
+        }
+
+        $this->forceFill(['overtime_reason' => $reason])->saveQuietly();
     }
 
     /** Primer día (inclusive, `Y-m-d`) que considera "Requieren atención". */
