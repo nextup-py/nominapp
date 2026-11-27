@@ -310,6 +310,12 @@ class AttendanceDayResource extends Resource
                     ->description(fn (AttendanceDay $record): ?string => $record->overtime_unauthorized && (float) $record->extra_hours > 0 && ! $record->overtime_approved ? 'No autorizadas' : null)
                     ->toggleable(),
 
+                TextColumn::make('overtime_reason')
+                    ->label('Motivo de horas extra')
+                    ->formatStateUsing(fn (?string $state, AttendanceDay $record): ?string => (float) $record->extra_hours > 0 ? AttendanceEvent::overtimeReasonLabel($state) : null)
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('attention')
                     ->label('Pendiente')
                     ->getStateUsing(fn (AttendanceDay $record) => $record->attentionReasons())
@@ -359,6 +365,15 @@ class AttendanceDayResource extends Resource
                     ->toggle()
                     ->query(fn (Builder $query) => $query->where('extra_hours', '>', 0)->where('overtime_unauthorized', true)->where('overtime_approved', false))
                     ->indicator('Horas extra no autorizadas'),
+
+                SelectFilter::make('overtime_reason')
+                    ->label('Motivo de horas extra')
+                    ->options(AttendanceEvent::getOvertimeReasonOptions() + ['none' => 'Sin motivo'])
+                    ->query(fn (Builder $query, array $data): Builder => match ($data['value'] ?? null) {
+                        null, '' => $query,
+                        'none' => $query->where('extra_hours', '>', 0)->whereNull('overtime_reason'),
+                        default => $query->where('overtime_reason', $data['value']),
+                    }),
 
                 Filter::make('date')
                     ->label('Rango de Fechas')
@@ -1312,6 +1327,11 @@ class AttendanceDayResource extends Resource
                             ->suffix(' hrs')
                             ->placeholder('0')
                             ->hidden(fn ($record) => ! $record->extra_hours_nocturnas || $record->extra_hours_nocturnas <= 0),
+
+                        TextEntry::make('overtime_reason')
+                            ->label('Motivo de las Horas Extra')
+                            ->formatStateUsing(fn (?string $state): string => AttendanceEvent::overtimeReasonLabel($state))
+                            ->hidden(fn ($record) => $record->extra_hours <= 0),
 
                         TextEntry::make('overtime_approved')
                             ->label('Aprobación Horas Extra')

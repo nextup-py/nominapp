@@ -32,7 +32,7 @@ import {
     countPendingEvents, getEmployeeStatusCache, setEmployeeStatusCache,
 } from './db.js';
 import { submitEvents, fetchStatus, MobileAuthError } from './sync.js';
-import { allowedNextEventTypes, resolveOwnStatus, getOwnStatus, enqueueMark, flushQueue } from './queue.js';
+import { allowedNextEventTypes, resolveOwnStatus, getOwnStatus, enqueueMark, flushQueue, getOvertimeConfig } from './queue.js';
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -123,6 +123,48 @@ describe('enqueueMark', () => {
         await enqueueMark('check_in');
 
         expect(setEmployeeStatusCache).not.toHaveBeenCalled();
+    });
+});
+
+describe('motivo de las horas extra', () => {
+    it('enqueueMark guarda el motivo solo cuando se pasa', async () => {
+        getOwnEmployee.mockResolvedValue({ has_scheduled_break: true });
+
+        await enqueueMark('check_out', null, { overtimeReason: 'boss_request' });
+        await enqueueMark('check_out');
+
+        expect(queueEvent).toHaveBeenNthCalledWith(1, expect.objectContaining({ overtime_reason: 'boss_request' }));
+        expect(queueEvent).toHaveBeenNthCalledWith(2, expect.not.objectContaining({ overtime_reason: expect.anything() }));
+    });
+
+    it('flushQueue envía el motivo y omite la clave si no hay', async () => {
+        getPendingEvents.mockResolvedValue([
+            { client_event_id: 'e1', event_type: 'check_out', recorded_at: '2026-01-01T19:00:00Z', location: null, overtime_reason: 'other' },
+            { client_event_id: 'e2', event_type: 'check_out', recorded_at: '2026-01-01T19:05:00Z', location: null },
+        ]);
+        submitEvents.mockResolvedValue([{ client_event_id: 'e1', status: 'synced' }, { client_event_id: 'e2', status: 'synced' }]);
+        countPendingEvents.mockResolvedValue(0);
+
+        await flushQueue();
+
+        const [sent] = submitEvents.mock.calls[0];
+        expect(sent[0]).toMatchObject({ client_event_id: 'e1', overtime_reason: 'other' });
+        expect(sent[1]).not.toHaveProperty('overtime_reason');
+    });
+
+    it('getOvertimeConfig devuelve los motivos y la tolerancia del último latido', async () => {
+        getMeta.mockImplementation((key) => Promise.resolve({
+            overtime_reasons: { cash_close: 'Cierre de caja' },
+            overtime_tolerance_minutes: 10,
+        }[key]));
+
+        expect(await getOvertimeConfig()).toEqual({ reasons: [{ key: 'cash_close', label: 'Cierre de caja' }], toleranceMinutes: 10 });
+    });
+
+    it('getOvertimeConfig sin latido previo no tiene motivos', async () => {
+        getMeta.mockResolvedValue(undefined);
+
+        expect(await getOvertimeConfig()).toEqual({ reasons: [], toleranceMinutes: null });
     });
 });
 

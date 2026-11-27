@@ -54,6 +54,24 @@ describe('heartbeat', () => {
         expect(logSync).toHaveBeenCalledWith('heartbeat', true);
     });
 
+    it('guarda los motivos de horas extra y la tolerancia del latido', async () => {
+        getMeta.mockResolvedValue('tok');
+        fetch.mockResolvedValue({
+            status: 200,
+            json: () => Promise.resolve({
+                ok: true,
+                employee: { id: 5 },
+                config: { face_threshold: 0.5, face_min_confidence_gap: 0.1, overtime_reasons: { other: 'Otro' }, overtime_tolerance_minutes: 15 },
+                server_time: '2026-01-01T00:00:00Z',
+            }),
+        });
+
+        await heartbeat();
+
+        expect(setMeta).toHaveBeenCalledWith('overtime_reasons', { other: 'Otro' });
+        expect(setMeta).toHaveBeenCalledWith('overtime_tolerance_minutes', 15);
+    });
+
     it('registra el fallo en logSync y relanza', async () => {
         getMeta.mockResolvedValue('tok');
         fetch.mockResolvedValue({ status: 200, json: () => Promise.resolve({ ok: false, message: 'Error en heartbeat' }) });

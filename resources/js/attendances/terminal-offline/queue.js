@@ -31,6 +31,7 @@ import {
 import { submitEvents, fetchEmployeeStatus, TerminalAuthError } from './sync.js';
 import { submitInChunks } from '../offline-shared/submit-in-chunks.js';
 import { isClosedStateFromAnotherDay } from '../offline-shared/stale-state.js';
+import { normalizeOvertimeReasons } from '../offline-shared/overtime-reason.js';
 
 /**
  * Máquina de estados de marcación diaria — mismo criterio que
@@ -204,13 +205,13 @@ export async function getEmployeeStatus(employeeId) {
  * offline. Sin heartbeat previo el offset es 0 (no hay corrección posible).
  * @param {number} employeeId
  * @param {string} eventType
- * @param {{optimistic?: boolean, reviewOnly?: boolean}} [options] - `optimistic: false` no toca el caché de estado y
+ * @param {{optimistic?: boolean, reviewOnly?: boolean, overtimeReason?: string|null}} [options] - `optimistic: false` no toca el caché de estado y
  *        `reviewOnly: true` marca la marcación como «solo para revisión» (la salida de quien no tiene entrada, que el
  *        servidor deja como fallo para RR.HH.): al sincronizar se quita de la cola en vez de quedar como conflicto, así
  *        el terminal no muestra para siempre «requieren revisión». Van juntas: no debe cambiar lo que se ofrece después.
  * @returns {Promise<{client_event_id: string, recorded_at: string}>}
  */
-export async function enqueueMark(employeeId, eventType, { optimistic = true, reviewOnly = false } = {}) {
+export async function enqueueMark(employeeId, eventType, { optimistic = true, reviewOnly = false, overtimeReason = null } = {}) {
     const clientEventId = crypto.randomUUID();
     const recordedAt = await correctedNow();
 
@@ -221,6 +222,7 @@ export async function enqueueMark(employeeId, eventType, { optimistic = true, re
         recorded_at: recordedAt.toISOString(),
         date: localDateString(recordedAt),
         ...(reviewOnly ? { review_only: true } : {}),
+        ...(overtimeReason ? { overtime_reason: overtimeReason } : {}),
     });
 
     if (!optimistic) {
@@ -271,6 +273,26 @@ export async function getExpectedShift(employeeId) {
         return { expectedCheckIn: null, expectedCheckOut: null };
     }
     return { expectedCheckIn: cached.expected_check_in ?? null, expectedCheckOut: cached.expected_check_out ?? null };
+}
+
+/**
+ * Datos para decidir si se pide el motivo de las horas extra al marcar la salida: la lista de motivos y la tolerancia
+ * que trajo el último latido, y la salida del horario de hoy que informó el servidor con el estado del empleado.
+ * @param {number} employeeId
+ * @returns {Promise<{reasons: Array<{key: string, label: string}>, toleranceMinutes: number|null, expectedCheckOut: string|null}>}
+ */
+export async function getOvertimeContext(employeeId) {
+    const [stored, toleranceMinutes, shift] = await Promise.all([
+        getMeta('overtime_reasons'),
+        getMeta('overtime_tolerance_minutes'),
+        getExpectedShift(employeeId),
+    ]);
+
+    return {
+        reasons: normalizeOvertimeReasons(stored),
+        toleranceMinutes: toleranceMinutes ?? null,
+        expectedCheckOut: shift.expectedCheckOut,
+    };
 }
 
 /**
@@ -381,11 +403,12 @@ export async function flushQueue() {
         try {
             const { synced, conflicts, results } = await submitInChunks(
                 pending,
-                (batch) => submitEvents(batch.map(({ client_event_id, employee_id, event_type, recorded_at }) => ({
+                (batch) => submitEvents(batch.map(({ client_event_id, employee_id, event_type, recorded_at, overtime_reason }) => ({
                     client_event_id,
                     employee_id,
                     event_type,
                     recorded_at,
+                    ...(overtime_reason ? { overtime_reason } : {}),
                 }))),
                 { onSynced: removeQueuedEvent, onConflict: onQueuedEventConflict(employeeIdByClientEventId, reviewOnlyIds) },
                 MAX_BATCH_SIZE,

@@ -707,6 +707,28 @@ body {
     border-color: var(--c-border-s);
 }
 
+/* Motivo de las horas extra: un botón grande por motivo, apilados para tocar con el dedo. */
+.overtime-reason-list {
+    display: grid;
+    gap: var(--sp-3);
+    width: min(100%, 620px);
+}
+.overtime-reason-btn {
+    font-family: var(--font);
+    font-size: clamp(1.125rem, min(3vw, 3.4vh), 1.75rem);
+    font-weight: 600;
+    color: var(--c-text);
+    background: var(--c-surface);
+    border: 2px solid var(--c-border);
+    border-radius: var(--r-2xl);
+    padding: clamp(var(--sp-3), 2vh, var(--sp-5)) var(--sp-5);
+    box-shadow: var(--sh);
+    cursor: pointer;
+    transition: all var(--tr);
+}
+.overtime-reason-btn:hover { transform: translateY(-2px); box-shadow: var(--sh-lg); border-color: var(--c-primary); }
+.overtime-reason-btn:active { transform: translateY(0); box-shadow: var(--sh-md); }
+
 /* Grid 2×2 de tipos */
 .type-grid {
     display: grid;

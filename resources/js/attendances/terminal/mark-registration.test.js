@@ -1,16 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../terminal-offline/queue.js', () => ({
     enqueueMark: vi.fn(),
     flushQueue: vi.fn(),
     getExpectedCheckOut: vi.fn(),
+    getOvertimeContext: vi.fn(),
 }));
 vi.mock('./sync-status-ui.js', () => ({
     refreshIdleSyncStatus: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { enqueueMark, flushQueue, getExpectedCheckOut } from '../terminal-offline/queue.js';
-import { registerMark, registerExitWithoutEntry, showTypeSelectionForEmployee, getPendingEmployee, clearPendingEmployee, isEntryOrExitPending } from './mark-registration.js';
+import { enqueueMark, flushQueue, getExpectedCheckOut, getOvertimeContext } from '../terminal-offline/queue.js';
+import { setOvertimeReasonAsker, registerMark, registerExitWithoutEntry, showTypeSelectionForEmployee, getPendingEmployee, clearPendingEmployee, isEntryOrExitPending } from './mark-registration.js';
 
 describe('registerMark', () => {
     beforeEach(() => {
@@ -173,5 +174,72 @@ describe('selección «¿Entrada o salida?»', () => {
         showTypeSelectionForEmployee(screens, dom, { id: 5 }, ['check_in'], null, null);
 
         expect(isEntryOrExitPending()).toBe(false);
+    });
+});
+
+describe('registerMark con motivo de horas extra', () => {
+    const reasons = [{ key: 'cash_close', label: 'Cierre de caja' }];
+    const callbacks = () => ({ onStatusUpdate: vi.fn(), onSuccess: vi.fn(), onError: vi.fn() });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        enqueueMark.mockResolvedValue({ client_event_id: 'abc-123', recorded_at: '2026-09-11T19:00:00Z' });
+        flushQueue.mockResolvedValue({ results: [{ client_event_id: 'abc-123', status: 'synced' }] });
+        getExpectedCheckOut.mockResolvedValue(null);
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(2026, 8, 11, 19, 0));
+    });
+
+    afterEach(() => {
+        setOvertimeReasonAsker(null);
+        vi.useRealTimers();
+    });
+
+    const run = async (eventType) => {
+        const promise = registerMark({ id: 1 }, eventType, callbacks(), { onLine: true });
+        await vi.advanceTimersByTimeAsync(800);
+        await promise;
+    };
+
+    it('pide el motivo en una salida con horas extra y lo manda con la marcación', async () => {
+        getOvertimeContext.mockResolvedValue({ reasons, toleranceMinutes: 15, expectedCheckOut: '17:00' });
+        const asker = vi.fn().mockResolvedValue('cash_close');
+        setOvertimeReasonAsker(asker);
+
+        await run('check_out');
+
+        expect(asker).toHaveBeenCalledWith(reasons);
+        expect(enqueueMark).toHaveBeenCalledWith(1, 'check_out', { overtimeReason: 'cash_close' });
+    });
+
+    it('si vence la espera registra la salida igual, sin motivo', async () => {
+        getOvertimeContext.mockResolvedValue({ reasons, toleranceMinutes: 15, expectedCheckOut: '17:00' });
+        setOvertimeReasonAsker(vi.fn().mockResolvedValue(null));
+
+        await run('check_out');
+
+        expect(enqueueMark).toHaveBeenCalledWith(1, 'check_out', { overtimeReason: null });
+    });
+
+    it('no pregunta si la salida es a su hora, ni para otros eventos', async () => {
+        const asker = vi.fn();
+        setOvertimeReasonAsker(asker);
+
+        getOvertimeContext.mockResolvedValue({ reasons, toleranceMinutes: 15, expectedCheckOut: '19:00' });
+        await run('check_out');
+        getOvertimeContext.mockResolvedValue({ reasons, toleranceMinutes: 15, expectedCheckOut: '17:00' });
+        await run('break_start');
+
+        expect(asker).not.toHaveBeenCalled();
+    });
+
+    it('un error al pedir el motivo no impide registrar la salida', async () => {
+        getOvertimeContext.mockRejectedValue(new Error('db'));
+        setOvertimeReasonAsker(vi.fn());
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        await run('check_out');
+
+        expect(enqueueMark).toHaveBeenCalledWith(1, 'check_out', { overtimeReason: null });
     });
 });

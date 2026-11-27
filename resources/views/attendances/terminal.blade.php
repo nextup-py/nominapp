@@ -91,6 +91,7 @@
             <x-attendance.terminal-loading />
             <x-attendance.terminal-idle />
             <x-attendance.terminal-type-selector />
+            <x-attendance.terminal-overtime-reason />
             <x-attendance.terminal-video-section />
             <x-attendance.terminal-success />
             <x-attendance.terminal-unlinked />

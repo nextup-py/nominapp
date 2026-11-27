@@ -19,6 +19,7 @@ import { probeStorage, describeStorageNotice, hasLinkMarker } from './terminal/s
 import { createPrivacyNotice } from './terminal/privacy-notice.js';
 import { createAdminPinGate } from './terminal/admin-pin.js';
 import { createAdminPinPrompt } from './terminal/admin-pin-prompt.js';
+import { createOvertimeReasonPrompt } from './offline-shared/overtime-reason-prompt.js';
 import { getCameraPrefs, setCameraPrefs, listVideoInputs } from './terminal/camera-prefs.js';
 import { initThemeToggle } from '../shared/theme-toggle.js';
 import { captureInstallPrompt, triggerInstallPrompt, isDismissed, dismiss } from '../shared/install-prompt.js';
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loading:         document.getElementById('loadingScreen'),
         idle:            document.getElementById('idleScreen'),
         typeSelection:   document.getElementById('typeSelectionScreen'),
+        overtimeReason:  document.getElementById('overtimeReasonScreen'),
         identification:  document.getElementById('identificationScreen'),
         success:         document.getElementById('successScreen'),
         dayComplete:     document.getElementById('dayCompleteScreen'),
@@ -482,6 +484,13 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (identificationStatus) identificationStatus.innerHTML = `<span class="id-status-dot" id="idStatusDot"></span><span class="id-status-text">${text}</span>`;
         },
     });
+
+    // Motivo de las horas extra: se pide al marcar una salida pasada la hora del horario (ver overtime-reason-prompt.js).
+    markRegistration.setOvertimeReasonAsker(createOvertimeReasonPrompt({
+        list: document.getElementById('overtimeReasonList'),
+        countdown: document.getElementById('overtimeReasonCountdown'),
+        show: () => screenState.showScreen(screens, 'overtimeReason'),
+    }).ask);
 
     // ============================================================================
     // EVENT LISTENERS

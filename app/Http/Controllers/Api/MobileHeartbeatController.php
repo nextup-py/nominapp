@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttendanceEvent;
 use App\Models\Employee;
 use App\Services\AttendanceCalculator;
 use App\Settings\GeneralSettings;
@@ -45,6 +46,9 @@ class MobileHeartbeatController extends Controller
             'config' => [
                 'face_threshold' => (float) $settings->face_threshold,
                 'face_min_confidence_gap' => (float) $settings->face_min_confidence_gap,
+                // Motivos y tolerancia para pedir el motivo al marcar una salida con horas extra.
+                'overtime_reasons' => AttendanceEvent::getOvertimeReasonOptions(),
+                'overtime_tolerance_minutes' => (int) $settings->attendance_overtime_tolerance_minutes,
             ],
             'employee' => [
                 'id' => $employee->id,
