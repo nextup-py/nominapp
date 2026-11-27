@@ -302,14 +302,14 @@ it('Aprobar HE del período aprueba lo seguro, deja auditoría y omite tope lega
 
     ['approvable' => $left, 'skipped' => $skipped] = AttendanceDayResource::overtimeRangeCandidates('2026-03-16', '2026-03-26');
     expect($left)->toHaveCount(0)
-        ->and($skipped)->toBe(['limit' => 2, 'double_shift' => 1, 'payroll' => 0]);
+        ->and($skipped)->toBe(['limit' => 2, 'double_shift' => 1, 'payroll' => 0, 'unauthorized' => 0]);
 
     $lockedDay = $make('2026-03-31');
     lockPayrollFor($lockedDay);
 
     expect(AttendanceDayResource::overtimeRangeCandidates('2026-03-31', '2026-03-31'))
         ->approvable->toHaveCount(0)
-        ->skipped->toBe(['limit' => 0, 'double_shift' => 0, 'payroll' => 1]);
+        ->skipped->toBe(['limit' => 0, 'double_shift' => 0, 'payroll' => 1, 'unauthorized' => 0]);
 });
 
 // ─── Búsqueda, filtros, recálculo con horario y auditoría de estado ──────────

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\BranchStatusAction;
 use App\Filament\Actions\MobileMarkingFields;
+use App\Filament\Actions\OvertimeAllowedFields;
 use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\BranchResource\Pages;
 use App\Filament\Resources\BranchResource\RelationManagers\AuditsRelationManager;
@@ -199,6 +200,8 @@ class BranchResource extends Resource
                 ->icon('heroicon-o-device-phone-mobile')
                 ->schema([
                     MobileMarkingFields::select('Rige para quien no tenga el suyo. «Heredar» usa la empresa o Configuración General.'),
+
+                    OvertimeAllowedFields::select('Rige para quien no lo tenga definido en su ficha ni en su cargo. «Heredar» usa la empresa o Configuración General.'),
 
                     Toggle::make('location_control')
                         ->label('Controlar la ubicación del celular')

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\CompanyStatusAction;
 use App\Filament\Actions\MobileMarkingFields;
+use App\Filament\Actions\OvertimeAllowedFields;
 use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\CompanyResource\Pages;
 use App\Filament\Resources\CompanyResource\RelationManagers;
@@ -273,6 +274,14 @@ class CompanyResource extends Resource
                     ])
                     ->collapsible()
                     ->collapsed(fn (?Company $record) => $record?->mobile_marking_allowed === null),
+
+                Section::make('Horas extra')
+                    ->icon('heroicon-o-clock')
+                    ->schema([
+                        OvertimeAllowedFields::select('Rige para quien no lo tenga definido en su ficha, su cargo ni su sucursal. «Heredar» usa Configuración General.'),
+                    ])
+                    ->collapsible()
+                    ->collapsed(fn (?Company $record) => $record?->overtime_allowed === null),
             ]);
     }
 

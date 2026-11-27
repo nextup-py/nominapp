@@ -80,6 +80,9 @@ class GeneralSettings extends Settings
     /** Permiso de marcación desde el celular cuando ni el empleado, ni su sucursal ni su empresa lo definen. */
     public bool $attendance_mobile_marking_default;
 
+    /** Permiso de horas extra cuando ni el empleado, ni su cargo, sucursal o empresa lo definen. */
+    public bool $attendance_overtime_allowed_default;
+
     /** Radio (m) de marcación desde el celular cuando el empleado o la sucursal no definen el suyo. */
     public int $attendance_location_default_radius;
 

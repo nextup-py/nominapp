@@ -178,6 +178,7 @@ class AttendanceCalculator
         $day->late_minutes = null;
         $day->early_leave_minutes = null;
         $day->overtime_limit_exceeded = false;
+        $day->overtime_unauthorized = false;
     }
 
     /**
@@ -279,10 +280,12 @@ class AttendanceCalculator
             $weeklyExceeded = ((float) $weeklyOtherHours + (float) $day->extra_hours) > $settings->overtime_max_weekly_hours;
 
             $day->overtime_limit_exceeded = $dailyExceeded || $weeklyExceeded;
+            $day->overtime_unauthorized = ! self::employeeMayWorkOvertime($day);
         } else {
             $day->extra_hours_diurnas = 0;
             $day->extra_hours_nocturnas = 0;
             $day->overtime_limit_exceeded = false;
+            $day->overtime_unauthorized = false;
         }
 
         // Calcular minutos de llegada tarde (basado en expected_check_in guardada)
@@ -290,6 +293,17 @@ class AttendanceCalculator
 
         // Calcular minutos de salida anticipada (basado en expected_check_out guardada)
         $day->early_leave_minutes = self::calculateEarlyLeaveMinutes($expectedOut, $checkOut);
+    }
+
+    /**
+     * Indica si el empleado de la jornada está autorizado a hacer horas extra (empleado, cargo, sucursal, empresa
+     * o valor general). Las horas se registran igual; solo se marcan como no autorizadas.
+     */
+    private static function employeeMayWorkOvertime(AttendanceDay $day): bool
+    {
+        $employee = $day->relationLoaded('employee') ? $day->employee : Employee::with(['activeContract.position', 'branch.company'])->find($day->employee_id);
+
+        return $employee?->canWorkOvertime() ?? true;
     }
 
     /**

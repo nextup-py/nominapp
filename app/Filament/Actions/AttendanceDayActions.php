@@ -373,6 +373,10 @@ class AttendanceDayActions
         $action = $record->overtime_approved ? 'Se revocara la aprobacion de' : 'Se aprobaran';
         $desc = "{$action} {$record->extra_hours} hrs extra para {$record->employee->full_name} del {$record->date->format('d/m/Y')}.";
 
+        if ($record->overtime_unauthorized && ! $record->overtime_approved) {
+            $desc .= ' ATENCION: este empleado no está autorizado a hacer horas extra ('.mb_strtolower($record->employee->overtimeAllowedLabel()).'); aprobarlas las autoriza solo para esta jornada.';
+        }
+
         if ($record->extra_hours_diurnas > 0 || $record->extra_hours_nocturnas > 0) {
             $parts = [];
             if ($record->extra_hours_diurnas > 0) {
@@ -488,11 +492,14 @@ class AttendanceDayActions
                 $approved = 0;
                 $skipped = 0;
                 $locked = 0;
+                $unauthorized = 0;
                 $closer = app(OpenShiftCloser::class);
 
                 foreach ($records as $day) {
                     if ($closer->isPayrollLocked($day)) {
                         $locked++;
+                    } elseif ($day->extra_hours > 0 && ! $day->overtime_approved && $day->overtime_unauthorized) {
+                        $unauthorized++;
                     } elseif ($day->extra_hours > 0 && ! $day->overtime_approved) {
                         $day->overtime_approved = true;
                         $day->save();
@@ -504,7 +511,9 @@ class AttendanceDayActions
 
                 Notification::make()
                     ->title('Aprobación completada')
-                    ->body("Aprobadas: {$approved} | Omitidas (sin hrs extra o ya aprobadas): {$skipped}".self::lockedSuffix($locked))
+                    ->body("Aprobadas: {$approved} | Omitidas (sin hrs extra o ya aprobadas): {$skipped}"
+                        .($unauthorized > 0 ? " | No autorizadas (aprobar una por una): {$unauthorized}" : '')
+                        .self::lockedSuffix($locked))
                     ->success()
                     ->send();
             });

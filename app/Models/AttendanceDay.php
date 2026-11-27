@@ -21,6 +21,7 @@ class AttendanceDay extends Model implements Auditable
     protected array $auditInclude = [
         'status',
         'overtime_approved',
+        'overtime_unauthorized',
         'second_shift_regular',
         'excluded_from_calculation',
         'exclusion_reason',
@@ -89,6 +90,7 @@ class AttendanceDay extends Model implements Auditable
         'is_holiday' => 'boolean',
         'manual_adjustment' => 'boolean',
         'overtime_approved' => 'boolean',
+        'overtime_unauthorized' => 'boolean',
         'second_shift_regular' => 'boolean',
         'excluded_from_calculation' => 'boolean',
         'overtime_limit_exceeded' => 'boolean',
@@ -250,7 +252,7 @@ class AttendanceDay extends Model implements Auditable
     public const PENDING_TARDINESS_SQL = 'attendance_days.late_minutes > 0 and coalesce(attendance_days.tardiness_deduction_approved, 0) = 0 and attendance_days.tardiness_dismissed_at is null';
 
     /** Condición SQL de horas extra sin aprobar (un doble turno aceptado como jornada normal no cuenta). */
-    public const PENDING_OVERTIME_SQL = 'attendance_days.extra_hours > 0 and coalesce(attendance_days.overtime_approved, 0) = 0 and coalesce(attendance_days.second_shift_regular, 0) = 0 and attendance_days.overtime_dismissed_at is null';
+    public const PENDING_OVERTIME_SQL = 'attendance_days.extra_hours > 0 and coalesce(attendance_days.overtime_approved, 0) = 0 and coalesce(attendance_days.overtime_unauthorized, 0) = 0 and coalesce(attendance_days.second_shift_regular, 0) = 0 and attendance_days.overtime_dismissed_at is null';
 
     /**
      * Condición SQL de jornada calculada con marcaciones pero sin horario esperado ese día: el empleado no
@@ -405,7 +407,7 @@ class AttendanceDay extends Model implements Auditable
             $reasons[] = 'Tardanza por aprobar';
         }
 
-        if ((float) $this->extra_hours > 0 && ! $this->overtime_approved && ! $this->second_shift_regular && ! $this->overtime_dismissed_at) {
+        if ((float) $this->extra_hours > 0 && ! $this->overtime_approved && ! $this->overtime_unauthorized && ! $this->second_shift_regular && ! $this->overtime_dismissed_at) {
             $reasons[] = 'Extras por aprobar';
         }
 
@@ -815,6 +817,7 @@ class AttendanceDay extends Model implements Auditable
         $fieldLabels = [
             'status' => 'Estado',
             'overtime_approved' => 'HE aprobadas',
+            'overtime_unauthorized' => 'HE no autorizadas',
             'second_shift_regular' => 'Doble turno como jornada normal',
             'excluded_from_calculation' => 'Excluida del cálculo',
             'exclusion_reason' => 'Motivo de exclusión',
@@ -844,7 +847,7 @@ class AttendanceDay extends Model implements Auditable
         }
 
         return match ($key) {
-            'overtime_approved', 'second_shift_regular', 'excluded_from_calculation', 'tardiness_deduction_approved', 'manual_adjustment' => $value ? 'Sí' : 'No',
+            'overtime_approved', 'overtime_unauthorized', 'second_shift_regular', 'excluded_from_calculation', 'tardiness_deduction_approved', 'manual_adjustment' => $value ? 'Sí' : 'No',
             'extra_hours_diurnas', 'extra_hours_nocturnas' => number_format((float) $value, 2).' hrs',
             'status' => self::getStatusLabel((string) $value),
             'notes' => Str::limit((string) $value, 120),
