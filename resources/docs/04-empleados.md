@@ -14,6 +14,7 @@ El módulo de Empleados gestiona todos los datos personales y laborales del pers
 - **Empresa y sucursal** a las que pertenece (el campo **Empresa** solo se muestra si hay más de una empresa activa; sirve para filtrar las sucursales)
 - **Estado:** Activo o Inactivo
 - **Marcación desde el celular:** Heredar, Sí o No (por defecto se marca solo desde el terminal). También se puede habilitar con el botón **Habilitar celular** de la ficha del empleado o con la acción **Habilitar celular** del menú de cada fila del listado; si el cargo ya lo habilita, queda en «Heredar». Ver **Quién puede marcar desde el celular** en el capítulo de Asistencias, donde también se explica el **Estado del celular** (detalle de la columna **Marca con** y filtro del listado).
+- **Horas extra:** Heredar, Sí o No. Con «No», las horas extra del empleado se registran igual pero quedan marcadas como no autorizadas. Ver **Quién puede hacer horas extra** en Asistencias.
 - **Lugar de trabajo propio (opcional):** sección colapsada (se abre sola si ya tiene datos) con latitud, longitud y **Radio de marcación**; solo para quien trabaja en un lugar fijo propio; la marcación desde el celular se compara con ese punto. Vacíos = usa el de su sucursal (si controla la ubicación) o es «de campo». Ver **Control de ubicación del celular** en Asistencias.
 
 ![Asistente de alta de empleado, paso Datos básicos](/docs-images/04-empleado-nuevo.png)

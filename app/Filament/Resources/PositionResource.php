@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\MobileMarkingFields;
 use App\Filament\Actions\OrgUnitStatusAction;
+use App\Filament\Actions\OvertimeAllowedFields;
 use App\Filament\Actions\PositionMergeAction;
 use App\Filament\Concerns\UsesNavigationLayout;
 use App\Filament\Resources\PositionResource\Pages;
@@ -223,19 +224,7 @@ class PositionResource extends Resource
                         MobileMarkingFields::select('Rige para quien no tenga el suyo. «Heredar» usa la sucursal, la empresa o el valor general. Ej.: «Sí» para Supervisores.')
                             ->columnSpanFull(),
 
-                        Select::make('overtime_allowed')
-                            ->label('Horas extra')
-                            ->options([
-                                'inherit' => 'Heredar (se permiten)',
-                                'yes' => 'Sí, permitidas',
-                                'no' => 'No, no autorizadas',
-                            ])
-                            ->default('inherit')
-                            ->native(false)
-                            ->selectablePlaceholder(false)
-                            ->formatStateUsing(fn ($state): string => MobileMarkingFields::toOption($state))
-                            ->dehydrateStateUsing(fn ($state): ?bool => MobileMarkingFields::fromOption($state))
-                            ->helperText('Por ahora solo se registra: todavía no cambia el cálculo de horas extra.'),
+                        OvertimeAllowedFields::select('Rige para quien no tenga el suyo. «Heredar» usa la sucursal, la empresa o el valor general. Las horas extra de quien no está autorizado se registran igual, pero quedan marcadas.'),
 
                         Select::make('default_schedule_id')
                             ->label('Horario sugerido')

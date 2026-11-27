@@ -687,6 +687,20 @@ Los multiplicadores exactos se definen en **Configuración → Ajustes de Nómin
 
 ---
 
+## Quién puede hacer horas extra
+
+El campo **Horas extra** tiene tres valores: **Heredar**, **Sí, autorizadas** y **No autorizadas**. Se define en cinco niveles y gana el más específico, igual que la marcación desde el celular:
+
+1. La ficha del **empleado** (sección **Asignación Laboral**).
+2. El **cargo** (**Organización → Cargos**), según el contrato vigente.
+3. La **sucursal** (sección **Marcación desde el celular**).
+4. La **empresa** (sección **Horas extra**).
+5. **Configuración → Configuración General → Configuración Laboral → Autorizar horas extra por defecto** (activado de fábrica).
+
+Las horas extra de quien **no está autorizado** se **registran igual** (la marcación es un hecho), pero la jornada queda marcada como **No autorizadas**: no figura en **Por resolver** ni en **Requieren atención**, y la aprobación por rango y la masiva la omiten (el aviso indica cuántas). Para verlas, usar el filtro **Horas extra no autorizadas** de la tabla de Asistencias. RR.HH. puede aprobar una a una con **Aprobar**: el modal lo advierte y la aprobación vale solo para esa jornada.
+
+> El permiso rige para las jornadas que se calculen desde que se define; las ya calculadas conservan su estado hasta recalcularlas (**Recalcular**).
+
 ## Aprobación de horas extras
 
 Las horas extras deben ser aprobadas para incluirse en el cálculo de la nómina. Las horas registradas pero no aprobadas no generan percepción adicional.

@@ -70,6 +70,7 @@ class Employee extends Model implements AuthenticatableContract
         'mobile_linked_at',
         'mobile_last_heartbeat_at',
         'mobile_marking_allowed',
+        'overtime_allowed',
     ];
 
     protected $casts = [
@@ -80,6 +81,7 @@ class Employee extends Model implements AuthenticatableContract
         'mobile_linked_at' => 'datetime',
         'mobile_last_heartbeat_at' => 'datetime',
         'mobile_marking_allowed' => 'boolean',
+        'overtime_allowed' => 'boolean',
     ];
 
     // ───────────────────────────────────────────
@@ -1530,6 +1532,45 @@ class Employee extends Model implements AuthenticatableContract
     public function mobileMarkingLabel(): string
     {
         $info = $this->mobileMarkingSource();
+        $origin = $info['source'] === 'employee' ? '' : ' ('.self::getMobileMarkingSourceLabels()[$info['source']].')';
+
+        return ($info['allowed'] ? 'Sí' : 'No').$origin;
+    }
+
+    /**
+     * Indica si el empleado está autorizado a hacer horas extra: el valor propio, si no el de su cargo, su sucursal,
+     * su empresa, y por último el general de Configuración General.
+     */
+    public function canWorkOvertime(): bool
+    {
+        return $this->overtimeAllowedSource()['allowed'];
+    }
+
+    /**
+     * Permiso efectivo de horas extra y el nivel que lo define (el primer valor no nulo gana).
+     *
+     * @return array{allowed: bool, source: 'employee'|'position'|'branch'|'company'|'general'}
+     */
+    public function overtimeAllowedSource(): array
+    {
+        foreach ([
+            'employee' => $this,
+            'position' => $this->activeContract?->position,
+            'branch' => $this->branch,
+            'company' => $this->branch?->company,
+        ] as $source => $model) {
+            if ($model?->overtime_allowed !== null) {
+                return ['allowed' => (bool) $model->overtime_allowed, 'source' => $source];
+            }
+        }
+
+        return ['allowed' => (bool) app(GeneralSettings::class)->attendance_overtime_allowed_default, 'source' => 'general'];
+    }
+
+    /** Permiso de horas extra con su origen, por ejemplo «Sí» o «No (del cargo)». */
+    public function overtimeAllowedLabel(): string
+    {
+        $info = $this->overtimeAllowedSource();
         $origin = $info['source'] === 'employee' ? '' : ' ('.self::getMobileMarkingSourceLabels()[$info['source']].')';
 
         return ($info['allowed'] ? 'Sí' : 'No').$origin;

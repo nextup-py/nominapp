@@ -279,6 +279,10 @@ class ManageGeneralSettings extends SettingsPage
                             ->label('Permitir marcar desde el celular por defecto')
                             ->helperText('Valor para los empleados que no lo tienen definido ni en su ficha, ni en su sucursal ni en su empresa. Apagado = solo desde el terminal. Los celulares ya vinculados de quienes dejen de estar habilitados se desvinculan solos en su próxima conexión.'),
 
+                        Toggle::make('attendance_overtime_allowed_default')
+                            ->label('Autorizar horas extra por defecto')
+                            ->helperText('Valor para quienes no lo tienen definido ni en su ficha, ni en su cargo, sucursal o empresa. Apagado: las horas extra se registran igual pero quedan marcadas como no autorizadas y no aparecen en Por resolver.'),
+
                         TextInput::make('attendance_location_default_radius')
                             ->label('Radio de marcación desde el celular')
                             ->numeric()

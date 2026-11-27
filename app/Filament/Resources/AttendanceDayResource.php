@@ -101,12 +101,12 @@ class AttendanceDayResource extends Resource
      * Separa los días con horas extra pendientes de un rango entre los que se pueden aprobar en bloque
      * y los que requieren revisión individual (tope legal excedido, doble turno sin decidir, nómina generada).
      *
-     * @return array{approvable: Collection<int, AttendanceDay>, skipped: array{limit: int, double_shift: int, payroll: int}}
+     * @return array{approvable: Collection<int, AttendanceDay>, skipped: array{limit: int, double_shift: int, payroll: int, unauthorized: int}}
      */
     public static function overtimeRangeCandidates(string $start, string $end): array
     {
         $closer = app(OpenShiftCloser::class);
-        $skipped = ['limit' => 0, 'double_shift' => 0, 'payroll' => 0];
+        $skipped = ['limit' => 0, 'double_shift' => 0, 'payroll' => 0, 'unauthorized' => 0];
 
         $approvable = AttendanceDay::query()
             ->whereBetween('date', [$start, $end])
@@ -114,6 +114,11 @@ class AttendanceDayResource extends Resource
             ->where('overtime_approved', false)
             ->get()
             ->filter(function (AttendanceDay $day) use ($closer, &$skipped): bool {
+                if ($day->overtime_unauthorized) {
+                    $skipped['unauthorized']++;
+
+                    return false;
+                }
                 if ($day->overtime_limit_exceeded) {
                     $skipped['limit']++;
 
@@ -302,6 +307,7 @@ class AttendanceDayResource extends Resource
                     ->default(0)
                     ->numeric(2)
                     ->color(fn ($state) => $state > 0 ? 'warning' : 'gray')
+                    ->description(fn (AttendanceDay $record): ?string => $record->overtime_unauthorized && (float) $record->extra_hours > 0 && ! $record->overtime_approved ? 'No autorizadas' : null)
                     ->toggleable(),
 
                 TextColumn::make('attention')
@@ -347,6 +353,12 @@ class AttendanceDayResource extends Resource
                     ->toggle()
                     ->query(fn (Builder $query) => $query->missingCheckOut())
                     ->indicator('Sin salida registrada'),
+
+                Filter::make('overtime_unauthorized')
+                    ->label('Horas extra no autorizadas')
+                    ->toggle()
+                    ->query(fn (Builder $query) => $query->where('extra_hours', '>', 0)->where('overtime_unauthorized', true)->where('overtime_approved', false))
+                    ->indicator('Horas extra no autorizadas'),
 
                 Filter::make('date')
                     ->label('Rango de Fechas')
@@ -832,7 +844,7 @@ class AttendanceDayResource extends Resource
                         $summary = "Se aprobarán {$approvable->count()} registro(s) con un total de {$approvable->sum('extra_hours')} hrs extra.";
 
                         if ($skippedTotal > 0) {
-                            $summary .= " Quedan para revisión individual {$skippedTotal}: {$skipped['limit']} con tope legal excedido, {$skipped['double_shift']} con doble turno sin decidir y {$skipped['payroll']} con nómina generada.";
+                            $summary .= " Quedan para revisión individual {$skippedTotal}: {$skipped['limit']} con tope legal excedido, {$skipped['double_shift']} con doble turno sin decidir, {$skipped['payroll']} con nómina generada y {$skipped['unauthorized']} de empleados no autorizados a hacer horas extra.";
                         }
 
                         return $summary;
@@ -871,7 +883,7 @@ class AttendanceDayResource extends Resource
                 Notification::make()
                     ->title('Horas extra aprobadas')
                     ->body("Se aprobaron {$approvable->count()} registro(s) entre {$startDate->format('d/m/Y')} y {$endDate->format('d/m/Y')}."
-                        .($skippedTotal > 0 ? " Quedan {$skippedTotal} para revisión individual (tope legal: {$skipped['limit']}, doble turno: {$skipped['double_shift']}, nómina generada: {$skipped['payroll']})." : ''))
+                        .($skippedTotal > 0 ? " Quedan {$skippedTotal} para revisión individual (tope legal: {$skipped['limit']}, doble turno: {$skipped['double_shift']}, nómina generada: {$skipped['payroll']}, no autorizadas: {$skipped['unauthorized']})." : ''))
                     ->success()
                     ->duration(8000)
                     ->send();
@@ -1305,7 +1317,7 @@ class AttendanceDayResource extends Resource
                             ->label('Aprobación Horas Extra')
                             ->badge()
                             ->color(fn ($state) => AttendanceDay::getBooleanColor($state, 'success', 'danger'))
-                            ->formatStateUsing(fn ($state) => $state ? 'Aprobadas' : 'Pendientes')
+                            ->formatStateUsing(fn ($state, $record) => $state ? 'Aprobadas' : ($record->overtime_unauthorized ? 'No autorizadas' : 'Pendientes'))
                             ->icon(fn ($state) => $state ? 'heroicon-o-check-circle' : 'heroicon-o-x-circle')
                             ->hidden(fn ($record) => $record->extra_hours <= 0),
 

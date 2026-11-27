@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\EmployeeResource\Schemas;
 
 use App\Filament\Actions\MobileMarkingFields;
+use App\Filament\Actions\OvertimeAllowedFields;
 use App\Filament\Actions\ReportingLineActions;
 use App\Models\Branch;
 use App\Models\Company;
@@ -81,6 +82,8 @@ final class EmployeeForm
                         self::status(),
 
                         MobileMarkingFields::select('«Heredar» usa el valor de la sucursal, la empresa o Configuración General.'),
+
+                        OvertimeAllowedFields::select('«Heredar» usa el valor del cargo, la sucursal, la empresa o Configuración General.'),
                     ]),
 
                 Section::make('Lugar de trabajo propio (opcional)')
