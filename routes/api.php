@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\MobileEventSyncController;
 use App\Http\Controllers\Api\MobileHeartbeatController;
+use App\Http\Controllers\Api\MobileOvertimeRequestController;
 use App\Http\Controllers\Api\MobileStatusController;
 use App\Http\Controllers\Api\MobileUnlinkController;
 use App\Http\Controllers\Api\TerminalEmployeeSyncController;
@@ -74,6 +75,14 @@ Route::prefix('v1/mobile')->name('api.mobile.')->middleware(['auth:sanctum'])->g
     Route::post('/events/sync', [MobileEventSyncController::class, 'store'])
         ->middleware(['ability:mobile:sync', 'mobile.allowed'])
         ->name('events.sync');
+
+    Route::get('/overtime-requests', [MobileOvertimeRequestController::class, 'index'])
+        ->middleware(['ability:mobile:sync', 'mobile.allowed'])
+        ->name('overtime-requests.index');
+
+    Route::post('/overtime-requests', [MobileOvertimeRequestController::class, 'store'])
+        ->middleware(['ability:mobile:sync', 'mobile.allowed'])
+        ->name('overtime-requests.store');
 
     Route::post('/unlink', [MobileUnlinkController::class, 'store'])
         ->middleware('ability:mobile:sync')

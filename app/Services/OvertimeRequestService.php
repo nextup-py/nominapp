@@ -10,6 +10,7 @@ use App\Settings\GeneralSettings;
 use App\Settings\PayrollSettings;
 use Carbon\Carbon;
 use DomainException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -75,9 +76,11 @@ class OvertimeRequestService
         $maxHours = round((float) $data['max_hours'], 2);
         $asHr = $user->can(self::HR_APPROVE);
 
-        $this->validate($user, $employee, $from, $to, $timeFrom, $timeTo, $maxHours, $asHr);
+        $this->validate($employee, $from, $to, $timeFrom, $timeTo, $maxHours, $asHr ? 'hr' : 'boss');
 
-        $request = DB::transaction(function () use ($user, $employee, $data, $from, $to, $timeFrom, $timeTo, $maxHours, $asHr): OvertimeRequest {
+        $autoApproved = ! $asHr && $this->qualifiesForAutoApproval($maxHours);
+
+        $request = DB::transaction(function () use ($user, $employee, $data, $from, $to, $timeFrom, $timeTo, $maxHours, $asHr, $autoApproved): OvertimeRequest {
             $now = now();
 
             return OvertimeRequest::create([
@@ -90,7 +93,8 @@ class OvertimeRequestService
                 'max_hours' => $maxHours,
                 'reason' => $data['reason'] ?? null,
                 'notes' => $data['notes'] ?? null,
-                'status' => $asHr ? OvertimeRequest::STATUS_APPROVED : OvertimeRequest::STATUS_PENDING_HR,
+                'status' => ($asHr || $autoApproved) ? OvertimeRequest::STATUS_APPROVED : OvertimeRequest::STATUS_PENDING_HR,
+                'auto_approved' => $autoApproved,
                 'boss_approved_by_id' => $asHr ? null : $user->id,
                 'boss_approved_at' => $asHr ? null : $now,
                 'hr_approved_by_id' => $asHr ? $user->id : null,
@@ -116,12 +120,20 @@ class OvertimeRequestService
             throw new DomainException('Este pedido no está esperando su aprobación.');
         }
 
+        $auto = $this->qualifiesForAutoApproval((float) $request->max_hours);
+
         $request->update([
-            'status' => OvertimeRequest::STATUS_PENDING_HR,
+            'status' => $auto ? OvertimeRequest::STATUS_APPROVED : OvertimeRequest::STATUS_PENDING_HR,
+            'auto_approved' => $auto,
             'boss_approved_by_id' => $user->id,
             'boss_approved_at' => now(),
         ]);
-        $this->notifyHr($request, $user);
+
+        if ($auto) {
+            $this->notifyRequester($request, 'approved', $user);
+        } else {
+            $this->notifyHr($request, $user);
+        }
 
         return $request;
     }
@@ -212,9 +224,12 @@ class OvertimeRequestService
     }
 
     /**
+     * Reglas comunes de un pedido. `$mode`: `hr` (sin restricción de fechas), `boss` (desde hoy y con anticipación) o
+     * `employee` (igual que el jefe, con la excepción de pedir el mismo día después del hecho: regularización).
+     *
      * @throws DomainException
      */
-    private function validate(User $user, Employee $employee, Carbon $from, Carbon $to, ?string $timeFrom, ?string $timeTo, float $maxHours, bool $asHr): void
+    private function validate(Employee $employee, Carbon $from, Carbon $to, ?string $timeFrom, ?string $timeTo, float $maxHours, string $mode, bool $regularization = false): void
     {
         if ($employee->status !== 'active') {
             throw new DomainException('El empleado no está activo.');
@@ -236,14 +251,20 @@ class OvertimeRequestService
             throw new DomainException('La hora desde y la hora hasta no pueden ser iguales.');
         }
 
-        if (! $asHr) {
-            if ($to->lt(today())) {
-                throw new DomainException('Solo RR.HH. puede cargar un pedido de fechas pasadas.');
-            }
-            $notice = (int) app(GeneralSettings::class)->attendance_overtime_request_min_notice_hours;
-            $start = $from->copy()->setTimeFromTimeString($timeFrom ?? '00:00');
-            if ($notice > 0 && now()->diffInHours($start, false) < $notice) {
-                throw new DomainException("El pedido debe hacerse con al menos {$notice} horas de anticipación.");
+        if ($mode !== 'hr') {
+            if ($regularization) {
+                if (! $from->isSameDay(today()) || ! $to->isSameDay(today())) {
+                    throw new DomainException('La regularización solo puede pedirse para las horas extra de hoy.');
+                }
+            } else {
+                if ($to->lt(today())) {
+                    throw new DomainException('Solo RR.HH. puede cargar un pedido de fechas pasadas.');
+                }
+                $notice = (int) app(GeneralSettings::class)->attendance_overtime_request_min_notice_hours;
+                $start = $from->copy()->setTimeFromTimeString($timeFrom ?? '00:00');
+                if ($notice > 0 && now()->diffInHours($start, false) < $notice) {
+                    throw new DomainException("El pedido debe hacerse con al menos {$notice} horas de anticipación.");
+                }
             }
         }
 
@@ -258,12 +279,100 @@ class OvertimeRequestService
         }
     }
 
+    /** Indica si un pedido de esas horas por día puede aprobarse sin pasar por RR.HH. (ajuste «Aprobación automática»). */
+    public function qualifiesForAutoApproval(float $maxHours): bool
+    {
+        $limit = (int) app(GeneralSettings::class)->attendance_overtime_request_auto_approve_hours;
+
+        return $limit > 0 && $maxHours <= $limit + 0.0001;
+    }
+
+    /**
+     * Pedido que el propio empleado hace desde su celular. Espera al jefe (`pending_boss`) o, si no tiene superior con
+     * usuario en el panel, a RR.HH.; si es una regularización (horas extra de hoy ya hechas) se marca como tal.
+     *
+     * @param  array{date_from: string, date_to?: string|null, max_hours: float|int|string, time_from?: ?string, time_to?: ?string, reason?: ?string, notes?: ?string}  $data
+     *
+     * @throws DomainException
+     */
+    public function createForEmployee(Employee $employee, array $data, bool $regularization = false): OvertimeRequest
+    {
+        $from = Carbon::parse($data['date_from'])->startOfDay();
+        $to = Carbon::parse($data['date_to'] ?? $data['date_from'])->startOfDay();
+        $timeFrom = filled($data['time_from'] ?? null) ? substr((string) $data['time_from'], 0, 5) : null;
+        $timeTo = filled($data['time_to'] ?? null) ? substr((string) $data['time_to'], 0, 5) : null;
+        $maxHours = round((float) $data['max_hours'], 2);
+
+        $this->validate($employee, $from, $to, $timeFrom, $timeTo, $maxHours, 'employee', $regularization);
+
+        $bosses = $employee->bossUsers();
+
+        $request = OvertimeRequest::create([
+            'employee_id' => $employee->id,
+            'requested_by_employee_id' => $employee->id,
+            'date_from' => $from->toDateString(),
+            'date_to' => $to->toDateString(),
+            'time_from' => $timeFrom,
+            'time_to' => $timeTo,
+            'max_hours' => $maxHours,
+            'reason' => $data['reason'] ?? null,
+            'notes' => $data['notes'] ?? null,
+            'regularization' => $regularization,
+            'status' => $bosses->isEmpty() ? OvertimeRequest::STATUS_PENDING_HR : OvertimeRequest::STATUS_PENDING_BOSS,
+        ]);
+
+        if ($bosses->isEmpty()) {
+            $this->notifyHr($request, null);
+        } else {
+            $this->notifyBoss($request, $bosses);
+        }
+
+        return $request;
+    }
+
+    /**
+     * Pasa a RR.HH. los pedidos del empleado que el jefe no resolvió en el plazo configurado. Devuelve cuántos.
+     */
+    public function escalateStale(): int
+    {
+        $hours = (int) app(GeneralSettings::class)->attendance_overtime_request_boss_escalation_hours;
+        if ($hours <= 0) {
+            return 0;
+        }
+
+        $stale = OvertimeRequest::query()
+            ->where('status', OvertimeRequest::STATUS_PENDING_BOSS)
+            ->where('created_at', '<=', now()->subHours($hours))
+            ->get();
+
+        foreach ($stale as $request) {
+            $request->update(['status' => OvertimeRequest::STATUS_PENDING_HR, 'escalated_at' => now()]);
+            $this->notifyHr($request, null);
+        }
+
+        return $stale->count();
+    }
+
+    /**
+     * Avisa al superior directo que un empleado de su equipo pidió horas extra.
+     *
+     * @param  Collection<int, User>  $bosses
+     */
+    private function notifyBoss(OvertimeRequest $request, $bosses): void
+    {
+        try {
+            $bosses->each->notify(new OvertimeRequestNotification($request, 'boss'));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo avisar al jefe de un pedido de horas extra: '.$e->getMessage());
+        }
+    }
+
     /** Avisa a RR.HH. (quienes pueden aprobar) que un pedido espera su decisión. */
-    private function notifyHr(OvertimeRequest $request, User $from): void
+    private function notifyHr(OvertimeRequest $request, ?User $from): void
     {
         try {
             User::all()
-                ->filter(fn (User $u): bool => $u->id !== $from->id && $u->can(self::HR_APPROVE))
+                ->filter(fn (User $u): bool => $u->id !== $from?->id && $u->can(self::HR_APPROVE))
                 ->each->notify(new OvertimeRequestNotification($request, 'hr'));
         } catch (\Throwable $e) {
             Log::warning('No se pudo avisar a RR.HH. de un pedido de horas extra: '.$e->getMessage());

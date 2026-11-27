@@ -717,7 +717,7 @@ Los motivos de fábrica son **Cierre de caja**, **Cubrir a un compañero**, **Pe
 
 ## Pedido previo de horas extra
 
-Las horas extra se pueden **autorizar de antemano** con un pedido. Lo piden el jefe directo (desde **Mi equipo → Pedir horas extra**) o RR.HH. (**Asistencias → Pedidos de horas extra → Pedir horas extra**).
+Las horas extra se pueden **autorizar de antemano** con un pedido. Lo piden el jefe directo (desde **Mi equipo → Pedir horas extra**), RR.HH. (**Asistencias → Pedidos de horas extra → Pedir horas extra**) o el propio empleado desde el celular (ver **Pedido del empleado desde el celular**).
 
 | Campo | Qué es |
 |-------|--------|
@@ -739,13 +739,27 @@ Las horas extra se pueden **autorizar de antemano** con un pedido. Lo piden el j
 | **Vencido** | Seguía pendiente cuando pasó su última fecha (se marca solo, a las 00:10) |
 
 - Si el empleado no tiene superior («Reporta a») o el que pide es el propio jefe, decide solo RR.HH.
+- **Aprobación automática:** con **Configuración → Horas extra → Aprobación automática hasta** (por ejemplo 2 horas por día), un pedido de hasta ese tope queda **aprobado** apenas lo aprueba el jefe (o lo pide el jefe), sin pasar por RR.HH.; el detalle del pedido lo indica en **Aprobación automática**. Por encima del tope sigue el camino normal.
 - **Anticipación mínima:** se configura en **Configuración → Horas extra → Pedido previo** (0 = se puede pedir hasta el mismo día). **Solo RR.HH. puede cargar pedidos de fechas pasadas** para regularizar.
 - No puede haber dos pedidos pendientes o aprobados que se superpongan para la misma persona.
 - Un pedido ya aplicado a una jornada **no se puede cancelar**.
 
+### Pedido del empleado desde el celular
+
+En `/marcar` el menú tiene **Pedir horas extra** (solo con conexión): fecha, horas estimadas, motivo y un detalle opcional, y debajo la lista de **Mis pedidos** con su estado. El pedido queda **Pendiente del jefe** (el superior directo que tenga usuario en el panel) o, sin jefe, **Pendiente de RR.HH.**
+
+- **Aviso al jefe:** recibe una notificación inmediata y el pedido aparece en **Mi equipo → Pedidos de horas extra**, donde lo aprueba o rechaza. También figura en el resumen diario de **Solicitudes pendientes de aprobar**.
+- **Escalado:** si **Configuración → Horas extra → Escalar a RR.HH. si el jefe no responde en** tiene horas, el pedido que el jefe no resolvió en ese plazo pasa a **Pendiente de RR.HH.** (se controla cada hora) y se avisa a RR.HH.; el detalle muestra **Escalado a RR.HH.**
+- **Regularización:** al marcar una **salida con horas extra**, si ese día no hay un pedido aprobado, al cerrar la confirmación el celular ofrece **pedir que se aprueben** esas horas. Es un pedido por las horas extra de **hoy** (no exige anticipación) y figura como **Regularización** en el detalle.
+- El empleado ve el resultado (con el motivo si lo rechazan) en **Mis pedidos**.
+
 **Efecto sobre la jornada:** cuando se calcula una jornada con horas extra y existe un pedido **aprobado** que cubre esa fecha, la jornada queda **autorizada** y, si las horas extra no pasan del tope pedido (ni de la ventana horaria ni de los límites legales), se **aprueban solas** para la nómina. Lo que excede el tope queda en **Por resolver** para decidirlo a mano. Esto ocurre la primera vez que se calcula la jornada con el pedido; si RR.HH. revoca después la aprobación, un recálculo no la vuelve a aprobar.
 
 **Exigir pedido previo:** en la ficha del empleado, el cargo, la sucursal o la empresa (**Heredar / Sí / No**, igual que el permiso de horas extra) y, por defecto, en **Configuración → Horas extra**. Con «Sí», las horas extra de quien **no tiene un pedido aprobado** que cubra el día se registran igual pero quedan **no autorizadas** (como en **Quién puede hacer horas extra**); RR.HH. puede aprobarlas una a una. Rige para las jornadas que se calculen desde que se define.
+
+### Avisos de horas extra acumuladas
+
+Con **Tope semanal** y **Tope mensual** en **Configuración → Horas extra → Avisos de acumulación**, cada día a las 08:20 se avisa a **RR.HH.** (todas las personas) y a cada **jefe** (su equipo) de quienes superaron esas horas extra en la semana en curso (lunes a hoy) o el mes en curso. Cuentan las horas registradas, aprobadas o no, salvo las descartadas o aceptadas como turno normal. No se repite mientras el aviso anterior siga sin leer. Con 0 el aviso está apagado.
 
 Los pedidos que esperan a RR.HH. figuran en la pestaña **Pendientes de RR.HH.** (con insignia en el menú) y en el resumen diario de **Solicitudes pendientes de aprobar**.
 

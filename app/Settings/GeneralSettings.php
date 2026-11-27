@@ -101,6 +101,18 @@ class GeneralSettings extends Settings
     /** Horas de anticipación mínimas de un pedido de horas extra (0 = se puede pedir el mismo día). */
     public int $attendance_overtime_request_min_notice_hours;
 
+    /** Un pedido de hasta estas horas por día queda aprobado cuando lo aprueba el jefe, sin pasar por RR.HH. (0 = apagado). */
+    public int $attendance_overtime_request_auto_approve_hours;
+
+    /** Horas que un pedido del empleado espera al jefe antes de pasar a RR.HH. (0 = nunca). */
+    public int $attendance_overtime_request_boss_escalation_hours;
+
+    /** Aviso al jefe y a RR.HH. cuando alguien suma más de estas horas extra en la semana (0 = apagado). */
+    public int $attendance_overtime_weekly_alert_hours;
+
+    /** Aviso al jefe y a RR.HH. cuando alguien suma más de estas horas extra en el mes (0 = apagado). */
+    public int $attendance_overtime_monthly_alert_hours;
+
     /** Radio (m) de marcación desde el celular cuando el empleado o la sucursal no definen el suyo. */
     public int $attendance_location_default_radius;
 

@@ -82,7 +82,7 @@ it('cada notificación declara una clave que existe en el catálogo y no sobra n
         }
 
         if ($expression === '"overtime.request_{$this->kind}"') {
-            array_push($used, ...array_map(fn ($kind) => "overtime.request_{$kind}", ['hr', 'result']));
+            array_push($used, ...array_map(fn ($kind) => "overtime.request_{$kind}", ['hr', 'result', 'boss']));
 
             continue;
         }

@@ -109,6 +109,24 @@ export async function fetchStatus() {
 }
 
 /**
+ * Pedidos de horas extra propios (recientes), motivos disponibles y si hoy ya tiene un pedido aprobado. Requiere red.
+ * @returns {Promise<{ok: boolean, requests: Array<object>, reasons: Object<string, string>, covered_today: boolean}>}
+ */
+export async function fetchOvertimeRequests() {
+    return apiFetch('/overtime-requests');
+}
+
+/**
+ * Crea un pedido de horas extra (o una regularización de las de hoy). Devuelve la respuesta del servidor, incluso
+ * ante un 422 con el mensaje de la regla que no se cumple.
+ * @param {{date_from: string, max_hours: number, reason: string, notes?: string, regularization?: boolean}} payload
+ * @returns {Promise<{ok: boolean, message?: string}>}
+ */
+export async function submitOvertimeRequest(payload) {
+    return apiFetch('/overtime-requests', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+/**
  * Auto-desvinculación: el propio empleado decide desvincular este dispositivo
  * (ej. antes de venderlo o prestarlo) desde /marcar — a diferencia de
  * "Revocar sesión móvil" en EmployeeResource (accionada por un admin). El

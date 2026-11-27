@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Filament\Pages\MyTeam;
 use App\Filament\Resources\OvertimeRequestResource;
 use App\Models\OvertimeRequest;
 use App\Notifications\Concerns\HonorsPreferences;
@@ -11,15 +12,15 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
 /**
- * Avisos del pedido previo de horas extra: `hr` (espera la decisión de RR.HH.) y `result` (se aprobó o rechazó, para
- * quien lo pidió).
+ * Avisos del pedido previo de horas extra: `boss` (un empleado del equipo pidió), `hr` (espera la decisión de RR.HH.)
+ * y `result` (se aprobó o rechazó, para quien lo pidió).
  */
 class OvertimeRequestNotification extends Notification
 {
     use HonorsPreferences;
     use Queueable;
 
-    /** @param  'hr'|'result'  $kind */
+    /** @param  'hr'|'result'|'boss'  $kind */
     public function __construct(public readonly OvertimeRequest $request, public readonly string $kind) {}
 
     /**
@@ -31,7 +32,13 @@ class OvertimeRequestNotification extends Notification
         $employee = trim(($request->employee?->first_name ?? '').' '.($request->employee?->last_name ?? ''));
         $detail = "{$employee} · {$request->rangeLabel()} · hasta {$request->max_hours} h por día";
 
-        if ($this->kind === 'hr') {
+        if ($this->kind === 'boss') {
+            $notification = FilamentNotification::make()
+                ->title('Un empleado de tu equipo pidió horas extra')
+                ->body($detail.($request->regularization ? ' · Regularización de hoy' : ''))
+                ->icon('heroicon-o-clock')
+                ->warning();
+        } elseif ($this->kind === 'hr') {
             $notification = FilamentNotification::make()
                 ->title('Pedido de horas extra para aprobar')
                 ->body($detail)
@@ -48,7 +55,7 @@ class OvertimeRequestNotification extends Notification
 
         return [
             ...$notification
-                ->actions([FilamentAction::make('view')->label('Ver pedido')->url(OvertimeRequestResource::getUrl('view', ['record' => $request]))])
+                ->actions([FilamentAction::make('view')->label('Ver pedido')->url($this->kind === 'boss' ? MyTeam::getUrl() : OvertimeRequestResource::getUrl('view', ['record' => $request]))])
                 ->getDatabaseMessage(),
             'overtime_request_id' => $request->id,
         ];

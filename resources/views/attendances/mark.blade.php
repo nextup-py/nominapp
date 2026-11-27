@@ -161,6 +161,40 @@
         </div>
     </div>
 
+    {{-- Pedir horas extra: el empleado pide autorización anticipada a su jefe (o regulariza las de hoy) y ve el estado de
+         sus pedidos. Se arma desde mark/overtime-request-modal.js. --}}
+    <div id="overtimeRequestModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true"
+        aria-labelledby="overtimeRequestModalTitle">
+        <div class="modal-content modal-info">
+            <h2 id="overtimeRequestModalTitle">Pedir horas extra</h2>
+            <p id="overtimeRequestNotice" class="my-events-status"></p>
+
+            <form id="overtimeRequestForm" class="overtime-request-form" data-regularization="0">
+                <label for="overtimeRequestDate">Fecha</label>
+                <input id="overtimeRequestDate" type="date" required>
+
+                <label for="overtimeRequestHours">Horas estimadas</label>
+                <input id="overtimeRequestHours" type="number" inputmode="decimal" min="0.25" step="0.25" required>
+
+                <label for="overtimeRequestReason">Motivo</label>
+                <select id="overtimeRequestReason" required></select>
+
+                <label for="overtimeRequestNotes">Detalle (opcional)</label>
+                <textarea id="overtimeRequestNotes" rows="2" maxlength="500"></textarea>
+
+                <p id="overtimeRequestMessage" class="my-events-status" aria-live="polite"></p>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn-modal-retry">Enviar pedido</button>
+                    <button id="closeOvertimeRequestModal" type="button" class="btn-modal-dismiss">Cerrar</button>
+                </div>
+            </form>
+
+            <h3 class="overtime-request-subtitle">Mis pedidos</h3>
+            <ul id="overtimeRequestList" class="my-events-list"></ul>
+        </div>
+    </div>
+
     {{-- Motivo de las horas extra: se abre al confirmar una salida pasada la hora del horario. Los botones se dibujan
          desde offline-shared/overtime-reason-prompt.js; si nadie elige, la salida se registra igual sin motivo. --}}
     <div id="overtimeReasonModal" class="modal hidden" role="dialog" aria-modal="true"
