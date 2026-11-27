@@ -6,6 +6,7 @@ use App\Models\Advance;
 use App\Models\EmployeeLeave;
 use App\Models\Loan;
 use App\Models\MerchandiseWithdrawal;
+use App\Models\OvertimeRequest;
 use App\Models\User;
 use App\Notifications\PendingApprovalsNotification;
 use Illuminate\Console\Command;
@@ -27,6 +28,7 @@ class NotifyPendingApprovals extends Command
             'loans' => Loan::query()->where('status', 'pending')->count(),
             'merchandise_withdrawals' => MerchandiseWithdrawal::query()->where('status', 'pending')->count(),
             'employee_leaves' => EmployeeLeave::query()->where('status', 'pending')->count(),
+            'overtime_requests' => OvertimeRequest::query()->where('status', OvertimeRequest::STATUS_PENDING_HR)->count(),
         ];
 
         if (array_sum($totals) === 0) {

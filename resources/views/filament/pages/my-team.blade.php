@@ -102,5 +102,10 @@
                 @endif
             </x-filament::section>
         </div>
+
+        {{-- Pedidos previos de horas extra del equipo: el jefe los pide y aprueba desde acá. --}}
+        <x-filament::section heading="Pedidos de horas extra" description="Pedidos del equipo. Los que pide el jefe pasan a RR.HH. para su aprobación final." class="mt-6">
+            {{ $this->table }}
+        </x-filament::section>
     @endif
 </x-filament-panels::page>

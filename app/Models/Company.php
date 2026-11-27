@@ -45,6 +45,7 @@ class Company extends Model implements Auditable
         'privacy_notice_version',
         'mobile_marking_allowed',
         'overtime_allowed',
+        'overtime_request_required',
         'profile_requirements',
     ];
 
@@ -68,12 +69,14 @@ class Company extends Model implements Auditable
         'privacy_policy_url',
         'mobile_marking_allowed',
         'overtime_allowed',
+        'overtime_request_required',
         'profile_requirements',
     ];
 
     protected $casts = [
         'mobile_marking_allowed' => 'boolean',
         'overtime_allowed' => 'boolean',
+        'overtime_request_required' => 'boolean',
         'profile_requirements' => 'array',
         'is_active' => 'boolean',
         'founded_at' => 'date',

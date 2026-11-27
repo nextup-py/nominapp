@@ -67,7 +67,7 @@ Para ver la página hace falta el mismo permiso que para el listado de **Asisten
 
 ## Mi equipo
 
-Ir a **Mi equipo** (en el menú, arriba) para ver el estado de hoy de las personas a tu cargo: quién está en turno, en descanso, sin marcar, ausente, con retraso o de permiso. Es una vista de **solo consulta**, se actualiza sola cada 30 segundos y usa los mismos contadores del Monitor en vivo (tocar una tarjeta filtra la lista; hay buscador por nombre o CI). La aprobación de tardanzas, extras y permisos sigue siendo de RR.HH.
+Ir a **Mi equipo** (en el menú, arriba) para ver el estado de hoy de las personas a tu cargo: quién está en turno, en descanso, sin marcar, ausente, con retraso o de permiso. La foto de hoy es de **solo consulta**, se actualiza sola cada 30 segundos y usa los mismos contadores del Monitor en vivo (tocar una tarjeta filtra la lista; hay buscador por nombre o CI). La aprobación de tardanzas, extras y permisos sigue siendo de RR.HH. Debajo de la lista están los **Pedidos de horas extra** del equipo y el botón **Pedir horas extra** (ver **Pedido previo de horas extra**).
 
 Quién aparece en tu equipo depende de tus permisos y de la ficha vinculada a tu usuario:
 
@@ -714,6 +714,40 @@ Los motivos de fábrica son **Cierre de caja**, **Cubrir a un compañero**, **Pe
 - El motivo queda en la marcación de salida y en la jornada. Se ve en el modal de **Aprobar** horas extra, en el detalle del día (**Motivo de las Horas Extra**), en la columna **Motivo de horas extra** de la tabla de Asistencias (oculta por defecto, se activa desde el selector de columnas), y en el Excel y el PDF del reporte **Horas Extras y Tardanzas** (**Motivo HE**).
 - En **Asistencias** el filtro **Motivo de horas extra** permite ver, por ejemplo, todas las jornadas por **Pedido del jefe** o las que quedaron **Sin motivo**.
 - No cambia la aprobación ni el pago: es información para decidir. Los motivos desactivados siguen mostrándose en las marcaciones que ya los tenían.
+
+## Pedido previo de horas extra
+
+Las horas extra se pueden **autorizar de antemano** con un pedido. Lo piden el jefe directo (desde **Mi equipo → Pedir horas extra**) o RR.HH. (**Asistencias → Pedidos de horas extra → Pedir horas extra**).
+
+| Campo | Qué es |
+|-------|--------|
+| **Empleado** | Un jefe elige entre las personas de su equipo; RR.HH. entre todos los activos |
+| **Desde / Hasta (fecha)** | Una sola fecha es un día; el pedido puede cubrir hasta 32 días |
+| **Horas máximas por día** | Entre 0,25 y el límite legal diario (**Configuración → Horas extra**) |
+| **Hora desde / hasta** (opcional) | Ventana horaria: si se indica, las horas extra se aprueban solas solo si la salida no pasa de la hora «hasta» (más la tolerancia) |
+| **Motivo** y **Detalle** | El motivo es de la lista de **Horas extra** en Configuración |
+
+**Ciclo de vida:**
+
+| Estado | Significado |
+|--------|-------------|
+| **Pendiente del jefe** | Espera la aprobación del superior directo |
+| **Pendiente de RR.HH.** | Lo pidió un jefe (su pedido es su aprobación) o ya lo aprobó el jefe; falta la aprobación final |
+| **Aprobado** | Vigente. Lo que pide RR.HH. queda aprobado de una vez |
+| **Rechazado** | Con el motivo del rechazo; se avisa a quien lo pidió |
+| **Cancelado** | Anulado por quien lo pidió o por RR.HH. mientras nadie lo usó |
+| **Vencido** | Seguía pendiente cuando pasó su última fecha (se marca solo, a las 00:10) |
+
+- Si el empleado no tiene superior («Reporta a») o el que pide es el propio jefe, decide solo RR.HH.
+- **Anticipación mínima:** se configura en **Configuración → Horas extra → Pedido previo** (0 = se puede pedir hasta el mismo día). **Solo RR.HH. puede cargar pedidos de fechas pasadas** para regularizar.
+- No puede haber dos pedidos pendientes o aprobados que se superpongan para la misma persona.
+- Un pedido ya aplicado a una jornada **no se puede cancelar**.
+
+**Efecto sobre la jornada:** cuando se calcula una jornada con horas extra y existe un pedido **aprobado** que cubre esa fecha, la jornada queda **autorizada** y, si las horas extra no pasan del tope pedido (ni de la ventana horaria ni de los límites legales), se **aprueban solas** para la nómina. Lo que excede el tope queda en **Por resolver** para decidirlo a mano. Esto ocurre la primera vez que se calcula la jornada con el pedido; si RR.HH. revoca después la aprobación, un recálculo no la vuelve a aprobar.
+
+**Exigir pedido previo:** en la ficha del empleado, el cargo, la sucursal o la empresa (**Heredar / Sí / No**, igual que el permiso de horas extra) y, por defecto, en **Configuración → Horas extra**. Con «Sí», las horas extra de quien **no tiene un pedido aprobado** que cubra el día se registran igual pero quedan **no autorizadas** (como en **Quién puede hacer horas extra**); RR.HH. puede aprobarlas una a una. Rige para las jornadas que se calculen desde que se define.
+
+Los pedidos que esperan a RR.HH. figuran en la pestaña **Pendientes de RR.HH.** (con insignia en el menú) y en el resumen diario de **Solicitudes pendientes de aprobar**.
 
 ## Aprobación de horas extras
 

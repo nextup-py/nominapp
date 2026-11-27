@@ -35,6 +35,7 @@ class Branch extends Model implements Auditable
         'watch_day_hours',
         'mobile_marking_allowed',
         'overtime_allowed',
+        'overtime_request_required',
         'location_control',
         'location_radius_m',
     ];
@@ -54,6 +55,7 @@ class Branch extends Model implements Auditable
         'watch_day_hours',
         'mobile_marking_allowed',
         'overtime_allowed',
+        'overtime_request_required',
         'location_control',
         'location_radius_m',
     ];
@@ -70,6 +72,7 @@ class Branch extends Model implements Auditable
         'watch_day_hours' => 'array',
         'mobile_marking_allowed' => 'boolean',
         'overtime_allowed' => 'boolean',
+        'overtime_request_required' => 'boolean',
         'location_control' => 'boolean',
     ];
 

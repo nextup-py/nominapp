@@ -20,13 +20,14 @@ class RoleSeeder extends Seeder
                 'attendance_day', 'attendance_event', 'attendance_mark_failure',
                 'employee_leave', 'warning', 'vacation', 'schedule', 'shift_template',
                 'rotation_pattern', 'holiday', 'face_enrollment', 'employee_device',
-                'terminal', 'branch', 'absence', 'document', 'document_type',
+                'terminal', 'branch', 'absence', 'document', 'document_type', 'overtime_request',
             ]),
             [
                 'approve_employee_leave', 'reject_employee_leave', 'cancel_employee_leave',
                 'justify_absence', 'mark_unjustified_absence', 'export_absence',
                 'activate_contract', 'renew_contract', 'suspend_contract',
                 'reactivate_contract', 'terminate_contract',
+                'approve_overtime_request', 'reject_overtime_request', 'cancel_overtime_request',
             ],
         ));
 

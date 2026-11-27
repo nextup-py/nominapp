@@ -225,6 +225,7 @@ class PositionResource extends Resource
                             ->columnSpanFull(),
 
                         OvertimeAllowedFields::select('Rige para quien no tenga el suyo. «Heredar» usa la sucursal, la empresa o el valor general. Las horas extra de quien no está autorizado se registran igual, pero quedan marcadas.'),
+                        OvertimeAllowedFields::requestSelect('Con «Sí», las horas extra sin un pedido previo aprobado quedan como no autorizadas. «Heredar» usa el siguiente nivel o Horas extra en Configuración.'),
 
                         Select::make('default_schedule_id')
                             ->label('Horario sugerido')

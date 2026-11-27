@@ -22,6 +22,7 @@ class AttendanceDay extends Model implements Auditable
         'status',
         'overtime_approved',
         'overtime_unauthorized',
+        'overtime_request_id',
         'overtime_reason',
         'second_shift_regular',
         'excluded_from_calculation',
@@ -108,6 +109,12 @@ class AttendanceDay extends Model implements Auditable
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    /** @return BelongsTo<OvertimeRequest, $this> Pedido previo de horas extra aplicado a la jornada. */
+    public function overtimeRequest(): BelongsTo
+    {
+        return $this->belongsTo(OvertimeRequest::class);
     }
 
     public function events(): HasMany

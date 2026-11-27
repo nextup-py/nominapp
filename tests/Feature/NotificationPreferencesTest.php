@@ -81,6 +81,12 @@ it('cada notificación declara una clave que existe en el catálogo y no sobra n
             continue;
         }
 
+        if ($expression === '"overtime.request_{$this->kind}"') {
+            array_push($used, ...array_map(fn ($kind) => "overtime.request_{$kind}", ['hr', 'result']));
+
+            continue;
+        }
+
         expect($expression)->not->toBeNull(basename($file).' no declara preferenceKey()');
         $used[] = trim($expression, "'");
     }

@@ -123,7 +123,9 @@ Los días y los interruptores de estos avisos se definen en **Configuración de 
 
 | Aviso | Permiso necesario | Cuándo llega |
 |-------|-------------------|--------------|
-| **Solicitudes pendientes de aprobar** | Aprobar adelantos, préstamos, retiros de mercadería o permisos | Resumen diario (08:50) con el conteo de lo pendiente que ese usuario puede aprobar. No se repite mientras el anterior esté sin leer |
+| **Pedido de horas extra para aprobar** | Aprobar pedidos de horas extra (RR.HH.) | Cuando un jefe pide horas extra para su equipo y el pedido espera la decisión de RR.HH. |
+| **Resultado de un pedido de horas extra** | Pedir horas extra (jefe) o aprobarlos (RR.HH.) | Cuando el pedido que hiciste se aprueba o se rechaza (con el motivo) |
+| **Solicitudes pendientes de aprobar** | Aprobar adelantos, préstamos, retiros de mercadería, permisos o pedidos de horas extra | Resumen diario (08:50) con el conteo de lo pendiente que ese usuario puede aprobar. No se repite mientras el anterior esté sin leer |
 | **Fallo en el envío de correo** | Solo Super Admin | Un correo no pudo enviarse; incluye el motivo. Obligatorio |
 
 > **Quién recibe qué:** además de la elección de cada usuario, un aviso solo llega a quien tiene el permiso del módulo. Si a un usuario le cambian el rol, la lista de su pantalla se ajusta sola.

@@ -21,7 +21,7 @@ class PermissionSeeder extends Seeder
         'deduction', 'department', 'disbursement_batch', 'document', 'document_type',
         'employee', 'employee_device', 'employee_leave',
         'face_enrollment', 'holiday', 'liquidacion', 'loan',
-        'merchandise_withdrawal', 'payroll', 'payroll_period',
+        'merchandise_withdrawal', 'overtime_request', 'payroll', 'payroll_period',
         'perception', 'position', 'rotation_pattern', 'schedule',
         'shift_template', 'terminal', 'user', 'vacation', 'warning',
     ];
@@ -38,6 +38,7 @@ class PermissionSeeder extends Seeder
 
     public const MODEL_LABELS = [
         'absence' => 'Ausencia',
+        'overtime_request' => 'Pedido de Horas Extra',
         'advance' => 'Adelanto',
         'aguinaldo' => 'Aguinaldo',
         'aguinaldo_period' => 'Período de Aguinaldo',
@@ -80,7 +81,7 @@ class PermissionSeeder extends Seeder
     public const GROUPS = [
         'Organización' => ['company', 'branch', 'department', 'position', 'contract_template', 'document_type'],
         'Empleados' => ['employee', 'contract', 'document', 'employee_device', 'face_enrollment', 'vacation', 'warning', 'employee_leave', 'holiday'],
-        'Asistencia' => ['attendance_day', 'attendance_event', 'attendance_mark_failure', 'terminal', 'schedule', 'shift_template', 'rotation_pattern', 'team'],
+        'Asistencia' => ['attendance_day', 'attendance_event', 'attendance_mark_failure', 'overtime_request', 'terminal', 'schedule', 'shift_template', 'rotation_pattern', 'team'],
         'Nómina y Créditos' => ['payroll', 'payroll_period', 'period', 'deduction', 'perception', 'loan', 'advance', 'merchandise_withdrawal', 'liquidacion', 'aguinaldo', 'aguinaldo_period', 'disbursement_batch', 'absence'],
         'Configuración' => ['user', 'system_health'],
     ];
