@@ -17,9 +17,8 @@ Acceder desde **Configuración → Configuración General**.
 - **Mínimo entre salida y nueva entrada:** minutos que deben pasar después de marcar la salida para poder marcar otra entrada el mismo día, por ejemplo en un doble turno (por defecto 5 minutos; 0 = sin mínimo). Evita reentradas por error.
 - **Mínimo entre entrada y salida:** minutos que deben pasar después de marcar la entrada para poder marcar la salida (por defecto 2 minutos; 0 = sin mínimo). Evita salidas por un toque equivocado; una salida que llega al sincronizar antes de ese mínimo queda como conflicto en **Fallos de Marcación**.
 - **Límite de jornada nocturna abierta:** horas desde la última marcación de la jornada de ayer durante las cuales una salida nueva se le sigue asignando como turno nocturno en curso (por defecto 16 horas; 0 = sin límite). Pasado ese tiempo la jornada de ayer queda en **Sin salida registrada** para corregirla a mano y el terminal ofrece solo la entrada.
-- **Tolerancia de tardanza** (por defecto 5 minutos): hasta ese margen de atraso en la entrada no se considera tardanza. Pasado el margen cuentan **todos** los minutos de atraso (con 5, llegar 7 minutos tarde son 7 minutos de tardanza). 0 = sin tolerancia.
-- **Autorizar horas extra por defecto** (activado de fábrica): permiso para quienes no lo tienen definido en su ficha, cargo, sucursal ni empresa. Ver **Quién puede hacer horas extra** en Asistencias.
-- **Tolerancia de horas extra** (por defecto 15 minutos): hasta ese margen de tiempo trabajado por encima del horario no se considera hora extra (salir unos minutos tarde o llegar un poco antes). Pasado el margen cuenta todo el tiempo extra. 0 = sin tolerancia. Las dos tolerancias se aplican a las jornadas que se calculen desde que se activan; las ya calculadas no cambian salvo que se recalculen (**Recalcular** en Asistencias).
+- **Tolerancia de tardanza** (por defecto 5 minutos): hasta ese margen de atraso en la entrada no se considera tardanza. Pasado el margen cuentan **todos** los minutos de atraso (con 5, llegar 7 minutos tarde son 7 minutos de tardanza). 0 = sin tolerancia. Se aplica a las jornadas que se calculen desde que se define; las ya calculadas no cambian salvo que se recalculen (**Recalcular** en Asistencias).
+- La **tolerancia de horas extra**, el **permiso de horas extra por defecto** y el **motivo al salir** se configuran en **Configuración → Horas extra**.
 - **Cerrar solo las jornadas sin salida:** apagado por defecto. Al activarlo aparece **Hora del cierre automático** (por defecto 05:30): cada día, a esa hora, el sistema cierra las jornadas abiertas de los últimos 7 días con la salida del horario o, si el empleado marcó un descanso o un fin de descanso cerca de la hora de salida, con esa marcación real. No toca jornadas con nómina generada ni con decisiones de RR.HH. (aprobaciones, ajustes, exclusión), y deja un resumen en la campanita (**Jornadas cerradas automáticamente**). Las salidas agregadas quedan como marcaciones manuales y se pueden corregir desde **Corregir marcaciones**.
 - **Avisar cada noche quién se fue sin marcar la salida:** activado por defecto, con **Hora del aviso** (por defecto 21:30). Envía a quienes ven asistencias la lista de los empleados cuyo turno terminó hace más de 1 hora y siguen sin salida (los que el **Monitor en vivo** muestra como **Sin salida**), para consultarles mientras se acuerdan. No se repite mientras el aviso anterior siga sin leer. Se puede apagar o ajustar desde **Mis notificaciones**.
 - **Permitir marcar desde el celular por defecto:** valor para los empleados que no lo tienen definido en su ficha, su sucursal ni su empresa. Apagado de fábrica (solo terminal). Ver **Quién puede marcar desde el celular** en el capítulo de Asistencias.
@@ -94,19 +93,9 @@ Acceder desde **Configuración → Configuración de Nómina**.
 | Horas mensuales | 225 |
 | Horas por jornada | 7.5 |
 
-### Multiplicadores de horas extra
+### Horas extra
 
-| Tipo | Multiplicador por defecto |
-|------|--------------------------|
-| HE Diurnas | 1.5× (+50%) |
-| HE Nocturnas (día regular) | 2.6× (1.30 × 2.0 sobre base diurna) |
-| HE Diurnas Feriado/Domingo | 2.0× (+100%) |
-| HE Nocturnas Feriado/Domingo | 2.6× (1.30 × 2.0 sobre base diurna) |
-
-### Límites de horas extra
-
-- **Máximo de horas extra por día:** por defecto 3 hrs (Art. 202 CLT).
-- **Máximo de horas extra por semana:** por defecto 9 hrs (Art. 202 CLT).
+Los multiplicadores y los límites de horas extra se configuran en **Configuración → Horas extra**.
 
 ### Liquidación / Finiquito
 
@@ -177,6 +166,39 @@ Los hijos se cargan en la pestaña **Hijos** del empleado. La columna **Bonifica
 - **Derecho anual sin tomar (cada lunes):** avisa de los empleados que tienen sin usar todo el derecho de un año.
 
 ---
+
+## Horas extra
+
+Acceder desde **Configuración → Horas extra** (solo Super Admin). Reúne en un solo formulario lo que antes estaba repartido entre Configuración de Nómina y Configuración General; al guardar se actualizan ambos.
+
+### Multiplicadores
+
+| Tipo | Multiplicador por defecto |
+|------|--------------------------|
+| HE Diurnas | 1.5× (+50%) |
+| HE Nocturnas (día regular) | 2.6× (1.30 × 2.0 sobre base diurna) |
+| HE Diurnas feriado/domingo | 2.0× (+100%) |
+| HE Nocturnas feriado/domingo | 2.6× (1.30 × 2.0 sobre base diurna) |
+
+Se aplican solo a las horas extra aprobadas (Art. 234 CLT).
+
+### Límites
+
+- **Máximo de horas extra por día:** por defecto 3 hrs (Art. 202 CLT).
+- **Máximo de horas extra por semana:** por defecto 9 hrs (Art. 202 CLT).
+
+### Registro y permiso
+
+- **Tolerancia de horas extra** (por defecto 15 minutos): hasta ese margen de tiempo trabajado por encima del horario no se considera hora extra (salir unos minutos tarde o llegar un poco antes). Pasado el margen cuenta todo el tiempo extra. 0 = sin tolerancia.
+- **Autorizar horas extra por defecto** (activado de fábrica): permiso para quienes no lo tienen definido en su ficha, cargo, sucursal ni empresa. Ver **Quién puede hacer horas extra** en Asistencias.
+
+Ambos ajustes se aplican a las jornadas que se calculen desde que se guardan; las ya calculadas no cambian salvo que se recalculen (**Recalcular** en Asistencias).
+
+### Motivo al marcar la salida
+
+- **Motivo obligatorio** (apagado de fábrica): con el interruptor encendido, el selector del terminal y del celular no vence y la salida no se registra hasta elegir un motivo. Apagado, si nadie elige la salida se registra igual sin motivo.
+- **Espera del selector** (por defecto 20 segundos, entre 5 y 120): tiempo que espera el selector antes de registrar sin motivo. No aparece con el motivo obligatorio.
+- **Motivos disponibles:** lista editable. Se pueden **agregar** motivos nuevos, **cambiar el nombre**, **reordenar** (es el orden que ve el empleado) y **desactivar**. Un motivo **no se elimina**: desactivarlo deja de ofrecerlo pero las marcaciones anteriores lo siguen mostrando. Debe haber al menos un motivo activo y no puede haber dos con el mismo nombre. Los dispositivos toman los cambios con su próximo latido.
 
 ## Usuarios del Sistema
 

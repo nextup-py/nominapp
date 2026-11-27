@@ -697,7 +697,7 @@ El campo **Horas extra** tiene tres valores: **Heredar**, **Sí, autorizadas** y
 2. El **cargo** (**Organización → Cargos**), según el contrato vigente.
 3. La **sucursal** (sección **Marcación desde el celular**).
 4. La **empresa** (sección **Horas extra**).
-5. **Configuración → Configuración General → Configuración Laboral → Autorizar horas extra por defecto** (activado de fábrica).
+5. **Configuración → Horas extra → Autorizar horas extra por defecto** (activado de fábrica).
 
 Las horas extra de quien **no está autorizado** se **registran igual** (la marcación es un hecho), pero la jornada queda marcada como **No autorizadas**: no figura en **Por resolver** ni en **Requieren atención**, y la aprobación por rango y la masiva la omiten (el aviso indica cuántas). Para verlas, usar el filtro **Horas extra no autorizadas** de la tabla de Asistencias. RR.HH. puede aprobar una a una con **Aprobar**: el modal lo advierte y la aprobación vale solo para esa jornada.
 
@@ -705,21 +705,15 @@ Las horas extra de quien **no está autorizado** se **registran igual** (la marc
 
 ## Motivo de las horas extra
 
-Cuando alguien marca una **salida** y ya pasó la hora de salida de su horario más la **tolerancia de horas extra** (**Configuración → Configuración General → Configuración Laboral**), el **terminal** y el **celular** piden el motivo antes de registrar la salida. Quien sale a su hora no ve nada nuevo.
+Cuando alguien marca una **salida** y ya pasó la hora de salida de su horario más la **tolerancia de horas extra** (**Configuración → Horas extra**), el **terminal** y el **celular** piden el motivo antes de registrar la salida. Quien sale a su hora no ve nada nuevo.
 
-| Motivo | Cuándo se usa |
-|--------|---------------|
-| **Cierre de caja** | Se quedó por el cierre o arqueo |
-| **Cubrir a un compañero** | Reemplazó a alguien que faltó o salió |
-| **Pedido del jefe** | Se lo pidió su superior |
-| **Trabajo pendiente** | Terminaba una tarea |
-| **Otro** | Cualquier otro caso |
+Los motivos de fábrica son **Cierre de caja**, **Cubrir a un compañero**, **Pedido del jefe**, **Trabajo pendiente** y **Otro**. Se pueden agregar, renombrar, reordenar y desactivar en **Configuración → Horas extra → Motivos disponibles**.
 
-- **No bloquea la salida.** Si la persona no elige en unos segundos (hay una cuenta regresiva), la salida se registra igual **sin motivo** y RR.HH. la ve como **Sin motivo**.
+- **No bloquea la salida** (salvo que se active **Motivo obligatorio**). Si la persona no elige en unos segundos (hay una cuenta regresiva, 20 s de fábrica), la salida se registra igual **sin motivo** y RR.HH. la ve como **Sin motivo**. Con **Motivo obligatorio** encendido el selector no vence y no se registra la salida hasta elegir uno.
 - Funciona **sin conexión**: la lista y la tolerancia llegan con el último latido del dispositivo, y la hora de salida esperada es la que ya se consultó ese día. Sin alguna de ellas no se pregunta.
 - El motivo queda en la marcación de salida y en la jornada. Se ve en el modal de **Aprobar** horas extra, en el detalle del día (**Motivo de las Horas Extra**), en la columna **Motivo de horas extra** de la tabla de Asistencias (oculta por defecto, se activa desde el selector de columnas), y en el Excel y el PDF del reporte **Horas Extras y Tardanzas** (**Motivo HE**).
 - En **Asistencias** el filtro **Motivo de horas extra** permite ver, por ejemplo, todas las jornadas por **Pedido del jefe** o las que quedaron **Sin motivo**.
-- No cambia la aprobación ni el pago: es información para decidir. La lista de motivos es fija del sistema.
+- No cambia la aprobación ni el pago: es información para decidir. Los motivos desactivados siguen mostrándose en las marcaciones que ya los tenían.
 
 ## Aprobación de horas extras
 

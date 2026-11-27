@@ -161,6 +161,8 @@ class TerminalHeartbeatController extends Controller
                 // Motivos y tolerancia para pedir el motivo al marcar una salida con horas extra (ver terminal/overtime-reason.js).
                 'overtime_reasons' => AttendanceEvent::getOvertimeReasonOptions(),
                 'overtime_tolerance_minutes' => (int) $settings->attendance_overtime_tolerance_minutes,
+                'overtime_reason_required' => (bool) $settings->attendance_overtime_reason_required,
+                'overtime_reason_timeout_seconds' => max(5, (int) $settings->attendance_overtime_reason_timeout_seconds),
                 'camera_resume_minutes' => (int) $settings->terminal_camera_resume_minutes,
                 'no_charger_minutes' => (int) $settings->terminal_no_charger_minutes,
                 'low_battery_percent' => (int) $settings->terminal_low_battery_percent,

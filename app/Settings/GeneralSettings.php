@@ -83,6 +83,18 @@ class GeneralSettings extends Settings
     /** Permiso de horas extra cuando ni el empleado, ni su cargo, sucursal o empresa lo definen. */
     public bool $attendance_overtime_allowed_default;
 
+    /**
+     * Catálogo de motivos de las horas extra (terminal y celular). La clave es estable (queda en las marcaciones); un motivo
+     * no se elimina, se desactiva. Cada elemento es ['key' => string, 'label' => string, 'active' => bool].
+     */
+    public array $attendance_overtime_reasons;
+
+    /** El motivo es obligatorio: el selector no vence y no deja salir sin elegir uno. */
+    public bool $attendance_overtime_reason_required;
+
+    /** Segundos que espera el selector de motivo antes de registrar la salida sin motivo (ignorado si es obligatorio). */
+    public int $attendance_overtime_reason_timeout_seconds;
+
     /** Radio (m) de marcación desde el celular cuando el empleado o la sucursal no definen el suyo. */
     public int $attendance_location_default_radius;
 

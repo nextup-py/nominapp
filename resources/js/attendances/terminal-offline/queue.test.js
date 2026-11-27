@@ -304,12 +304,16 @@ describe('motivo de las horas extra', () => {
         getMeta.mockImplementation(async (key) => ({
             overtime_reasons: { cash_close: 'Cierre de caja' },
             overtime_tolerance_minutes: 15,
+            overtime_reason_required: false,
+            overtime_reason_timeout_seconds: 25,
         })[key] ?? 0);
         getEmployeeStatusCache.mockResolvedValue({ expected_check_out: '17:00', shift_date: todayStamp() });
 
         expect(await getOvertimeContext(1)).toEqual({
             reasons: [{ key: 'cash_close', label: 'Cierre de caja' }],
             toleranceMinutes: 15,
+            reasonRequired: false,
+            reasonTimeoutSeconds: 25,
             expectedCheckOut: '17:00',
         });
     });
@@ -318,7 +322,7 @@ describe('motivo de las horas extra', () => {
         getMeta.mockResolvedValue(undefined);
         getEmployeeStatusCache.mockResolvedValue(undefined);
 
-        expect(await getOvertimeContext(1)).toEqual({ reasons: [], toleranceMinutes: null, expectedCheckOut: null });
+        expect(await getOvertimeContext(1)).toEqual({ reasons: [], toleranceMinutes: null, reasonRequired: false, reasonTimeoutSeconds: null, expectedCheckOut: null });
     });
 });
 

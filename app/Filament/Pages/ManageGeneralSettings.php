@@ -237,17 +237,6 @@ class ManageGeneralSettings extends SettingsPage
                             ->suffix('minutos')
                             ->helperText('Hasta este margen de atraso en la entrada no se considera tardanza. Pasado el margen cuentan todos los minutos de atraso (con 5, llegar 7 minutos tarde son 7 minutos de tardanza). 0 = sin tolerancia. Aplica a las jornadas que se calculen desde ahora; las ya calculadas no cambian salvo que se recalculen.'),
 
-                        TextInput::make('attendance_overtime_tolerance_minutes')
-                            ->label('Tolerancia de horas extra')
-                            ->numeric()
-                            ->integer()
-                            ->required()
-                            ->minValue(0)
-                            ->maxValue(120)
-                            ->default(15)
-                            ->suffix('minutos')
-                            ->helperText('Hasta este margen de tiempo trabajado por encima del horario no se considera hora extra (salir unos minutos tarde o llegar un poco antes). Pasado el margen cuenta todo el tiempo extra. 0 = sin tolerancia. Aplica a las jornadas que se calculen desde ahora.'),
-
                         Toggle::make('attendance_auto_close_enabled')
                             ->label('Cerrar solo las jornadas sin salida')
                             ->live()
@@ -278,10 +267,6 @@ class ManageGeneralSettings extends SettingsPage
                         Toggle::make('attendance_mobile_marking_default')
                             ->label('Permitir marcar desde el celular por defecto')
                             ->helperText('Valor para los empleados que no lo tienen definido ni en su ficha, ni en su sucursal ni en su empresa. Apagado = solo desde el terminal. Los celulares ya vinculados de quienes dejen de estar habilitados se desvinculan solos en su próxima conexión.'),
-
-                        Toggle::make('attendance_overtime_allowed_default')
-                            ->label('Autorizar horas extra por defecto')
-                            ->helperText('Valor para quienes no lo tienen definido ni en su ficha, ni en su cargo, sucursal o empresa. Apagado: las horas extra se registran igual pero quedan marcadas como no autorizadas y no aparecen en Por resolver.'),
 
                         TextInput::make('attendance_location_default_radius')
                             ->label('Radio de marcación desde el celular')

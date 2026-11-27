@@ -78,7 +78,7 @@ export function showTypeSelectionForEmployee(screens, dom, employee, allowedEven
 
 /**
  * Registra la función que muestra el selector de motivo de las horas extra (ver overtime-reason-prompt.js).
- * @param {((reasons: Array<{key: string, label: string}>) => Promise<string|null>)|null} asker
+ * @param {((reasons: Array<{key: string, label: string}>, options?: {required?: boolean, seconds?: number|null}) => Promise<string|null>)|null} asker
  */
 export function setOvertimeReasonAsker(asker) {
     overtimeReasonAsker = asker;
@@ -95,10 +95,10 @@ async function askOvertimeReason(employee, eventType) {
     if (eventType !== 'check_out' || !overtimeReasonAsker) return null;
 
     try {
-        const { reasons, toleranceMinutes, expectedCheckOut } = await getOvertimeContext(employee.id);
+        const { reasons, toleranceMinutes, expectedCheckOut, reasonRequired, reasonTimeoutSeconds } = await getOvertimeContext(employee.id);
 
         return shouldAskOvertimeReason({ eventType, expectedCheckOut, toleranceMinutes, reasons })
-            ? await overtimeReasonAsker(reasons)
+            ? await overtimeReasonAsker(reasons, { required: reasonRequired, seconds: reasonTimeoutSeconds })
             : null;
     } catch (error) {
         console.error('No se pudo pedir el motivo de las horas extra:', error);

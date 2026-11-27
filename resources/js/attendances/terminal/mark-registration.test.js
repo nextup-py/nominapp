@@ -208,8 +208,18 @@ describe('registerMark con motivo de horas extra', () => {
 
         await run('check_out');
 
-        expect(asker).toHaveBeenCalledWith(reasons);
+        expect(asker).toHaveBeenCalledWith(reasons, { required: undefined, seconds: undefined });
         expect(enqueueMark).toHaveBeenCalledWith(1, 'check_out', { overtimeReason: 'cash_close' });
+    });
+
+    it('pasa al selector si el motivo es obligatorio y los segundos configurados', async () => {
+        getOvertimeContext.mockResolvedValue({ reasons, toleranceMinutes: 15, expectedCheckOut: '17:00', reasonRequired: true, reasonTimeoutSeconds: 40 });
+        const asker = vi.fn().mockResolvedValue('cash_close');
+        setOvertimeReasonAsker(asker);
+
+        await run('check_out');
+
+        expect(asker).toHaveBeenCalledWith(reasons, { required: true, seconds: 40 });
     });
 
     it('si vence la espera registra la salida igual, sin motivo', async () => {

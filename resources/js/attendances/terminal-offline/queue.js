@@ -279,18 +279,22 @@ export async function getExpectedShift(employeeId) {
  * Datos para decidir si se pide el motivo de las horas extra al marcar la salida: la lista de motivos y la tolerancia
  * que trajo el último latido, y la salida del horario de hoy que informó el servidor con el estado del empleado.
  * @param {number} employeeId
- * @returns {Promise<{reasons: Array<{key: string, label: string}>, toleranceMinutes: number|null, expectedCheckOut: string|null}>}
+ * @returns {Promise<{reasons: Array<{key: string, label: string}>, toleranceMinutes: number|null, reasonRequired: boolean, reasonTimeoutSeconds: number|null, expectedCheckOut: string|null}>}
  */
 export async function getOvertimeContext(employeeId) {
-    const [stored, toleranceMinutes, shift] = await Promise.all([
+    const [stored, toleranceMinutes, required, timeoutSeconds, shift] = await Promise.all([
         getMeta('overtime_reasons'),
         getMeta('overtime_tolerance_minutes'),
+        getMeta('overtime_reason_required'),
+        getMeta('overtime_reason_timeout_seconds'),
         getExpectedShift(employeeId),
     ]);
 
     return {
         reasons: normalizeOvertimeReasons(stored),
         toleranceMinutes: toleranceMinutes ?? null,
+        reasonRequired: required === true,
+        reasonTimeoutSeconds: Number.isFinite(timeoutSeconds) ? timeoutSeconds : null,
         expectedCheckOut: shift.expectedCheckOut,
     };
 }

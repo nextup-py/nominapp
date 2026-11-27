@@ -14,6 +14,7 @@ use App\Models\Terminal;
 use App\Models\User;
 use App\Services\AttendanceEventSyncService;
 use App\Services\MobileEventSyncService;
+use App\Settings\GeneralSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -124,11 +125,17 @@ it('guarda el motivo también desde el celular', function () {
 
 it('los latidos del terminal y del celular traen la lista de motivos y la tolerancia', function () {
     [$employee, $terminal] = overtimeReasonSetup();
+    $general = app(GeneralSettings::class);
+    $general->attendance_overtime_reason_required = true;
+    $general->attendance_overtime_reason_timeout_seconds = 45;
+    $general->save();
 
     Sanctum::actingAs($terminal, [Terminal::SYNC_ABILITY]);
     $terminalResponse = $this->postJson('/api/v1/terminal/heartbeat', [])->assertOk();
 
     expect($terminalResponse->json('config.overtime_reasons'))->toBe(AttendanceEvent::getOvertimeReasonOptions())
+        ->and($terminalResponse->json('config.overtime_reason_required'))->toBeTrue()
+        ->and($terminalResponse->json('config.overtime_reason_timeout_seconds'))->toBe(45)
         ->and($terminalResponse->json('config.overtime_tolerance_minutes'))->toBeInt();
 
     $employee->forceFill(['mobile_marking_allowed' => true])->save();
@@ -136,6 +143,7 @@ it('los latidos del terminal y del celular traen la lista de motivos y la tolera
     $mobileResponse = $this->postJson('/api/v1/mobile/heartbeat')->assertOk();
 
     expect($mobileResponse->json('config.overtime_reasons'))->toBe(AttendanceEvent::getOvertimeReasonOptions())
+        ->and($mobileResponse->json('config.overtime_reason_required'))->toBeTrue()
         ->and($mobileResponse->json('config.overtime_tolerance_minutes'))->toBeInt();
 });
 
