@@ -17,6 +17,7 @@ import { translateEventType, buildDetailedError } from './mark/text-helpers.js';
 import { markUserInteracted, playBeep } from '../shared/audio-feedback.js';
 import { setOfflineBanner, updateSyncStatus, refreshSyncStatus } from './mark/sync-status-ui.js';
 import { openMyEventsModal, closeMyEventsModal } from './mark/my-events-modal.js';
+import { openOvertimeRequestModal, closeOvertimeRequestModal, submitOvertimeRequestForm, offerOvertimeRegularization } from './mark/overtime-request-modal.js';
 import { showSuccessModal } from './mark/success-modal.js';
 import { showErrorModal, initErrorModal, isErrorModalVisible, setErrorModalVisible } from './mark/error-modal.js';
 import { createMenuSheet } from '../shared/menu-sheet.js';
@@ -271,6 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const { reasons, toleranceMinutes, reasonRequired, reasonTimeoutSeconds } = await getOvertimeConfig();
             if (!shouldAskOvertimeReason({ eventType, expectedCheckOut: state.expectedCheckOut, toleranceMinutes, reasons })) return null;
+            state.offerRegularization = true;
 
             return await overtimeReasonPrompt.ask(reasons, { required: reasonRequired, seconds: reasonTimeoutSeconds });
         } catch (error) {
@@ -469,6 +471,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // Botón "Mis marcaciones" — no requiere pasar por la cámara, el dispositivo
     // ya sabe de quién es (vinculación 1:1). Reusa getOwnStatus() (mismo
     // camino que la identificación) para no duplicar el manejo de auth/red.
+    const btnOvertimeRequest = document.getElementById("btnOvertimeRequest");
+    if (btnOvertimeRequest) {
+        btnOvertimeRequest.addEventListener("click", () => { openOvertimeRequestModal(); });
+    }
+    document.getElementById("closeOvertimeRequestModal")?.addEventListener("click", closeOvertimeRequestModal);
+    document.getElementById("overtimeRequestForm")?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        submitOvertimeRequestForm();
+    });
+
     if (btnMyEvents) {
         btnMyEvents.addEventListener("click", () => { openMyEventsModal(); });
     }
@@ -574,6 +586,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function returnToSplash() {
+        // Tras una salida con horas extra, ofrece pedir su aprobación si hoy no hay un pedido (no bloquea nada).
+        if (state.offerRegularization) {
+            state.offerRegularization = false;
+            offerOvertimeRegularization();
+        }
+
         // Resetear estado
         state.employee = null;
         state.allowed  = [];

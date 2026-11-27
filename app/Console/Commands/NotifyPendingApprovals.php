@@ -9,6 +9,7 @@ use App\Models\MerchandiseWithdrawal;
 use App\Models\OvertimeRequest;
 use App\Models\User;
 use App\Notifications\PendingApprovalsNotification;
+use App\Services\TeamScopeService;
 use Illuminate\Console\Command;
 
 /**
@@ -29,6 +30,7 @@ class NotifyPendingApprovals extends Command
             'merchandise_withdrawals' => MerchandiseWithdrawal::query()->where('status', 'pending')->count(),
             'employee_leaves' => EmployeeLeave::query()->where('status', 'pending')->count(),
             'overtime_requests' => OvertimeRequest::query()->where('status', OvertimeRequest::STATUS_PENDING_HR)->count(),
+            'overtime_boss' => OvertimeRequest::query()->where('status', OvertimeRequest::STATUS_PENDING_BOSS)->count(),
         ];
 
         if (array_sum($totals) === 0) {
@@ -43,6 +45,18 @@ class NotifyPendingApprovals extends Command
             $counts = [];
 
             foreach (PendingApprovalsNotification::types() as $key => [, , $permission]) {
+                if ($key === 'overtime_boss') {
+                    $mine = $totals[$key] > 0 && ($user->can('view_team') || $user->can('view_branch_team'))
+                        ? OvertimeRequest::query()->where('status', OvertimeRequest::STATUS_PENDING_BOSS)
+                            ->whereIn('employee_id', app(TeamScopeService::class)->employeeIds($user))->count()
+                        : 0;
+                    if ($mine > 0) {
+                        $counts[$key] = $mine;
+                    }
+
+                    continue;
+                }
+
                 if ($totals[$key] > 0 && $user->can($permission)) {
                     $counts[$key] = $totals[$key];
                 }

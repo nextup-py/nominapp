@@ -198,6 +198,12 @@ Ambos ajustes se aplican a las jornadas que se calculen desde que se guardan; la
 
 - **Exigir pedido previo por defecto** (apagado de fábrica): para quienes no lo tienen definido en su ficha, cargo, sucursal ni empresa. Encendido, las horas extra sin un pedido aprobado quedan como no autorizadas. Ver **Pedido previo de horas extra** en Asistencias.
 - **Anticipación mínima del pedido** (0 horas de fábrica): 0 = se puede pedir hasta el mismo día. Solo RR.HH. puede cargar pedidos de fechas pasadas.
+- **Aprobación automática hasta** (0 de fábrica): un pedido de hasta esas horas por día queda aprobado apenas lo aprueba el jefe, sin pasar por RR.HH. 0 = RR.HH. siempre aprueba.
+- **Escalar a RR.HH. si el jefe no responde en** (0 de fábrica): horas que un pedido del empleado espera al jefe antes de pasar a RR.HH. 0 = nunca.
+
+### Avisos de acumulación
+
+- **Tope semanal** y **Tope mensual** (0 de fábrica = apagado): aviso diario al jefe y a RR.HH. de quienes superan esas horas extra en la semana o el mes en curso. El límite legal es de 9 horas semanales.
 
 ### Motivo al marcar la salida
 

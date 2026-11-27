@@ -70,7 +70,7 @@ class OvertimeRequestResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['employee', 'requestedBy']);
+        return parent::getEloquentQuery()->with(['employee', 'requestedBy', 'requestedByEmployee']);
     }
 
     public static function table(Table $table): Table
@@ -98,7 +98,7 @@ class OvertimeRequestResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => OvertimeRequest::getStatusLabels()[$state] ?? $state)
                     ->color(fn (string $state): string => OvertimeRequest::getStatusColors()[$state] ?? 'gray'),
-                Tables\Columns\TextColumn::make('requestedBy.name')->label('Pidió')->placeholder('Sin dato'),
+                Tables\Columns\TextColumn::make('requestedBy.name')->label('Pidió')->formatStateUsing(fn ($state, OvertimeRequest $record): ?string => $record->requesterName())->placeholder('Sin dato'),
                 Tables\Columns\TextColumn::make('created_at')->label('Creado')->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
@@ -135,9 +135,12 @@ class OvertimeRequestResource extends Resource
                 TextEntry::make('notes')->label('Detalle')->placeholder('Sin detalle')->columnSpanFull(),
             ]),
             InfoSection::make('Seguimiento')->columns(3)->schema([
-                TextEntry::make('requestedBy.name')->label('Pidió')->placeholder('Sin dato'),
+                TextEntry::make('requestedBy.name')->label('Pidió')->formatStateUsing(fn ($state, OvertimeRequest $record): ?string => $record->requesterName())->placeholder('Sin dato'),
                 TextEntry::make('boss_approved_at')->label('Aprobó el jefe')->dateTime('d/m/Y H:i')->placeholder('—'),
                 TextEntry::make('hr_approved_at')->label('Aprobó RR.HH.')->dateTime('d/m/Y H:i')->placeholder('—'),
+                TextEntry::make('auto_approved')->label('Aprobación automática')->formatStateUsing(fn ($state): string => $state ? 'Sí, por el tope de horas' : 'No'),
+                TextEntry::make('escalated_at')->label('Escalado a RR.HH.')->dateTime('d/m/Y H:i')->placeholder('—'),
+                TextEntry::make('regularization')->label('Regularización')->formatStateUsing(fn ($state): string => $state ? 'Sí (horas extra de hoy ya hechas)' : 'No'),
                 TextEntry::make('rejected_at')->label('Rechazado')->dateTime('d/m/Y H:i')->placeholder('—'),
                 TextEntry::make('rejection_reason')->label('Motivo del rechazo')->placeholder('—')->columnSpan(2),
                 TextEntry::make('cancelled_at')->label('Cancelado')->dateTime('d/m/Y H:i')->placeholder('—'),

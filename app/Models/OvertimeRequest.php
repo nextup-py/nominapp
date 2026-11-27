@@ -31,7 +31,7 @@ class OvertimeRequest extends Model implements Auditable
     public const STATUS_EXPIRED = 'expired';
 
     protected $fillable = [
-        'employee_id', 'requested_by_id', 'date_from', 'date_to', 'time_from', 'time_to', 'max_hours', 'reason', 'notes',
+        'employee_id', 'requested_by_id', 'requested_by_employee_id', 'regularization', 'auto_approved', 'escalated_at', 'date_from', 'date_to', 'time_from', 'time_to', 'max_hours', 'reason', 'notes',
         'status', 'boss_approved_by_id', 'boss_approved_at', 'hr_approved_by_id', 'hr_approved_at',
         'rejected_by_id', 'rejected_at', 'rejection_reason', 'cancelled_by_id', 'cancelled_at',
     ];
@@ -49,6 +49,9 @@ class OvertimeRequest extends Model implements Auditable
             'date_from' => 'date',
             'date_to' => 'date',
             'max_hours' => 'decimal:2',
+            'regularization' => 'boolean',
+            'auto_approved' => 'boolean',
+            'escalated_at' => 'datetime',
             'boss_approved_at' => 'datetime',
             'hr_approved_at' => 'datetime',
             'rejected_at' => 'datetime',
@@ -98,6 +101,22 @@ class OvertimeRequest extends Model implements Auditable
     public function requestedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by_id');
+    }
+
+    /** @return BelongsTo<Employee, $this> Empleado que hizo el pedido desde su celular (si lo pidió él). */
+    public function requestedByEmployee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'requested_by_employee_id');
+    }
+
+    /** Quien hizo el pedido: el usuario del panel o el propio empleado desde el celular. */
+    public function requesterName(): ?string
+    {
+        if ($this->requestedBy) {
+            return $this->requestedBy->name;
+        }
+
+        return $this->requestedByEmployee ? trim($this->requestedByEmployee->first_name.' '.$this->requestedByEmployee->last_name).' (empleado)' : null;
     }
 
     /** @return HasMany<AttendanceDay, $this> Jornadas en las que se aplicó el pedido. */

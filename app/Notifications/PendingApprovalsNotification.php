@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Filament\Pages\MyTeam;
 use App\Filament\Resources\AdvanceResource;
 use App\Filament\Resources\EmployeeLeaveResource;
 use App\Filament\Resources\LoanResource;
@@ -36,6 +37,7 @@ class PendingApprovalsNotification extends Notification
             'merchandise_withdrawals' => ['retiro de mercadería', 'retiros de mercadería', 'approve_merchandise_withdrawal'],
             'employee_leaves' => ['permiso', 'permisos', 'approve_employee_leave'],
             'overtime_requests' => ['pedido de horas extra', 'pedidos de horas extra', 'approve_overtime_request'],
+            'overtime_boss' => ['pedido de horas extra de tu equipo', 'pedidos de horas extra de tu equipo', 'view_team'],
         ];
     }
 
@@ -64,6 +66,7 @@ class PendingApprovalsNotification extends Notification
             'merchandise_withdrawals' => fn () => MerchandiseWithdrawalResource::getUrl('index', ['activeTab' => 'pending']),
             'employee_leaves' => fn () => EmployeeLeaveResource::getUrl('index', ['activeTab' => 'pending']),
             'overtime_requests' => fn () => OvertimeRequestResource::getUrl('index', ['activeTab' => 'pending_hr']),
+            'overtime_boss' => fn () => MyTeam::getUrl(),
         ];
 
         foreach (self::types() as $key => [$singular, $plural]) {

@@ -70,6 +70,10 @@ class OvertimeSettings extends Page implements HasForms
             'attendance_overtime_allowed_default' => $general->attendance_overtime_allowed_default,
             'attendance_overtime_request_required_default' => $general->attendance_overtime_request_required_default,
             'attendance_overtime_request_min_notice_hours' => $general->attendance_overtime_request_min_notice_hours,
+            'attendance_overtime_request_auto_approve_hours' => $general->attendance_overtime_request_auto_approve_hours,
+            'attendance_overtime_request_boss_escalation_hours' => $general->attendance_overtime_request_boss_escalation_hours,
+            'attendance_overtime_weekly_alert_hours' => $general->attendance_overtime_weekly_alert_hours,
+            'attendance_overtime_monthly_alert_hours' => $general->attendance_overtime_monthly_alert_hours,
             'attendance_overtime_reason_required' => $general->attendance_overtime_reason_required,
             'attendance_overtime_reason_timeout_seconds' => $general->attendance_overtime_reason_timeout_seconds,
             'attendance_overtime_reasons' => array_values($general->attendance_overtime_reasons),
@@ -138,6 +142,34 @@ class OvertimeSettings extends Page implements HasForms
                             ->numeric()->integer()->required()->minValue(0)->maxValue(168)
                             ->suffix('horas')
                             ->helperText('0 = se puede pedir hasta el mismo día. Solo RR.HH. puede cargar pedidos de fechas pasadas.'),
+                        TextInput::make('attendance_overtime_request_auto_approve_hours')
+                            ->label('Aprobación automática hasta')
+                            ->numeric()->integer()->required()->minValue(0)->maxValue(24)
+                            ->suffix('horas por día')
+                            ->helperText('Un pedido de hasta estas horas por día queda aprobado apenas lo aprueba el jefe, sin pasar por RR.HH. 0 = RR.HH. siempre aprueba.'),
+                        TextInput::make('attendance_overtime_request_boss_escalation_hours')
+                            ->label('Escalar a RR.HH. si el jefe no responde en')
+                            ->numeric()->integer()->required()->minValue(0)->maxValue(720)
+                            ->suffix('horas')
+                            ->helperText('Los pedidos que hace el empleado desde el celular pasan a RR.HH. si el jefe no los resolvió en este plazo. 0 = nunca.'),
+                    ]),
+
+                Section::make('Avisos de acumulación')
+                    ->description('Aviso diario (08:20) al jefe y a RR.HH. cuando alguien supera estas horas extra. Cuentan las horas registradas, aprobadas o no.')
+                    ->icon('heroicon-o-exclamation-triangle')
+                    ->schema([
+                        Grid::make(2)->schema([
+                            TextInput::make('attendance_overtime_weekly_alert_hours')
+                                ->label('Tope semanal')
+                                ->numeric()->integer()->required()->minValue(0)->maxValue(168)
+                                ->suffix('horas')
+                                ->helperText('Semana en curso (de lunes a hoy). 0 = apagado. El límite legal es de 9 horas.'),
+                            TextInput::make('attendance_overtime_monthly_alert_hours')
+                                ->label('Tope mensual')
+                                ->numeric()->integer()->required()->minValue(0)->maxValue(744)
+                                ->suffix('horas')
+                                ->helperText('Mes en curso. 0 = apagado.'),
+                        ]),
                     ]),
 
                 Section::make('Motivo al marcar la salida')
@@ -250,6 +282,10 @@ class OvertimeSettings extends Page implements HasForms
         $general->attendance_overtime_allowed_default = (bool) $data['attendance_overtime_allowed_default'];
         $general->attendance_overtime_request_required_default = (bool) $data['attendance_overtime_request_required_default'];
         $general->attendance_overtime_request_min_notice_hours = (int) $data['attendance_overtime_request_min_notice_hours'];
+        $general->attendance_overtime_request_auto_approve_hours = (int) $data['attendance_overtime_request_auto_approve_hours'];
+        $general->attendance_overtime_request_boss_escalation_hours = (int) $data['attendance_overtime_request_boss_escalation_hours'];
+        $general->attendance_overtime_weekly_alert_hours = (int) $data['attendance_overtime_weekly_alert_hours'];
+        $general->attendance_overtime_monthly_alert_hours = (int) $data['attendance_overtime_monthly_alert_hours'];
         $general->attendance_overtime_reason_required = (bool) $data['attendance_overtime_reason_required'];
         $general->attendance_overtime_reason_timeout_seconds = (int) ($data['attendance_overtime_reason_timeout_seconds'] ?? $general->attendance_overtime_reason_timeout_seconds);
         $general->attendance_overtime_reasons = $reasons;
