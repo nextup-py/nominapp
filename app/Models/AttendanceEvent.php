@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Settings\GeneralSettings;
 use Carbon\CarbonInterface;
 use Database\Factories\AttendanceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,12 +15,12 @@ class AttendanceEvent extends Model
     public const REPEAT_WINDOW_SECONDS = 60;
 
     /**
-     * Motivos que el empleado elige al marcar una salida con horas extra (terminal y celular). Es la única definición:
-     * viaja a los clientes en el latido y el servidor solo acepta estas claves.
+     * Motivos de fábrica de las horas extra. El catálogo vigente vive en `GeneralSettings::$attendance_overtime_reasons`
+     * (editable en «Horas extra»); esta lista solo siembra la migración y sirve de respaldo si el catálogo no existe.
      *
      * @var array<string, string>
      */
-    public const OVERTIME_REASONS = [
+    public const DEFAULT_OVERTIME_REASONS = [
         'cash_close' => 'Cierre de caja',
         'cover_coworker' => 'Cubrir a un compañero',
         'boss_request' => 'Pedido del jefe',
@@ -27,22 +28,54 @@ class AttendanceEvent extends Model
         'other' => 'Otro',
     ];
 
-    /** @return array<string, string> Clave → etiqueta de los motivos de horas extra. */
+    /**
+     * Catálogo completo (activos e inactivos) normalizado: clave → ['label', 'active'].
+     *
+     * @return array<string, array{label: string, active: bool}>
+     */
+    public static function overtimeReasonCatalog(): array
+    {
+        try {
+            $stored = app(GeneralSettings::class)->attendance_overtime_reasons;
+        } catch (\Throwable) {
+            $stored = null;
+        }
+
+        if (! is_array($stored)) {
+            return array_map(fn (string $label): array => ['label' => $label, 'active' => true], self::DEFAULT_OVERTIME_REASONS);
+        }
+
+        $catalog = [];
+        foreach ($stored as $item) {
+            $key = is_array($item) ? ($item['key'] ?? null) : null;
+            $label = is_array($item) ? trim((string) ($item['label'] ?? '')) : '';
+            if (is_string($key) && $key !== '' && $label !== '') {
+                $catalog[$key] = ['label' => $label, 'active' => (bool) ($item['active'] ?? true)];
+            }
+        }
+
+        return $catalog;
+    }
+
+    /** @return array<string, string> Clave → etiqueta de los motivos activos (los que se ofrecen al marcar). */
     public static function getOvertimeReasonOptions(): array
     {
-        return self::OVERTIME_REASONS;
+        return array_map(
+            fn (array $reason): string => $reason['label'],
+            array_filter(self::overtimeReasonCatalog(), fn (array $reason): bool => $reason['active'])
+        );
     }
 
-    /** Devuelve la clave del motivo si es válida y, si no (vacío o desconocida), null: un motivo inválido nunca descarta la marcación. */
+    /** Devuelve la clave del motivo si existe en el catálogo (aunque esté desactivado: una marcación encolada antes puede traerlo) y, si no, null: un motivo inválido nunca descarta la marcación. */
     public static function sanitizeOvertimeReason(mixed $reason): ?string
     {
-        return is_string($reason) && array_key_exists($reason, self::OVERTIME_REASONS) ? $reason : null;
+        return is_string($reason) && array_key_exists($reason, self::overtimeReasonCatalog()) ? $reason : null;
     }
 
-    /** Etiqueta del motivo, o «Sin motivo» cuando no se eligió ninguno. */
+    /** Etiqueta del motivo (también si se desactivó), o «Sin motivo» cuando no se eligió ninguno. */
     public static function overtimeReasonLabel(?string $reason): string
     {
-        return $reason === null || $reason === '' ? 'Sin motivo' : (self::OVERTIME_REASONS[$reason] ?? $reason);
+        return $reason === null || $reason === '' ? 'Sin motivo' : (self::overtimeReasonCatalog()[$reason]['label'] ?? $reason);
     }
 
     /** @use HasFactory<AttendanceFactory> */

@@ -21,14 +21,15 @@ export function createOvertimeReasonPrompt({ list, countdown = null, show, secon
     /**
      * Pide el motivo y devuelve la clave elegida, o null si se venció la espera (o no hay dónde mostrarlo).
      * @param {Array<{key: string, label: string}>} reasons
+     * @param {{required?: boolean, seconds?: number|null}} [options] - `required`: sin cuenta regresiva, solo se sale eligiendo.
      * @returns {Promise<string|null>}
      */
-    function ask(reasons) {
+    function ask(reasons, { required = false, seconds: customSeconds = null } = {}) {
         if (!list || !Array.isArray(reasons) || reasons.length === 0) return Promise.resolve(null);
 
         return new Promise((resolve) => {
             let finished = false;
-            let remaining = seconds;
+            let remaining = Number.isFinite(customSeconds) && customSeconds > 0 ? customSeconds : seconds;
             let handle = null;
 
             const finish = (value) => {
@@ -41,6 +42,10 @@ export function createOvertimeReasonPrompt({ list, countdown = null, show, secon
             };
 
             const renderCountdown = () => {
+                if (required) {
+                    if (countdown) countdown.textContent = 'Elija un motivo para registrar la salida';
+                    return;
+                }
                 if (countdown) countdown.textContent = `Se registrará sin motivo en ${remaining} s`;
             };
 
@@ -57,6 +62,7 @@ export function createOvertimeReasonPrompt({ list, countdown = null, show, secon
 
             show();
             renderCountdown();
+            if (required) return;
             handle = setInterval(() => {
                 remaining -= 1;
                 if (remaining <= 0) finish(null);

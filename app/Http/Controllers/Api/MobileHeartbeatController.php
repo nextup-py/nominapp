@@ -49,6 +49,8 @@ class MobileHeartbeatController extends Controller
                 // Motivos y tolerancia para pedir el motivo al marcar una salida con horas extra.
                 'overtime_reasons' => AttendanceEvent::getOvertimeReasonOptions(),
                 'overtime_tolerance_minutes' => (int) $settings->attendance_overtime_tolerance_minutes,
+                'overtime_reason_required' => (bool) $settings->attendance_overtime_reason_required,
+                'overtime_reason_timeout_seconds' => max(5, (int) $settings->attendance_overtime_reason_timeout_seconds),
             ],
             'employee' => [
                 'id' => $employee->id,

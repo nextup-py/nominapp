@@ -156,15 +156,22 @@ describe('motivo de las horas extra', () => {
         getMeta.mockImplementation((key) => Promise.resolve({
             overtime_reasons: { cash_close: 'Cierre de caja' },
             overtime_tolerance_minutes: 10,
+            overtime_reason_required: true,
+            overtime_reason_timeout_seconds: 30,
         }[key]));
 
-        expect(await getOvertimeConfig()).toEqual({ reasons: [{ key: 'cash_close', label: 'Cierre de caja' }], toleranceMinutes: 10 });
+        expect(await getOvertimeConfig()).toEqual({
+            reasons: [{ key: 'cash_close', label: 'Cierre de caja' }],
+            toleranceMinutes: 10,
+            reasonRequired: true,
+            reasonTimeoutSeconds: 30,
+        });
     });
 
     it('getOvertimeConfig sin latido previo no tiene motivos', async () => {
         getMeta.mockResolvedValue(undefined);
 
-        expect(await getOvertimeConfig()).toEqual({ reasons: [], toleranceMinutes: null });
+        expect(await getOvertimeConfig()).toEqual({ reasons: [], toleranceMinutes: null, reasonRequired: false, reasonTimeoutSeconds: null });
     });
 });
 

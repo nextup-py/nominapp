@@ -577,7 +577,7 @@ Al reconocer a un empleado, la **entrada** se registra sola, pero la **salida** 
 
 ### Motivo de las horas extra
 
-Si la salida se marca pasada la hora de salida del horario más la tolerancia de horas extra, antes de registrarla el terminal muestra la pantalla **Motivo de las horas extra** con un botón por motivo y una cuenta regresiva (*Se registrará sin motivo en N s*). Elegir uno lo guarda con la salida; si vence la espera, la salida se registra igual sin motivo. Con el último latido el terminal ya tiene la lista y la tolerancia, así que funciona sin conexión. Ver **Motivo de las horas extra** en el capítulo de Asistencias.
+Si la salida se marca pasada la hora de salida del horario más la tolerancia de horas extra, antes de registrarla el terminal muestra la pantalla **Motivo de las horas extra** con un botón por motivo y una cuenta regresiva (*Se registrará sin motivo en N s*). Elegir uno lo guarda con la salida; si vence la espera, la salida se registra igual sin motivo. Si en **Configuración → Horas extra** el motivo es **obligatorio**, no hay cuenta regresiva (*Elija un motivo para registrar la salida*) y la salida espera hasta elegir uno. Con el último latido el terminal ya tiene la lista y la tolerancia, así que funciona sin conexión. Ver **Motivo de las horas extra** en el capítulo de Asistencias.
 
 ### Controles de la cámara
 

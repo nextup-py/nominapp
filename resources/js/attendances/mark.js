@@ -269,10 +269,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (eventType !== "check_out") return null;
 
         try {
-            const { reasons, toleranceMinutes } = await getOvertimeConfig();
+            const { reasons, toleranceMinutes, reasonRequired, reasonTimeoutSeconds } = await getOvertimeConfig();
             if (!shouldAskOvertimeReason({ eventType, expectedCheckOut: state.expectedCheckOut, toleranceMinutes, reasons })) return null;
 
-            return await overtimeReasonPrompt.ask(reasons);
+            return await overtimeReasonPrompt.ask(reasons, { required: reasonRequired, seconds: reasonTimeoutSeconds });
         } catch (error) {
             logWarn("No se pudo pedir el motivo de las horas extra:", error.message);
             return null;

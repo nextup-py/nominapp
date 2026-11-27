@@ -227,12 +227,22 @@ export async function enqueueMark(eventType, location = null, { overtimeReason =
 /**
  * Motivos de horas extra y tolerancia que trajo el último latido, para decidir si se pide el motivo al marcar la
  * salida (ver offline-shared/overtime-reason.js). Sin latido previo, la lista queda vacía y no se pregunta.
- * @returns {Promise<{reasons: Array<{key: string, label: string}>, toleranceMinutes: number|null}>}
+ * @returns {Promise<{reasons: Array<{key: string, label: string}>, toleranceMinutes: number|null, reasonRequired: boolean, reasonTimeoutSeconds: number|null}>}
  */
 export async function getOvertimeConfig() {
-    const [stored, toleranceMinutes] = await Promise.all([getMeta('overtime_reasons'), getMeta('overtime_tolerance_minutes')]);
+    const [stored, toleranceMinutes, required, timeoutSeconds] = await Promise.all([
+        getMeta('overtime_reasons'),
+        getMeta('overtime_tolerance_minutes'),
+        getMeta('overtime_reason_required'),
+        getMeta('overtime_reason_timeout_seconds'),
+    ]);
 
-    return { reasons: normalizeOvertimeReasons(stored), toleranceMinutes: toleranceMinutes ?? null };
+    return {
+        reasons: normalizeOvertimeReasons(stored),
+        toleranceMinutes: toleranceMinutes ?? null,
+        reasonRequired: required === true,
+        reasonTimeoutSeconds: Number.isFinite(timeoutSeconds) ? timeoutSeconds : null,
+    };
 }
 
 /**

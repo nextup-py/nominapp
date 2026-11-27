@@ -86,4 +86,26 @@ describe('createOvertimeReasonPrompt', () => {
 
         expect(list.children[0].textContent).toBe('<img src=x onerror=alert(1)>');
     });
+
+    it('usa los segundos del ajuste cuando se indican', async () => {
+        const result = build({ seconds: 30 }).ask(reasons, { seconds: 2 });
+
+        await vi.advanceTimersByTimeAsync(2000);
+
+        await expect(result).resolves.toBeNull();
+    });
+
+    it('si el motivo es obligatorio no vence: solo se sale eligiendo uno', async () => {
+        const result = build({ seconds: 2 }).ask(reasons, { required: true });
+        let settled = false;
+        result.then(() => { settled = true; });
+
+        await vi.advanceTimersByTimeAsync(600000);
+        expect(settled).toBe(false);
+        expect(countdown.textContent).toContain('Elija un motivo');
+
+        list.children[0].click();
+
+        await expect(result).resolves.toBe('cash_close');
+    });
 });
