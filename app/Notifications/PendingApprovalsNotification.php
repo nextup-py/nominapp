@@ -6,6 +6,7 @@ use App\Filament\Resources\AdvanceResource;
 use App\Filament\Resources\EmployeeLeaveResource;
 use App\Filament\Resources\LoanResource;
 use App\Filament\Resources\MerchandiseWithdrawalResource;
+use App\Filament\Resources\OvertimeRequestResource;
 use App\Notifications\Concerns\HonorsPreferences;
 use Filament\Notifications\Actions\Action as FilamentAction;
 use Filament\Notifications\Notification as FilamentNotification;
@@ -14,7 +15,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Resumen diario de las solicitudes que esperan una decisión de quien las aprueba: adelantos, préstamos, retiros de
- * mercadería y permisos. Cada usuario recibe solo los tipos que puede aprobar (`approve_*`); no se repite mientras el
+ * mercadería, permisos y pedidos de horas extra. Cada usuario recibe solo los tipos que puede aprobar (`approve_*`); no se repite mientras el
  * aviso anterior siga sin leer.
  */
 class PendingApprovalsNotification extends Notification
@@ -34,6 +35,7 @@ class PendingApprovalsNotification extends Notification
             'loans' => ['préstamo', 'préstamos', 'approve_loan'],
             'merchandise_withdrawals' => ['retiro de mercadería', 'retiros de mercadería', 'approve_merchandise_withdrawal'],
             'employee_leaves' => ['permiso', 'permisos', 'approve_employee_leave'],
+            'overtime_requests' => ['pedido de horas extra', 'pedidos de horas extra', 'approve_overtime_request'],
         ];
     }
 
@@ -61,6 +63,7 @@ class PendingApprovalsNotification extends Notification
             'loans' => fn () => LoanResource::getUrl('index', ['activeTab' => 'pending']),
             'merchandise_withdrawals' => fn () => MerchandiseWithdrawalResource::getUrl('index', ['activeTab' => 'pending']),
             'employee_leaves' => fn () => EmployeeLeaveResource::getUrl('index', ['activeTab' => 'pending']),
+            'overtime_requests' => fn () => OvertimeRequestResource::getUrl('index', ['activeTab' => 'pending_hr']),
         ];
 
         foreach (self::types() as $key => [$singular, $plural]) {

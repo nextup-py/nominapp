@@ -279,6 +279,7 @@ class CompanyResource extends Resource
                     ->icon('heroicon-o-clock')
                     ->schema([
                         OvertimeAllowedFields::select('Rige para quien no lo tenga definido en su ficha, su cargo ni su sucursal. «Heredar» usa Configuración General.'),
+                        OvertimeAllowedFields::requestSelect('Con «Sí», las horas extra sin un pedido previo aprobado quedan como no autorizadas. «Heredar» usa el siguiente nivel o Horas extra en Configuración.'),
                     ])
                     ->collapsible()
                     ->collapsed(fn (?Company $record) => $record?->overtime_allowed === null),

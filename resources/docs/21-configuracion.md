@@ -194,6 +194,11 @@ Se aplican solo a las horas extra aprobadas (Art. 234 CLT).
 
 Ambos ajustes se aplican a las jornadas que se calculen desde que se guardan; las ya calculadas no cambian salvo que se recalculen (**Recalcular** en Asistencias).
 
+### Pedido previo
+
+- **Exigir pedido previo por defecto** (apagado de fábrica): para quienes no lo tienen definido en su ficha, cargo, sucursal ni empresa. Encendido, las horas extra sin un pedido aprobado quedan como no autorizadas. Ver **Pedido previo de horas extra** en Asistencias.
+- **Anticipación mínima del pedido** (0 horas de fábrica): 0 = se puede pedir hasta el mismo día. Solo RR.HH. puede cargar pedidos de fechas pasadas.
+
 ### Motivo al marcar la salida
 
 - **Motivo obligatorio** (apagado de fábrica): con el interruptor encendido, el selector del terminal y del celular no vence y la salida no se registra hasta elegir un motivo. Apagado, si nadie elige la salida se registra igual sin motivo.

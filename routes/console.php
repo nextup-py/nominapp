@@ -154,6 +154,10 @@ Schedule::command('attendance:notify-no-schedule')
  * Avisar a quienes aprueban de las solicitudes pendientes (adelantos, préstamos, retiros de mercadería y permisos).
  * Una vez al día; no repite si el aviso sigue sin leer.
  */
+Schedule::command('overtime:expire-requests')
+    ->dailyAt('00:10')
+    ->withoutOverlapping();
+
 Schedule::command('approvals:notify-pending')
     ->dailyAt('08:50')
     ->withoutOverlapping();

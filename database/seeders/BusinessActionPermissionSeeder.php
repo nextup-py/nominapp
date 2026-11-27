@@ -35,6 +35,11 @@ class BusinessActionPermissionSeeder extends Seeder
             'cancel' => 'Cancelar',
             'export' => 'Exportar',
         ],
+        'overtime_request' => [
+            'approve' => 'Aprobar',
+            'reject' => 'Rechazar',
+            'cancel' => 'Cancelar',
+        ],
         'merchandise_withdrawal' => [
             'approve' => 'Aprobar',
             'reject' => 'Rechazar',

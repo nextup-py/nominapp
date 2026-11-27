@@ -28,6 +28,7 @@ class Position extends Model
         'headcount',
         'is_managerial',
         'overtime_allowed',
+        'overtime_request_required',
         'default_schedule_id',
     ];
 
@@ -57,6 +58,7 @@ class Position extends Model
             'headcount' => 'integer',
             'is_managerial' => 'boolean',
             'overtime_allowed' => 'boolean',
+            'overtime_request_required' => 'boolean',
         ];
     }
 

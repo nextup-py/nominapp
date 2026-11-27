@@ -202,6 +202,7 @@ class BranchResource extends Resource
                     MobileMarkingFields::select('Rige para quien no tenga el suyo. «Heredar» usa la empresa o Configuración General.'),
 
                     OvertimeAllowedFields::select('Rige para quien no lo tenga definido en su ficha ni en su cargo. «Heredar» usa la empresa o Configuración General.'),
+                    OvertimeAllowedFields::requestSelect('Con «Sí», las horas extra sin un pedido previo aprobado quedan como no autorizadas. «Heredar» usa el siguiente nivel o Horas extra en Configuración.'),
 
                     Toggle::make('location_control')
                         ->label('Controlar la ubicación del celular')

@@ -84,6 +84,7 @@ final class EmployeeForm
                         MobileMarkingFields::select('«Heredar» usa el valor de la sucursal, la empresa o Configuración General.'),
 
                         OvertimeAllowedFields::select('«Heredar» usa el valor del cargo, la sucursal, la empresa o Configuración General.'),
+                        OvertimeAllowedFields::requestSelect('Con «Sí», las horas extra sin un pedido previo aprobado quedan como no autorizadas. «Heredar» usa el siguiente nivel o Horas extra en Configuración.'),
                     ]),
 
                 Section::make('Lugar de trabajo propio (opcional)')

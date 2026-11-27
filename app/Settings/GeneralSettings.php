@@ -95,6 +95,12 @@ class GeneralSettings extends Settings
     /** Segundos que espera el selector de motivo antes de registrar la salida sin motivo (ignorado si es obligatorio). */
     public int $attendance_overtime_reason_timeout_seconds;
 
+    /** Exigir pedido previo de horas extra cuando ni el empleado, ni su cargo, sucursal o empresa lo definen. */
+    public bool $attendance_overtime_request_required_default;
+
+    /** Horas de anticipación mínimas de un pedido de horas extra (0 = se puede pedir el mismo día). */
+    public int $attendance_overtime_request_min_notice_hours;
+
     /** Radio (m) de marcación desde el celular cuando el empleado o la sucursal no definen el suyo. */
     public int $attendance_location_default_radius;
 

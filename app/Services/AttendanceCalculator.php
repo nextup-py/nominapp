@@ -7,6 +7,7 @@ use App\Models\AttendanceEvent;
 use App\Models\Employee;
 use App\Models\EmployeeScheduleAssignment;
 use App\Models\Holiday;
+use App\Models\OvertimeRequest;
 use App\Models\RotationAssignment;
 use App\Models\Schedule;
 use App\Models\ShiftOverride;
@@ -280,12 +281,13 @@ class AttendanceCalculator
             $weeklyExceeded = ((float) $weeklyOtherHours + (float) $day->extra_hours) > $settings->overtime_max_weekly_hours;
 
             $day->overtime_limit_exceeded = $dailyExceeded || $weeklyExceeded;
-            $day->overtime_unauthorized = ! self::employeeMayWorkOvertime($day);
+            self::applyOvertimeAuthorization($day, $checkOut);
         } else {
             $day->extra_hours_diurnas = 0;
             $day->extra_hours_nocturnas = 0;
             $day->overtime_limit_exceeded = false;
             $day->overtime_unauthorized = false;
+            $day->overtime_request_id = null;
         }
 
         // Calcular minutos de llegada tarde (basado en expected_check_in guardada)
@@ -296,14 +298,54 @@ class AttendanceCalculator
     }
 
     /**
-     * Indica si el empleado de la jornada está autorizado a hacer horas extra (empleado, cargo, sucursal, empresa
-     * o valor general). Las horas se registran igual; solo se marcan como no autorizadas.
+     * Resuelve si las horas extra de la jornada están autorizadas. Un pedido previo aprobado que cubre la fecha las
+     * autoriza y, la primera vez que se vincula, las aprueba solas siempre que no pasen del tope pedido, ni de la
+     * ventana horaria (si la tiene), ni de los límites legales: el exceso queda por revisar. Sin pedido, quien no tiene permiso de horas extra
+     * o exige pedido previo las deja como no autorizadas (se registran igual).
      */
-    private static function employeeMayWorkOvertime(AttendanceDay $day): bool
+    private static function applyOvertimeAuthorization(AttendanceDay $day, mixed $checkOut): void
     {
-        $employee = $day->relationLoaded('employee') ? $day->employee : Employee::with(['activeContract.position', 'branch.company'])->find($day->employee_id);
+        $employee = $day->relationLoaded('employee') ? $day->employee : null;
+        $employee ??= Employee::with(['activeContract.position', 'branch.company'])->find($day->employee_id);
+        $date = Carbon::parse($day->date)->toDateString();
+        $request = $employee ? OvertimeRequest::covering($employee->id, $date)->orderByDesc('max_hours')->first() : null;
 
-        return $employee?->canWorkOvertime() ?? true;
+        if ($request) {
+            $firstLink = $day->overtime_request_id === null;
+            $day->overtime_request_id = $request->id;
+            $day->overtime_unauthorized = false;
+
+            if ($firstLink && ! $day->overtime_approved && ! $day->overtime_limit_exceeded && self::fitsRequest($request, (float) $day->extra_hours, $checkOut)) {
+                $day->overtime_approved = true;
+            }
+
+            return;
+        }
+
+        $day->overtime_request_id = null;
+        $day->overtime_unauthorized = $employee
+            ? (! $employee->canWorkOvertime() || $employee->overtimeRequestRequired())
+            : false;
+    }
+
+    /** Indica si las horas extra caben en el tope diario y la ventana horaria del pedido. */
+    private static function fitsRequest(OvertimeRequest $request, float $extraHours, mixed $checkOut): bool
+    {
+        if ($extraHours > (float) $request->max_hours + 0.0001) {
+            return false;
+        }
+
+        $to = $request->time_to ? substr((string) $request->time_to, 0, 5) : null;
+        $from = $request->time_from ? substr((string) $request->time_from, 0, 5) : null;
+
+        if ($to && $from && $to > $from && $checkOut) {
+            $tolerance = max(0, (int) app(GeneralSettings::class)->attendance_overtime_tolerance_minutes);
+            $limit = Carbon::createFromFormat('H:i', $to)->addMinutes($tolerance)->format('H:i');
+
+            return Carbon::parse($checkOut)->format('H:i') <= $limit;
+        }
+
+        return true;
     }
 
     /**

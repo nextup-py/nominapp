@@ -58,7 +58,7 @@ it('los turnos viven en su propio grupo y Asistencias queda con lo de uso diario
     }
 
     expect($groups['Horarios y turnos'])->toEqualCanonicalizing(['Planificador de Turnos', 'Horarios', 'Turnos', 'Patrones de rotación'])
-        ->and($groups['Asistencias'])->toEqualCanonicalizing(['Monitor en vivo', 'Por resolver', 'Asistencias', 'Ausencias'])
+        ->and($groups['Asistencias'])->toEqualCanonicalizing(['Monitor en vivo', 'Por resolver', 'Asistencias', 'Ausencias', 'Pedidos de horas extra'])
         ->and($groups['Sistema'])->toEqualCanonicalizing(['Salud del sistema', 'Visor de Logs'])
         ->and($groups['Licencias y vacaciones'])->toEqualCanonicalizing(['Licencias', 'Vacaciones', 'Balances de Vacaciones'])
         ->and($groups['Empleados'])->toEqualCanonicalizing(['Empleados', 'Contratos', 'Amonestaciones'])

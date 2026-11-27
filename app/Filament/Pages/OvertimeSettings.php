@@ -68,6 +68,8 @@ class OvertimeSettings extends Page implements HasForms
             'overtime_max_weekly_hours' => $payroll->overtime_max_weekly_hours,
             'attendance_overtime_tolerance_minutes' => $general->attendance_overtime_tolerance_minutes,
             'attendance_overtime_allowed_default' => $general->attendance_overtime_allowed_default,
+            'attendance_overtime_request_required_default' => $general->attendance_overtime_request_required_default,
+            'attendance_overtime_request_min_notice_hours' => $general->attendance_overtime_request_min_notice_hours,
             'attendance_overtime_reason_required' => $general->attendance_overtime_reason_required,
             'attendance_overtime_reason_timeout_seconds' => $general->attendance_overtime_reason_timeout_seconds,
             'attendance_overtime_reasons' => array_values($general->attendance_overtime_reasons),
@@ -122,6 +124,20 @@ class OvertimeSettings extends Page implements HasForms
                         Toggle::make('attendance_overtime_allowed_default')
                             ->label('Autorizar horas extra por defecto')
                             ->helperText('Para quienes no lo tienen definido en su ficha, cargo, sucursal o empresa. Apagado: las horas extra se registran igual pero quedan como no autorizadas y no aparecen en Por resolver.'),
+                    ]),
+
+                Section::make('Pedido previo')
+                    ->description('Las horas extra se pueden autorizar con un pedido anticipado que aprueban el jefe y RR.HH. (se pide desde Mi equipo o Pedidos de horas extra).')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->schema([
+                        Toggle::make('attendance_overtime_request_required_default')
+                            ->label('Exigir pedido previo por defecto')
+                            ->helperText('Para quienes no lo tienen definido en su ficha, cargo, sucursal o empresa. Encendido: las horas extra sin un pedido aprobado se registran igual pero quedan como no autorizadas.'),
+                        TextInput::make('attendance_overtime_request_min_notice_hours')
+                            ->label('Anticipación mínima del pedido')
+                            ->numeric()->integer()->required()->minValue(0)->maxValue(168)
+                            ->suffix('horas')
+                            ->helperText('0 = se puede pedir hasta el mismo día. Solo RR.HH. puede cargar pedidos de fechas pasadas.'),
                     ]),
 
                 Section::make('Motivo al marcar la salida')
@@ -232,6 +248,8 @@ class OvertimeSettings extends Page implements HasForms
         $general = app(GeneralSettings::class);
         $general->attendance_overtime_tolerance_minutes = (int) $data['attendance_overtime_tolerance_minutes'];
         $general->attendance_overtime_allowed_default = (bool) $data['attendance_overtime_allowed_default'];
+        $general->attendance_overtime_request_required_default = (bool) $data['attendance_overtime_request_required_default'];
+        $general->attendance_overtime_request_min_notice_hours = (int) $data['attendance_overtime_request_min_notice_hours'];
         $general->attendance_overtime_reason_required = (bool) $data['attendance_overtime_reason_required'];
         $general->attendance_overtime_reason_timeout_seconds = (int) ($data['attendance_overtime_reason_timeout_seconds'] ?? $general->attendance_overtime_reason_timeout_seconds);
         $general->attendance_overtime_reasons = $reasons;

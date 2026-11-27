@@ -71,6 +71,7 @@ class Employee extends Model implements AuthenticatableContract
         'mobile_last_heartbeat_at',
         'mobile_marking_allowed',
         'overtime_allowed',
+        'overtime_request_required',
     ];
 
     protected $casts = [
@@ -82,6 +83,7 @@ class Employee extends Model implements AuthenticatableContract
         'mobile_last_heartbeat_at' => 'datetime',
         'mobile_marking_allowed' => 'boolean',
         'overtime_allowed' => 'boolean',
+        'overtime_request_required' => 'boolean',
     ];
 
     // ───────────────────────────────────────────
@@ -1565,6 +1567,46 @@ class Employee extends Model implements AuthenticatableContract
         }
 
         return ['allowed' => (bool) app(GeneralSettings::class)->attendance_overtime_allowed_default, 'source' => 'general'];
+    }
+
+    /**
+     * Indica si las horas extra de este empleado exigen un pedido previo aprobado: valor propio, cargo, sucursal,
+     * empresa y, por último, el general.
+     */
+    public function overtimeRequestRequired(): bool
+    {
+        return $this->overtimeRequestRequiredSource()['required'];
+    }
+
+    /**
+     * Exigencia efectiva de pedido previo y el nivel que la define (el primer valor no nulo gana).
+     *
+     * @return array{required: bool, source: 'employee'|'position'|'branch'|'company'|'general'}
+     */
+    public function overtimeRequestRequiredSource(): array
+    {
+        foreach ([
+            'employee' => $this,
+            'position' => $this->activeContract?->position,
+            'branch' => $this->branch,
+            'company' => $this->branch?->company,
+        ] as $source => $model) {
+            if ($model?->overtime_request_required !== null) {
+                return ['required' => (bool) $model->overtime_request_required, 'source' => $source];
+            }
+        }
+
+        return ['required' => (bool) app(GeneralSettings::class)->attendance_overtime_request_required_default, 'source' => 'general'];
+    }
+
+    /**
+     * Usuarios vinculados a la ficha del superior directo («Reporta a»): quienes reciben el pedido del equipo.
+     *
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    public function bossUsers(): \Illuminate\Support\Collection
+    {
+        return $this->reports_to_id ? User::query()->where('employee_id', $this->reports_to_id)->get() : collect();
     }
 
     /** Permiso de horas extra con su origen, por ejemplo «Sí» o «No (del cargo)». */
